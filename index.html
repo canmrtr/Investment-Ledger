@@ -525,7 +525,7 @@ function AddTab({session,user,pos,loadData,flash_}){
     setParsing(false);
   };
 
-  const parseText=()=>{if(textInput.trim())callParse({type:"text",text:textInput});};
+  const parseText=()=>{if(textInput.trim())callParse({text:textInput});};
 
   const parseImage=async()=>{
     if(!imgFile)return;
@@ -535,7 +535,7 @@ function AddTab({session,user,pos,loadData,flash_}){
       rd.onerror=rej;
       rd.readAsDataURL(imgFile);
     });
-    callParse({type:"image",media_type:imgFile.type||"image/png",image_data:b64});
+    callParse({imageBase64:b64,imageType:imgFile.type||"image/png"});
   };
 
   const saveTx=async()=>{
