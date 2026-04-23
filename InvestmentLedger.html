@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Investment Ledger</title>
+  <meta name="description" content="Kişisel yatırım takip uygulaması"/>
+  <meta name="theme-color" content="#111111"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="Ledger"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>"/>
+  <style>
+    :root {
+      --bg: #111; --bg2: #1c1c1e; --bg3: #2c2c2e;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18);
+      --text: #f0f0f0; --text2: #8e8e93; --text3: #48484a;
+      --ok: #30d158; --err: #ff453a; --info: #0a84ff;
+      --r: 10px; --rl: 14px;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f2f2f7; --bg2: #ffffff; --bg3: #e5e5ea;
+        --border: rgba(0,0,0,0.08); --border2: rgba(0,0,0,0.15);
+        --text: #000; --text2: #6c6c70; --text3: #aeaeb2;
+        --ok: #34c759; --err: #ff3b30; --info: #007aff;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif; min-height: 100vh; }
+    #root { max-width: 820px; margin: 0 auto; padding: 16px 12px 40px; }
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; }
+    .sub { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
+    button { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--r); color: var(--text); cursor: pointer; font-family: inherit; padding: 7px 14px; font-size: 13px; font-weight: 500; transition: opacity .15s; }
+    button:hover:not(:disabled) { opacity: .8; }
+    button:active:not(:disabled) { opacity: .6; }
+    button:disabled { opacity: .35; cursor: default; }
+    button.primary { background: var(--info); border-color: var(--info); color: #fff; }
+    input, textarea, select { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--r); color: var(--text); font-family: inherit; padding: 9px 11px; font-size: 13px; outline: none; width: 100%; }
+    input:focus, textarea:focus { border-color: var(--info); }
+    select option { background: var(--bg2); }
+    table { width: 100%; border-collapse: collapse; }
+    th { font-size: 10px; font-weight: 500; color: var(--text3); padding: 5px 8px; border-bottom: 0.5px solid var(--border); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; cursor: pointer; user-select: none; }
+    th.l { text-align: left; } th.r { text-align: right; }
+    td { padding: 8px 8px; border-bottom: 0.5px solid var(--border); font-size: 12px; font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace; font-variant-numeric: tabular-nums; }
+    td.l { text-align: left; font-family: inherit; } td.r { text-align: right; }
+    .card { background: var(--bg2); border-radius: var(--r); padding: 13px 15px; }
+    .lbl { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px; }
+    .mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+    .ok { color: var(--ok); } .err { color: var(--err); } .dim { color: var(--text2); }
+    .flash { border-radius: var(--r); padding: 9px 13px; font-size: 13px; margin-bottom: 14px; }
+    .flash.ok { background: rgba(48,209,88,.12); color: var(--ok); border: 0.5px solid rgba(48,209,88,.3); }
+    .flash.err { background: rgba(255,69,58,.12); color: var(--err); border: 0.5px solid rgba(255,69,58,.3); }
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 0.5px solid var(--border); padding-bottom: 10px; overflow-x: auto; }
+    .tab { background: transparent; border: 0.5px solid transparent; border-radius: var(--r); padding: 6px 13px; font-size: 13px; color: var(--text2); white-space: nowrap; }
+    .tab.active { background: var(--bg2); border-color: var(--border2); color: var(--text); }
+    .grid4 { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; margin-bottom: 18px; }
+    @media (max-width: 500px) { .grid4 { grid-template-columns: repeat(2,1fr); } }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 0.5px solid var(--border); }
+    .row:last-child { border-bottom: none; }
+    .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .section-title { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+    .badge { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 4px; font-family: inherit; margin-left: 4px; }
+    .badge.etf { background: rgba(10,132,255,.15); color: var(--info); }
+    .badge.cry { background: rgba(255,159,10,.15); color: #ff9f0a; }
+    .confirmed-box { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: var(--rl); padding: 15px; margin-bottom: 14px; }
+    .kv-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; margin-bottom: 14px; }
+    .kv-key { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; }
+    .kv-val { font-size: 13px; font-weight: 500; font-family: 'SF Mono', 'Fira Code', monospace; }
+    .settings-group { margin-bottom: 22px; }
+    .settings-group label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 6px; }
+    .settings-group .hint { font-size: 11px; color: var(--text3); margin-top: 5px; }
+    .status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; }
+    .dot-ok { background: var(--ok); } .dot-off { background: var(--text3); }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .empty { color: var(--text2); font-size: 13px; padding: 3rem 0; text-align: center; }
+  </style>
+</head>
+<body>
+<div id="root"><div style="padding:40px;text-align:center;color:#888">Yükleniyor...</div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
+<script type="text/babel">
+const {useState,useEffect,useCallback} = React;
+
+// ── Constants ────────────────────────────────────────────────────
+const P0 = [
+  {ticker:"SCHD",name:"Schwab Dividend ETF",     type:"FUND",    shares:639,    avgCost:28.76, currency:"USD",broker:"Akbank"},
+  {ticker:"SPY", name:"SPDR S&P 500 ETF",        type:"FUND",    shares:60,     avgCost:569.03,currency:"USD",broker:"QNB"},
+  {ticker:"QQQ", name:"Invesco QQQ ETF",          type:"FUND",    shares:37,     avgCost:458.62,currency:"USD",broker:"Akbank"},
+  {ticker:"MCHI",name:"iShares MSCI China ETF",  type:"FUND",    shares:65,     avgCost:59.24, currency:"USD",broker:"Akbank"},
+  {ticker:"VT",  name:"Vanguard Total World ETF",type:"FUND",    shares:35,     avgCost:121.26,currency:"USD",broker:"Akbank"},
+  {ticker:"NVDA",name:"NVIDIA Corp",             type:"US_STOCK",shares:45,     avgCost:33.49, currency:"USD",broker:"Midas"},
+  {ticker:"SOFI",name:"SoFi Technologies",       type:"US_STOCK",shares:253,    avgCost:9.71,  currency:"USD",broker:"Midas"},
+  {ticker:"GOOGL",name:"Alphabet Inc",           type:"US_STOCK",shares:8,      avgCost:120.81,currency:"USD",broker:"Midas"},
+  {ticker:"META",name:"Meta Platforms",          type:"US_STOCK",shares:1,      avgCost:667.95,currency:"USD",broker:"Akbank"},
+  {ticker:"TSLA",name:"Tesla Inc",               type:"US_STOCK",shares:4,      avgCost:235.22,currency:"USD",broker:"Midas"},
+  {ticker:"KO",  name:"Coca-Cola",               type:"US_STOCK",shares:14,     avgCost:60.51, currency:"USD",broker:"QNB"},
+  {ticker:"UBER",name:"Uber Technologies",       type:"US_STOCK",shares:18,     avgCost:73.39, currency:"USD",broker:"QNB"},
+  {ticker:"MNSO",name:"MINISO Group",            type:"US_STOCK",shares:27,     avgCost:17.53, currency:"USD",broker:"Akbank"},
+  {ticker:"AEVA",name:"Aeva Technologies",       type:"US_STOCK",shares:6,      avgCost:45.50, currency:"USD",broker:"Midas"},
+  {ticker:"PYPL",name:"PayPal Holdings",         type:"US_STOCK",shares:3,      avgCost:144.54,currency:"USD",broker:"Midas"},
+  {ticker:"SKLZ",name:"Skillz Inc",              type:"US_STOCK",shares:15,     avgCost:17.79, currency:"USD",broker:"QNB"},
+  {ticker:"NNOX",name:"Nano-X Imaging",          type:"US_STOCK",shares:16,     avgCost:33.66, currency:"USD",broker:"QNB"},
+  {ticker:"BTC", name:"Bitcoin",                 type:"CRYPTO",  shares:0.01033,avgCost:3142000,currency:"TRY",broker:"DGA"},
+];
+const PRC0 = {SCHD:31.01,SPY:711.21,QQQ:655.11,MCHI:58.30,VT:150.10,SOFI:19.06,NVDA:202.50,GOOGL:339.32,UBER:75.58,META:674.72,KO:74.63,TSLA:387.51,MNSO:14.98,PYPL:51.22,AEVA:16.32,SKLZ:3.68,NNOX:2.00};
+const TLBL = {US_STOCK:"Hisse",FUND:"ETF/Fon",CRYPTO:"Kripto",BIST:"BIST",GOLD:"Altın",FX:"Döviz"};
+
+// ── Helpers ───────────────────────────────────────────────────────
+const LS = {
+  get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
+  set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+};
+const uid  = ()=>Math.random().toString(36).slice(2,9);
+const fmt  = (n,d=2)=>n==null?"—":n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtD = n=>n==null?"—":(n>=0?"+$":"-$")+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtP = n=>n==null?"—":(n>=0?"+":"")+n.toFixed(1)+"%";
+const pc   = n=>n==null?"":n>=0?" ok":" err";
+const sleep= ms=>new Promise(r=>setTimeout(r,ms));
+const today= ()=>new Date().toISOString().split("T")[0];
+
+// ── App ───────────────────────────────────────────────────────────
+function App() {
+  const [tab,  setTab]  = useState("dashboard");
+  const [pos,  setPos_] = useState(()=>LS.get("il_pos",P0));
+  const [prc,  setPrc_] = useState(()=>{const p=LS.get("il_prc",null);return p?p.p:PRC0;});
+  const [pdate,setPd_]  = useState(()=>{const p=LS.get("il_prc",null);return p?p.d:"2026-04-22";});
+  const [txs,  setTxs_] = useState(()=>LS.get("il_txs",[]));
+  const [cfg,  setCfg_] = useState(()=>LS.get("il_cfg",{webhookUrl:"",massiveKey:"",anthropicKey:""}));
+  const [sort, setSort] = useState({by:"plPct",dir:"asc"});
+  const [input,setInput]= useState("");
+  const [parsed,setParsed]=useState(null);
+  const [busy, setBusy] = useState({parse:false,price:false,sync:false});
+  const [pprog,setPprog]= useState("");
+  const [perr, setPerr] = useState("");
+  const [flash,setFlash]= useState(null);
+
+  const savePos = p=>{setPos_(p);LS.set("il_pos",p);};
+  const saveTxs = t=>{setTxs_(t);LS.set("il_txs",t);};
+  const saveCfg = c=>{setCfg_(c);LS.set("il_cfg",c);};
+  const savePrc = (p,d)=>{setPrc_(p);setPd_(d);LS.set("il_prc",{p,d});};
+
+  const flash_ = (msg,type="ok")=>{setFlash({msg,type});setTimeout(()=>setFlash(null),3500);};
+
+  const postHook = async(action,data)=>{
+    if(!cfg.webhookUrl)return;
+    try{await fetch(cfg.webhookUrl,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,data})});}
+    catch(e){console.warn("Webhook:",e);}
+  };
+
+  // derived
+  const usd = pos.filter(p=>p.currency==="USD").map(p=>{
+    const price=prc[p.ticker],cost=p.shares*p.avgCost;
+    const mv=price!=null?p.shares*price:null,pl=mv!=null?mv-cost:null;
+    return {...p,price,cost,mv,pl,plPct:pl!=null?(pl/cost)*100:null};
+  });
+  const tC=usd.reduce((a,p)=>a+p.cost,0);
+  const tM=usd.reduce((a,p)=>a+(p.mv??p.cost),0);
+  const tP=tM-tC, tPct=(tP/tC)*100;
+  const byT={};usd.forEach(p=>{byT[p.type]=(byT[p.type]||0)+(p.mv??p.cost);});
+  const sorted=[...usd].sort((a,b)=>{let va=a[sort.by]??0,vb=b[sort.by]??0;return sort.dir==="asc"?va-vb:vb-va;});
+  const tsort=k=>{setSort(s=>({by:k,dir:s.by===k&&s.dir==="asc"?"desc":"asc"}));};
+  const top4=fn=>[...usd].filter(p=>p.plPct!=null).sort(fn).slice(0,4);
+
+  // AI parse
+  const parseAI = async()=>{
+    if(!input.trim())return;
+    if(!cfg.anthropicKey){setPerr("Ayarlar > Anthropic API Key gir.");return;}
+    setBusy(b=>({...b,parse:true}));setPerr("");setParsed(null);
+    try{
+      const r=await fetch("https://api.anthropic.com/v1/messages",{
+        method:"POST",
+        headers:{"Content-Type":"application/json","x-api-key":cfg.anthropicKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+        body:JSON.stringify({model:"claude-opus-4-5",max_tokens:600,
+          system:`Yatırım işlemi parser. SADECE JSON döndür, başka hiçbir şey yok.\n{"date":"YYYY-MM-DD","ticker":"","name":"","asset_type":"US_STOCK|FUND|CRYPTO|BIST|GOLD|FX","way":"BUY|SELL","shares":0,"price":0,"currency":"USD|TRY|EUR","broker":"","commission":0,"exchange":"","notes":""}\nBugün:${today()}. Tarih yoksa bugün. Komisyon yoksa 0.`,
+          messages:[{role:"user",content:input}]
+        })
+      });
+      const d=await r.json();
+      if(d.error)throw new Error(d.error.message);
+      setParsed(JSON.parse(d.content[0].text.replace(/```json|```/g,"").trim()));
+    }catch(e){setPerr("Parse hatası: "+e.message);}
+    finally{setBusy(b=>({...b,parse:false}));}
+  };
+
+  const confirmTx = async()=>{
+    if(!parsed)return;
+    const tx={...parsed,id:uid(),savedAt:new Date().toISOString()};
+    saveTxs([tx,...txs]);
+    const p=[...pos];const idx=p.findIndex(x=>x.ticker===tx.ticker);
+    if(tx.way==="BUY"){
+      if(idx>=0){const ot=p[idx].shares*p[idx].avgCost,nt=tx.shares*tx.price,ns=p[idx].shares+tx.shares;p[idx]={...p[idx],shares:ns,avgCost:(ot+nt)/ns};}
+      else p.push({ticker:tx.ticker,name:tx.name,type:tx.asset_type,shares:tx.shares,avgCost:tx.price,currency:tx.currency,broker:tx.broker});
+    }else if(tx.way==="SELL"&&idx>=0){const ns=p[idx].shares-tx.shares;if(ns<=0)p.splice(idx,1);else p[idx]={...p[idx],shares:ns};}
+    savePos(p);await postHook("add_transaction",tx);
+    setParsed(null);setInput("");
+    flash_(cfg.webhookUrl?"Kaydedildi + Sheets'e gönderildi ✓":"Kaydedildi ✓");setTab("dashboard");
+  };
+
+  // fetch prices
+  const fetchPrices = async()=>{
+    if(!cfg.massiveKey){flash_("Ayarlar > Massive API Key gir.","err");return;}
+    setBusy(b=>({...b,price:true}));
+    const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
+    const d1=new Date(Date.now()-86400000).toISOString().split("T")[0];
+    const np={...prc};let cnt=0;
+    for(let i=0;i<tickers.length;i++){
+      const t=tickers[i];setPprog(`${t} (${i+1}/${tickers.length})`);
+      try{
+        const r=await fetch(`https://api.massive.com/v1/open-close/${t}/${d1}?apiKey=${cfg.massiveKey}`);
+        if(r.ok){const csv=await r.text();const row=csv.split("\n")[1];if(row){const c=row.split(",");if(c.length>=5){np[t]=parseFloat(c[4]);cnt++;}}}
+      }catch(e){}
+      if(i<tickers.length-1)await sleep(7500);
+    }
+    savePrc(np,d1);setBusy(b=>({...b,price:false}));setPprog("");
+    flash_(`${cnt}/${tickers.length} fiyat güncellendi (${d1})`);
+  };
+
+  const syncSheets=async()=>{
+    if(!cfg.webhookUrl){flash_("Ayarlar > Webhook URL gir.","err");return;}
+    setBusy(b=>({...b,sync:true}));await postHook("sync_positions",pos);
+    setBusy(b=>({...b,sync:false}));flash_("Sheets'e senkronize edildi ✓");
+  };
+
+  const dlCSV=(rows,hdr,name)=>{const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent([hdr,...rows].join("\n"));a.download=name;a.click();};
+
+  const TABS=[["dashboard","Dashboard"],["positions","Pozisyonlar"],["history","İşlemler"],["add","+ Ekle"],["settings","Ayarlar ⚙"]];
+
+  return (
+    <div>
+      <h1>Investment Ledger</h1>
+      <div className="sub">Kişisel yatırım takibi</div>
+
+      <div className="tabs">
+        {TABS.map(([id,lbl])=>(
+          <button key={id} onClick={()=>setTab(id)} className={"tab"+(tab===id?" active":"")}>{lbl}</button>
+        ))}
+      </div>
+
+      {flash&&<div className={"flash "+flash.type}>{flash.msg}</div>}
+
+      {/* ── DASHBOARD ── */}
+      {tab==="dashboard"&&<div>
+        <div className="grid4">
+          {[{l:"Maliyet",v:"$"+fmt(tC)},{l:"Piyasa Değeri",v:"$"+fmt(tM)},{l:"P&L",v:fmtD(tP),c:pc(tP)},{l:"P&L %",v:fmtP(tPct),c:pc(tPct)}].map(x=>(
+            <div key={x.l} className="card"><div className="lbl">{x.l}</div><div className={"mono "+(x.c||"")} style={{fontSize:16,fontWeight:600}}>{x.v}</div></div>
+          ))}
+        </div>
+
+        <div className="section-title">Varlık Dağılımı</div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
+          {Object.entries(byT).sort((a,b)=>b[1]-a[1]).map(([t,v])=>(
+            <div key={t} className="card" style={{flex:1,minWidth:70}}>
+              <div className="lbl">{TLBL[t]||t}</div>
+              <div className="mono" style={{fontSize:13,fontWeight:600}}>${fmt(v,0)}</div>
+              <div className="dim" style={{fontSize:10}}>{(v/tM*100).toFixed(1)}%</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid2">
+          {[["En İyi",top4((a,b)=>b.plPct-a.plPct),"ok"],["En Kötü",top4((a,b)=>a.plPct-b.plPct),"err"]].map(([t,l,c])=>(
+            <div key={t}><div className="section-title">{t}</div>
+              {l.map(p=><div key={p.ticker} className="row"><span className="mono" style={{fontWeight:600}}>{p.ticker}</span><span className={"mono "+c}>{fmtP(p.plPct)}</span></div>)}
+            </div>
+          ))}
+        </div>
+
+        <div style={{fontSize:11,color:"var(--text2)",marginTop:8,display:"flex",justifyContent:"space-between"}}>
+          <span>Fiyat: {pdate} · {txs.length} işlem · BTC hariç</span>
+          {cfg.webhookUrl&&<span className="ok">● Sheets</span>}
+        </div>
+      </div>}
+
+      {/* ── POSITIONS ── */}
+      {tab==="positions"&&<div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <span className="dim" style={{fontSize:12}}>{pos.length} pozisyon</span>
+          <div className="btn-row">
+            <button onClick={syncSheets} disabled={busy.sync||!cfg.webhookUrl} style={{opacity:!cfg.webhookUrl?.4:1}}>{busy.sync?"Sync...":"Sheets ↗"}</button>
+            <button onClick={()=>dlCSV(pos.map(p=>`${p.ticker},${p.name},${p.type},${p.shares},${p.avgCost},${p.currency},${p.broker}`),"Ticker,Name,Type,Shares,AvgCost,Currency,Broker","positions.csv")}>CSV ↗</button>
+          </div>
+        </div>
+        <div className="tbl-wrap">
+          <table>
+            <thead><tr>
+              {[["ticker","Ticker","l"],["name","Şirket","l"],["shares","Adet","r"],["avgCost","Maliyet","r"],["price","Fiyat","r"],["mv","Değer","r"],["pl","P&L","r"],["plPct","P&L%","r"]].map(([k,l,a])=>(
+                <th key={k} onClick={()=>tsort(k)} className={a}>{l}{sort.by===k?(sort.dir==="asc"?" ↑":" ↓"):""}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {sorted.map(p=>(
+                <tr key={p.ticker}>
+                  <td className="l" style={{fontWeight:700}}>{p.ticker}{p.type==="FUND"&&<span className="badge etf">ETF</span>}{p.type==="CRYPTO"&&<span className="badge cry">🔸</span>}</td>
+                  <td className="l dim" style={{fontSize:11,maxWidth:90,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</td>
+                  <td className="r">{Number.isInteger(p.shares)?p.shares:p.shares.toFixed(4)}</td>
+                  <td className="r">${fmt(p.avgCost)}</td>
+                  <td className="r">{p.price?"$"+fmt(p.price):"—"}</td>
+                  <td className="r">{p.mv?"$"+fmt(p.mv,0):"—"}</td>
+                  <td className={"r"+pc(p.pl)}>{fmtD(p.pl)}</td>
+                  <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>}
+
+      {/* ── HISTORY ── */}
+      {tab==="history"&&<div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <span className="dim" style={{fontSize:12}}>{txs.length} işlem</span>
+          {txs.length>0&&<button onClick={()=>dlCSV(txs.map(t=>`${t.date},${t.ticker},${t.name||""},${t.asset_type||""},${t.way},${t.shares},${t.price},${t.currency||"USD"},${t.broker||""},${t.commission||0}`),"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Broker,Commission","transactions.csv")}>CSV ↗</button>}
+        </div>
+        {txs.length===0
+          ?<div className="empty">Henüz işlem yok — "+ Ekle" ile başla.</div>
+          :<div className="tbl-wrap">
+            <table>
+              <thead><tr>
+                {[["Tarih","l"],["Ticker","l"],["İşlem","l"],["Adet","r"],["Fiyat","r"],["Toplam","r"],["Broker","l"]].map(([l,a])=><th key={l} className={a}>{l}</th>)}
+              </tr></thead>
+              <tbody>{txs.map(t=>(
+                <tr key={t.id}>
+                  <td className="l dim" style={{fontSize:11}}>{t.date}</td>
+                  <td className="l" style={{fontWeight:700}}>{t.ticker}</td>
+                  <td className={"l "+(t.way==="BUY"?"ok":"err")} style={{fontSize:11}}>{t.way==="BUY"?"Alış":"Satış"}</td>
+                  <td className="r">{t.shares}</td>
+                  <td className="r">{t.currency==="TRY"?"₺":"$"}{fmt(t.price)}</td>
+                  <td className="r">{t.currency==="TRY"?"₺":"$"}{fmt(t.shares*t.price,0)}</td>
+                  <td className="l dim" style={{fontSize:11}}>{t.broker||"—"}</td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        }
+      </div>}
+
+      {/* ── ADD ── */}
+      {tab==="add"&&<div>
+        <div className="section-title" style={{marginBottom:8}}>Doğal dilde yaz — AI parse edecek</div>
+        <textarea value={input} onChange={e=>setInput(e.target.value)} rows={4}
+          placeholder={"\"NVDA 5 adet $210 Akbank bugün\"\n\"SPY 2 lot sattım $715 QNB komisyon $3\"\n\"BTC 0.001 adet 95000 TRY Binance\"\n\"THYAO 100 adet 350 TL BIST Akbank\""}
+          style={{marginBottom:10,lineHeight:1.6,resize:"vertical"}}
+        />
+        <button onClick={parseAI} disabled={busy.parse||!input.trim()} className="primary">{busy.parse?"Parse ediliyor...":"AI ile Parse Et"}</button>
+        {!cfg.anthropicKey&&<div className="dim" style={{fontSize:11,marginTop:6}}>⚠ Ayarlar'da Anthropic API Key gerekli</div>}
+
+        {perr&&<div className="flash err" style={{marginTop:12}}>{perr}</div>}
+
+        {parsed&&<div className="confirmed-box" style={{marginTop:16}}>
+          <div className="lbl" style={{marginBottom:12}}>Parse sonucu — doğrula</div>
+          <div className="kv-grid">
+            {[["Tarih",parsed.date],["Ticker",parsed.ticker],["Şirket",parsed.name],["Tür",TLBL[parsed.asset_type]||parsed.asset_type],["İşlem",parsed.way==="BUY"?"Alış":"Satış"],["Adet",parsed.shares],["Fiyat",(parsed.currency==="TRY"?"₺":"$")+fmt(parsed.price)],["Toplam",(parsed.currency==="TRY"?"₺":"$")+fmt(parsed.shares*parsed.price,0)],["Broker",parsed.broker||"—"],["Komisyon",parsed.commission?"$"+parsed.commission:"—"]].map(([k,v])=>(
+              <div key={k}><div className="kv-key">{k}</div><div className="kv-val">{v}</div></div>
+            ))}
+          </div>
+          {cfg.webhookUrl&&<div className="ok" style={{fontSize:11,marginBottom:10}}>● Sheets'e otomatik gönderilecek</div>}
+          <div className="btn-row">
+            <button onClick={confirmTx} className="primary">Kaydet</button>
+            <button onClick={()=>setParsed(null)}>İptal</button>
+          </div>
+        </div>}
+      </div>}
+
+      {/* ── SETTINGS ── */}
+      {tab==="settings"&&<div>
+        <div className="settings-group">
+          <label>Anthropic API Key <span className="dim">(AI parsing için)</span></label>
+          <input type="password" value={cfg.anthropicKey} onChange={e=>saveCfg({...cfg,anthropicKey:e.target.value})} placeholder="sk-ant-..."/>
+          <div className="hint">console.anthropic.com'dan alabilirsin. Tarayıcında saklanır.</div>
+        </div>
+        <div className="settings-group">
+          <label>Massive API Key <span className="dim">(fiyat güncellemesi için)</span></label>
+          <input type="password" value={cfg.massiveKey} onChange={e=>saveCfg({...cfg,massiveKey:e.target.value})} placeholder="massive_..."/>
+        </div>
+        <div className="settings-group">
+          <label>Google Sheets Webhook URL</label>
+          <input type="text" value={cfg.webhookUrl} onChange={e=>saveCfg({...cfg,webhookUrl:e.target.value})} placeholder="https://script.google.com/macros/s/..."/>
+          <div className="hint">Apps Script web app URL'i — Claude'dan InvestmentLedger_AppScript.gs dosyasını indir, Sheets'e yapıştır.</div>
+        </div>
+
+        <div className="settings-group">
+          <label>Fiyat Güncelle <span className="dim">(son: {pdate})</span></label>
+          {busy.price
+            ?<div className="dim mono" style={{fontSize:13}}>Çekiliyor: {pprog}</div>
+            :<div className="btn-row">
+              <button onClick={fetchPrices} disabled={!cfg.massiveKey} style={{opacity:!cfg.massiveKey?.4:1}}>Tüm Fiyatları Güncelle</button>
+            </div>
+          }
+          <div className="hint">Rate limit: ~2 dakika (17 ticker, 8 istek/dk)</div>
+        </div>
+
+        <div style={{borderTop:"0.5px solid var(--border)",paddingTop:16}}>
+          <div className="section-title">Sistem Durumu</div>
+          {[
+            [!!cfg.anthropicKey,"Anthropic API",cfg.anthropicKey?"Tanımlı":"Eksik"],
+            [!!cfg.massiveKey,"Massive API",cfg.massiveKey?"Tanımlı":"Eksik"],
+            [!!cfg.webhookUrl,"Google Sheets",cfg.webhookUrl?"Bağlı":"Bağlı değil"],
+            [true,"Pozisyonlar",pos.length+" açık"],
+            [true,"İşlemler",txs.length+" kayıtlı"],
+          ].map(([ok,l,v])=>(
+            <div key={l} className="row">
+              <span style={{fontSize:13}}><span className={"status-dot "+(ok?"dot-ok":"dot-off")}></span>{l}</span>
+              <span className={"dim"+(ok?"":" err")} style={{fontSize:12}}>{v}</span>
+            </div>
+          ))}
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
