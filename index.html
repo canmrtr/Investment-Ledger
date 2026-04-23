@@ -341,7 +341,7 @@ function HistoryTab({txs,user,loadData,flash_,mask,hideAmts}){
 
 // ── ManuelPosForm ────────────────────────────────────────────────
 function ManuelPosForm({session,user,pos,loadData,flash_}){
-  const E={ticker:"",name:"",type:"US_STOCK",shares:"",avgCost:"",currency:"USD",broker:""};
+  const E={ticker:"",name:"",type:"US_STOCK",shares:"",avgCost:"",currency:"USD",broker:"",date:today()};
   const [form,setForm]=useState(E);
   const [curPrice,setCurPrice]=useState(null);
   const [fetchP,setFetchP]=useState(false);
@@ -349,14 +349,23 @@ function ManuelPosForm({session,user,pos,loadData,flash_}){
   const [editTk,setEditTk]=useState(null);
   const set=f=>setForm(p=>({...p,...f}));
 
-  const fetchPrice=async(tk)=>{
-    if(!tk)return;
+  const NAMES={SCHD:"Schwab US Dividend ETF",SPY:"SPDR S&P 500 ETF",QQQ:"Invesco QQQ Trust",MCHI:"iShares MSCI China ETF",VT:"Vanguard Total World ETF",NVDA:"NVIDIA Corp",SOFI:"SoFi Technologies",GOOGL:"Alphabet Inc",META:"Meta Platforms",KO:"Coca-Cola Co",UBER:"Uber Technologies",MNSO:"MINISO Group",AEVA:"Aeva Technologies",PYPL:"PayPal Holdings",SKLZ:"Skillz Inc",NNOX:"Nano-X Imaging",TSLA:"Tesla Inc",AAPL:"Apple Inc",MSFT:"Microsoft Corp",AMZN:"Amazon.com",BTC:"Bitcoin"};
+
+  const fetchPrice=async(tk,date)=>{
+    const upper=(tk||form.ticker).toUpperCase();
+    const useDate=date||form.date||today();
+    if(!upper)return;
+    if(NAMES[upper])set({name:NAMES[upper]});
     setFetchP(true);setCurPrice(null);
     try{
-      const r=await edgeCall("fetch-prices",{tickers:[tk.toUpperCase()],mode:"price"});
+      const r=await edgeCall("fetch-prices",{ticker:upper,mode:"price",date:useDate});
       const d=await r.json();
-      const p=d.results&&d.results[tk.toUpperCase()];
-      if(p&&p.price)setCurPrice(p.price);
+      if(d.result?.price){
+        const p=d.result.price;
+        setCurPrice(p);
+        // Tarihin fiyatını otomatik maliyet olarak doldur
+        set({avgCost:p.toFixed(2)});
+      }
     }catch(e){}
     setFetchP(false);
   };
@@ -394,17 +403,24 @@ function ManuelPosForm({session,user,pos,loadData,flash_}){
         <div className="lbl" style={{marginBottom:12}}>{editTk?`${editTk} — Düzenle`:"Yeni Pozisyon Ekle"}</div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
           <div>
+            <div className="kk" style={{marginBottom:4}}>Tarih</div>
+            <input style={finp} type="date" value={form.date}
+              onChange={e=>{set({date:e.target.value});setCurPrice(null);}}
+              max={today()}/>
+          </div>
+          <div>
             <div className="kk" style={{marginBottom:4}}>Ticker *</div>
             <div style={{display:"flex",gap:6}}>
               <input style={{...finp,textTransform:"uppercase"}} value={form.ticker}
-                onChange={e=>set({ticker:e.target.value.toUpperCase()})}
+                onChange={e=>{set({ticker:e.target.value.toUpperCase(),name:"",avgCost:""});setCurPrice(null);}}
                 onBlur={e=>e.target.value&&fetchPrice(e.target.value)}
                 placeholder="AAPL" disabled={!!editTk}/>
-              <button style={{whiteSpace:"nowrap",fontSize:12,padding:"7px 10px"}} onClick={()=>fetchPrice(form.ticker)} disabled={fetchP||!form.ticker}>
+              <button style={{whiteSpace:"nowrap",fontSize:12,padding:"7px 10px"}}
+                onClick={()=>fetchPrice()} disabled={fetchP||!form.ticker}>
                 {fetchP?<div className="spin" style={{width:12,height:12}}></div>:"↻"}
               </button>
             </div>
-            {curPrice&&<div style={{fontSize:11,color:"var(--ok)",marginTop:4}}>Güncel: ${fmt(curPrice)}</div>}
+            {curPrice&&<div style={{fontSize:11,color:"var(--ok)",marginTop:4}}>{form.date} fiyatı: ${fmt(curPrice)}</div>}
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Şirket Adı</div>
