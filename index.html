@@ -728,6 +728,7 @@ function AddTab({session,user,pos,loadData,flash_}){
 function App({session}){
   const user=session.user;
   const [tab,setTab]=useState("dashboard");
+  const [period,setPeriod]=useState("max"); // selected period on dashboard
   const [pos,setPos]=useState([]);
   const [txs,setTxs]=useState([]);
   const [prc,setPrc_]=useState(()=>{const p=LS.get("il_prc",null);return p?p.p:{};});
@@ -763,8 +764,7 @@ function App({session}){
     const mv=price!=null?p.shares*price:null,pl=mv!=null?mv-cost:null;
     const h=hist[p.ticker]||null;
     return{...p,price,cost,mv,pl,plPct:pl!=null?(pl/cost)*100:null,d1:h?.d1??null,w1:h?.w1??null,m1:h?.m1??null,y1:h?.y1??null};
-  });
-  const tC=usd.reduce((a,p)=>a+p.cost,0);
+  });  const tC=usd.reduce((a,p)=>a+p.cost,0);
   const tM=usd.reduce((a,p)=>a+(p.mv??p.cost),0);
   const tP=tM-tC,tPct=(tP/tC)*100;
   const byT={};usd.forEach(p=>{byT[p.type]=(byT[p.type]||0)+(p.mv??p.cost);});
@@ -800,7 +800,15 @@ function App({session}){
       if(d.results){
         const nh={...hist};const np={...prc};
         Object.entries(d.results).forEach(([t,v])=>{
-          if(v.price){nh[t]={last:v.price,d1:v.d1,w1:v.w1,m1:v.m1,y1:v.y1};np[t]=v.price;}
+          if(v.price){
+            nh[t]={
+              last:v.price,
+              d1:v.d1,w1:v.w1,m1:v.m1,y1:v.y1,
+              p_d1:v.p_d1,p_w1:v.p_w1,p_m1:v.p_m1,
+              p_m3:v.p_m3,p_m6:v.p_m6,p_y1:v.p_y1
+            };
+            np[t]=v.price;
+          }
         });
         saveHist(nh);savePrc(np,d.date||dago(1));
         flash_(`${Object.keys(d.results).length} tarihi veri yüklendi`);
@@ -834,43 +842,98 @@ function App({session}){
       {flash&&<div className={"flash "+flash.t}>{flash.msg}</div>}
 
       {/* DASHBOARD */}
-      {tab==="dashboard"&&(
-        <div>
-          <div className="g4">
-            {[{l:"Maliyet",v:mask("$"+fmt(tC))},{l:"Piyasa Değeri",v:mask("$"+fmt(tM))},{l:"P&L",v:hide?fmtP(tPct):fmtD(tP),c:pc(tP)},{l:"P&L %",v:fmtP(tPct),c:pc(tPct)}].map(x=>(
-              <div key={x.l} className="card"><div className="lbl">{x.l}</div><div className={"mono"+(x.c||"")} style={{fontSize:16,fontWeight:600}}>{x.v}</div></div>
-            ))}
-          </div>
-          {hasH&&(
+      {tab==="dashboard"&&(()=>{
+        // Period performance calculation
+        const PERIODS=[
+          {key:"d1",  lbl:"1G",  priceKey:"p_d1"},
+          {key:"w1",  lbl:"1H",  priceKey:"p_w1"},
+          {key:"m1",  lbl:"1A",  priceKey:"p_m1"},
+          {key:"m3",  lbl:"3A",  priceKey:"p_m3"},
+          {key:"m6",  lbl:"6A",  priceKey:"p_m6"},
+          {key:"y1",  lbl:"1Y",  priceKey:"p_y1"},
+          {key:"max", lbl:"Max", priceKey:null},
+        ];
+
+        const periodPerf=(key,priceKey)=>{
+          if(key==="max")return{pl:tP,pct:tPct};
+          const valid=usd.filter(p=>p.mv!=null&&hist[p.ticker]?.[priceKey]!=null);
+          if(!valid.length)return null;
+          const now=valid.reduce((a,p)=>a+p.mv,0);
+          const past=valid.reduce((a,p)=>a+p.shares*hist[p.ticker][priceKey],0);
+          if(past<=0)return null;
+          return{pl:now-past,pct:(now/past-1)*100};
+        };
+
+        const sel=PERIODS.find(p=>p.key===period)||PERIODS[6];
+        const perf=periodPerf(sel.key,sel.priceKey);
+
+        return(
+          <div>
+            {/* Summary cards */}
+            <div className="g4">
+              {[{l:"Maliyet",v:mask("$"+fmt(tC))},{l:"Piyasa Değeri",v:mask("$"+fmt(tM))},
+                {l:"P&L ("+sel.lbl+")",v:perf?mask(fmtD(perf.pl)):"—",c:perf?pc(perf.pl):""},
+                {l:"P&L % ("+sel.lbl+")",v:perf?fmtP(perf.pct):"—",c:perf?pc(perf.pct):""}
+              ].map(x=>(
+                <div key={x.l} className="card"><div className="lbl">{x.l}</div><div className={"mono"+(x.c||"")} style={{fontSize:16,fontWeight:600}}>{x.v}</div></div>
+              ))}
+            </div>
+
+            {/* Period selector */}
+            <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+              {PERIODS.map(p=>{
+                const available=p.key==="max"||(hasH&&hist[usd[0]?.ticker]?.[p.priceKey]!=null);
+                return(
+                  <button key={p.key}
+                    onClick={()=>setPeriod(p.key)}
+                    disabled={!available&&p.key!=="max"}
+                    style={{
+                      flex:1,minWidth:40,fontSize:12,padding:"5px 8px",
+                      background:period===p.key?"var(--info)":"var(--bg2)",
+                      borderColor:period===p.key?"var(--info)":"var(--border2)",
+                      color:period===p.key?"#fff":available?"var(--text)":"var(--text3)",
+                    }}>{p.lbl}</button>
+                );
+              })}
+            </div>
+
+            {/* Period performance bar (if hist loaded) */}
+            {hasH&&perf&&(
+              <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <span className="dim" style={{fontSize:12}}>{sel.lbl} performans</span>
+                  <div style={{display:"flex",gap:16,alignItems:"center"}}>
+                    {!hide&&<span className={"mono "+(perf.pl>=0?"ok":"err")} style={{fontSize:15,fontWeight:600}}>{fmtD(perf.pl)}</span>}
+                    <span className={"mono "+(perf.pct>=0?"ok":"err")} style={{fontSize:18,fontWeight:700}}>{fmtP(perf.pct)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Varlık dağılımı */}
             <div style={{marginBottom:16}}>
-              <div className="stitle">Portföy Performansı</div>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                {[["1G",pPerf("d1")],["1H",pPerf("w1")],["1A",pPerf("m1")],["1Y",pPerf("y1")]].map(([l,v])=>(
-                  <div key={l} className="pchip"><div className="pchip-lbl">{l}</div><div className={"pchip-val"+(v==null?"":v>=0?" ok":" err")}>{v!=null?fmtP(v):"—"}</div></div>
+              <div className="stitle">Varlık Dağılımı</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {Object.entries(byT).sort((a,b)=>b[1]-a[1]).map(([t,v])=>(
+                  <div key={t} className="card" style={{flex:1,minWidth:70}}>
+                    <div className="lbl">{TL[t]||t}</div>
+                    <div className="mono" style={{fontSize:13,fontWeight:600}}>{mask("$"+fmt(v,0))}</div>
+                    <div className="dim" style={{fontSize:10}}>{(v/tM*100).toFixed(1)}%</div>
+                  </div>
                 ))}
               </div>
             </div>
-          )}
-          <div style={{marginBottom:16}}>
-            <div className="stitle">Varlık Dağılımı</div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {Object.entries(byT).sort((a,b)=>b[1]-a[1]).map(([t,v])=>(
-                <div key={t} className="card" style={{flex:1,minWidth:70}}>
-                  <div className="lbl">{TL[t]||t}</div>
-                  <div className="mono" style={{fontSize:13,fontWeight:600}}>{mask("$"+fmt(v,0))}</div>
-                  <div className="dim" style={{fontSize:10}}>{(v/tM*100).toFixed(1)}%</div>
-                </div>
+
+            {/* En iyi / En kötü */}
+            <div className="g2">
+              {[["En İyi",top4((a,b)=>b.plPct-a.plPct),"ok"],["En Kötü",top4((a,b)=>a.plPct-b.plPct),"err"]].map(([t,l,c])=>(
+                <div key={t}><div className="stitle">{t}</div>{l.map(p=><div key={p.ticker} className="row"><span className="mono" style={{fontWeight:700}}>{p.ticker}</span><span className={"mono "+c}>{fmtP(p.plPct)}</span></div>)}</div>
               ))}
             </div>
+            <div style={{fontSize:11,color:"var(--text2)"}}>{txs.length} işlem · BTC hariç · {usd.length} USD pozisyon{!hasH&&<span style={{marginLeft:8}}>· Tarihi veri için Ayarlar → "Tarihi Veri" butonu</span>}</div>
           </div>
-          <div className="g2">
-            {[["En İyi",top4((a,b)=>b.plPct-a.plPct),"ok"],["En Kötü",top4((a,b)=>a.plPct-b.plPct),"err"]].map(([t,l,c])=>(
-              <div key={t}><div className="stitle">{t}</div>{l.map(p=><div key={p.ticker} className="row"><span className="mono" style={{fontWeight:700}}>{p.ticker}</span><span className={"mono "+c}>{fmtP(p.plPct)}</span></div>)}</div>
-            ))}
-          </div>
-          <div style={{fontSize:11,color:"var(--text2)"}}>{txs.length} işlem · BTC hariç · {usd.length} USD pozisyon</div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* POSITIONS */}
       {tab==="positions"&&(
