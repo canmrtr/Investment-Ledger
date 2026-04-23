@@ -775,46 +775,54 @@ function App({session}){
   const sa=k=>sort.by===k?(sort.dir==="asc"?" ↑":" ↓"):"";
   const top4=fn=>[...usd].filter(p=>p.plPct!=null).sort(fn).slice(0,4);
 
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
   const fetchPrices=async()=>{
-    setBusy(b=>({...b,p:true}));setPprog("Fiyatlar çekiliyor...");
+    setBusy(b=>({...b,p:true}));
     const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
-    try{
-      const r=await edgeCall(session,"fetch-prices",{tickers,mode:"price"});
-      const d=await r.json();
-      if(d.results){
-        const np={...prc};
-        Object.entries(d.results).forEach(([t,v])=>{if(v.price)np[t]=v.price;});
-        savePrc(np,d.date||dago(1));
-        flash_(`${Object.keys(d.results).length} fiyat güncellendi`);
-      }
-    }catch(e){flash_("Hata: "+e.message,"err");}
+    const np={...prc};let cnt=0;
+    for(let i=0;i<tickers.length;i++){
+      const t=tickers[i];
+      setPprog(`${t} (${i+1}/${tickers.length})`);
+      try{
+        const r=await edgeCall(session,"fetch-prices",{ticker:t,mode:"price"});
+        const d=await r.json();
+        if(d.result?.price){np[t]=d.result.price;cnt++;}
+      }catch(e){}
+      if(i<tickers.length-1)await sleep(7500);
+    }
+    savePrc(np,new Date(Date.now()-86400000).toISOString().split("T")[0]);
     setBusy(b=>({...b,p:false}));setPprog("");
+    flash_(`${cnt}/${tickers.length} fiyat güncellendi`);
   };
 
   const fetchHist=async()=>{
-    setBusy(b=>({...b,h:true}));setPprog("Tarihi veri çekiliyor...");
+    setBusy(b=>({...b,h:true}));
     const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
-    try{
-      const r=await edgeCall(session,"fetch-prices",{tickers,mode:"historical"});
-      const d=await r.json();
-      if(d.results){
-        const nh={...hist};const np={...prc};
-        Object.entries(d.results).forEach(([t,v])=>{
-          if(v.price){
-            nh[t]={
-              last:v.price,
-              d1:v.d1,w1:v.w1,m1:v.m1,y1:v.y1,
-              p_d1:v.p_d1,p_w1:v.p_w1,p_m1:v.p_m1,
-              p_m3:v.p_m3,p_m6:v.p_m6,p_y1:v.p_y1
-            };
-            np[t]=v.price;
-          }
-        });
-        saveHist(nh);savePrc(np,d.date||dago(1));
-        flash_(`${Object.keys(d.results).length} tarihi veri yüklendi`);
-      }
-    }catch(e){flash_("Hata: "+e.message,"err");}
+    const nh={...hist};const np={...prc};let cnt=0;
+    for(let i=0;i<tickers.length;i++){
+      const t=tickers[i];
+      setPprog(`${t} tarihi (${i+1}/${tickers.length})`);
+      try{
+        const r=await edgeCall(session,"fetch-prices",{ticker:t,mode:"historical"});
+        const d=await r.json();
+        const v=d.result;
+        if(v?.price){
+          nh[t]={
+            last:v.price,
+            d1:v.d1,w1:v.w1,m1:v.m1,y1:v.y1,
+            p_d1:v.p_d1,p_w1:v.p_w1,p_m1:v.p_m1,
+            p_m3:v.p_m3,p_m6:v.p_m6,p_y1:v.p_y1
+          };
+          np[t]=v.price;cnt++;
+        }
+      }catch(e){}
+      if(i<tickers.length-1)await sleep(7500);
+    }
+    saveHist(nh);
+    savePrc(np,new Date(Date.now()-86400000).toISOString().split("T")[0]);
     setBusy(b=>({...b,h:false}));setPprog("");
+    flash_(`${cnt}/${tickers.length} tarihi veri yüklendi`);
   };
 
   const dlCSV=(rows,hdr,name)=>{const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent([hdr,...rows].join("\n"));a.download=name;a.click();};
@@ -1003,7 +1011,7 @@ function App({session}){
                 <button onClick={fetchPrices}>Güncel Fiyatlar</button>
                 <button onClick={fetchHist}>Tarihi Veri (1G/1H/1A/1Y)</button>
               </div>}
-            <div className="hint">Tarihi veri fiyatı da günceller · ~2 dk</div>
+            <div className="hint">Ticker başına ~8 saniye · 13 ticker ≈ 2 dakika · progress Ayarlar'da görünür</div>
           </div>
           <div className="sg">
             <label>Export</label>
