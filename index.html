@@ -502,7 +502,8 @@ function AddTab({session,user,pos,loadData,flash_}){
     try{
       const r=await edgeCall("parse-transaction",body);
       const d=await r.json();
-      if(d.error)throw new Error(d.error);
+      if(!r.ok||d.error||d.code)throw new Error(d.message||d.error||`HTTP ${r.status}`);
+      if(!d.ticker||!d.date)throw new Error("Geçersiz yanıt — ticker veya tarih eksik");
       setParsed(d);
     }catch(e){setParseErr("Hata: "+e.message);}
     setParsing(false);
