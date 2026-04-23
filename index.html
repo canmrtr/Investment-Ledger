@@ -118,10 +118,13 @@ const pc   = n=>n==null?"":n>=0?" ok":" err";
 const today= ()=>new Date().toISOString().split("T")[0];
 const dago = n=>new Date(Date.now()-n*86400000).toISOString().split("T")[0];
 
-const edgeCall = (session,fn,body)=>fetch(`${SUPA_URL}/functions/v1/${fn}`,{
-  method:"POST",
-  headers:{"Content-Type":"application/json","Authorization":`Bearer ${session.access_token}`},
-  body:JSON.stringify(body)
+const edgeCall = (fn, body) => fetch(`${SUPA_URL}/functions/v1/${fn}`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${SUPA_ANON}`
+  },
+  body: JSON.stringify(body)
 });
 
 // Icons
@@ -350,7 +353,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_}){
     if(!tk)return;
     setFetchP(true);setCurPrice(null);
     try{
-      const r=await edgeCall(session,"fetch-prices",{tickers:[tk.toUpperCase()],mode:"price"});
+      const r=await edgeCall("fetch-prices",{tickers:[tk.toUpperCase()],mode:"price"});
       const d=await r.json();
       const p=d.results&&d.results[tk.toUpperCase()];
       if(p&&p.price)setCurPrice(p.price);
@@ -497,7 +500,7 @@ function AddTab({session,user,pos,loadData,flash_}){
   const callParse=async(body)=>{
     setParsing(true);setParseErr("");setParsed(null);
     try{
-      const r=await edgeCall(session,"parse-transaction",body);
+      const r=await edgeCall("parse-transaction",body);
       const d=await r.json();
       if(d.error)throw new Error(d.error);
       setParsed(d);
@@ -785,7 +788,7 @@ function App({session}){
       const t=tickers[i];
       setPprog(`${t} (${i+1}/${tickers.length})`);
       try{
-        const r=await edgeCall(session,"fetch-prices",{ticker:t,mode:"price"});
+        const r=await edgeCall("fetch-prices",{ticker:t,mode:"price"});
         const d=await r.json();
         if(d.result?.price){np[t]=d.result.price;cnt++;}
       }catch(e){}
@@ -804,7 +807,7 @@ function App({session}){
       const t=tickers[i];
       setPprog(`${t} tarihi (${i+1}/${tickers.length})`);
       try{
-        const r=await edgeCall(session,"fetch-prices",{ticker:t,mode:"historical"});
+        const r=await edgeCall("fetch-prices",{ticker:t,mode:"historical"});
         const d=await r.json();
         const v=d.result;
         if(v?.price){
@@ -1012,7 +1015,7 @@ function App({session}){
                 <button onClick={fetchHist}>Tarihi Veri (1G/1H/1A/1Y)</button>
                 <button onClick={async()=>{
                   try{
-                    const r=await edgeCall(session,"fetch-prices",{ticker:"NVDA",mode:"price"});
+                    const r=await edgeCall("fetch-prices",{ticker:"NVDA",mode:"price"});
                     const txt=await r.text();
                     alert("HTTP "+r.status+"\n\n"+txt.slice(0,600));
                   }catch(e){alert("HATA: "+e.message);}
