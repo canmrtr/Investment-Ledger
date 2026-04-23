@@ -379,13 +379,41 @@ function ManuelPosForm({session,user,pos,loadData,flash_}){
   const savePos=async()=>{
     if(!form.ticker||!form.shares||!form.avgCost)return;
     setSaving(true);
-    const{error}=await sb.from("positions").upsert({
-      user_id:user.id,ticker:form.ticker.toUpperCase(),name:form.name||form.ticker.toUpperCase(),
-      type:form.type,shares:+form.shares,avg_cost:+form.avgCost,
-      currency:form.currency,broker:form.broker||"",updated_at:new Date().toISOString()
+    const tk=form.ticker.toUpperCase();
+    const nm=form.name||tk;
+    const sh=+form.shares;
+    const pr=+form.avgCost;
+
+    // Transaction'a yaz
+    const tx={
+      user_id:user.id,
+      date:form.date||today(),
+      ticker:tk,name:nm,
+      asset_type:form.type,
+      way:"BUY",
+      shares:sh,price:pr,
+      currency:form.currency,
+      total:+(sh*pr).toFixed(4),
+      broker:form.broker||"",
+      commission:0,exchange:"",notes:"Manuel giriş"
+    };
+    const{error:te}=await sb.from("transactions").insert(tx);
+    if(te){flash_(te.message,"err");setSaving(false);return;}
+
+    // Pozisyonu güncelle
+    const ex=pos.find(x=>x.ticker===tk);
+    const ns=(ex?.shares||0)+sh;
+    const na=((ex?.shares||0)*(ex?.avgCost||0)+sh*pr)/ns;
+    await sb.from("positions").upsert({
+      user_id:user.id,ticker:tk,name:nm,type:form.type,
+      shares:+ns.toFixed(6),avg_cost:+na.toFixed(6),
+      currency:form.currency,broker:form.broker||"",
+      updated_at:new Date().toISOString()
     },{onConflict:"user_id,ticker"});
-    if(error)flash_(error.message,"err");
-    else{await loadData();flash_(`${form.ticker.toUpperCase()} kaydedildi ✓`);setEditTk(null);setForm(E);setCurPrice(null);}
+
+    await loadData();
+    flash_(`${tk} işlem geçmişine ve pozisyona eklendi ✓`);
+    setEditTk(null);setForm(E);setCurPrice(null);
     setSaving(false);
   };
 
@@ -849,7 +877,7 @@ function App({session}){
   const expTx=()=>dlCSV(txs.map(t=>`${t.date},${t.ticker},${t.name||""},${t.asset_type||""},${t.way},${t.shares},${t.price},${t.currency||"USD"},${t.total||""},${t.broker||""},${t.commission||0}`),"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Total,Broker,Commission",`txs_${today()}.csv`);
   const expPos=()=>dlCSV(pos.map(p=>`${p.ticker},${p.name},${p.type},${p.shares},${p.avgCost},${p.currency},${p.broker}`),"Ticker,Name,Type,Shares,AvgCost,Currency,Broker",`pos_${today()}.csv`);
 
-  const TABS=[["dashboard","Dashboard"],["positions","Pozisyonlar"],["history","İşlemler"],["add","+ Ekle"],["settings","Ayarlar"]];
+  const TABS=[["dashboard","Dashboard"],["history","İşlemler"],["add","+ Ekle"],["settings","Ayarlar"]];
 
   if(busy.d&&pos.length===0)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",gap:10,color:"#888",fontSize:13}}><div className="spin"></div>Yükleniyor...</div>;
 
@@ -952,63 +980,54 @@ function App({session}){
               </div>
             </div>
 
-            {/* En iyi / En kötü */}
-            <div className="g2">
-              {[["En İyi",top4((a,b)=>b.plPct-a.plPct),"ok"],["En Kötü",top4((a,b)=>a.plPct-b.plPct),"err"]].map(([t,l,c])=>(
-                <div key={t}><div className="stitle">{t}</div>{l.map(p=><div key={p.ticker} className="row"><span className="mono" style={{fontWeight:700}}>{p.ticker}</span><span className={"mono "+c}>{fmtP(p.plPct)}</span></div>)}</div>
-              ))}
+            {/* Pozisyonlar listesi */}
+            <div style={{marginBottom:8}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <div className="stitle">Pozisyonlar</div>
+                <div className="brow">
+                  <button style={{fontSize:11,padding:"3px 9px"}} onClick={loadData} disabled={busy.d}>{busy.d?"...":"Yenile"}</button>
+                  <button style={{fontSize:11,padding:"3px 9px"}} onClick={expPos}>CSV ↗</button>
+                </div>
+              </div>
+              <div className="tbl-wrap">
+                <table>
+                  <thead><tr>
+                    <th className="l" onClick={()=>tsort("ticker")}>Ticker{sa("ticker")}</th>
+                    {!hide&&<th className="r" onClick={()=>tsort("shares")}>Adet{sa("shares")}</th>}
+                    {!hide&&<th className="r" onClick={()=>tsort("avgCost")}>Maliyet{sa("avgCost")}</th>}
+                    {!hide&&<th className="r" onClick={()=>tsort("price")}>Fiyat{sa("price")}</th>}
+                    {!hide&&<th className="r" onClick={()=>tsort("mv")}>Değer{sa("mv")}</th>}
+                    {!hide&&<th className="r" onClick={()=>tsort("pl")}>P&L${sa("pl")}</th>}
+                    <th className="r" onClick={()=>tsort("plPct")}>P&L%{sa("plPct")}</th>
+                    {hasH&&<th className="r" onClick={()=>tsort("d1")}>1G{sa("d1")}</th>}
+                    {hasH&&<th className="r" onClick={()=>tsort("w1")}>1H{sa("w1")}</th>}
+                    {hasH&&<th className="r" onClick={()=>tsort("m1")}>1A{sa("m1")}</th>}
+                    {hasH&&<th className="r" onClick={()=>tsort("y1")}>1Y{sa("y1")}</th>}
+                  </tr></thead>
+                  <tbody>
+                    {sorted.map(p=>(
+                      <tr key={p.ticker}>
+                        <td className="l"><div className="tcell"><span className="tsym">{p.ticker}{p.type==="FUND"&&<span className="badge etf">ETF</span>}{p.type==="CRYPTO"&&<span className="badge cry">₿</span>}</span><span className="tname">{p.name}</span></div></td>
+                        {!hide&&<td className="r">{p.shares%1===0?p.shares:p.shares.toFixed(4)}</td>}
+                        {!hide&&<td className="r">{mask("$"+fmt(p.avgCost))}</td>}
+                        {!hide&&<td className="r">{p.price?mask("$"+fmt(p.price)):"—"}</td>}
+                        {!hide&&<td className="r">{p.mv?mask("$"+fmt(p.mv,0)):"—"}</td>}
+                        {!hide&&<td className={"r"+pc(p.pl)}>{fmtD(p.pl)}</td>}
+                        <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
+                        {hasH&&<td className={"r"+pc(p.d1)}>{fmtP(p.d1)}</td>}
+                        {hasH&&<td className={"r"+pc(p.w1)}>{fmtP(p.w1)}</td>}
+                        {hasH&&<td className={"r"+pc(p.m1)}>{fmtP(p.m1)}</td>}
+                        {hasH&&<td className={"r"+pc(p.y1)}>{fmtP(p.y1)}</td>}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div style={{fontSize:11,color:"var(--text2)"}}>{txs.length} işlem · BTC hariç · {usd.length} USD pozisyon{!hasH&&<span style={{marginLeft:8}}>· Tarihi veri için Ayarlar → "Tarihi Veri" butonu</span>}</div>
+            <div style={{fontSize:11,color:"var(--text2)",marginTop:8}}>{txs.length} işlem · BTC hariç · {usd.length} USD pozisyon{!hasH&&<span style={{marginLeft:8}}>· Tarihi veri için Ayarlar → "Tarihi Veri" butonu</span>}</div>
           </div>
         );
       })()}
-
-      {/* POSITIONS */}
-      {tab==="positions"&&(
-        <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <span className="dim" style={{fontSize:12}}>{pos.length} pozisyon</span>
-            <div className="brow">
-              <button onClick={loadData} disabled={busy.d}>{busy.d?"...":"Yenile"}</button>
-              <button onClick={expPos}>CSV ↗</button>
-            </div>
-          </div>
-          <div className="tbl-wrap">
-            <table>
-              <thead><tr>
-                <th className="l" onClick={()=>tsort("ticker")}>Ticker{sa("ticker")}</th>
-                {!hide&&<th className="r" onClick={()=>tsort("shares")}>Adet{sa("shares")}</th>}
-                {!hide&&<th className="r" onClick={()=>tsort("avgCost")}>Maliyet{sa("avgCost")}</th>}
-                {!hide&&<th className="r" onClick={()=>tsort("price")}>Fiyat{sa("price")}</th>}
-                {!hide&&<th className="r" onClick={()=>tsort("mv")}>Değer{sa("mv")}</th>}
-                {!hide&&<th className="r" onClick={()=>tsort("pl")}>P&L${sa("pl")}</th>}
-                <th className="r" onClick={()=>tsort("plPct")}>P&L%{sa("plPct")}</th>
-                {hasH&&<th className="r" onClick={()=>tsort("d1")}>1G{sa("d1")}</th>}
-                {hasH&&<th className="r" onClick={()=>tsort("w1")}>1H{sa("w1")}</th>}
-                {hasH&&<th className="r" onClick={()=>tsort("m1")}>1A{sa("m1")}</th>}
-                {hasH&&<th className="r" onClick={()=>tsort("y1")}>1Y{sa("y1")}</th>}
-              </tr></thead>
-              <tbody>
-                {sorted.map(p=>(
-                  <tr key={p.ticker}>
-                    <td className="l"><div className="tcell"><span className="tsym">{p.ticker}{p.type==="FUND"&&<span className="badge etf">ETF</span>}{p.type==="CRYPTO"&&<span className="badge cry">₿</span>}</span><span className="tname">{p.name}</span></div></td>
-                    {!hide&&<td className="r">{p.shares%1===0?p.shares:p.shares.toFixed(4)}</td>}
-                    {!hide&&<td className="r">{mask("$"+fmt(p.avgCost))}</td>}
-                    {!hide&&<td className="r">{p.price?mask("$"+fmt(p.price)):"—"}</td>}
-                    {!hide&&<td className="r">{p.mv?mask("$"+fmt(p.mv,0)):"—"}</td>}
-                    {!hide&&<td className={"r"+pc(p.pl)}>{fmtD(p.pl)}</td>}
-                    <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
-                    {hasH&&<td className={"r"+pc(p.d1)}>{fmtP(p.d1)}</td>}
-                    {hasH&&<td className={"r"+pc(p.w1)}>{fmtP(p.w1)}</td>}
-                    {hasH&&<td className={"r"+pc(p.m1)}>{fmtP(p.m1)}</td>}
-                    {hasH&&<td className={"r"+pc(p.y1)}>{fmtP(p.y1)}</td>}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {/* HISTORY */}
       {tab==="history"&&(
