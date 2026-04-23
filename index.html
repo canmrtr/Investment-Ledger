@@ -4,40 +4,29 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Investment Ledger</title>
-  <meta name="description" content="Kişisel yatırım takip uygulaması"/>
-  <meta name="theme-color" content="#111111"/>
+  <meta name="theme-color" content="#111"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Ledger"/>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>"/>
   <style>
-    :root {
-      --bg:#111;--bg2:#1c1c1e;--bg3:#2c2c2e;
-      --border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.18);
-      --text:#f0f0f0;--text2:#8e8e93;--text3:#48484a;
-      --ok:#30d158;--err:#ff453a;--info:#0a84ff;
-      --r:10px;--rl:14px;
-    }
-    @media(prefers-color-scheme:light){
-      :root{--bg:#f2f2f7;--bg2:#fff;--bg3:#e5e5ea;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);--text:#000;--text2:#6c6c70;--text3:#aeaeb2;--ok:#34c759;--err:#ff3b30;--info:#007aff;}
-    }
+    :root{--bg:#111;--bg2:#1c1c1e;--bg3:#2c2c2e;--border:rgba(255,255,255,0.1);--border2:rgba(255,255,255,0.18);--text:#f0f0f0;--text2:#8e8e93;--text3:#48484a;--ok:#30d158;--err:#ff453a;--info:#0a84ff;--warn:#ff9f0a;--r:10px;--rl:14px;}
+    @media(prefers-color-scheme:light){:root{--bg:#f2f2f7;--bg2:#fff;--bg3:#e5e5ea;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);--text:#000;--text2:#6c6c70;--text3:#aeaeb2;--ok:#34c759;--err:#ff3b30;--info:#007aff;--warn:#ff9500;}}
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
     body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;min-height:100vh;}
-    #root{max-width:820px;margin:0 auto;padding:16px 12px 60px;}
-    h1{font-size:22px;font-weight:600;margin-bottom:2px;}
-    .sub{font-size:12px;color:var(--text2);margin-bottom:20px;}
+    #root{max-width:860px;margin:0 auto;padding:16px 12px 60px;}
     button{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);color:var(--text);cursor:pointer;font-family:inherit;padding:7px 14px;font-size:13px;font-weight:500;}
-    button:hover:not(:disabled){opacity:.8;}button:active:not(:disabled){opacity:.6;}
-    button:disabled{opacity:.35;cursor:default;}
+    button:hover:not(:disabled){opacity:.8;}button:active:not(:disabled){opacity:.6;}button:disabled{opacity:.35;cursor:default;}
     button.primary{background:var(--info);border-color:var(--info);color:#fff;}
-    input,textarea,select{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:inherit;padding:9px 11px;font-size:13px;outline:none;width:100%;}
+    button.danger{background:var(--err);border-color:var(--err);color:#fff;}
+    input,textarea{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);color:var(--text);font-family:inherit;padding:9px 11px;font-size:13px;outline:none;width:100%;}
     input:focus,textarea:focus{border-color:var(--info);}
     table{width:100%;border-collapse:collapse;}
-    th{font-size:10px;font-weight:500;color:var(--text3);padding:5px 8px;border-bottom:0.5px solid var(--border);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;cursor:pointer;user-select:none;}
+    th{font-size:10px;font-weight:500;color:var(--text3);padding:5px 7px;border-bottom:0.5px solid var(--border);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;cursor:pointer;user-select:none;}
     th.l{text-align:left;}th.r{text-align:right;}
-    td{padding:8px 8px;border-bottom:0.5px solid var(--border);font-size:12px;font-family:'SF Mono','Fira Code','Consolas',monospace;font-variant-numeric:tabular-nums;}
+    td{padding:7px 7px;border-bottom:0.5px solid var(--border);font-size:12px;font-family:'SF Mono','Fira Code','Consolas',monospace;font-variant-numeric:tabular-nums;}
     td.l{text-align:left;font-family:inherit;}td.r{text-align:right;}
-    .card{background:var(--bg2);border-radius:var(--r);padding:13px 15px;}
+    .card{background:var(--bg2);border-radius:var(--r);padding:12px 14px;}
     .lbl{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
     .mono{font-family:'SF Mono','Fira Code',monospace;}
     .ok{color:var(--ok);}.err{color:var(--err);}.dim{color:var(--text2);}
@@ -47,16 +36,16 @@
     .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:0.5px solid var(--border);padding-bottom:10px;overflow-x:auto;}
     .tab{background:transparent;border:0.5px solid transparent;border-radius:var(--r);padding:6px 13px;font-size:13px;color:var(--text2);white-space:nowrap;}
     .tab.active{background:var(--bg2);border-color:var(--border2);color:var(--text);}
-    .grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:18px;}
-    @media(max-width:500px){.grid4{grid-template-columns:repeat(2,1fr);}}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+    .g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:16px;}
+    .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
+    @media(max-width:500px){.g4{grid-template-columns:repeat(2,1fr);}}
     .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);}
     .row:last-child{border-bottom:none;}
     .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
     .stitle{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
-    .badge{display:inline-block;font-size:9px;padding:1px 5px;border-radius:4px;font-family:inherit;margin-left:4px;}
+    .badge{display:inline-block;font-size:9px;padding:1px 5px;border-radius:4px;font-family:inherit;margin-left:3px;}
     .badge.etf{background:rgba(10,132,255,.15);color:var(--info);}
-    .badge.cry{background:rgba(255,159,10,.15);color:#ff9f0a;}
+    .badge.cry{background:rgba(255,159,10,.15);color:var(--warn);}
     .cbox{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--rl);padding:15px;margin-bottom:14px;}
     .kv{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:14px;}
     .kk{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;}
@@ -68,127 +57,191 @@
     .dot.ok{background:var(--ok);}.dot.off{background:var(--text3);}
     .brow{display:flex;gap:8px;flex-wrap:wrap;}
     .empty{color:var(--text2);font-size:13px;padding:3rem 0;text-align:center;}
-    .loading{display:flex;align-items:center;justify-content:center;padding:3rem;gap:10px;color:var(--text2);font-size:13px;}
-    .spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--info);border-radius:50%;animation:spin .8s linear infinite;}
+    .spinner{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--info);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;}
     @keyframes spin{to{transform:rotate(360deg);}}
+    .mask{color:var(--text3);letter-spacing:2px;}
+    .ticker-cell{display:flex;flex-direction:column;gap:1px;}
+    .ticker-sym{font-weight:700;font-size:12px;font-family:'SF Mono','Fira Code',monospace;}
+    .ticker-name{font-size:10px;color:var(--text2);max-width:85px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .perf-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+    .perf-chip{background:var(--bg2);border-radius:8px;padding:7px 10px;text-align:center;flex:1;min-width:60px;}
+    .perf-lbl{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;}
+    .perf-val{font-size:14px;font-weight:600;font-family:'SF Mono','Fira Code',monospace;}
+    .eye-btn{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--r);padding:6px 9px;cursor:pointer;display:flex;align-items:center;color:var(--text2);}
+    .eye-btn:hover{opacity:.7;}
+    .eye-btn.active{border-color:var(--warn);color:var(--warn);}
+    .hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:18px;}
+    .hdr-l h1{font-size:20px;font-weight:600;}
+    .hdr-l .sub{font-size:11px;color:var(--text2);margin-top:2px;}
+    .hdr-r{display:flex;gap:8px;align-items:center;}
+    /* Login */
+    .login-wrap{display:flex;align-items:center;justify-content:center;min-height:90vh;}
+    .login-box{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--rl);padding:32px 28px;width:100%;max-width:360px;}
+    .login-logo{text-align:center;font-size:36px;margin-bottom:6px;}
+    .login-title{text-align:center;font-size:18px;font-weight:600;margin-bottom:4px;}
+    .login-sub{text-align:center;font-size:12px;color:var(--text2);margin-bottom:24px;}
+    .login-field{margin-bottom:12px;}
+    .login-field label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;}
+    .login-actions{margin-top:20px;display:flex;flex-direction:column;gap:10px;}
+    .login-toggle{background:transparent;border:none;color:var(--info);font-size:13px;cursor:pointer;padding:0;}
   </style>
 </head>
 <body>
-<div id="root"><div class="loading"><div class="spinner"></div>Yükleniyor...</div></div>
+<div id="root"><div style="display:flex;align-items:center;justify-content:center;height:80vh;gap:10px;color:#888;font-size:13px;"><div class="spinner"></div>Yükleniyor...</div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+
 <script type="text/babel">
-const {useState,useEffect} = React;
+// ── CONFIG — Supabase bilgilerini buraya yaz ────────────────────
+const SUPA_URL  = "https://jfetubcilmuthpddkodg.supabase.co";
+const SUPA_ANON = "sb_publishable_fB2va7QAJaGjwdn0ULNr9g_SbO2fCPy";
+// ───────────────────────────────────────────────────────────────
 
-const P0=[
-  {ticker:"SCHD",name:"Schwab Dividend ETF",     type:"FUND",    shares:639,    avgCost:28.76, currency:"USD",broker:"Akbank"},
-  {ticker:"SPY", name:"SPDR S&P 500 ETF",        type:"FUND",    shares:60,     avgCost:569.03,currency:"USD",broker:"QNB"},
-  {ticker:"QQQ", name:"Invesco QQQ ETF",          type:"FUND",    shares:37,     avgCost:458.62,currency:"USD",broker:"Akbank"},
-  {ticker:"MCHI",name:"iShares MSCI China ETF",  type:"FUND",    shares:65,     avgCost:59.24, currency:"USD",broker:"Akbank"},
-  {ticker:"VT",  name:"Vanguard Total World ETF",type:"FUND",    shares:35,     avgCost:121.26,currency:"USD",broker:"Akbank"},
-  {ticker:"NVDA",name:"NVIDIA Corp",             type:"US_STOCK",shares:45,     avgCost:33.49, currency:"USD",broker:"Midas"},
-  {ticker:"SOFI",name:"SoFi Technologies",       type:"US_STOCK",shares:253,    avgCost:9.71,  currency:"USD",broker:"Midas"},
-  {ticker:"GOOGL",name:"Alphabet Inc",           type:"US_STOCK",shares:8,      avgCost:120.81,currency:"USD",broker:"Midas"},
-  {ticker:"META",name:"Meta Platforms",          type:"US_STOCK",shares:1,      avgCost:667.95,currency:"USD",broker:"Akbank"},
-  {ticker:"TSLA",name:"Tesla Inc",               type:"US_STOCK",shares:4,      avgCost:235.22,currency:"USD",broker:"Midas"},
-  {ticker:"KO",  name:"Coca-Cola",               type:"US_STOCK",shares:14,     avgCost:60.51, currency:"USD",broker:"QNB"},
-  {ticker:"UBER",name:"Uber Technologies",       type:"US_STOCK",shares:18,     avgCost:73.39, currency:"USD",broker:"QNB"},
-  {ticker:"MNSO",name:"MINISO Group",            type:"US_STOCK",shares:27,     avgCost:17.53, currency:"USD",broker:"Akbank"},
-  {ticker:"AEVA",name:"Aeva Technologies",       type:"US_STOCK",shares:6,      avgCost:45.50, currency:"USD",broker:"Midas"},
-  {ticker:"PYPL",name:"PayPal Holdings",         type:"US_STOCK",shares:3,      avgCost:144.54,currency:"USD",broker:"Midas"},
-  {ticker:"SKLZ",name:"Skillz Inc",              type:"US_STOCK",shares:15,     avgCost:17.79, currency:"USD",broker:"QNB"},
-  {ticker:"NNOX",name:"Nano-X Imaging",          type:"US_STOCK",shares:16,     avgCost:33.66, currency:"USD",broker:"QNB"},
-  {ticker:"BTC", name:"Bitcoin",                 type:"CRYPTO",  shares:0.01033,avgCost:3142000,currency:"TRY",broker:"DGA"},
-];
-const PRC0={SCHD:31.01,SPY:711.21,QQQ:655.11,MCHI:58.30,VT:150.10,SOFI:19.06,NVDA:202.50,GOOGL:339.32,UBER:75.58,META:674.72,KO:74.63,TSLA:387.51,MNSO:14.98,PYPL:51.22,AEVA:16.32,SKLZ:3.68,NNOX:2.00};
-const TL={US_STOCK:"Hisse",FUND:"ETF/Fon",CRYPTO:"Kripto",BIST:"BIST",GOLD:"Altın",FX:"Döviz"};
+const sb = supabase.createClient(SUPA_URL, SUPA_ANON, {
+  auth: { persistSession: true, autoRefreshToken: true }
+});
 
-const LS={
+const {useState, useEffect} = React;
+const TL = {US_STOCK:"Hisse",FUND:"ETF/Fon",CRYPTO:"Kripto",BIST:"BIST",GOLD:"Altın",FX:"Döviz"};
+const LS = {
   get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
   set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 };
-const uid=()=>Math.random().toString(36).slice(2,9);
-const fmt=(n,d=2)=>n==null?"—":n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
-const fmtD=n=>n==null?"—":(n>=0?"+$":"-$")+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmtP=n=>n==null?"—":(n>=0?"+":"")+n.toFixed(1)+"%";
-const pc=n=>n==null?"":n>=0?" ok":" err";
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const today=()=>new Date().toISOString().split("T")[0];
+const uid  = ()=>Math.random().toString(36).slice(2,9);
+const fmt  = (n,d=2)=>n==null?"—":n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtD = n=>n==null?"—":(n>=0?"+$":"-$")+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtP = n=>n==null?"—":(n>=0?"+":"")+n.toFixed(1)+"%";
+const pc   = n=>n==null?"":n>=0?" ok":" err";
+const sleep= ms=>new Promise(r=>setTimeout(r,ms));
+const today= ()=>new Date().toISOString().split("T")[0];
+const dago = n=>new Date(Date.now()-n*86400000).toISOString().split("T")[0];
 
-function App(){
+// ── SVG Icons ───────────────────────────────────────────────────
+const EyeOn = ()=>(
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <ellipse cx="12" cy="12" rx="11" ry="8"/>
+    <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
+  </svg>
+);
+const EyeOff = ()=>(
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3l18 18"/>
+    <path d="M10.5 10.7a3 3 0 0 0 3.8 3.8"/>
+    <path d="M6.1 6.3A10.9 10.9 0 0 0 1 12s4 8 11 8a10.7 10.7 0 0 0 5.9-1.9"/>
+    <path d="M9.4 4.4A10.5 10.5 0 0 1 12 4c7 0 11 8 11 8a18 18 0 0 1-2.7 3.8"/>
+  </svg>
+);
+
+// ── Login ───────────────────────────────────────────────────────
+function Login(){
+  const [email,setEmail]=useState("");
+  const [pw,setPw]=useState("");
+  const [isReg,setIsReg]=useState(false);
+  const [loading,setLoading]=useState(false);
+  const [err,setErr]=useState("");
+  const [msg,setMsg]=useState("");
+
+  const submit=async()=>{
+    if(!email||!pw)return;
+    setLoading(true);setErr("");setMsg("");
+    const {error}=isReg
+      ?await sb.auth.signUp({email,password:pw})
+      :await sb.auth.signInWithPassword({email,password:pw});
+    if(error)setErr(error.message);
+    else if(isReg)setMsg("Hesap oluşturuldu! E-posta onayı gelebilir.");
+    setLoading(false);
+  };
+
+  return(
+    <div className="login-wrap">
+      <div className="login-box">
+        <div className="login-logo">📈</div>
+        <div className="login-title">Investment Ledger</div>
+        <div className="login-sub">Kişisel yatırım takibi</div>
+        <div className="login-field"><label>E-posta</label>
+          <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="ornek@mail.com" onKeyDown={e=>e.key==="Enter"&&submit()}/>
+        </div>
+        <div className="login-field"><label>Şifre</label>
+          <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&submit()}/>
+        </div>
+        {err&&<div style={{fontSize:12,color:"var(--err)",marginTop:8}}>{err}</div>}
+        {msg&&<div style={{fontSize:12,color:"var(--ok)",marginTop:8}}>{msg}</div>}
+        <div className="login-actions">
+          <button className="primary" onClick={submit} disabled={loading||!email||!pw}>
+            {loading?<><span className="spinner" style={{width:14,height:14}}></span></>:(isReg?"Kayıt Ol":"Giriş Yap")}
+          </button>
+          <button className="login-toggle" onClick={()=>{setIsReg(!isReg);setErr("");setMsg("");}}>
+            {isReg?"Hesabım var → Giriş Yap":"Hesabım yok → Kayıt Ol"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ────────────────────────────────────────────────────
+function App({user}){
   const [tab,setTab]=useState("dashboard");
-  const [pos,setPos_]=useState(()=>LS.get("il_pos",P0));
-  const [prc,setPrc_]=useState(()=>{const p=LS.get("il_prc",null);return p?p.p:PRC0;});
-  const [pdate,setPd_]=useState(()=>{const p=LS.get("il_prc",null);return p?p.d:"2026-04-22";});
-  const [txs,setTxs_]=useState(()=>LS.get("il_txs",[]));
-  const [cfg,setCfg_]=useState(()=>LS.get("il_cfg",{webhookUrl:"",massiveKey:"",anthropicKey:"",token:""}));
+  const [pos,setPos]=useState([]);
+  const [txs,setTxs]=useState([]);
+  const [prc,setPrc_]=useState(()=>{const p=LS.get("il_prc",null);return p?p.p:{};});
+  const [pdate,setPdate]=useState(()=>{const p=LS.get("il_prc",null);return p?p.d:"—";});
+  const [hist,setHist_]=useState(()=>LS.get("il_hist",{}));
+  const [cfg,setCfg_]=useState(()=>LS.get("il_cfg",{massiveKey:"",anthropicKey:""}));
+  const [hideAmts,setHide_]=useState(()=>LS.get("il_hide",false));
   const [sort,setSort]=useState({by:"plPct",dir:"asc"});
   const [input,setInput]=useState("");
   const [parsed,setParsed]=useState(null);
-  const [busy,setBusy]=useState({parse:false,price:false,sync:false,load:false});
+  const [busy,setBusy]=useState({parse:false,price:false,hist:false,data:false});
   const [pprog,setPprog]=useState("");
   const [perr,setPerr]=useState("");
   const [flash,setFlash]=useState(null);
-  const [synced,setSynced]=useState(false);
 
-  const savePos=p=>{setPos_(p);LS.set("il_pos",p);};
-  const saveTxs=t=>{setTxs_(t);LS.set("il_txs",t);};
-  const saveCfg=c=>{setCfg_(c);LS.set("il_cfg",c);};
-  const savePrc=(p,d)=>{setPrc_(p);setPd_(d);LS.set("il_prc",{p,d});};
-  const flash_=(msg,type="ok")=>{setFlash({msg,type});setTimeout(()=>setFlash(null),3500);};
+  const saveCfg =c=>{setCfg_(c);LS.set("il_cfg",c);};
+  const saveHide=v=>{setHide_(v);LS.set("il_hide",v);};
+  const savePrc =(p,d)=>{setPrc_(p);setPdate(d);LS.set("il_prc",{p,d});};
+  const saveHist=h=>{setHist_(h);LS.set("il_hist",h);};
+  const flash_  =(msg,t="ok")=>{setFlash({msg,t});setTimeout(()=>setFlash(null),3500);};
+  const mask    =v=>hideAmts?<span className="mask">••••</span>:v;
 
-  // Sheets'ten yükle — açılışta otomatik
-  useEffect(()=>{
-    const c=LS.get("il_cfg",{});
-    if(c.webhookUrl&&c.token&&!synced){
-      loadFromSheets(c.webhookUrl,c.token);
-    }
-  },[]);
-
-  const loadFromSheets=async(url,token)=>{
-    if(!url||!token)return;
-    setBusy(b=>({...b,load:true}));
+  // Load data from Supabase
+  const loadData=async()=>{
+    setBusy(b=>({...b,data:true}));
     try{
-      const r=await fetch(`${url}?action=positions&token=${encodeURIComponent(token)}`);
-      if(!r.ok)throw new Error("HTTP "+r.status);
-      const d=await r.json();
-      if(d.error)throw new Error(d.error);
-      if(d.positions&&d.positions.length>0){
-        savePos(d.positions);
-        setSynced(true);
-        flash_("Sheets'ten yüklendi ✓ ("+d.positions.length+" pozisyon)");
-      }
-    }catch(e){
-      // Sessizce fail — localStorage'dan devam et
-      console.warn("Sheets yüklenemedi:",e.message);
-    }finally{
-      setBusy(b=>({...b,load:false}));
-    }
+      const[pr,tr]=await Promise.all([
+        sb.from("positions").select("*").eq("user_id",user.id),
+        sb.from("transactions").select("*").eq("user_id",user.id).order("date",{ascending:false})
+      ]);
+      if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker})));
+      if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission})));
+    }catch(e){flash_(e.message,"err");}
+    setBusy(b=>({...b,data:false}));
   };
 
-  const postHook=async(action,data)=>{
-    if(!cfg.webhookUrl||!cfg.token)return;
-    try{
-      await fetch(cfg.webhookUrl,{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({action,data,token:cfg.token})});
-    }catch(e){console.warn("Webhook:",e);}
-  };
+  useEffect(()=>{loadData();},[]);
 
-  // derived
+  // Derived
   const usd=pos.filter(p=>p.currency==="USD").map(p=>{
     const price=prc[p.ticker],cost=p.shares*p.avgCost;
     const mv=price!=null?p.shares*price:null,pl=mv!=null?mv-cost:null;
-    return{...p,price,cost,mv,pl,plPct:pl!=null?(pl/cost)*100:null};
+    const h=hist[p.ticker]||null;
+    return{...p,price,cost,mv,pl,plPct:pl!=null?(pl/cost)*100:null,d1:h?.d1??null,w1:h?.w1??null,m1:h?.m1??null,y1:h?.y1??null};
   });
   const tC=usd.reduce((a,p)=>a+p.cost,0);
   const tM=usd.reduce((a,p)=>a+(p.mv??p.cost),0);
   const tP=tM-tC,tPct=(tP/tC)*100;
   const byT={};usd.forEach(p=>{byT[p.type]=(byT[p.type]||0)+(p.mv??p.cost);});
+  const pPerf=k=>{const v=usd.filter(p=>p[k]!=null&&p.mv!=null);if(!v.length)return null;const s=v.reduce((a,p)=>a+p.mv,0);return v.reduce((a,p)=>a+p[k]*(p.mv/s),0);};
+  const hasHist=Object.keys(hist).length>0;
   const sorted=[...usd].sort((a,b)=>{let va=a[sort.by]??0,vb=b[sort.by]??0;return sort.dir==="asc"?va-vb:vb-va;});
   const tsort=k=>setSort(s=>({by:k,dir:s.by===k&&s.dir==="asc"?"desc":"asc"}));
+  const sa=k=>sort.by===k?(sort.dir==="asc"?" ↑":" ↓"):"";
   const top4=fn=>[...usd].filter(p=>p.plPct!=null).sort(fn).slice(0,4);
 
+  // AI Parse
   const parseAI=async()=>{
     if(!input.trim())return;
     if(!cfg.anthropicKey){setPerr("Ayarlar > Anthropic API Key gir.");return;}
@@ -206,100 +259,131 @@ function App(){
     finally{setBusy(b=>({...b,parse:false}));}
   };
 
+  // Save transaction → Supabase
   const confirmTx=async()=>{
     if(!parsed)return;
-    const tx={...parsed,id:uid(),savedAt:new Date().toISOString()};
-    saveTxs([tx,...txs]);
-    const p=[...pos];const idx=p.findIndex(x=>x.ticker===tx.ticker);
-    if(tx.way==="BUY"){
-      if(idx>=0){const ot=p[idx].shares*p[idx].avgCost,nt=tx.shares*tx.price,ns=p[idx].shares+tx.shares;p[idx]={...p[idx],shares:ns,avgCost:(ot+nt)/ns};}
-      else p.push({ticker:tx.ticker,name:tx.name,type:tx.asset_type,shares:tx.shares,avgCost:tx.price,currency:tx.currency,broker:tx.broker});
-    }else if(tx.way==="SELL"&&idx>=0){const ns=p[idx].shares-tx.shares;if(ns<=0)p.splice(idx,1);else p[idx]={...p[idx],shares:ns};}
-    savePos(p);await postHook("add_transaction",tx);
+    const tx={user_id:user.id,date:parsed.date,ticker:parsed.ticker,name:parsed.name||"",asset_type:parsed.asset_type,way:parsed.way,shares:parsed.shares,price:parsed.price,currency:parsed.currency||"USD",total:+(parsed.shares*parsed.price).toFixed(4),broker:parsed.broker||"",commission:parsed.commission||0,exchange:parsed.exchange||"",notes:parsed.notes||""};
+    const{error:te}=await sb.from("transactions").insert(tx);
+    if(te){flash_(te.message,"err");return;}
+
+    // Update position
+    const ex=pos.find(p=>p.ticker===parsed.ticker);
+    if(parsed.way==="BUY"){
+      const ns=(ex?.shares||0)+parsed.shares;
+      const na=((ex?.shares||0)*(ex?.avgCost||0)+parsed.shares*parsed.price)/ns;
+      const{error:pe}=await sb.from("positions").upsert({user_id:user.id,ticker:parsed.ticker,name:parsed.name||"",type:parsed.asset_type,shares:+ns.toFixed(6),avg_cost:+na.toFixed(6),currency:parsed.currency||"USD",broker:parsed.broker||"",updated_at:new Date().toISOString()},{onConflict:"user_id,ticker"});
+      if(pe){flash_(pe.message,"err");return;}
+    }else if(parsed.way==="SELL"&&ex){
+      const ns=ex.shares-parsed.shares;
+      if(ns<=0.0001){await sb.from("positions").delete().eq("user_id",user.id).eq("ticker",parsed.ticker);}
+      else{await sb.from("positions").update({shares:+ns.toFixed(6),updated_at:new Date().toISOString()}).eq("user_id",user.id).eq("ticker",parsed.ticker);}
+    }
+    await loadData();
     setParsed(null);setInput("");
-    flash_(cfg.webhookUrl?"Kaydedildi + Sheets'e gönderildi ✓":"Kaydedildi ✓");
-    setTab("dashboard");
+    flash_("Kaydedildi ✓");setTab("dashboard");
   };
 
+  // Prices
   const fetchPrices=async()=>{
-    if(!cfg.massiveKey){flash_("Ayarlar > Massive API Key gir.","err");return;}
+    if(!cfg.massiveKey){flash_("Massive API Key gir.","err");return;}
     setBusy(b=>({...b,price:true}));
     const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
-    const d1=new Date(Date.now()-86400000).toISOString().split("T")[0];
-    const np={...prc};let cnt=0;
+    const d1=dago(1);const np={...prc};let cnt=0;
     for(let i=0;i<tickers.length;i++){
       const t=tickers[i];setPprog(`${t} (${i+1}/${tickers.length})`);
-      try{
-        const r=await fetch(`https://api.massive.com/v1/open-close/${t}/${d1}?apiKey=${cfg.massiveKey}`);
-        if(r.ok){const csv=await r.text();const row=csv.split("\n")[1];if(row){const c=row.split(",");if(c.length>=5){np[t]=parseFloat(c[4]);cnt++;}}}
-      }catch(e){}
+      try{const r=await fetch(`https://api.massive.com/v1/open-close/${t}/${d1}?apiKey=${cfg.massiveKey}`);if(r.ok){const csv=await r.text();const row=csv.split("\n")[1];if(row){const c=row.split(",");if(c.length>=5){np[t]=parseFloat(c[4]);cnt++;}}}}catch(e){}
       if(i<tickers.length-1)await sleep(7500);
     }
     savePrc(np,d1);setBusy(b=>({...b,price:false}));setPprog("");
-    flash_(`${cnt}/${tickers.length} fiyat güncellendi (${d1})`);
+    flash_(`${cnt}/${tickers.length} fiyat güncellendi`);
   };
 
-  const syncSheets=async()=>{
-    if(!cfg.webhookUrl||!cfg.token){flash_("Ayarlar > Webhook URL ve Token gir.","err");return;}
-    setBusy(b=>({...b,sync:true}));await postHook("sync_positions",pos);
-    setBusy(b=>({...b,sync:false}));flash_("Sheets'e senkronize edildi ✓");
+  // Historical
+  const fetchHistorical=async()=>{
+    if(!cfg.massiveKey){flash_("Massive API Key gir.","err");return;}
+    setBusy(b=>({...b,hist:true}));
+    const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
+    const from=dago(366),to=dago(1);
+    const nh={...hist};const np={...prc};let cnt=0;
+    for(let i=0;i<tickers.length;i++){
+      const t=tickers[i];setPprog(`${t} tarihi (${i+1}/${tickers.length})`);
+      try{
+        const r=await fetch(`https://api.massive.com/v2/aggs/ticker/${t}/range/1/day/${from}/${to}?adjusted=true&limit=400&apiKey=${cfg.massiveKey}`);
+        if(r.ok){const d=await r.json();if(d.results&&d.results.length>1){const bars=d.results.sort((a,b)=>a.t-b.t);const n=bars.length,last=bars[n-1].c;const g=i=>i>=0&&i<n?bars[i].c:null;const chg=o=>o!=null?(last/o-1)*100:null;nh[t]={last,d1:chg(g(n-2)),w1:chg(g(n-6)),m1:chg(g(n-22)),y1:chg(g(0))};np[t]=last;cnt++;}}
+      }catch(e){}
+      if(i<tickers.length-1)await sleep(7500);
+    }
+    saveHist(nh);savePrc(np,to);
+    setBusy(b=>({...b,hist:false}));setPprog("");
+    flash_(`${cnt}/${tickers.length} tarihi veri yüklendi`);
   };
 
-  const manualLoad=()=>loadFromSheets(cfg.webhookUrl,cfg.token);
-
+  // Export CSV
   const dlCSV=(rows,hdr,name)=>{const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent([hdr,...rows].join("\n"));a.download=name;a.click();};
+  const exportTx=()=>dlCSV(txs.map(t=>`${t.date},${t.ticker},${t.name||""},${t.asset_type||""},${t.way},${t.shares},${t.price},${t.currency||"USD"},${t.total||""},${t.broker||""},${t.commission||0}`),"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Total,Broker,Commission",`transactions_${today()}.csv`);
+  const exportPos=()=>dlCSV(pos.map(p=>`${p.ticker},${p.name},${p.type},${p.shares},${p.avgCost},${p.currency},${p.broker}`),"Ticker,Name,Type,Shares,AvgCost,Currency,Broker",`positions_${today()}.csv`);
 
-  const TABS=[["dashboard","Dashboard"],["positions","Pozisyonlar"],["history","İşlemler"],["add","+ Ekle"],["settings","Ayarlar ⚙"]];
+  // Logout
+  const logout=async()=>{await sb.auth.signOut();};
 
-  if(busy.load)return(
-    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",flexDirection:"column",gap:12}}>
-      <div className="spinner"></div>
-      <div className="dim" style={{fontSize:13}}>Sheets'ten yükleniyor...</div>
-    </div>
-  );
+  const TABS=[["dashboard","Dashboard"],["positions","Pozisyonlar"],["history","İşlemler"],["add","+ Ekle"],["settings","Ayarlar"]];
+
+  if(busy.data&&pos.length===0)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",gap:10,color:"#888",fontSize:13}}><div className="spinner"></div>Veriler yükleniyor...</div>;
 
   return(
     <div>
-      <h1>Investment Ledger</h1>
-      <div className="sub">
-        Fiyat: {pdate}
-        {cfg.webhookUrl&&<span className="ok" style={{marginLeft:8}}>● Sheets</span>}
-        {synced&&<span className="dim" style={{marginLeft:8}}>· senkron</span>}
+      {/* Header */}
+      <div className="hdr">
+        <div className="hdr-l">
+          <h1>Investment Ledger</h1>
+          <div className="sub">
+            {user.email}
+            {pdate!=="—"&&<span style={{marginLeft:8}}>· {pdate}</span>}
+            {hasHist&&<span className="dim" style={{marginLeft:8}}>· tarihi ✓</span>}
+          </div>
+        </div>
+        <div className="hdr-r">
+          <button className={"eye-btn"+(hideAmts?" active":"")} onClick={()=>saveHide(!hideAmts)} title={hideAmts?"Tutarları göster":"Tutarları gizle"}>
+            {hideAmts?<EyeOff/>:<EyeOn/>}
+          </button>
+        </div>
       </div>
 
       <div className="tabs">
-        {TABS.map(([id,lbl])=>(
-          <button key={id} onClick={()=>setTab(id)} className={"tab"+(tab===id?" active":"")}>{lbl}</button>
-        ))}
+        {TABS.map(([id,lbl])=><button key={id} onClick={()=>setTab(id)} className={"tab"+(tab===id?" active":"")}>{lbl}</button>)}
       </div>
 
-      {flash&&<div className={"flash "+flash.type}>{flash.msg}</div>}
+      {flash&&<div className={"flash "+flash.t}>{flash.msg}</div>}
 
       {/* DASHBOARD */}
       {tab==="dashboard"&&<div>
-        <div className="grid4">
-          {[{l:"Maliyet",v:"$"+fmt(tC)},{l:"Piyasa Değeri",v:"$"+fmt(tM)},{l:"P&L",v:fmtD(tP),c:pc(tP)},{l:"P&L %",v:fmtP(tPct),c:pc(tPct)}].map(x=>(
+        <div className="g4">
+          {[{l:"Maliyet",v:mask("$"+fmt(tC))},{l:"Piyasa Değeri",v:mask("$"+fmt(tM))},{l:"P&L",v:hideAmts?fmtP(tPct):fmtD(tP),c:pc(tP)},{l:"P&L %",v:fmtP(tPct),c:pc(tPct)}].map(x=>(
             <div key={x.l} className="card"><div className="lbl">{x.l}</div><div className={"mono "+(x.c||"")} style={{fontSize:16,fontWeight:600}}>{x.v}</div></div>
           ))}
         </div>
-        <div className="stitle">Varlık Dağılımı</div>
-        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:20}}>
-          {Object.entries(byT).sort((a,b)=>b[1]-a[1]).map(([t,v])=>(
-            <div key={t} className="card" style={{flex:1,minWidth:70}}>
-              <div className="lbl">{TL[t]||t}</div>
-              <div className="mono" style={{fontSize:13,fontWeight:600}}>${fmt(v,0)}</div>
-              <div className="dim" style={{fontSize:10}}>{(v/tM*100).toFixed(1)}%</div>
-            </div>
-          ))}
+        {hasHist&&<div style={{marginBottom:16}}>
+          <div className="stitle">Portföy Performansı</div>
+          <div className="perf-row">
+            {[["1G",pPerf("d1")],["1H",pPerf("w1")],["1A",pPerf("m1")],["1Y",pPerf("y1")]].map(([l,v])=>(
+              <div key={l} className="perf-chip"><div className="perf-lbl">{l}</div><div className={"perf-val"+(v==null?"":v>=0?" ok":" err")}>{v!=null?fmtP(v):"—"}</div></div>
+            ))}
+          </div>
+        </div>}
+        <div style={{marginBottom:16}}>
+          <div className="stitle">Varlık Dağılımı</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {Object.entries(byT).sort((a,b)=>b[1]-a[1]).map(([t,v])=>(
+              <div key={t} className="card" style={{flex:1,minWidth:70}}><div className="lbl">{TL[t]||t}</div><div className="mono" style={{fontSize:13,fontWeight:600}}>{mask("$"+fmt(v,0))}</div><div className="dim" style={{fontSize:10}}>{(v/tM*100).toFixed(1)}%</div></div>
+            ))}
+          </div>
         </div>
-        <div className="grid2">
+        <div className="g2">
           {[["En İyi",top4((a,b)=>b.plPct-a.plPct),"ok"],["En Kötü",top4((a,b)=>a.plPct-b.plPct),"err"]].map(([t,l,c])=>(
-            <div key={t}><div className="stitle">{t}</div>
-              {l.map(p=><div key={p.ticker} className="row"><span className="mono" style={{fontWeight:600}}>{p.ticker}</span><span className={"mono "+c}>{fmtP(p.plPct)}</span></div>)}
-            </div>
+            <div key={t}><div className="stitle">{t}</div>{l.map(p=><div key={p.ticker} className="row"><span className="mono" style={{fontWeight:700}}>{p.ticker}</span><span className={"mono "+c}>{fmtP(p.plPct)}</span></div>)}</div>
           ))}
         </div>
-        <div style={{fontSize:11,color:"var(--text2)",marginTop:8}}>{txs.length} işlem · BTC hariç · {usd.length} USD pozisyon</div>
+        <div style={{fontSize:11,color:"var(--text2)"}}>{txs.length} işlem · BTC hariç · {usd.length} USD pozisyon</div>
       </div>}
 
       {/* POSITIONS */}
@@ -307,61 +391,63 @@ function App(){
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <span className="dim" style={{fontSize:12}}>{pos.length} pozisyon</span>
           <div className="brow">
-            <button onClick={manualLoad} disabled={!cfg.webhookUrl||!cfg.token} style={{opacity:!cfg.webhookUrl?.4:1}}>Sheets'ten Yükle ↓</button>
-            <button onClick={syncSheets} disabled={busy.sync||!cfg.webhookUrl} style={{opacity:!cfg.webhookUrl?.4:1}}>{busy.sync?"Sync...":"Sheets'e Aktar ↑"}</button>
-            <button onClick={()=>dlCSV(pos.map(p=>`${p.ticker},${p.name},${p.type},${p.shares},${p.avgCost},${p.currency},${p.broker}`),"Ticker,Name,Type,Shares,AvgCost,Currency,Broker","positions.csv")}>CSV</button>
+            <button onClick={loadData} disabled={busy.data}>{busy.data?"Yükleniyor...":"Yenile"}</button>
+            <button onClick={exportPos}>CSV ↗</button>
           </div>
         </div>
-        <div className="tbl-wrap">
-          <table>
-            <thead><tr>
-              {[["ticker","Ticker","l"],["name","Şirket","l"],["shares","Adet","r"],["avgCost","Maliyet","r"],["price","Fiyat","r"],["mv","Değer","r"],["pl","P&L","r"],["plPct","P&L%","r"]].map(([k,l,a])=>(
-                <th key={k} onClick={()=>tsort(k)} className={a}>{l}{sort.by===k?(sort.dir==="asc"?" ↑":" ↓"):""}</th>
-              ))}
-            </tr></thead>
-            <tbody>
-              {sorted.map(p=>(
-                <tr key={p.ticker}>
-                  <td className="l" style={{fontWeight:700}}>{p.ticker}{p.type==="FUND"&&<span className="badge etf">ETF</span>}{p.type==="CRYPTO"&&<span className="badge cry">₿</span>}</td>
-                  <td className="l dim" style={{fontSize:11,maxWidth:90,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.name}</td>
-                  <td className="r">{Number.isInteger(p.shares)?p.shares:p.shares.toFixed(4)}</td>
-                  <td className="r">${fmt(p.avgCost)}</td>
-                  <td className="r">{p.price?"$"+fmt(p.price):"—"}</td>
-                  <td className="r">{p.mv?"$"+fmt(p.mv,0):"—"}</td>
-                  <td className={"r"+pc(p.pl)}>{fmtD(p.pl)}</td>
-                  <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <div className="tbl-wrap"><table>
+          <thead><tr>
+            <th className="l" onClick={()=>tsort("ticker")}>Ticker{sa("ticker")}</th>
+            {!hideAmts&&<th className="r" onClick={()=>tsort("shares")}>Adet{sa("shares")}</th>}
+            {!hideAmts&&<th className="r" onClick={()=>tsort("avgCost")}>Maliyet{sa("avgCost")}</th>}
+            {!hideAmts&&<th className="r" onClick={()=>tsort("price")}>Fiyat{sa("price")}</th>}
+            {!hideAmts&&<th className="r" onClick={()=>tsort("mv")}>Değer{sa("mv")}</th>}
+            {!hideAmts&&<th className="r" onClick={()=>tsort("pl")}>P&L${sa("pl")}</th>}
+            <th className="r" onClick={()=>tsort("plPct")}>P&L%{sa("plPct")}</th>
+            {hasHist&&<th className="r" onClick={()=>tsort("d1")}>1G{sa("d1")}</th>}
+            {hasHist&&<th className="r" onClick={()=>tsort("w1")}>1H{sa("w1")}</th>}
+            {hasHist&&<th className="r" onClick={()=>tsort("m1")}>1A{sa("m1")}</th>}
+            {hasHist&&<th className="r" onClick={()=>tsort("y1")}>1Y{sa("y1")}</th>}
+          </tr></thead>
+          <tbody>{sorted.map(p=>(
+            <tr key={p.ticker}>
+              <td className="l"><div className="ticker-cell"><span className="ticker-sym">{p.ticker}{p.type==="FUND"&&<span className="badge etf">ETF</span>}{p.type==="CRYPTO"&&<span className="badge cry">₿</span>}</span><span className="ticker-name">{p.name}</span></div></td>
+              {!hideAmts&&<td className="r">{p.shares%1===0?p.shares:p.shares.toFixed(4)}</td>}
+              {!hideAmts&&<td className="r">{mask("$"+fmt(p.avgCost))}</td>}
+              {!hideAmts&&<td className="r">{p.price?mask("$"+fmt(p.price)):"—"}</td>}
+              {!hideAmts&&<td className="r">{p.mv?mask("$"+fmt(p.mv,0)):"—"}</td>}
+              {!hideAmts&&<td className={"r"+pc(p.pl)}>{fmtD(p.pl)}</td>}
+              <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
+              {hasHist&&<td className={"r"+pc(p.d1)}>{fmtP(p.d1)}</td>}
+              {hasHist&&<td className={"r"+pc(p.w1)}>{fmtP(p.w1)}</td>}
+              {hasHist&&<td className={"r"+pc(p.m1)}>{fmtP(p.m1)}</td>}
+              {hasHist&&<td className={"r"+pc(p.y1)}>{fmtP(p.y1)}</td>}
+            </tr>
+          ))}</tbody>
+        </table></div>
       </div>}
 
       {/* HISTORY */}
       {tab==="history"&&<div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <span className="dim" style={{fontSize:12}}>{txs.length} işlem</span>
-          {txs.length>0&&<button onClick={()=>dlCSV(txs.map(t=>`${t.date},${t.ticker},${t.name||""},${t.asset_type||""},${t.way},${t.shares},${t.price},${t.currency||"USD"},${t.broker||""},${t.commission||0}`),"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Broker,Commission","transactions.csv")}>CSV</button>}
+          {txs.length>0&&<button onClick={exportTx}>CSV ↗</button>}
         </div>
-        {txs.length===0
-          ?<div className="empty">Henüz işlem yok — "+ Ekle" ile başla.</div>
-          :<div className="tbl-wrap">
-            <table>
-              <thead><tr>{[["Tarih","l"],["Ticker","l"],["İşlem","l"],["Adet","r"],["Fiyat","r"],["Toplam","r"],["Broker","l"]].map(([l,a])=><th key={l} className={a}>{l}</th>)}</tr></thead>
-              <tbody>{txs.map(t=>(
-                <tr key={t.id}>
-                  <td className="l dim" style={{fontSize:11}}>{t.date}</td>
-                  <td className="l" style={{fontWeight:700}}>{t.ticker}</td>
-                  <td className={"l "+(t.way==="BUY"?"ok":"err")} style={{fontSize:11}}>{t.way==="BUY"?"Alış":"Satış"}</td>
-                  <td className="r">{t.shares}</td>
-                  <td className="r">{t.currency==="TRY"?"₺":"$"}{fmt(t.price)}</td>
-                  <td className="r">{t.currency==="TRY"?"₺":"$"}{fmt(t.shares*t.price,0)}</td>
-                  <td className="l dim" style={{fontSize:11}}>{t.broker||"—"}</td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-        }
+        {txs.length===0?<div className="empty">Henüz işlem yok.</div>
+        :<div className="tbl-wrap"><table>
+          <thead><tr>{[["Tarih","l"],["Ticker","l"],["İşlem","l"],["Adet","r"],["Fiyat","r"],["Toplam","r"],["Broker","l"]].map(([l,a])=><th key={l} className={a}>{l}</th>)}</tr></thead>
+          <tbody>{txs.map(t=>(
+            <tr key={t.id}>
+              <td className="l dim" style={{fontSize:11}}>{t.date}</td>
+              <td className="l" style={{fontWeight:700}}>{t.ticker}</td>
+              <td className={"l "+(t.way==="BUY"?"ok":"err")} style={{fontSize:11}}>{t.way==="BUY"?"Alış":"Satış"}</td>
+              <td className="r">{t.shares}</td>
+              <td className="r">{mask((t.currency==="TRY"?"₺":"$")+fmt(t.price))}</td>
+              <td className="r">{mask((t.currency==="TRY"?"₺":"$")+fmt(t.total,0))}</td>
+              <td className="l dim" style={{fontSize:11}}>{t.broker||"—"}</td>
+            </tr>
+          ))}</tbody>
+        </table></div>}
       </div>}
 
       {/* ADD */}
@@ -380,67 +466,71 @@ function App(){
               <div key={k}><div className="kk">{k}</div><div className="kv_">{v}</div></div>
             ))}
           </div>
-          {cfg.webhookUrl&&<div className="ok" style={{fontSize:11,marginBottom:10}}>● Sheets'e otomatik gönderilecek</div>}
-          <div className="brow">
-            <button onClick={confirmTx} className="primary">Kaydet</button>
-            <button onClick={()=>setParsed(null)}>İptal</button>
-          </div>
+          <div className="brow"><button onClick={confirmTx} className="primary">Kaydet</button><button onClick={()=>setParsed(null)}>İptal</button></div>
         </div>}
       </div>}
 
       {/* SETTINGS */}
       {tab==="settings"&&<div>
+        <div className="sg"><label>Anthropic API Key</label><input type="password" value={cfg.anthropicKey} onChange={e=>saveCfg({...cfg,anthropicKey:e.target.value})} placeholder="sk-ant-..."/><div className="hint">console.anthropic.com → API Keys</div></div>
+        <div className="sg"><label>Massive API Key</label><input type="password" value={cfg.massiveKey} onChange={e=>saveCfg({...cfg,massiveKey:e.target.value})} placeholder="massive_..."/></div>
+
         <div className="sg">
-          <label>Gizli Token <span className="dim">(Sheets güvenliği)</span></label>
-          <input type="password" value={cfg.token} onChange={e=>saveCfg({...cfg,token:e.target.value})} placeholder="Gizli kelimen"/>
-          <div className="hint">Apps Script'teki SECRET_TOKEN ile aynı olmalı. Her cihaza girilmeli.</div>
+          <label>Fiyat & Veri</label>
+          {(busy.price||busy.hist)
+            ?<div className="dim" style={{fontSize:13,display:"flex",alignItems:"center",gap:8}}><div className="spinner" style={{width:14,height:14}}></div>{pprog}</div>
+            :<div className="brow">
+              <button onClick={fetchPrices} disabled={!cfg.massiveKey} style={{opacity:!cfg.massiveKey?.4:1}}>Güncel Fiyatlar</button>
+              <button onClick={fetchHistorical} disabled={!cfg.massiveKey} style={{opacity:!cfg.massiveKey?.4:1}}>Tarihi Veri (1G/1H/1A/1Y)</button>
+            </div>}
+          <div className="hint">Tarihi veri fiyatı da günceller · ~2 dk</div>
         </div>
+
         <div className="sg">
-          <label>Google Sheets Webhook URL</label>
-          <input type="text" value={cfg.webhookUrl} onChange={e=>saveCfg({...cfg,webhookUrl:e.target.value})} placeholder="https://script.google.com/macros/s/..."/>
-        </div>
-        <div className="sg">
-          <label>Anthropic API Key <span className="dim">(AI parsing)</span></label>
-          <input type="password" value={cfg.anthropicKey} onChange={e=>saveCfg({...cfg,anthropicKey:e.target.value})} placeholder="sk-ant-..."/>
-          <div className="hint">console.anthropic.com → API Keys</div>
-        </div>
-        <div className="sg">
-          <label>Massive API Key <span className="dim">(fiyat güncellemesi)</span></label>
-          <input type="password" value={cfg.massiveKey} onChange={e=>saveCfg({...cfg,massiveKey:e.target.value})} placeholder="massive_..."/>
-        </div>
-        <div className="sg">
-          <label>Fiyat Güncelle <span className="dim">(son: {pdate})</span></label>
-          {busy.price
-            ?<div className="dim mono" style={{fontSize:13}}>Çekiliyor: {pprog}</div>
-            :<button onClick={fetchPrices} disabled={!cfg.massiveKey} style={{opacity:!cfg.massiveKey?.4:1}}>Tüm Fiyatları Güncelle</button>}
-          <div className="hint">Rate limit nedeniyle ~2 dakika sürer</div>
-        </div>
-        <div style={{borderTop:"0.5px solid var(--border)",paddingTop:16}}>
-          <div className="stitle">Sistem Durumu</div>
-          {[
-            [!!cfg.token,"Gizli Token",cfg.token?"Tanımlı":"Eksik"],
-            [!!cfg.webhookUrl,"Google Sheets",cfg.webhookUrl?"Bağlı":"Bağlı değil"],
-            [!!cfg.anthropicKey,"Anthropic API",cfg.anthropicKey?"Tanımlı":"Eksik"],
-            [!!cfg.massiveKey,"Massive API",cfg.massiveKey?"Tanımlı":"Eksik"],
-            [true,"Pozisyonlar",pos.length+" açık"],
-            [true,"İşlemler",txs.length+" kayıtlı"],
-            [synced,"Sheets sync",synced?"Bu oturumda yüklendi":"Henüz yüklenmedi"],
-          ].map(([ok,l,v])=>(
-            <div key={l} className="row">
-              <span style={{fontSize:13}}><span className={"dot "+(ok?"ok":"off")}></span>{l}</span>
-              <span className={"dim"+(ok?"":" err")} style={{fontSize:12}}>{v}</span>
-            </div>
-          ))}
-          <div style={{marginTop:16}}>
-            <button onClick={manualLoad} disabled={!cfg.webhookUrl||!cfg.token}>Sheets'ten Şimdi Yükle</button>
+          <label>Export</label>
+          <div className="brow">
+            <button onClick={exportTx}>İşlemler CSV</button>
+            <button onClick={exportPos}>Pozisyonlar CSV</button>
           </div>
         </div>
+
+        <div style={{borderTop:"0.5px solid var(--border)",paddingTop:16,marginBottom:16}}>
+          <div className="stitle">Sistem Durumu</div>
+          {[
+            [!!cfg.anthropicKey,"Anthropic API",cfg.anthropicKey?"Tanımlı":"Eksik"],
+            [!!cfg.massiveKey,"Massive API",cfg.massiveKey?"Tanımlı":"Eksik"],
+            [true,"Supabase","Bağlı · RLS aktif"],
+            [hasHist,"Tarihi Veri",hasHist?`${Object.keys(hist).length} ticker`:"Yüklenmedi"],
+            [pdate!=="—","Son Fiyat",pdate],
+            [true,"Pozisyonlar",pos.length+" açık"],
+            [true,"İşlemler",txs.length+" kayıtlı"],
+          ].map(([ok,l,v])=>(
+            <div key={l} className="row"><span style={{fontSize:13}}><span className={"dot "+(ok?"ok":"off")}></span>{l}</span><span className={"dim"+(ok?"":" err")} style={{fontSize:12}}>{v}</span></div>
+          ))}
+        </div>
+
+        <button className="danger" onClick={logout} style={{width:"100%"}}>Çıkış Yap</button>
       </div>}
     </div>
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+// ── Root — Auth Controller ──────────────────────────────────────
+function Root(){
+  const [session,setSession]=useState(undefined); // undefined = loading
+
+  useEffect(()=>{
+    sb.auth.getSession().then(({data:{session}})=>setSession(session));
+    const{data:{subscription}}=sb.auth.onAuthStateChange((_,session)=>setSession(session));
+    return()=>subscription.unsubscribe();
+  },[]);
+
+  if(session===undefined)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"80vh",gap:10,color:"#888",fontSize:13}}><div className="spinner"></div>Yükleniyor...</div>;
+  if(!session)return<Login/>;
+  return<App user={session.user}/>;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
 </script>
 </body>
 </html>
