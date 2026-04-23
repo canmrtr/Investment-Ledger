@@ -547,7 +547,7 @@ function AddTab({session,user,pos,loadData,flash_}){
   const [input,setInput]=useState("");
   const [imgFile,setImgFile]=useState(null);
   const [csvText,setCsvText]=useState("");
-  const [csvRows,setCsvRows]=useState([]);
+  const [csvProg,setCsvProg]=useState({step:"",pct:0,done:false});
   const [parsed,setParsed]=useState(null);
   const [busy,setBusy]=useState(false);
   const [err,setErr]=useState("");
@@ -586,14 +586,40 @@ function AddTab({session,user,pos,loadData,flash_}){
   const importCSV=async()=>{
     if(!csvRows.length)return;
     setBusy(true);
-    const txs=csvRows.map(r=>({user_id:user.id,date:r.date||today(),ticker:r.ticker.toUpperCase(),name:r.name||r.ticker,asset_type:r.type||r.asset_type||"US_STOCK",way:r.way.toUpperCase(),shares:+r.shares,price:+r.price,currency:r.currency||"USD",total:+(r.total||(+r.shares)*(+r.price)).toFixed(4),broker:r.broker||"",commission:+r.commission||0,exchange:r.exchange||"",notes:r.notes||""}));
+    setCsvProg({step:`0 / ${csvRows.length} işlem ekleniyor...`,pct:5,done:false});
+
+    const txs=csvRows.map(r=>({
+      user_id:user.id,
+      date:r.date||today(),
+      ticker:r.ticker.toUpperCase(),
+      name:r.name||r.ticker,
+      asset_type:r.type||r.asset_type||"US_STOCK",
+      way:r.way.toUpperCase(),
+      shares:+r.shares,
+      price:+r.price,
+      currency:r.currency||"USD",
+      total:+(r.total||(+r.shares)*(+r.price)).toFixed(4),
+      broker:r.broker||"",
+      commission:+r.commission||0,
+      exchange:r.exchange||"",
+      notes:r.notes||""
+    }));
+
+    // Batch insert (50'lik paketler)
     let ok=0;
-    for(let i=0;i<txs.length;i+=50){
-      const{error}=await sb.from("transactions").insert(txs.slice(i,i+50));
-      if(!error)ok+=Math.min(50,txs.length-i);
+    const batchSize=50;
+    for(let i=0;i<txs.length;i+=batchSize){
+      const{error}=await sb.from("transactions").insert(txs.slice(i,i+batchSize));
+      if(!error)ok+=Math.min(batchSize,txs.length-i);
+      const pct=Math.round(((i+batchSize)/txs.length)*60)+5;
+      setCsvProg({step:`${Math.min(ok,txs.length)} / ${txs.length} işlem eklendi`,pct:Math.min(pct,65),done:false});
     }
-    // Pozisyonları yeniden hesapla
+
+    // Pozisyon hesaplama
+    setCsvProg({step:"Tüm işlemler okunuyor...",pct:70,done:false});
     const{data:all}=await sb.from("transactions").select("*").eq("user_id",user.id).order("date");
+
+    setCsvProg({step:"Pozisyonlar hesaplanıyor...",pct:80,done:false});
     const pm={};
     for(const t of(all||[])){
       if(!pm[t.ticker])pm[t.ticker]={ticker:t.ticker,name:t.name,type:t.asset_type,shares:0,cost:0,currency:t.currency,broker:t.broker};
@@ -601,11 +627,20 @@ function AddTab({session,user,pos,loadData,flash_}){
       if(t.way==="BUY"){p.cost+=t.shares*t.price;p.shares+=t.shares;}
       else if(t.way==="SELL"){const a=p.shares>0?p.cost/p.shares:0;p.cost-=a*t.shares;p.shares-=t.shares;}
     }
+
+    setCsvProg({step:"Supabase güncelleniyor...",pct:90,done:false});
     await sb.from("positions").delete().eq("user_id",user.id);
-    const newPos=Object.values(pm).filter(p=>p.shares>0.0001).map(p=>({user_id:user.id,ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares.toFixed(6),avg_cost:+(p.cost/p.shares).toFixed(6),currency:p.currency,broker:p.broker,updated_at:new Date().toISOString()}));
+    const newPos=Object.values(pm).filter(p=>p.shares>0.0001).map(p=>({
+      user_id:user.id,ticker:p.ticker,name:p.name,type:p.type,
+      shares:+p.shares.toFixed(6),avg_cost:+(p.cost/p.shares).toFixed(6),
+      currency:p.currency,broker:p.broker,updated_at:new Date().toISOString()
+    }));
     if(newPos.length)await sb.from("positions").insert(newPos);
-    await loadData();setBusy(false);setCsvText("");setCsvRows([]);
-    flash_(`${ok} işlem eklendi, ${newPos.length} pozisyon hesaplandı ✓`);
+
+    await loadData();
+    setCsvProg({step:`✓ ${ok} işlem · ${newPos.length} pozisyon başarıyla aktarıldı`,pct:100,done:true});
+    setBusy(false);
+    setTimeout(()=>{setCsvText("");setCsvRows([]);setCsvProg({step:"",pct:0,done:false});},4000);
   };
 
   const saveTx=async(p)=>{
@@ -677,10 +712,31 @@ function AddTab({session,user,pos,loadData,flash_}){
             placeholder={"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Total,Broker,Commission\n2021-03-03,TSLA,Tesla Inc,US_STOCK,BUY,2,692.08,USD,1384.16,QNB,20"}
             style={{fontSize:11,fontFamily:"monospace",resize:"vertical",marginBottom:10}}/>
         </div>
-        <div className="brow">
-          <button onClick={parseCSVText} disabled={!csvText.trim()}>Önizle</button>
-          {csvRows.length>0&&<button onClick={importCSV} disabled={busy} className="primary">{busy?"İçe aktarılıyor...":csvRows.length+" İşlemi İçe Aktar"}</button>}
+        <div className="brow" style={{marginBottom:12}}>
+          <button onClick={parseCSVText} disabled={!csvText.trim()||busy}>Önizle</button>
+          {csvRows.length>0&&!busy&&!csvProg.done&&(
+            <button onClick={importCSV} className="primary">{csvRows.length} İşlemi İçe Aktar</button>
+          )}
         </div>
+
+        {/* Progress */}
+        {(busy||csvProg.done)&&csvProg.step&&(
+          <div style={{marginBottom:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+              <span style={{fontSize:12,color:csvProg.done?"var(--ok)":"var(--text2)"}}>{csvProg.step}</span>
+              <span style={{fontSize:11,color:"var(--text3)"}}>{csvProg.pct}%</span>
+            </div>
+            <div style={{height:6,background:"var(--bg3)",borderRadius:3,overflow:"hidden"}}>
+              <div style={{
+                height:"100%",
+                width:csvProg.pct+"%",
+                background:csvProg.done?"var(--ok)":"var(--info)",
+                borderRadius:3,
+                transition:"width 0.4s ease"
+              }}/>
+            </div>
+          </div>
+        )}
         {csvRows.length>0&&<div style={{marginTop:12}}>
           <div className="stitle">{csvRows.length} işlem bulundu — ilk 5:</div>
           <div className="tbl-wrap"><table>
