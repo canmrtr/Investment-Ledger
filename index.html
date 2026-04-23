@@ -547,6 +547,7 @@ function AddTab({session,user,pos,loadData,flash_}){
   const [input,setInput]=useState("");
   const [imgFile,setImgFile]=useState(null);
   const [csvText,setCsvText]=useState("");
+  const [csvRows,setCsvRows]=useState([]);
   const [csvProg,setCsvProg]=useState({step:"",pct:0,done:false});
   const [parsed,setParsed]=useState(null);
   const [busy,setBusy]=useState(false);
