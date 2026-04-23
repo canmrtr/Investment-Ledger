@@ -74,7 +74,6 @@
     .hdr-l h1{font-size:20px;font-weight:600;}
     .hdr-l .sub{font-size:11px;color:var(--text2);margin-top:2px;}
     .hdr-r{display:flex;gap:8px;align-items:center;}
-    /* Login */
     .login-wrap{display:flex;align-items:center;justify-content:center;min-height:90vh;}
     .login-box{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--rl);padding:32px 28px;width:100%;max-width:360px;}
     .login-logo{text-align:center;font-size:36px;margin-bottom:6px;}
@@ -95,7 +94,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
 
 <script type="text/babel">
-// ── CONFIG — Supabase bilgilerini buraya yaz ────────────────────
+// ── CONFIG — sadece public değerler, API key yok ────────────────
 const SUPA_URL  = "https://jfetubcilmuthpddkodg.supabase.co";
 const SUPA_ANON = "sb_publishable_fB2va7QAJaGjwdn0ULNr9g_SbO2fCPy";
 // ───────────────────────────────────────────────────────────────
@@ -104,29 +103,27 @@ const sb = supabase.createClient(SUPA_URL, SUPA_ANON, {
   auth: { persistSession: true, autoRefreshToken: true }
 });
 
-const {useState, useEffect} = React;
-const TL = {US_STOCK:"Hisse",FUND:"ETF/Fon",CRYPTO:"Kripto",BIST:"BIST",GOLD:"Altın",FX:"Döviz"};
-const LS = {
+const {useState,useEffect}=React;
+const TL={US_STOCK:"Hisse",FUND:"ETF/Fon",CRYPTO:"Kripto",BIST:"BIST",GOLD:"Altın",FX:"Döviz"};
+const LS={
   get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
   set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 };
-const uid  = ()=>Math.random().toString(36).slice(2,9);
-const fmt  = (n,d=2)=>n==null?"—":n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
-const fmtD = n=>n==null?"—":(n>=0?"+$":"-$")+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmtP = n=>n==null?"—":(n>=0?"+":"")+n.toFixed(1)+"%";
-const pc   = n=>n==null?"":n>=0?" ok":" err";
-const sleep= ms=>new Promise(r=>setTimeout(r,ms));
-const today= ()=>new Date().toISOString().split("T")[0];
-const dago = n=>new Date(Date.now()-n*86400000).toISOString().split("T")[0];
+const fmt =(n,d=2)=>n==null?"—":n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtD=n=>n==null?"—":(n>=0?"+$":"-$")+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtP=n=>n==null?"—":(n>=0?"+":"")+n.toFixed(1)+"%";
+const pc  =n=>n==null?"":n>=0?" ok":" err";
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const today=()=>new Date().toISOString().split("T")[0];
+const dago =n=>new Date(Date.now()-n*86400000).toISOString().split("T")[0];
 
-// ── SVG Icons ───────────────────────────────────────────────────
-const EyeOn = ()=>(
+const EyeOn=()=>(
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <ellipse cx="12" cy="12" rx="11" ry="8"/>
     <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
   </svg>
 );
-const EyeOff = ()=>(
+const EyeOff=()=>(
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 3l18 18"/>
     <path d="M10.5 10.7a3 3 0 0 0 3.8 3.8"/>
@@ -134,6 +131,16 @@ const EyeOff = ()=>(
     <path d="M9.4 4.4A10.5 10.5 0 0 1 12 4c7 0 11 8 11 8a18 18 0 0 1-2.7 3.8"/>
   </svg>
 );
+
+// ── Edge Function çağrı yardımcısı ──────────────────────────────
+const edgeCall=async(session,fn,body)=>{
+  const r=await fetch(`${SUPA_URL}/functions/v1/${fn}`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":`Bearer ${session.access_token}`},
+    body:JSON.stringify(body)
+  });
+  return r;
+};
 
 // ── Login ───────────────────────────────────────────────────────
 function Login(){
@@ -147,7 +154,7 @@ function Login(){
   const submit=async()=>{
     if(!email||!pw)return;
     setLoading(true);setErr("");setMsg("");
-    const {error}=isReg
+    const{error}=isReg
       ?await sb.auth.signUp({email,password:pw})
       :await sb.auth.signInWithPassword({email,password:pw});
     if(error)setErr(error.message);
@@ -171,7 +178,7 @@ function Login(){
         {msg&&<div style={{fontSize:12,color:"var(--ok)",marginTop:8}}>{msg}</div>}
         <div className="login-actions">
           <button className="primary" onClick={submit} disabled={loading||!email||!pw}>
-            {loading?<><span className="spinner" style={{width:14,height:14}}></span></>:(isReg?"Kayıt Ol":"Giriş Yap")}
+            {loading?<div className="spinner" style={{width:14,height:14,margin:"0 auto"}}></div>:(isReg?"Kayıt Ol":"Giriş Yap")}
           </button>
           <button className="login-toggle" onClick={()=>{setIsReg(!isReg);setErr("");setMsg("");}}>
             {isReg?"Hesabım var → Giriş Yap":"Hesabım yok → Kayıt Ol"}
@@ -182,45 +189,551 @@ function Login(){
   );
 }
 
-// ── Main App ────────────────────────────────────────────────────
-function App({user}){
+// ── HistoryTab — gruplu, katlanabilir, düzenlenebilir ────────────
+function HistoryTab({txs,user,loadData,flash_,mask,hideAmts}){
+  const [open,setOpen]=useState({});       // {TICKER: true/false}
+  const [editing,setEditing]=useState(null); // tx id
+  const [editForm,setEditForm]=useState({});
+  const [saving,setSaving]=useState(false);
+  const [deleting,setDeleting]=useState(null);
+
+  // Ticker'a göre grupla, alfabetik sırala
+  const grouped={};
+  txs.forEach(t=>{
+    if(!grouped[t.ticker])grouped[t.ticker]=[];
+    grouped[t.ticker].push(t);
+  });
+  const tickers=Object.keys(grouped).sort();
+
+  const toggle=tk=>setOpen(o=>({...o,[tk]:!o[tk]}));
+
+  const startEdit=t=>{
+    setEditing(t.id);
+    setEditForm({date:t.date,way:t.way,shares:t.shares,price:t.price,currency:t.currency||"USD",broker:t.broker||"",commission:t.commission||0,notes:t.notes||""});
+  };
+
+  const saveEdit=async(t)=>{
+    setSaving(true);
+    const total=+(editForm.shares*editForm.price).toFixed(4);
+    const{error}=await sb.from("transactions").update({
+      date:editForm.date,way:editForm.way,
+      shares:+editForm.shares,price:+editForm.price,
+      currency:editForm.currency,total,
+      broker:editForm.broker,commission:+editForm.commission||0,
+      notes:editForm.notes||""
+    }).eq("id",t.id).eq("user_id",user.id);
+    if(error){flash_(error.message,"err");}
+    else{
+      // Pozisyonları yeniden hesapla
+      await rebuildPositions(user.id);
+      await loadData();
+      flash_("Güncellendi ✓");
+      setEditing(null);
+    }
+    setSaving(false);
+  };
+
+  const deleteTx=async(t)=>{
+    if(!window.confirm(`${t.ticker} — ${t.date} işlemi silinsin mi?`))return;
+    setDeleting(t.id);
+    const{error}=await sb.from("transactions").delete().eq("id",t.id).eq("user_id",user.id);
+    if(error){flash_(error.message,"err");}
+    else{
+      await rebuildPositions(user.id);
+      await loadData();
+      flash_("Silindi ✓");
+    }
+    setDeleting(null);
+  };
+
+  const rebuildPositions=async(uid)=>{
+    const{data:all}=await sb.from("transactions").select("*").eq("user_id",uid).order("date");
+    const pm={};
+    for(const t of(all||[])){
+      if(!pm[t.ticker])pm[t.ticker]={ticker:t.ticker,name:t.name,type:t.asset_type,shares:0,cost:0,currency:t.currency,broker:t.broker};
+      const p=pm[t.ticker];
+      if(t.way==="BUY"){p.cost+=t.shares*t.price;p.shares+=t.shares;}
+      else if(t.way==="SELL"){const a=p.shares>0?p.cost/p.shares:0;p.cost-=a*t.shares;p.shares-=t.shares;}
+    }
+    await sb.from("positions").delete().eq("user_id",uid);
+    const newPos=Object.values(pm).filter(p=>p.shares>0.0001).map(p=>({
+      user_id:uid,ticker:p.ticker,name:p.name,type:p.type,
+      shares:+p.shares.toFixed(6),avg_cost:+(p.cost/p.shares).toFixed(6),
+      currency:p.currency,broker:p.broker,updated_at:new Date().toISOString()
+    }));
+    if(newPos.length)await sb.from("positions").insert(newPos);
+  };
+
+  if(txs.length===0)return<div className="empty">Henüz işlem yok — "+ Ekle" ile başla.</div>;
+
+  const inp={background:"var(--bg)",border:"0.5px solid var(--border2)",borderRadius:6,color:"var(--text)",fontFamily:"inherit",padding:"4px 7px",fontSize:12,width:"100%"};
+
+  return(
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <span className="dim" style={{fontSize:12}}>{txs.length} işlem · {tickers.length} varlık</span>
+        <div className="brow">
+          <button style={{fontSize:11,padding:"4px 9px"}} onClick={()=>setOpen(Object.fromEntries(tickers.map(t=>[t,true])))}>Tümünü Aç</button>
+          <button style={{fontSize:11,padding:"4px 9px"}} onClick={()=>setOpen({})}>Tümünü Kapat</button>
+        </div>
+      </div>
+
+      {tickers.map(tk=>{
+        const items=grouped[tk];
+        const isOpen=!!open[tk];
+        const buys=items.filter(t=>t.way==="BUY").reduce((a,t)=>a+t.shares,0);
+        const totalVal=items.reduce((a,t)=>a+(t.way==="BUY"?t.total:-t.total),0);
+
+        return(
+          <div key={tk} style={{marginBottom:8,border:"0.5px solid var(--border)",borderRadius:12,overflow:"hidden"}}>
+            {/* Ticker header */}
+            <div onClick={()=>toggle(tk)} style={{
+              display:"flex",justifyContent:"space-between",alignItems:"center",
+              padding:"10px 14px",background:"var(--bg2)",cursor:"pointer"
+            }}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:13,fontWeight:700,fontFamily:"var(--mono)"}}>{tk}</span>
+                <span className="dim" style={{fontSize:11}}>{items.length} işlem</span>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                {!hideAmts&&<span className="dim mono" style={{fontSize:11}}>{mask("$"+fmt(totalVal,0))}</span>}
+                <span style={{color:"var(--text3)",fontSize:12}}>{isOpen?"▲":"▼"}</span>
+              </div>
+            </div>
+
+            {/* Transactions list */}
+            {isOpen&&<div>
+              {items.map(t=>(
+                <div key={t.id} style={{borderTop:"0.5px solid var(--border)"}}>
+                  {editing===t.id?(
+                    /* Edit form */
+                    <div style={{padding:"12px 14px",background:"var(--bg3)"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+                        <div><div className="kk" style={{marginBottom:3}}>Tarih</div><input style={inp} value={editForm.date} onChange={e=>setEditForm(f=>({...f,date:e.target.value}))}/></div>
+                        <div><div className="kk" style={{marginBottom:3}}>İşlem</div>
+                          <select style={inp} value={editForm.way} onChange={e=>setEditForm(f=>({...f,way:e.target.value}))}>
+                            <option value="BUY">Alış</option><option value="SELL">Satış</option>
+                          </select>
+                        </div>
+                        <div><div className="kk" style={{marginBottom:3}}>Para Birimi</div>
+                          <select style={inp} value={editForm.currency} onChange={e=>setEditForm(f=>({...f,currency:e.target.value}))}>
+                            <option>USD</option><option>TRY</option><option>EUR</option>
+                          </select>
+                        </div>
+                        <div><div className="kk" style={{marginBottom:3}}>Adet</div><input style={inp} type="number" value={editForm.shares} onChange={e=>setEditForm(f=>({...f,shares:e.target.value}))}/></div>
+                        <div><div className="kk" style={{marginBottom:3}}>Fiyat</div><input style={inp} type="number" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))}/></div>
+                        <div><div className="kk" style={{marginBottom:3}}>Broker</div><input style={inp} value={editForm.broker} onChange={e=>setEditForm(f=>({...f,broker:e.target.value}))}/></div>
+                      </div>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                        <div><div className="kk" style={{marginBottom:3}}>Komisyon</div><input style={inp} type="number" value={editForm.commission} onChange={e=>setEditForm(f=>({...f,commission:e.target.value}))}/></div>
+                        <div><div className="kk" style={{marginBottom:3}}>Not</div><input style={inp} value={editForm.notes} onChange={e=>setEditForm(f=>({...f,notes:e.target.value}))}/></div>
+                      </div>
+                      <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>
+                        Toplam: {editForm.currency==="TRY"?"₺":"$"}{fmt(editForm.shares*editForm.price)}
+                      </div>
+                      <div className="brow">
+                        <button className="primary" style={{fontSize:12,padding:"5px 12px"}} onClick={()=>saveEdit(t)} disabled={saving}>{saving?"Kaydediliyor...":"Kaydet"}</button>
+                        <button style={{fontSize:12,padding:"5px 12px"}} onClick={()=>setEditing(null)}>İptal</button>
+                      </div>
+                    </div>
+                  ):(
+                    /* Normal row */
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 14px"}}>
+                      <div style={{display:"flex",gap:12,alignItems:"center",flex:1}}>
+                        <span style={{fontSize:11,color:"var(--text2)",fontFamily:"var(--mono)",minWidth:72}}>{t.date}</span>
+                        <span className={t.way==="BUY"?"ok":"err"} style={{fontSize:11,minWidth:30}}>{t.way==="BUY"?"Alış":"Satış"}</span>
+                        <span className="mono" style={{fontSize:12}}>{t.shares%1===0?t.shares:t.shares.toFixed(4)} adet</span>
+                        {!hideAmts&&<span className="mono dim" style={{fontSize:12}}>{mask((t.currency==="TRY"?"₺":"$")+fmt(t.price))}</span>}
+                        {!hideAmts&&<span className="mono" style={{fontSize:12}}>{mask((t.currency==="TRY"?"₺":"$")+fmt(t.total,0))}</span>}
+                        {t.broker&&<span className="dim" style={{fontSize:10}}>{t.broker}</span>}
+                      </div>
+                      <div className="brow" style={{gap:5}}>
+                        <button style={{fontSize:11,padding:"3px 9px"}} onClick={()=>startEdit(t)}>Düzenle</button>
+                        <button style={{fontSize:11,padding:"3px 9px",color:"var(--err)",borderColor:"var(--err)",background:"transparent"}} onClick={()=>deleteTx(t)} disabled={deleting===t.id}>{deleting===t.id?"...":"Sil"}</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Manuel Pozisyon Formu ────────────────────────────────────────
+function ManuelPosForm({session,user,pos,loadData,flash_}){
+  const EMPTY={ticker:"",name:"",type:"US_STOCK",shares:"",avgCost:"",currency:"USD",broker:""};
+  const [form,setForm]=useState(EMPTY);
+  const [currentPrice,setCurrentPrice]=useState(null);
+  const [fetchingPrice,setFetchingPrice]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [editTicker,setEditTicker]=useState(null); // düzenlenen pozisyon ticker'ı
+
+  const set=f=>setForm(p=>({...p,...f}));
+
+  // Mevcut pozisyonları listele
+  const usdPos=pos.filter(p=>p.currency==="USD");
+
+  const fetchPrice=async(ticker)=>{
+    if(!ticker||ticker.length<1)return;
+    setFetchingPrice(true);setCurrentPrice(null);
+    try{
+      const r=await fetch(`${SUPA_URL}/functions/v1/fetch-prices`,{
+        method:"POST",
+        headers:{"Content-Type":"application/json","Authorization":`Bearer ${session.access_token}`},
+        body:JSON.stringify({tickers:[ticker.toUpperCase()],mode:"price"})
+      });
+      const d=await r.json();
+      if(d.results&&d.results[ticker.toUpperCase()]?.price){
+        setCurrentPrice(d.results[ticker.toUpperCase()].price);
+      }else{setCurrentPrice(null);}
+    }catch(e){}
+    setFetchingPrice(false);
+  };
+
+  const startEdit=p=>{
+    setEditTicker(p.ticker);
+    setForm({ticker:p.ticker,name:p.name,type:p.type,shares:p.shares,avgCost:p.avgCost,currency:p.currency,broker:p.broker||""});
+    setCurrentPrice(null);
+    fetchPrice(p.ticker);
+  };
+
+  const cancelEdit=()=>{setEditTicker(null);setForm(EMPTY);setCurrentPrice(null);};
+
+  const savePos=async()=>{
+    if(!form.ticker||!form.shares||!form.avgCost)return;
+    setSaving(true);
+    const payload={
+      user_id:user.id,
+      ticker:form.ticker.toUpperCase(),
+      name:form.name||form.ticker.toUpperCase(),
+      type:form.type,
+      shares:+form.shares,
+      avg_cost:+form.avgCost,
+      currency:form.currency,
+      broker:form.broker||"",
+      updated_at:new Date().toISOString()
+    };
+    const{error}=await sb.from("positions")
+      .upsert(payload,{onConflict:"user_id,ticker"});
+    if(error){flash_(error.message,"err");}
+    else{
+      await loadData();
+      flash_(`${payload.ticker} pozisyonu kaydedildi ✓`);
+      setEditTicker(null);setForm(EMPTY);setCurrentPrice(null);
+    }
+    setSaving(false);
+  };
+
+  const deletePos=async(ticker)=>{
+    if(!window.confirm(`${ticker} pozisyonu silinsin mi? (İşlem geçmişi korunur)`))return;
+    await sb.from("positions").delete().eq("user_id",user.id).eq("ticker",ticker);
+    await loadData();flash_(`${ticker} pozisyonu silindi`);
+  };
+
+  const inp={background:"var(--bg)",border:"0.5px solid var(--border2)",borderRadius:6,color:"var(--text)",fontFamily:"inherit",padding:"7px 9px",fontSize:13,width:"100%"};
+  const sel={...inp};
+
+  const isEditing=editTicker!==null;
+
+  return(
+    <div>
+      {/* Form */}
+      <div className="cbox" style={{marginBottom:16}}>
+        <div className="lbl" style={{marginBottom:12}}>{isEditing?`${editTicker} — Düzenle`:"Yeni Pozisyon Ekle"}</div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+          <div>
+            <div className="kk" style={{marginBottom:4}}>Ticker *</div>
+            <div style={{display:"flex",gap:6}}>
+              <input style={{...inp,textTransform:"uppercase"}} value={form.ticker}
+                onChange={e=>set({ticker:e.target.value.toUpperCase()})}
+                onBlur={e=>fetchPrice(e.target.value)}
+                placeholder="AAPL" disabled={isEditing}/>
+              <button style={{whiteSpace:"nowrap",fontSize:12,padding:"7px 10px"}}
+                onClick={()=>fetchPrice(form.ticker)} disabled={fetchingPrice||!form.ticker}>
+                {fetchingPrice?<div className="spinner" style={{width:12,height:12}}></div>:"↻"}
+              </button>
+            </div>
+            {currentPrice&&<div style={{fontSize:11,color:"var(--ok)",marginTop:4}}>Güncel fiyat: ${fmt(currentPrice)}</div>}
+            {fetchingPrice&&<div style={{fontSize:11,color:"var(--text2)",marginTop:4}}>Fiyat çekiliyor...</div>}
+          </div>
+
+          <div>
+            <div className="kk" style={{marginBottom:4}}>Şirket Adı</div>
+            <input style={inp} value={form.name} onChange={e=>set({name:e.target.value})} placeholder="Apple Inc"/>
+          </div>
+
+          <div>
+            <div className="kk" style={{marginBottom:4}}>Varlık Türü</div>
+            <select style={sel} value={form.type} onChange={e=>set({type:e.target.value})}>
+              <option value="US_STOCK">Hisse (US)</option>
+              <option value="FUND">ETF / Fon</option>
+              <option value="CRYPTO">Kripto</option>
+              <option value="BIST">BIST</option>
+              <option value="GOLD">Altın</option>
+              <option value="FX">Döviz</option>
+            </select>
+          </div>
+
+          <div>
+            <div className="kk" style={{marginBottom:4}}>Para Birimi</div>
+            <select style={sel} value={form.currency} onChange={e=>set({currency:e.target.value})}>
+              <option>USD</option><option>TRY</option><option>EUR</option>
+            </select>
+          </div>
+
+          <div>
+            <div className="kk" style={{marginBottom:4}}>Adet *</div>
+            <input style={inp} type="number" value={form.shares} onChange={e=>set({shares:e.target.value})} placeholder="0"/>
+          </div>
+
+          <div>
+            <div className="kk" style={{marginBottom:4}}>Ortalama Maliyet *</div>
+            <input style={inp} type="number" value={form.avgCost} onChange={e=>set({avgCost:e.target.value})} placeholder="0.00"/>
+          </div>
+
+          <div>
+            <div className="kk" style={{marginBottom:4}}>Broker</div>
+            <input style={inp} value={form.broker} onChange={e=>set({broker:e.target.value})} placeholder="Akbank, Midas..."/>
+          </div>
+
+          <div style={{display:"flex",alignItems:"flex-end"}}>
+            {form.shares&&form.avgCost&&<div style={{fontSize:11,color:"var(--text2)",padding:"7px 0"}}>
+              Toplam maliyet: {form.currency==="TRY"?"₺":"$"}{fmt(form.shares*form.avgCost,0)}
+              {currentPrice&&<><br/>Piyasa değeri: {form.currency==="TRY"?"₺":"$"}{fmt(form.shares*currentPrice,0)}</>}
+            </div>}
+          </div>
+        </div>
+
+        <div className="brow">
+          <button className="primary" onClick={savePos} disabled={saving||!form.ticker||!form.shares||!form.avgCost}>
+            {saving?"Kaydediliyor...":(isEditing?"Güncelle":"Pozisyon Kaydet")}
+          </button>
+          {isEditing&&<button onClick={cancelEdit}>İptal</button>}
+        </div>
+        <div style={{fontSize:11,color:"var(--text2)",marginTop:8}}>
+          ⚠ Bu form pozisyonu doğrudan yazar — işlem geçmişine eklenmez.
+        </div>
+      </div>
+
+      {/* Mevcut pozisyonlar listesi */}
+      {usdPos.length>0&&<div>
+        <div className="stitle">Mevcut Pozisyonlar — Seç ve Düzenle</div>
+        {usdPos.sort((a,b)=>a.ticker.localeCompare(b.ticker)).map(p=>(
+          <div key={p.ticker} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:"0.5px solid var(--border)"}}>
+            <div>
+              <span style={{fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{p.ticker}</span>
+              <span className="dim" style={{fontSize:11,marginLeft:8}}>{p.shares%1===0?p.shares:p.shares.toFixed(4)} adet · ${fmt(p.avgCost)} ort.</span>
+              {p.broker&&<span className="dim" style={{fontSize:10,marginLeft:6}}>· {p.broker}</span>}
+            </div>
+            <div className="brow" style={{gap:5}}>
+              <button style={{fontSize:11,padding:"3px 9px"}} onClick={()=>startEdit(p)}>Düzenle</button>
+              <button style={{fontSize:11,padding:"3px 9px",color:"var(--err)",borderColor:"var(--err)",background:"transparent"}} onClick={()=>deletePos(p.ticker)}>Sil</button>
+            </div>
+          </div>
+        ))}
+      </div>}
+    </div>
+  );
+}
+
+// ── Add Tab ─────────────────────────────────────────────────────
+function AddTab({session,user,pos,loadData,flash_}){
+  const [mode,setMode]=useState("text");
+  const [input,setInput]=useState("");
+  const [imgFile,setImgFile]=useState(null);
+  const [csvText,setCsvText]=useState("");
+  const [csvRows,setCsvRows]=useState([]);
+  const [parsed,setParsed]=useState(null);
+  const [busy,setBusy]=useState(false);
+  const [err,setErr]=useState("");
+
+  const callParse=async(body)=>{
+    setBusy(true);setErr("");setParsed(null);
+    try{
+      const r=await edgeCall(session,"parse-transaction",body);
+      const d=await r.json();
+      if(d.error)throw new Error(d.error);
+      setParsed(d); // Edge function returns parsed JSON directly
+    }catch(e){setErr("Parse hatası: "+e.message);}
+    finally{setBusy(false);}
+  };
+
+  const parseText=()=>callParse({type:"text",text:input});
+
+  const parseImage=async()=>{
+    if(!imgFile)return;
+    const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(",")[1]);r.onerror=rej;r.readAsDataURL(imgFile);});
+    callParse({type:"image",media_type:imgFile.type||"image/png",image_data:b64});
+  };
+
+  const parseCSVText=()=>{
+    const lines=csvText.trim().split("\n").filter(l=>l.trim());
+    if(lines.length<2){setCsvRows([]);return;}
+    const hdrs=lines[0].split(",").map(h=>h.trim().toLowerCase().replace(/ /g,"_"));
+    const rows=lines.slice(1).map(line=>{
+      const vals=line.split(",");const obj={};
+      hdrs.forEach((h,i)=>obj[h]=(vals[i]||"").trim());
+      return obj;
+    }).filter(r=>r.ticker&&["BUY","SELL"].includes((r.way||"").toUpperCase()));
+    setCsvRows(rows);
+  };
+
+  const importCSV=async()=>{
+    if(!csvRows.length)return;
+    setBusy(true);
+    const txs=csvRows.map(r=>({user_id:user.id,date:r.date||today(),ticker:r.ticker.toUpperCase(),name:r.name||r.ticker,asset_type:r.type||r.asset_type||"US_STOCK",way:r.way.toUpperCase(),shares:+r.shares,price:+r.price,currency:r.currency||"USD",total:+(r.total||(+r.shares)*(+r.price)).toFixed(4),broker:r.broker||"",commission:+r.commission||0,exchange:r.exchange||"",notes:r.notes||""}));
+    let ok=0;
+    for(let i=0;i<txs.length;i+=50){
+      const{error}=await sb.from("transactions").insert(txs.slice(i,i+50));
+      if(!error)ok+=Math.min(50,txs.length-i);
+    }
+    // Pozisyonları yeniden hesapla
+    const{data:all}=await sb.from("transactions").select("*").eq("user_id",user.id).order("date");
+    const pm={};
+    for(const t of(all||[])){
+      if(!pm[t.ticker])pm[t.ticker]={ticker:t.ticker,name:t.name,type:t.asset_type,shares:0,cost:0,currency:t.currency,broker:t.broker};
+      const p=pm[t.ticker];
+      if(t.way==="BUY"){p.cost+=t.shares*t.price;p.shares+=t.shares;}
+      else if(t.way==="SELL"){const a=p.shares>0?p.cost/p.shares:0;p.cost-=a*t.shares;p.shares-=t.shares;}
+    }
+    await sb.from("positions").delete().eq("user_id",user.id);
+    const newPos=Object.values(pm).filter(p=>p.shares>0.0001).map(p=>({user_id:user.id,ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares.toFixed(6),avg_cost:+(p.cost/p.shares).toFixed(6),currency:p.currency,broker:p.broker,updated_at:new Date().toISOString()}));
+    if(newPos.length)await sb.from("positions").insert(newPos);
+    await loadData();setBusy(false);setCsvText("");setCsvRows([]);
+    flash_(`${ok} işlem eklendi, ${newPos.length} pozisyon hesaplandı ✓`);
+  };
+
+  const saveTx=async(p)=>{
+    if(!p)return;
+    const ex=pos.find(x=>x.ticker===p.ticker);
+    const tx={user_id:user.id,date:p.date,ticker:p.ticker,name:p.name||"",asset_type:p.asset_type,way:p.way,shares:p.shares,price:p.price,currency:p.currency||"USD",total:+(p.shares*p.price).toFixed(4),broker:p.broker||"",commission:p.commission||0,exchange:p.exchange||"",notes:p.notes||""};
+    const{error:te}=await sb.from("transactions").insert(tx);
+    if(te){flash_(te.message,"err");return;}
+    if(p.way==="BUY"){
+      const ns=(ex?.shares||0)+p.shares,na=((ex?.shares||0)*(ex?.avgCost||0)+p.shares*p.price)/ns;
+      await sb.from("positions").upsert({user_id:user.id,ticker:p.ticker,name:p.name||"",type:p.asset_type,shares:+ns.toFixed(6),avg_cost:+na.toFixed(6),currency:p.currency||"USD",broker:p.broker||"",updated_at:new Date().toISOString()},{onConflict:"user_id,ticker"});
+    }else if(p.way==="SELL"&&ex){
+      const ns=ex.shares-p.shares;
+      if(ns<=0.0001)await sb.from("positions").delete().eq("user_id",user.id).eq("ticker",p.ticker);
+      else await sb.from("positions").update({shares:+ns.toFixed(6),updated_at:new Date().toISOString()}).eq("user_id",user.id).eq("ticker",p.ticker);
+    }
+    await loadData();setParsed(null);setInput("");setImgFile(null);
+    flash_("Kaydedildi ✓");
+  };
+
+  const Confirm=({p})=>p?(
+    <div className="cbox" style={{marginTop:16}}>
+      <div className="lbl" style={{marginBottom:12}}>Parse sonucu — doğrula</div>
+      <div className="kv">
+        {[["Tarih",p.date],["Ticker",p.ticker],["Şirket",p.name],["Tür",TL[p.asset_type]||p.asset_type],["İşlem",p.way==="BUY"?"Alış":"Satış"],["Adet",p.shares],["Fiyat",(p.currency==="TRY"?"₺":"$")+fmt(p.price)],["Toplam",(p.currency==="TRY"?"₺":"$")+fmt(p.shares*p.price,0)],["Broker",p.broker||"—"],["Komisyon",p.commission?"$"+p.commission:"—"]].map(([k,v])=>(
+          <div key={k}><div className="kk">{k}</div><div className="kv_">{String(v)}</div></div>
+        ))}
+      </div>
+      <div className="brow"><button onClick={()=>saveTx(p)} className="primary">Kaydet</button><button onClick={()=>setParsed(null)}>İptal</button></div>
+    </div>
+  ):null;
+
+  return(
+    <div>
+      <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+        {[["text","📝 Metin"],["image","📷 Görüntü"],["csv","📋 CSV"],["manuel","📌 Manuel"]].map(([m,l])=>(
+          <button key={m} onClick={()=>{setMode(m);setParsed(null);setErr("");}} style={{flex:1,minWidth:70,background:mode===m?"var(--info)":"var(--bg2)",borderColor:mode===m?"var(--info)":"var(--border2)",color:mode===m?"#fff":"var(--text)",fontSize:12}}>{l}</button>
+        ))}
+      </div>
+
+      {mode==="text"&&<div>
+        <textarea value={input} onChange={e=>setInput(e.target.value)} rows={4}
+          placeholder={"\"NVDA 5 adet $210 Akbank bugün\"\n\"SPY 2 lot sattım $715 QNB komisyon $3\"\n\"BTC 0.001 adet 95000 TRY Binance\"\n\"THYAO 100 adet 350 TL BIST Akbank\""}
+          style={{marginBottom:10,lineHeight:1.6,resize:"vertical"}}/>
+        <button onClick={parseText} disabled={busy||!input.trim()} className="primary">{busy?"Parse ediliyor...":"AI ile Parse Et"}</button>
+        {err&&<div className="flash err" style={{marginTop:12}}>{err}</div>}
+        <Confirm p={parsed}/>
+      </div>}
+
+      {mode==="image"&&<div>
+        <div style={{marginBottom:12}}>
+          <div className="lbl" style={{marginBottom:8}}>Broker ekran görüntüsü</div>
+          <input type="file" accept="image/*" onChange={e=>setImgFile(e.target.files[0])} style={{fontSize:13}}/>
+          {imgFile&&<div style={{fontSize:11,color:"var(--text2)",marginTop:6}}>{imgFile.name} · {(imgFile.size/1024).toFixed(0)} KB</div>}
+        </div>
+        <button onClick={parseImage} disabled={busy||!imgFile} className="primary">{busy?"Okunuyor...":"Görüntüyü Oku"}</button>
+        {err&&<div className="flash err" style={{marginTop:12}}>{err}</div>}
+        <Confirm p={parsed}/>
+      </div>}
+
+      {mode==="manuel"&&<ManuelPosForm session={session} user={user} pos={pos} loadData={loadData} flash_={flash_}/>}
+
+      {mode==="csv"&&<div>
+        <div style={{marginBottom:10}}>
+          <div className="lbl" style={{marginBottom:6}}>CSV Dosya Yükle</div>
+          <input type="file" accept=".csv" onChange={e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{setCsvText(ev.target.result);setCsvRows([]);};r.readAsText(f);}} style={{fontSize:13,marginBottom:10}}/>
+          <div className="lbl" style={{marginBottom:6}}>veya Yapıştır</div>
+          <textarea value={csvText} onChange={e=>{setCsvText(e.target.value);setCsvRows([]);}} rows={4}
+            placeholder={"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Total,Broker,Commission\n2021-03-03,TSLA,Tesla Inc,US_STOCK,BUY,2,692.08,USD,1384.16,QNB,20"}
+            style={{fontSize:11,fontFamily:"monospace",resize:"vertical",marginBottom:10}}/>
+        </div>
+        <div className="brow">
+          <button onClick={parseCSVText} disabled={!csvText.trim()}>Önizle</button>
+          {csvRows.length>0&&<button onClick={importCSV} disabled={busy} className="primary">{busy?"İçe aktarılıyor...":csvRows.length+" İşlemi İçe Aktar"}</button>}
+        </div>
+        {csvRows.length>0&&<div style={{marginTop:12}}>
+          <div className="stitle">{csvRows.length} işlem bulundu — ilk 5:</div>
+          <div className="tbl-wrap"><table>
+            <thead><tr>{["Tarih","Ticker","İşlem","Adet","Fiyat","Broker"].map(h=><th key={h} className="l">{h}</th>)}</tr></thead>
+            <tbody>{csvRows.slice(0,5).map((r,i)=>(
+              <tr key={i}>
+                <td className="l" style={{fontSize:11}}>{r.date}</td>
+                <td className="l" style={{fontWeight:700}}>{r.ticker}</td>
+                <td className={"l "+(r.way?.toUpperCase()==="BUY"?"ok":"err")} style={{fontSize:11}}>{r.way?.toUpperCase()==="BUY"?"Alış":"Satış"}</td>
+                <td className="l">{r.shares}</td><td className="l">{r.price}</td>
+                <td className="l" style={{fontSize:11}}>{r.broker}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+          {csvRows.length>5&&<div className="dim" style={{fontSize:11,marginTop:4}}>...ve {csvRows.length-5} işlem daha</div>}
+          </div>
+        </div>}
+      </div>}
+    </div>
+  );
+}
+
+// ── Main App ─────────────────────────────────────────────────────
+function App({session}){
+  const user=session.user;
   const [tab,setTab]=useState("dashboard");
   const [pos,setPos]=useState([]);
   const [txs,setTxs]=useState([]);
   const [prc,setPrc_]=useState(()=>{const p=LS.get("il_prc",null);return p?p.p:{};});
   const [pdate,setPdate]=useState(()=>{const p=LS.get("il_prc",null);return p?p.d:"—";});
   const [hist,setHist_]=useState(()=>LS.get("il_hist",{}));
-  const [cfg,setCfg_]=useState(()=>LS.get("il_cfg",{massiveKey:"",anthropicKey:""}));
   const [hideAmts,setHide_]=useState(()=>LS.get("il_hide",false));
   const [sort,setSort]=useState({by:"plPct",dir:"asc"});
-  const [input,setInput]=useState("");
-  const [parsed,setParsed]=useState(null);
-  const [busy,setBusy]=useState({parse:false,price:false,hist:false,data:false});
+  const [busy,setBusy]=useState({price:false,hist:false,data:false});
   const [pprog,setPprog]=useState("");
-  const [perr,setPerr]=useState("");
   const [flash,setFlash]=useState(null);
 
-  const saveCfg =c=>{setCfg_(c);LS.set("il_cfg",c);};
-  const saveHide=v=>{setHide_(v);LS.set("il_hide",v);};
-  const savePrc =(p,d)=>{setPrc_(p);setPdate(d);LS.set("il_prc",{p,d});};
+  const savePrc=(p,d)=>{setPrc_(p);setPdate(d);LS.set("il_prc",{p,d});};
   const saveHist=h=>{setHist_(h);LS.set("il_hist",h);};
-  const flash_  =(msg,t="ok")=>{setFlash({msg,t});setTimeout(()=>setFlash(null),3500);};
-  const mask    =v=>hideAmts?<span className="mask">••••</span>:v;
+  const saveHide=v=>{setHide_(v);LS.set("il_hide",v);};
+  const flash_=(msg,t="ok")=>{setFlash({msg,t});setTimeout(()=>setFlash(null),3500);};
+  const mask=v=>hideAmts?<span className="mask">••••</span>:v;
 
-  // Load data from Supabase
   const loadData=async()=>{
     setBusy(b=>({...b,data:true}));
-    try{
-      const[pr,tr]=await Promise.all([
-        sb.from("positions").select("*").eq("user_id",user.id),
-        sb.from("transactions").select("*").eq("user_id",user.id).order("date",{ascending:false})
-      ]);
-      if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker})));
-      if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission})));
-    }catch(e){flash_(e.message,"err");}
+    const[pr,tr]=await Promise.all([
+      sb.from("positions").select("*").eq("user_id",user.id),
+      sb.from("transactions").select("*").eq("user_id",user.id).order("date",{ascending:false})
+    ]);
+    if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker})));
+    if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission})));
     setBusy(b=>({...b,data:false}));
   };
-
   useEffect(()=>{loadData();},[]);
 
   // Derived
@@ -241,90 +754,45 @@ function App({user}){
   const sa=k=>sort.by===k?(sort.dir==="asc"?" ↑":" ↓"):"";
   const top4=fn=>[...usd].filter(p=>p.plPct!=null).sort(fn).slice(0,4);
 
-  // AI Parse
-  const parseAI=async()=>{
-    if(!input.trim())return;
-    if(!cfg.anthropicKey){setPerr("Ayarlar > Anthropic API Key gir.");return;}
-    setBusy(b=>({...b,parse:true}));setPerr("");setParsed(null);
-    try{
-      const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
-        headers:{"Content-Type":"application/json","x-api-key":cfg.anthropicKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-        body:JSON.stringify({model:"claude-haiku-4-5-20251001",max_tokens:500,
-          system:`Yatırım işlemi parser. SADECE JSON döndür.\n{"date":"YYYY-MM-DD","ticker":"","name":"","asset_type":"US_STOCK|FUND|CRYPTO|BIST|GOLD|FX","way":"BUY|SELL","shares":0,"price":0,"currency":"USD|TRY|EUR","broker":"","commission":0,"exchange":"","notes":""}\nBugün:${today()}. Tarih yoksa bugün. Komisyon yoksa 0.`,
-          messages:[{role:"user",content:input}]})});
-      const d=await r.json();
-      if(d.error)throw new Error(d.error.message);
-      setParsed(JSON.parse(d.content[0].text.replace(/```json|```/g,"").trim()));
-    }catch(e){setPerr("Parse hatası: "+e.message);}
-    finally{setBusy(b=>({...b,parse:false}));}
-  };
-
-  // Save transaction → Supabase
-  const confirmTx=async()=>{
-    if(!parsed)return;
-    const tx={user_id:user.id,date:parsed.date,ticker:parsed.ticker,name:parsed.name||"",asset_type:parsed.asset_type,way:parsed.way,shares:parsed.shares,price:parsed.price,currency:parsed.currency||"USD",total:+(parsed.shares*parsed.price).toFixed(4),broker:parsed.broker||"",commission:parsed.commission||0,exchange:parsed.exchange||"",notes:parsed.notes||""};
-    const{error:te}=await sb.from("transactions").insert(tx);
-    if(te){flash_(te.message,"err");return;}
-
-    // Update position
-    const ex=pos.find(p=>p.ticker===parsed.ticker);
-    if(parsed.way==="BUY"){
-      const ns=(ex?.shares||0)+parsed.shares;
-      const na=((ex?.shares||0)*(ex?.avgCost||0)+parsed.shares*parsed.price)/ns;
-      const{error:pe}=await sb.from("positions").upsert({user_id:user.id,ticker:parsed.ticker,name:parsed.name||"",type:parsed.asset_type,shares:+ns.toFixed(6),avg_cost:+na.toFixed(6),currency:parsed.currency||"USD",broker:parsed.broker||"",updated_at:new Date().toISOString()},{onConflict:"user_id,ticker"});
-      if(pe){flash_(pe.message,"err");return;}
-    }else if(parsed.way==="SELL"&&ex){
-      const ns=ex.shares-parsed.shares;
-      if(ns<=0.0001){await sb.from("positions").delete().eq("user_id",user.id).eq("ticker",parsed.ticker);}
-      else{await sb.from("positions").update({shares:+ns.toFixed(6),updated_at:new Date().toISOString()}).eq("user_id",user.id).eq("ticker",parsed.ticker);}
-    }
-    await loadData();
-    setParsed(null);setInput("");
-    flash_("Kaydedildi ✓");setTab("dashboard");
-  };
-
-  // Prices
+  // Fiyat çekme — edge function üzerinden (batch)
   const fetchPrices=async()=>{
-    if(!cfg.massiveKey){flash_("Massive API Key gir.","err");return;}
-    setBusy(b=>({...b,price:true}));
+    setBusy(b=>({...b,price:true}));setPprog("Fiyatlar çekiliyor...");
     const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
-    const d1=dago(1);const np={...prc};let cnt=0;
-    for(let i=0;i<tickers.length;i++){
-      const t=tickers[i];setPprog(`${t} (${i+1}/${tickers.length})`);
-      try{const r=await fetch(`https://api.massive.com/v1/open-close/${t}/${d1}?apiKey=${cfg.massiveKey}`);if(r.ok){const csv=await r.text();const row=csv.split("\n")[1];if(row){const c=row.split(",");if(c.length>=5){np[t]=parseFloat(c[4]);cnt++;}}}}catch(e){}
-      if(i<tickers.length-1)await sleep(7500);
-    }
-    savePrc(np,d1);setBusy(b=>({...b,price:false}));setPprog("");
-    flash_(`${cnt}/${tickers.length} fiyat güncellendi`);
+    try{
+      const r=await edgeCall(session,"fetch-prices",{tickers,mode:"price"});
+      const d=await r.json();
+      if(d.results){
+        const np={...prc};
+        Object.entries(d.results).forEach(([t,v])=>{if(v.price)np[t]=v.price;});
+        savePrc(np,d.date||dago(1));
+        flash_(`${Object.keys(d.results).length}/${tickers.length} fiyat güncellendi`);
+      }
+    }catch(e){flash_("Hata: "+e.message,"err");}
+    setBusy(b=>({...b,price:false}));setPprog("");
   };
 
-  // Historical
+  // Tarihi veri — edge function üzerinden (batch)
   const fetchHistorical=async()=>{
-    if(!cfg.massiveKey){flash_("Massive API Key gir.","err");return;}
-    setBusy(b=>({...b,hist:true}));
+    setBusy(b=>({...b,hist:true}));setPprog("Tarihi veri çekiliyor...");
     const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
-    const from=dago(366),to=dago(1);
-    const nh={...hist};const np={...prc};let cnt=0;
-    for(let i=0;i<tickers.length;i++){
-      const t=tickers[i];setPprog(`${t} tarihi (${i+1}/${tickers.length})`);
-      try{
-        const r=await fetch(`https://api.massive.com/v2/aggs/ticker/${t}/range/1/day/${from}/${to}?adjusted=true&limit=400&apiKey=${cfg.massiveKey}`);
-        if(r.ok){const d=await r.json();if(d.results&&d.results.length>1){const bars=d.results.sort((a,b)=>a.t-b.t);const n=bars.length,last=bars[n-1].c;const g=i=>i>=0&&i<n?bars[i].c:null;const chg=o=>o!=null?(last/o-1)*100:null;nh[t]={last,d1:chg(g(n-2)),w1:chg(g(n-6)),m1:chg(g(n-22)),y1:chg(g(0))};np[t]=last;cnt++;}}
-      }catch(e){}
-      if(i<tickers.length-1)await sleep(7500);
-    }
-    saveHist(nh);savePrc(np,to);
+    try{
+      const r=await edgeCall(session,"fetch-prices",{tickers,mode:"historical"});
+      const d=await r.json();
+      if(d.results){
+        const nh={...hist};const np={...prc};
+        Object.entries(d.results).forEach(([t,v])=>{
+          if(v.price){nh[t]={last:v.price,d1:v.d1,w1:v.w1,m1:v.m1,y1:v.y1};np[t]=v.price;}
+        });
+        saveHist(nh);savePrc(np,d.date||dago(1));
+        flash_(`${Object.keys(d.results).length}/${tickers.length} tarihi veri yüklendi`);
+      }
+    }catch(e){flash_("Hata: "+e.message,"err");}
     setBusy(b=>({...b,hist:false}));setPprog("");
-    flash_(`${cnt}/${tickers.length} tarihi veri yüklendi`);
   };
 
-  // Export CSV
   const dlCSV=(rows,hdr,name)=>{const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent([hdr,...rows].join("\n"));a.download=name;a.click();};
-  const exportTx=()=>dlCSV(txs.map(t=>`${t.date},${t.ticker},${t.name||""},${t.asset_type||""},${t.way},${t.shares},${t.price},${t.currency||"USD"},${t.total||""},${t.broker||""},${t.commission||0}`),"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Total,Broker,Commission",`transactions_${today()}.csv`);
-  const exportPos=()=>dlCSV(pos.map(p=>`${p.ticker},${p.name},${p.type},${p.shares},${p.avgCost},${p.currency},${p.broker}`),"Ticker,Name,Type,Shares,AvgCost,Currency,Broker",`positions_${today()}.csv`);
-
-  // Logout
-  const logout=async()=>{await sb.auth.signOut();};
+  const expTx=()=>dlCSV(txs.map(t=>`${t.date},${t.ticker},${t.name||""},${t.asset_type||""},${t.way},${t.shares},${t.price},${t.currency||"USD"},${t.total||""},${t.broker||""},${t.commission||0}`),"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Total,Broker,Commission",`transactions_${today()}.csv`);
+  const expPos=()=>dlCSV(pos.map(p=>`${p.ticker},${p.name},${p.type},${p.shares},${p.avgCost},${p.currency},${p.broker}`),"Ticker,Name,Type,Shares,AvgCost,Currency,Broker",`positions_${today()}.csv`);
 
   const TABS=[["dashboard","Dashboard"],["positions","Pozisyonlar"],["history","İşlemler"],["add","+ Ekle"],["settings","Ayarlar"]];
 
@@ -332,18 +800,13 @@ function App({user}){
 
   return(
     <div>
-      {/* Header */}
       <div className="hdr">
         <div className="hdr-l">
           <h1>Investment Ledger</h1>
-          <div className="sub">
-            {user.email}
-            {pdate!=="—"&&<span style={{marginLeft:8}}>· {pdate}</span>}
-            {hasHist&&<span className="dim" style={{marginLeft:8}}>· tarihi ✓</span>}
-          </div>
+          <div className="sub">{user.email}{pdate!=="—"&&<span style={{marginLeft:8}}>· {pdate}</span>}{hasHist&&<span className="dim" style={{marginLeft:8}}>· tarihi ✓</span>}</div>
         </div>
         <div className="hdr-r">
-          <button className={"eye-btn"+(hideAmts?" active":"")} onClick={()=>saveHide(!hideAmts)} title={hideAmts?"Tutarları göster":"Tutarları gizle"}>
+          <button className={"eye-btn"+(hideAmts?" active":"")} onClick={()=>saveHide(!hideAmts)}>
             {hideAmts?<EyeOff/>:<EyeOn/>}
           </button>
         </div>
@@ -355,7 +818,6 @@ function App({user}){
 
       {flash&&<div className={"flash "+flash.t}>{flash.msg}</div>}
 
-      {/* DASHBOARD */}
       {tab==="dashboard"&&<div>
         <div className="g4">
           {[{l:"Maliyet",v:mask("$"+fmt(tC))},{l:"Piyasa Değeri",v:mask("$"+fmt(tM))},{l:"P&L",v:hideAmts?fmtP(tPct):fmtD(tP),c:pc(tP)},{l:"P&L %",v:fmtP(tPct),c:pc(tPct)}].map(x=>(
@@ -386,13 +848,12 @@ function App({user}){
         <div style={{fontSize:11,color:"var(--text2)"}}>{txs.length} işlem · BTC hariç · {usd.length} USD pozisyon</div>
       </div>}
 
-      {/* POSITIONS */}
       {tab==="positions"&&<div>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <span className="dim" style={{fontSize:12}}>{pos.length} pozisyon</span>
           <div className="brow">
-            <button onClick={loadData} disabled={busy.data}>{busy.data?"Yükleniyor...":"Yenile"}</button>
-            <button onClick={exportPos}>CSV ↗</button>
+            <button onClick={loadData} disabled={busy.data}>{busy.data?"...":"Yenile"}</button>
+            <button onClick={expPos}>CSV ↗</button>
           </div>
         </div>
         <div className="tbl-wrap"><table>
@@ -427,107 +888,58 @@ function App({user}){
         </table></div>
       </div>}
 
-      {/* HISTORY */}
-      {tab==="history"&&<div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <span className="dim" style={{fontSize:12}}>{txs.length} işlem</span>
-          {txs.length>0&&<button onClick={exportTx}>CSV ↗</button>}
-        </div>
-        {txs.length===0?<div className="empty">Henüz işlem yok.</div>
-        :<div className="tbl-wrap"><table>
-          <thead><tr>{[["Tarih","l"],["Ticker","l"],["İşlem","l"],["Adet","r"],["Fiyat","r"],["Toplam","r"],["Broker","l"]].map(([l,a])=><th key={l} className={a}>{l}</th>)}</tr></thead>
-          <tbody>{txs.map(t=>(
-            <tr key={t.id}>
-              <td className="l dim" style={{fontSize:11}}>{t.date}</td>
-              <td className="l" style={{fontWeight:700}}>{t.ticker}</td>
-              <td className={"l "+(t.way==="BUY"?"ok":"err")} style={{fontSize:11}}>{t.way==="BUY"?"Alış":"Satış"}</td>
-              <td className="r">{t.shares}</td>
-              <td className="r">{mask((t.currency==="TRY"?"₺":"$")+fmt(t.price))}</td>
-              <td className="r">{mask((t.currency==="TRY"?"₺":"$")+fmt(t.total,0))}</td>
-              <td className="l dim" style={{fontSize:11}}>{t.broker||"—"}</td>
-            </tr>
-          ))}</tbody>
-        </table></div>}
-      </div>}
+      {tab==="history"&&<HistoryTab txs={txs} user={user} loadData={loadData} flash_={flash_} mask={mask} hideAmts={hideAmts}/>}
 
-      {/* ADD */}
-      {tab==="add"&&<div>
-        <div className="stitle" style={{marginBottom:8}}>Doğal dilde yaz — AI parse edecek</div>
-        <textarea value={input} onChange={e=>setInput(e.target.value)} rows={4}
-          placeholder={"\"NVDA 5 adet $210 Akbank bugün\"\n\"SPY 2 lot sattım $715 QNB komisyon $3\"\n\"BTC 0.001 adet 95000 TRY Binance\"\n\"THYAO 100 adet 350 TL BIST Akbank\""}
-          style={{marginBottom:10,lineHeight:1.6,resize:"vertical"}}/>
-        <button onClick={parseAI} disabled={busy.parse||!input.trim()} className="primary">{busy.parse?"Parse ediliyor...":"AI ile Parse Et"}</button>
-        {!cfg.anthropicKey&&<div className="dim" style={{fontSize:11,marginTop:6}}>⚠ Ayarlar'da Anthropic API Key gerekli</div>}
-        {perr&&<div className="flash err" style={{marginTop:12}}>{perr}</div>}
-        {parsed&&<div className="cbox" style={{marginTop:16}}>
-          <div className="lbl" style={{marginBottom:12}}>Parse sonucu — doğrula</div>
-          <div className="kv">
-            {[["Tarih",parsed.date],["Ticker",parsed.ticker],["Şirket",parsed.name],["Tür",TL[parsed.asset_type]||parsed.asset_type],["İşlem",parsed.way==="BUY"?"Alış":"Satış"],["Adet",parsed.shares],["Fiyat",(parsed.currency==="TRY"?"₺":"$")+fmt(parsed.price)],["Toplam",(parsed.currency==="TRY"?"₺":"$")+fmt(parsed.shares*parsed.price,0)],["Broker",parsed.broker||"—"],["Komisyon",parsed.commission?"$"+parsed.commission:"—"]].map(([k,v])=>(
-              <div key={k}><div className="kk">{k}</div><div className="kv_">{v}</div></div>
-            ))}
-          </div>
-          <div className="brow"><button onClick={confirmTx} className="primary">Kaydet</button><button onClick={()=>setParsed(null)}>İptal</button></div>
-        </div>}
-      </div>}
+      {tab==="add"&&<AddTab session={session} user={user} pos={pos} loadData={loadData} flash_={flash_}/>}
 
-      {/* SETTINGS */}
       {tab==="settings"&&<div>
-        <div className="sg"><label>Anthropic API Key</label><input type="password" value={cfg.anthropicKey} onChange={e=>saveCfg({...cfg,anthropicKey:e.target.value})} placeholder="sk-ant-..."/><div className="hint">console.anthropic.com → API Keys</div></div>
-        <div className="sg"><label>Massive API Key</label><input type="password" value={cfg.massiveKey} onChange={e=>saveCfg({...cfg,massiveKey:e.target.value})} placeholder="massive_..."/></div>
-
         <div className="sg">
           <label>Fiyat & Veri</label>
           {(busy.price||busy.hist)
             ?<div className="dim" style={{fontSize:13,display:"flex",alignItems:"center",gap:8}}><div className="spinner" style={{width:14,height:14}}></div>{pprog}</div>
             :<div className="brow">
-              <button onClick={fetchPrices} disabled={!cfg.massiveKey} style={{opacity:!cfg.massiveKey?.4:1}}>Güncel Fiyatlar</button>
-              <button onClick={fetchHistorical} disabled={!cfg.massiveKey} style={{opacity:!cfg.massiveKey?.4:1}}>Tarihi Veri (1G/1H/1A/1Y)</button>
+              <button onClick={fetchPrices}>Güncel Fiyatlar</button>
+              <button onClick={fetchHistorical}>Tarihi Veri (1G/1H/1A/1Y)</button>
             </div>}
-          <div className="hint">Tarihi veri fiyatı da günceller · ~2 dk</div>
+          <div className="hint">~2 dakika · tarihi veri fiyatı da günceller</div>
         </div>
-
         <div className="sg">
           <label>Export</label>
           <div className="brow">
-            <button onClick={exportTx}>İşlemler CSV</button>
-            <button onClick={exportPos}>Pozisyonlar CSV</button>
+            <button onClick={expTx}>İşlemler CSV</button>
+            <button onClick={expPos}>Pozisyonlar CSV</button>
           </div>
         </div>
-
         <div style={{borderTop:"0.5px solid var(--border)",paddingTop:16,marginBottom:16}}>
           <div className="stitle">Sistem Durumu</div>
           {[
-            [!!cfg.anthropicKey,"Anthropic API",cfg.anthropicKey?"Tanımlı":"Eksik"],
-            [!!cfg.massiveKey,"Massive API",cfg.massiveKey?"Tanımlı":"Eksik"],
             [true,"Supabase","Bağlı · RLS aktif"],
-            [hasHist,"Tarihi Veri",hasHist?`${Object.keys(hist).length} ticker`:"Yüklenmedi"],
+            [true,"Edge Functions","parse-transaction · fetch-prices"],
+            [hasHist,"Tarihi Veri",hasHist?Object.keys(hist).length+" ticker":"Yüklenmedi"],
             [pdate!=="—","Son Fiyat",pdate],
             [true,"Pozisyonlar",pos.length+" açık"],
             [true,"İşlemler",txs.length+" kayıtlı"],
           ].map(([ok,l,v])=>(
-            <div key={l} className="row"><span style={{fontSize:13}}><span className={"dot "+(ok?"ok":"off")}></span>{l}</span><span className={"dim"+(ok?"":" err")} style={{fontSize:12}}>{v}</span></div>
+            <div key={l} className="row"><span style={{fontSize:13}}><span className={"dot "+(ok?"ok":"off")}></span>{l}</span><span className="dim" style={{fontSize:12}}>{v}</span></div>
           ))}
         </div>
-
-        <button className="danger" onClick={logout} style={{width:"100%"}}>Çıkış Yap</button>
+        <button className="danger" onClick={()=>sb.auth.signOut()} style={{width:"100%"}}>Çıkış Yap</button>
       </div>}
     </div>
   );
 }
 
-// ── Root — Auth Controller ──────────────────────────────────────
+// ── Root ─────────────────────────────────────────────────────────
 function Root(){
-  const [session,setSession]=useState(undefined); // undefined = loading
-
+  const [session,setSession]=useState(undefined);
   useEffect(()=>{
     sb.auth.getSession().then(({data:{session}})=>setSession(session));
-    const{data:{subscription}}=sb.auth.onAuthStateChange((_,session)=>setSession(session));
+    const{data:{subscription}}=sb.auth.onAuthStateChange((_,s)=>setSession(s));
     return()=>subscription.unsubscribe();
   },[]);
-
   if(session===undefined)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"80vh",gap:10,color:"#888",fontSize:13}}><div className="spinner"></div>Yükleniyor...</div>;
   if(!session)return<Login/>;
-  return<App user={session.user}/>;
+  return<App session={session}/>;
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
