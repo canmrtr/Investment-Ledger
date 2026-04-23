@@ -46,6 +46,7 @@
     .badge{display:inline-block;font-size:9px;padding:1px 5px;border-radius:4px;margin-left:3px;}
     .badge.etf{background:rgba(10,132,255,.15);color:var(--info);}
     .badge.cry{background:rgba(255,159,10,.15);color:var(--warn);}
+    .badge.split{background:rgba(255,159,10,.15);color:var(--warn);cursor:help;}
     .cbox{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--rl);padding:15px;margin-bottom:14px;}
     .kv{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:14px;}
     .kk{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;}
@@ -84,6 +85,33 @@
     /* Mode tabs in Add */
     .mtab{flex:1;min-width:70px;font-size:12px;}
     .mtab.on{background:var(--info);border-color:var(--info);color:#fff;}
+    /* Modal */
+    .mdl-bd{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:100;padding:16px;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);animation:fadeIn .15s ease;}
+    .mdl-bx{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--rl);padding:20px 22px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.4);animation:popIn .18s ease;}
+    .mdl-msg{font-size:14px;line-height:1.5;margin-bottom:16px;color:var(--text);}
+    .mdl-bx .brow{justify-content:flex-end;}
+    @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+    @keyframes popIn{from{opacity:0;transform:scale(.95);}to{opacity:1;transform:scale(1);}}
+    /* Empty state card */
+    .empty-card{background:var(--bg2);border:0.5px dashed var(--border2);border-radius:var(--rl);padding:48px 20px;text-align:center;margin:20px 0;}
+    .empty-card .ic{font-size:44px;margin-bottom:12px;opacity:.7;}
+    .empty-card .ttl{font-size:15px;font-weight:600;margin-bottom:6px;}
+    .empty-card .sub{font-size:12px;color:var(--text2);margin-bottom:18px;max-width:280px;margin-left:auto;margin-right:auto;line-height:1.5;}
+    /* Warning card (missing prices vs.) */
+    .warn-card{background:rgba(255,159,10,.08);border:0.5px solid rgba(255,159,10,.35);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
+    .warn-card .wc-ttl{font-size:13px;font-weight:600;color:var(--warn);margin-bottom:2px;}
+    .warn-card .wc-sub{font-size:11px;color:var(--text2);}
+    /* Size modifiers for buttons (used in list actions & toolbars) */
+    .btn-xs{font-size:11px;padding:3px 9px;}
+    .btn-sm{font-size:11px;padding:4px 9px;}
+    .btn-md{font-size:12px;padding:5px 12px;}
+    .btn-danger-out{color:var(--err);border-color:var(--err);background:transparent;}
+    /* Form input variant (inline-form fields inside rows) */
+    .finp{background:var(--bg);border:0.5px solid var(--border2);border-radius:6px;color:var(--text);font-family:inherit;width:100%;padding:7px 9px;font-size:13px;}
+    .finp.sm{padding:5px 8px;font-size:12px;}
+    /* Clickable position rows */
+    .pos-row{cursor:pointer;transition:background .12s ease;}
+    .pos-row:hover{background:var(--bg3);}
   </style>
 </head>
 <body>
@@ -98,6 +126,14 @@
 // ── CONFIG ──────────────────────────────────────────────────────
 const SUPA_URL  = "https://jfetubcilmuthpddkodg.supabase.co";
 const SUPA_ANON = "sb_publishable_fB2va7QAJaGjwdn0ULNr9g_SbO2fCPy";
+
+const CFG = {
+  RATE_LIMIT_MS:    7500,   // fiyat çekme arası bekleme (edge function rate limit)
+  DUST_THRESHOLD:   0.0001, // pozisyon sayılacak minimum shares
+  CSV_BATCH_SIZE:   50,     // CSV import'ta supabase insert batch
+  FLASH_MS:         3500,   // flash mesaj görünüm süresi
+  CSV_PROGRESS_MS:  5000,   // CSV bitişi sonrası progress reset
+};
 // ────────────────────────────────────────────────────────────────
 
 const sb = supabase.createClient(SUPA_URL, SUPA_ANON, {
@@ -126,6 +162,52 @@ const edgeCall = (fn, body) => fetch(`${SUPA_URL}/functions/v1/${fn}`, {
   },
   body: JSON.stringify(body)
 });
+
+// ── Position rebuild (shared by HistoryTab + CSV import) ─────────
+// SELL pozisyonda yoksa / shares yetmezse güvenli davran:
+// negatif shares/cost oluşturmaz, fazla satış yok sayılır.
+// Stock split'ler: bir işlemin tarihinden SONRA gelen her split'in
+// ratio'su birikimli olarak uygulanır (shares × factor). Toplam cost
+// aynı kalır, shares artar → avg_cost otomatik düşer.
+const rebuildPositions = async (userId) => {
+  const [txRes,splitRes] = await Promise.all([
+    sb.from("transactions").select("*").eq("user_id",userId).order("date"),
+    sb.from("splits").select("*").eq("user_id",userId)
+  ]);
+  const all = txRes.data || [];
+  const splits = splitRes.data || [];
+  const splitsByT = {};
+  splits.forEach(s => { (splitsByT[s.ticker] = splitsByT[s.ticker] || []).push(s); });
+  const factorFor = (ticker, date) => {
+    const arr = splitsByT[ticker] || [];
+    return arr.filter(s => s.split_date > date).reduce((a,s) => a * +s.ratio, 1);
+  };
+
+  const pm = {};
+  for (const t of all) {
+    if (!pm[t.ticker]) pm[t.ticker] = {ticker:t.ticker,name:t.name,type:t.asset_type,shares:0,cost:0,currency:t.currency,broker:t.broker};
+    const p = pm[t.ticker];
+    const f = factorFor(t.ticker, t.date);
+    const adjShares = +t.shares * f;
+    if (t.way === "BUY") {
+      p.cost += +t.shares * +t.price;   // total unchanged by split
+      p.shares += adjShares;
+    } else if (t.way === "SELL" && p.shares > 0) {
+      const avg = p.cost / p.shares;
+      const qty = Math.min(adjShares, p.shares);
+      p.cost = Math.max(0, p.cost - avg * qty);
+      p.shares -= qty;
+    }
+  }
+  await sb.from("positions").delete().eq("user_id",userId);
+  const np = Object.values(pm).filter(p => p.shares > CFG.DUST_THRESHOLD).map(p => ({
+    user_id: userId, ticker: p.ticker, name: p.name, type: p.type,
+    shares: +p.shares.toFixed(6), avg_cost: +(p.cost/p.shares).toFixed(6),
+    currency: p.currency, broker: p.broker, updated_at: new Date().toISOString()
+  }));
+  if (np.length) await sb.from("positions").insert(np);
+  return np.length;
+};
 
 // Icons
 const IconEye    = ()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="12" rx="11" ry="8"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>;
@@ -180,6 +262,34 @@ function Login(){
   );
 }
 
+// ── SparkChart — küçük SVG portföy değer grafiği ─────────────────
+// 7 nokta: 1Y / 6A / 3A / 1A / 1H / 1G / Bugün. "Bugünkü pozisyonların
+// geçmiş fiyatla değeri" — gerçek tarihi portföy değeri değildir.
+function SparkChart({data}){
+  if(!data||data.length<2)return<div className="dim" style={{fontSize:11,padding:"14px 0",textAlign:"center"}}>Grafik için yeterli veri yok</div>;
+  const W=400,H=70,pad=6;
+  const vals=data.map(d=>d.value);
+  const min=Math.min(...vals),max=Math.max(...vals),rng=(max-min)||1;
+  const sx=i=>pad+(W-2*pad)*(i/(data.length-1));
+  const sy=v=>pad+(H-2*pad)*(1-(v-min)/rng);
+  const pts=data.map((d,i)=>`${sx(i).toFixed(1)},${sy(d.value).toFixed(1)}`).join(" ");
+  const up=data[data.length-1].value>=data[0].value;
+  const col=up?"var(--ok)":"var(--err)";
+  const areaPts=`${pad},${H-pad} ${pts} ${W-pad},${H-pad}`;
+  return(
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:H,display:"block"}} preserveAspectRatio="none">
+        <polygon points={areaPts} fill={col} opacity="0.08"/>
+        <polyline points={pts} fill="none" stroke={col} strokeWidth="1.5" vectorEffect="non-scaling-stroke"/>
+        {data.map((d,i)=>(<circle key={i} cx={sx(i)} cy={sy(d.value)} r="2.2" fill={col}/>))}
+      </svg>
+      <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--text2)",marginTop:6,padding:"0 4px"}}>
+        {data.map((d,i)=>(<span key={i} style={{flex:1,textAlign:i===0?"left":i===data.length-1?"right":"center"}}>{d.lbl}</span>))}
+      </div>
+    </div>
+  );
+}
+
 // ── ConfirmBox (AddTab dışında!) ─────────────────────────────────
 function ConfirmBox({data,onSave,onCancel}){
   if(!data)return null;
@@ -208,37 +318,38 @@ function ConfirmBox({data,onSave,onCancel}){
 }
 
 // ── HistoryTab ───────────────────────────────────────────────────
-function HistoryTab({txs,user,loadData,flash_,mask,hideAmts}){
-  const [open,setOpen]=useState({});
+function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,initialSearch,onConsume,splits}){
+  const [open,setOpen]=useState(()=>initialSearch?{[initialSearch.toUpperCase()]:true}:{});
   const [editId,setEditId]=useState(null);
   const [editForm,setEditForm]=useState({});
   const [saving,setSaving]=useState(false);
+  const [search,setSearch]=useState(initialSearch||"");
+  const [wayF,setWayF]=useState("all");
+  const [dateF,setDateF]=useState("all");
+  useEffect(()=>{if(initialSearch&&onConsume)onConsume();},[]);
+
+  const filtered=txs.filter(t=>{
+    if(search){
+      const q=search.toLowerCase();
+      if(!t.ticker.toLowerCase().includes(q)&&!(t.name||"").toLowerCase().includes(q))return false;
+    }
+    if(wayF!=="all"&&t.way!==wayF)return false;
+    if(dateF!=="all"){
+      const days={d30:30,d90:90,y1:365}[dateF];
+      if(days){const cutoff=new Date(Date.now()-days*86400000).toISOString().split("T")[0];if(t.date<cutoff)return false;}
+    }
+    return true;
+  });
 
   const grouped={};
-  txs.forEach(t=>{if(!grouped[t.ticker])grouped[t.ticker]=[];grouped[t.ticker].push(t);});
+  filtered.forEach(t=>{if(!grouped[t.ticker])grouped[t.ticker]=[];grouped[t.ticker].push(t);});
   const tickers=Object.keys(grouped).sort();
+  const isFiltered=search||wayF!=="all"||dateF!=="all";
+  const clearFilters=()=>{setSearch("");setWayF("all");setDateF("all");};
 
   const startEdit=t=>{
     setEditId(t.id);
     setEditForm({date:t.date,way:t.way,shares:t.shares,price:t.price,currency:t.currency||"USD",broker:t.broker||"",commission:t.commission||0,notes:t.notes||""});
-  };
-
-  const rebuildPos=async()=>{
-    const{data:all}=await sb.from("transactions").select("*").eq("user_id",user.id).order("date");
-    const pm={};
-    for(const t of(all||[])){
-      if(!pm[t.ticker])pm[t.ticker]={ticker:t.ticker,name:t.name,type:t.asset_type,shares:0,cost:0,currency:t.currency,broker:t.broker};
-      const p=pm[t.ticker];
-      if(t.way==="BUY"){p.cost+=t.shares*t.price;p.shares+=t.shares;}
-      else if(t.way==="SELL"){const a=p.shares>0?p.cost/p.shares:0;p.cost-=a*t.shares;p.shares-=t.shares;}
-    }
-    await sb.from("positions").delete().eq("user_id",user.id);
-    const np=Object.values(pm).filter(p=>p.shares>0.0001).map(p=>({
-      user_id:user.id,ticker:p.ticker,name:p.name,type:p.type,
-      shares:+p.shares.toFixed(6),avg_cost:+(p.cost/p.shares).toFixed(6),
-      currency:p.currency,broker:p.broker,updated_at:new Date().toISOString()
-    }));
-    if(np.length)await sb.from("positions").insert(np);
   };
 
   const saveEdit=async(t)=>{
@@ -249,29 +360,61 @@ function HistoryTab({txs,user,loadData,flash_,mask,hideAmts}){
       broker:editForm.broker,commission:+(editForm.commission||0),notes:editForm.notes||""
     }).eq("id",t.id).eq("user_id",user.id);
     if(error){flash_(error.message,"err");}
-    else{await rebuildPos();await loadData();flash_("Güncellendi ✓");setEditId(null);}
+    else{await rebuildPositions(user.id);await loadData();flash_("Güncellendi ✓");setEditId(null);}
     setSaving(false);
   };
 
   const delTx=async(t)=>{
-    if(!window.confirm(`${t.ticker} — ${t.date} silinsin mi?`))return;
+    if(!(await confirm_(`${t.ticker} — ${t.date} işlemi silinsin mi?`,{okLbl:"Sil"})))return;
     await sb.from("transactions").delete().eq("id",t.id).eq("user_id",user.id);
-    await rebuildPos();await loadData();flash_("Silindi ✓");
+    await rebuildPositions(user.id);await loadData();flash_("Silindi ✓");
   };
 
-  if(txs.length===0)return<div className="empty">Henüz işlem yok.</div>;
-
-  const finp={background:"var(--bg)",border:"0.5px solid var(--border2)",borderRadius:6,color:"var(--text)",fontFamily:"inherit",padding:"5px 8px",fontSize:12,width:"100%"};
+  if(txs.length===0)return(
+    <div className="empty-card">
+      <div className="ic">📝</div>
+      <div className="ttl">Henüz işlem yok</div>
+      <div className="sub">Metin, görüntü, CSV veya manuel giriş — ilk işlemini ekle.</div>
+      <button className="pri" onClick={()=>setTab&&setTab("add")}>+ İlk işlemi ekle</button>
+    </div>
+  );
 
   return(
     <div>
+      {/* Filter toolbar */}
+      <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+        <input className="finp sm" value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Ticker veya şirket..." style={{flex:"1 1 160px",minWidth:140}}/>
+        <select className="finp sm" value={wayF} onChange={e=>setWayF(e.target.value)} style={{flex:"0 0 auto",width:90}}>
+          <option value="all">Tümü</option>
+          <option value="BUY">Alış</option>
+          <option value="SELL">Satış</option>
+        </select>
+        <select className="finp sm" value={dateF} onChange={e=>setDateF(e.target.value)} style={{flex:"0 0 auto",width:120}}>
+          <option value="all">Tüm zamanlar</option>
+          <option value="d30">Son 30 gün</option>
+          <option value="d90">Son 90 gün</option>
+          <option value="y1">Son 1 yıl</option>
+        </select>
+      </div>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-        <span className="dim" style={{fontSize:12}}>{txs.length} işlem · {tickers.length} varlık</span>
+        <span className="dim" style={{fontSize:12}}>
+          {isFiltered?`${filtered.length} / ${txs.length}`:filtered.length} işlem · {tickers.length} varlık
+          {isFiltered&&<button className="btn-xs" style={{marginLeft:8}} onClick={clearFilters}>Temizle</button>}
+        </span>
         <div className="brow">
-          <button style={{fontSize:11,padding:"4px 9px"}} onClick={()=>setOpen(Object.fromEntries(tickers.map(t=>[t,true])))}>Tümünü Aç</button>
-          <button style={{fontSize:11,padding:"4px 9px"}} onClick={()=>setOpen({})}>Kapat</button>
+          <button className="pri btn-sm" onClick={()=>setTab&&setTab("add")}>+ Ekle</button>
+          <button className="btn-sm" onClick={()=>setOpen(Object.fromEntries(tickers.map(t=>[t,true])))}>Tümünü Aç</button>
+          <button className="btn-sm" onClick={()=>setOpen({})}>Kapat</button>
         </div>
       </div>
+      {filtered.length===0&&(
+        <div className="empty-card" style={{padding:"28px 20px"}}>
+          <div className="ic">🔍</div>
+          <div className="ttl">Eşleşen işlem yok</div>
+          <div className="sub">Filtreleri değiştir ya da temizle.</div>
+          <button className="pri" onClick={clearFilters}>Filtreleri temizle</button>
+        </div>
+      )}
       {tickers.map(tk=>{
         const items=grouped[tk];
         const isOpen=!!open[tk];
@@ -293,25 +436,25 @@ function HistoryTab({txs,user,loadData,flash_,mask,hideAmts}){
                 {editId===t.id?(
                   <div style={{padding:"12px 14px",background:"var(--bg3)"}}>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
-                      <div><div className="kk" style={{marginBottom:3}}>Tarih</div><input style={finp} value={editForm.date} onChange={e=>setEditForm(f=>({...f,date:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Tarih</div><input className="finp sm" value={editForm.date} onChange={e=>setEditForm(f=>({...f,date:e.target.value}))}/></div>
                       <div><div className="kk" style={{marginBottom:3}}>İşlem</div>
-                        <select style={finp} value={editForm.way} onChange={e=>setEditForm(f=>({...f,way:e.target.value}))}>
+                        <select className="finp sm" value={editForm.way} onChange={e=>setEditForm(f=>({...f,way:e.target.value}))}>
                           <option value="BUY">Alış</option><option value="SELL">Satış</option>
                         </select>
                       </div>
                       <div><div className="kk" style={{marginBottom:3}}>Para</div>
-                        <select style={finp} value={editForm.currency} onChange={e=>setEditForm(f=>({...f,currency:e.target.value}))}>
+                        <select className="finp sm" value={editForm.currency} onChange={e=>setEditForm(f=>({...f,currency:e.target.value}))}>
                           <option>USD</option><option>TRY</option><option>EUR</option>
                         </select>
                       </div>
-                      <div><div className="kk" style={{marginBottom:3}}>Adet</div><input style={finp} type="number" value={editForm.shares} onChange={e=>setEditForm(f=>({...f,shares:e.target.value}))}/></div>
-                      <div><div className="kk" style={{marginBottom:3}}>Fiyat</div><input style={finp} type="number" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))}/></div>
-                      <div><div className="kk" style={{marginBottom:3}}>Broker</div><input style={finp} value={editForm.broker} onChange={e=>setEditForm(f=>({...f,broker:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Adet</div><input className="finp sm" type="number" value={editForm.shares} onChange={e=>setEditForm(f=>({...f,shares:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Fiyat</div><input className="finp sm" type="number" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Broker</div><input className="finp sm" value={editForm.broker} onChange={e=>setEditForm(f=>({...f,broker:e.target.value}))}/></div>
                     </div>
                     <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: {editForm.currency==="TRY"?"₺":"$"}{fmt((+editForm.shares)*(+editForm.price))}</div>
                     <div className="brow">
-                      <button className="pri" style={{fontSize:12,padding:"5px 12px"}} onClick={()=>saveEdit(t)} disabled={saving}>{saving?"Kaydediliyor...":"Kaydet"}</button>
-                      <button style={{fontSize:12,padding:"5px 12px"}} onClick={()=>setEditId(null)}>İptal</button>
+                      <button className="pri btn-md" onClick={()=>saveEdit(t)} disabled={saving}>{saving?"Kaydediliyor...":"Kaydet"}</button>
+                      <button className="btn-md" onClick={()=>setEditId(null)}>İptal</button>
                     </div>
                   </div>
                 ):(
@@ -323,10 +466,17 @@ function HistoryTab({txs,user,loadData,flash_,mask,hideAmts}){
                       {!hideAmts&&<span className="mono dim" style={{fontSize:12}}>{mask((t.currency==="TRY"?"₺":"$")+fmt(t.price))}</span>}
                       {!hideAmts&&<span className="mono" style={{fontSize:12,fontWeight:600}}>{mask((t.currency==="TRY"?"₺":"$")+fmt(t.total,0))}</span>}
                       {t.broker&&<span className="dim" style={{fontSize:10}}>{t.broker}</span>}
+                      {(()=>{
+                        const af=(splits||[]).filter(s=>s.ticker===t.ticker&&s.split_date>t.date);
+                        if(!af.length)return null;
+                        const fac=af.reduce((a,s)=>a*+s.ratio,1);
+                        const tip=`Bu işlem sonrası split: ${af.map(s=>`${s.split_date} ${s.ratio}:1`).join(" · ")}. Pozisyon hesabı ×${fac} uygulanır.`;
+                        return<span className="badge split" title={tip}>⚡ ×{fac}</span>;
+                      })()}
                     </div>
                     <div className="brow" style={{gap:5}}>
-                      <button style={{fontSize:11,padding:"3px 9px"}} onClick={()=>startEdit(t)}>Düzenle</button>
-                      <button style={{fontSize:11,padding:"3px 9px",color:"var(--err)",borderColor:"var(--err)",background:"transparent"}} onClick={()=>delTx(t)}>Sil</button>
+                      <button className="btn-xs" onClick={()=>startEdit(t)}>Düzenle</button>
+                      <button className="btn-xs btn-danger-out" onClick={()=>delTx(t)}>Sil</button>
                     </div>
                   </div>
                 )}
@@ -340,8 +490,8 @@ function HistoryTab({txs,user,loadData,flash_,mask,hideAmts}){
 }
 
 // ── ManuelPosForm ────────────────────────────────────────────────
-function ManuelPosForm({session,user,pos,loadData,flash_}){
-  const E={ticker:"",name:"",type:"US_STOCK",shares:"",avgCost:"",currency:"USD",broker:"",date:today()};
+function ManuelPosForm({session,user,pos,loadData,flash_,confirm_}){
+  const E={ticker:"",name:"",type:"US_STOCK",shares:"",avgCost:"",currency:"USD",broker:"",commission:"",date:today()};
   const [form,setForm]=useState(E);
   const [curPrice,setCurPrice]=useState(null);
   const [fetchP,setFetchP]=useState(false);
@@ -365,14 +515,20 @@ function ManuelPosForm({session,user,pos,loadData,flash_}){
         setCurPrice(p);
         // Tarihin fiyatını otomatik maliyet olarak doldur
         set({avgCost:p.toFixed(2)});
+      } else if(d.result?.error||d.error){
+        console.warn(`[fetchPrice ${upper}]`,d.result?.error||d.error);
+        flash_(`${upper}: ${d.result?.error||d.error}`,"err");
       }
-    }catch(e){}
+    }catch(e){
+      console.warn(`[fetchPrice ${upper}]`,e);
+      flash_(`${upper} fiyatı alınamadı: ${e.message}`,"err");
+    }
     setFetchP(false);
   };
 
   const startEdit=p=>{
     setEditTk(p.ticker);
-    setForm({ticker:p.ticker,name:p.name,type:p.type,shares:p.shares,avgCost:p.avgCost,currency:p.currency,broker:p.broker||""});
+    setForm({...E,ticker:p.ticker,name:p.name,type:p.type,shares:p.shares,avgCost:p.avgCost,currency:p.currency,broker:p.broker||""});
     fetchPrice(p.ticker);
   };
 
@@ -395,7 +551,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_}){
       currency:form.currency,
       total:+(sh*pr).toFixed(4),
       broker:form.broker||"",
-      commission:0,exchange:"",notes:"Manuel giriş"
+      commission:+(form.commission||0),exchange:"",notes:"Manuel giriş"
     };
     const{error:te}=await sb.from("transactions").insert(tx);
     if(te){flash_(te.message,"err");setSaving(false);return;}
@@ -418,12 +574,10 @@ function ManuelPosForm({session,user,pos,loadData,flash_}){
   };
 
   const delPos=async(tk)=>{
-    if(!window.confirm(`${tk} pozisyonu silinsin mi?`))return;
+    if(!(await confirm_(`${tk} pozisyonu silinsin mi?`,{okLbl:"Sil"})))return;
     await sb.from("positions").delete().eq("user_id",user.id).eq("ticker",tk);
     await loadData();flash_(`${tk} silindi`);
   };
-
-  const finp={background:"var(--bg)",border:"0.5px solid var(--border2)",borderRadius:6,color:"var(--text)",fontFamily:"inherit",padding:"7px 9px",fontSize:13,width:"100%"};
 
   return(
     <div>
@@ -432,14 +586,14 @@ function ManuelPosForm({session,user,pos,loadData,flash_}){
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
           <div>
             <div className="kk" style={{marginBottom:4}}>Tarih</div>
-            <input style={finp} type="date" value={form.date}
+            <input className="finp" type="date" value={form.date}
               onChange={e=>{set({date:e.target.value});setCurPrice(null);}}
               max={today()}/>
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Ticker *</div>
             <div style={{display:"flex",gap:6}}>
-              <input style={{...finp,textTransform:"uppercase"}} value={form.ticker}
+              <input className="finp" style={{textTransform:"uppercase"}} value={form.ticker}
                 onChange={e=>{set({ticker:e.target.value.toUpperCase(),name:"",avgCost:""});setCurPrice(null);}}
                 onBlur={e=>e.target.value&&fetchPrice(e.target.value)}
                 placeholder="AAPL" disabled={!!editTk}/>
@@ -452,11 +606,11 @@ function ManuelPosForm({session,user,pos,loadData,flash_}){
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Şirket Adı</div>
-            <input style={finp} value={form.name} onChange={e=>set({name:e.target.value})} placeholder="Apple Inc"/>
+            <input className="finp" value={form.name} onChange={e=>set({name:e.target.value})} placeholder="Apple Inc"/>
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Varlık Türü</div>
-            <select style={finp} value={form.type} onChange={e=>set({type:e.target.value})}>
+            <select className="finp" value={form.type} onChange={e=>set({type:e.target.value})}>
               <option value="US_STOCK">Hisse (US)</option>
               <option value="FUND">ETF / Fon</option>
               <option value="CRYPTO">Kripto</option>
@@ -467,21 +621,25 @@ function ManuelPosForm({session,user,pos,loadData,flash_}){
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Para Birimi</div>
-            <select style={finp} value={form.currency} onChange={e=>set({currency:e.target.value})}>
+            <select className="finp" value={form.currency} onChange={e=>set({currency:e.target.value})}>
               <option>USD</option><option>TRY</option><option>EUR</option>
             </select>
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Adet *</div>
-            <input style={finp} type="number" value={form.shares} onChange={e=>set({shares:e.target.value})} placeholder="0"/>
+            <input className="finp" type="number" value={form.shares} onChange={e=>set({shares:e.target.value})} placeholder="0"/>
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Ort. Maliyet *</div>
-            <input style={finp} type="number" value={form.avgCost} onChange={e=>set({avgCost:e.target.value})} placeholder="0.00"/>
+            <input className="finp" type="number" value={form.avgCost} onChange={e=>set({avgCost:e.target.value})} placeholder="0.00"/>
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Broker</div>
-            <input style={finp} value={form.broker} onChange={e=>set({broker:e.target.value})} placeholder="Akbank, Midas..."/>
+            <input className="finp" value={form.broker} onChange={e=>set({broker:e.target.value})} placeholder="Akbank, Midas..."/>
+          </div>
+          <div>
+            <div className="kk" style={{marginBottom:4}}>Komisyon</div>
+            <input className="finp" type="number" value={form.commission} onChange={e=>set({commission:e.target.value})} placeholder="0.00"/>
           </div>
           <div style={{display:"flex",alignItems:"flex-end"}}>
             {form.shares&&form.avgCost?(
@@ -512,8 +670,8 @@ function ManuelPosForm({session,user,pos,loadData,flash_}){
                 {p.broker&&<span className="dim" style={{fontSize:10,marginLeft:6}}>· {p.broker}</span>}
               </div>
               <div className="brow" style={{gap:5}}>
-                <button style={{fontSize:11,padding:"3px 9px"}} onClick={()=>startEdit(p)}>Düzenle</button>
-                <button style={{fontSize:11,padding:"3px 9px",color:"var(--err)",borderColor:"var(--err)",background:"transparent"}} onClick={()=>delPos(p.ticker)}>Sil</button>
+                <button className="btn-xs" onClick={()=>startEdit(p)}>Düzenle</button>
+                <button className="btn-xs btn-danger-out" onClick={()=>delPos(p.ticker)}>Sil</button>
               </div>
             </div>
           ))}
@@ -524,7 +682,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_}){
 }
 
 // ── AddTab ───────────────────────────────────────────────────────
-function AddTab({session,user,pos,loadData,flash_}){
+function AddTab({session,user,pos,loadData,flash_,confirm_}){
   const [mode,setMode]=useState("text");
   const [parsed,setParsed]=useState(null);
   const [parsing,setParsing]=useState(false);
@@ -587,7 +745,7 @@ function AddTab({session,user,pos,loadData,flash_}){
       },{onConflict:"user_id,ticker"});
     }else if(p.way==="SELL"&&ex){
       const ns=ex.shares-(+p.shares);
-      if(ns<=0.0001)await sb.from("positions").delete().eq("user_id",user.id).eq("ticker",p.ticker);
+      if(ns<=CFG.DUST_THRESHOLD)await sb.from("positions").delete().eq("user_id",user.id).eq("ticker",p.ticker);
       else await sb.from("positions").update({shares:+ns.toFixed(6),updated_at:new Date().toISOString()}).eq("user_id",user.id).eq("ticker",p.ticker);
     }
     await loadData();
@@ -602,16 +760,39 @@ function AddTab({session,user,pos,loadData,flash_}){
     rd.readAsText(f);
   };
 
+  // RFC 4180 style splitter: quotes içinde virgül ve "" (escaped quote) destekler.
+  const splitCSVLine=(line)=>{
+    const out=[];let cur="",inQ=false;
+    for(let i=0;i<line.length;i++){
+      const c=line[i];
+      if(c==='"'){
+        if(inQ&&line[i+1]==='"'){cur+='"';i++;}
+        else inQ=!inQ;
+      } else if(c===','&&!inQ){out.push(cur);cur="";}
+      else cur+=c;
+    }
+    out.push(cur);
+    return out.map(v=>v.trim());
+  };
+
   const parseCSV=()=>{
-    const lines=csvText.trim().split("\n").filter(l=>l.trim());
-    if(lines.length<2){setCsvRows([]);return;}
-    const hdrs=lines[0].split(",").map(h=>h.trim().toLowerCase().replace(/ /g,"_"));
+    const lines=csvText.trim().split(/\r?\n/).filter(l=>l.trim());
+    if(lines.length===0){setCsvRows([]);flash_("CSV boş","err");return;}
+    const hdrs=splitCSVLine(lines[0]).map(h=>h.toLowerCase().replace(/ /g,"_"));
+    // Beklenen header (en az biri) yoksa format yanlış.
+    if(!hdrs.some(h=>["ticker","date","way","shares"].includes(h))){
+      setCsvRows([]);
+      flash_('Header bulunamadı. İlk satır şöyle olmalı: "Date,Ticker,Name,Type,Way,Shares,Price,Currency,Total,Broker,Commission"',"err");
+      return;
+    }
+    if(lines.length<2){setCsvRows([]);flash_("Header var ama veri satırı yok","err");return;}
     const rows=lines.slice(1).map(line=>{
-      const vals=line.split(",");
+      const vals=splitCSVLine(line);
       const obj={};
-      hdrs.forEach((h,i)=>obj[h]=(vals[i]||"").trim());
+      hdrs.forEach((h,i)=>obj[h]=(vals[i]||""));
       return obj;
     }).filter(r=>r.ticker&&["BUY","SELL"].includes((r.way||"").toUpperCase()));
+    if(rows.length===0){flash_("Geçerli BUY/SELL satırı bulunamadı","err");}
     setCsvRows(rows);
   };
 
@@ -637,7 +818,7 @@ function AddTab({session,user,pos,loadData,flash_}){
     }));
 
     let ok=0;
-    const bsz=50;
+    const bsz=CFG.CSV_BATCH_SIZE;
     for(let i=0;i<txInserts.length;i+=bsz){
       const{error}=await sb.from("transactions").insert(txInserts.slice(i,i+bsz));
       if(!error)ok+=Math.min(bsz,txInserts.length-i);
@@ -647,28 +828,13 @@ function AddTab({session,user,pos,loadData,flash_}){
     }
 
     setProgStep("Pozisyonlar hesaplanıyor...");setProgPct(75);
-    const{data:all}=await sb.from("transactions").select("*").eq("user_id",user.id).order("date");
-    const pm={};
-    for(const t of(all||[])){
-      if(!pm[t.ticker])pm[t.ticker]={ticker:t.ticker,name:t.name,type:t.asset_type,shares:0,cost:0,currency:t.currency,broker:t.broker};
-      const p=pm[t.ticker];
-      if(t.way==="BUY"){p.cost+=t.shares*t.price;p.shares+=t.shares;}
-      else if(t.way==="SELL"){const a=p.shares>0?p.cost/p.shares:0;p.cost-=a*t.shares;p.shares-=t.shares;}
-    }
-
     setProgStep("Supabase güncelleniyor...");setProgPct(90);
-    await sb.from("positions").delete().eq("user_id",user.id);
-    const np=Object.values(pm).filter(p=>p.shares>0.0001).map(p=>({
-      user_id:user.id,ticker:p.ticker,name:p.name,type:p.type,
-      shares:+p.shares.toFixed(6),avg_cost:+(p.cost/p.shares).toFixed(6),
-      currency:p.currency,broker:p.broker,updated_at:new Date().toISOString()
-    }));
-    if(np.length)await sb.from("positions").insert(np);
+    const posCount=await rebuildPositions(user.id);
     await loadData();
 
-    setProgStep(`✓ ${ok} işlem · ${np.length} pozisyon aktarıldı`);
+    setProgStep(`✓ ${ok} işlem · ${posCount} pozisyon aktarıldı`);
     setProgPct(100);setProgDone(true);setCsvBusy(false);
-    setTimeout(()=>{setCsvText("");setCsvRows([]);setProgStep("");setProgPct(0);setProgDone(false);},5000);
+    setTimeout(()=>{setCsvText("");setCsvRows([]);setProgStep("");setProgPct(0);setProgDone(false);},CFG.CSV_PROGRESS_MS);
   };
 
   const MODES=[["text","📝 Metin"],["image","📷 Görüntü"],["csv","📋 CSV"],["manuel","📌 Manuel"]];
@@ -766,7 +932,7 @@ function AddTab({session,user,pos,loadData,flash_}){
       )}
 
       {mode==="manuel"&&(
-        <ManuelPosForm session={session} user={user} pos={pos} loadData={loadData} flash_={flash_}/>
+        <ManuelPosForm session={session} user={user} pos={pos} loadData={loadData} flash_={flash_} confirm_={confirm_}/>
       )}
     </div>
   );
@@ -776,14 +942,17 @@ function AddTab({session,user,pos,loadData,flash_}){
 function App({session}){
   const user=session.user;
   const [tab,setTab]=useState("dashboard");
+  const [navTicker,setNavTicker]=useState("");
+  const openHistory=tk=>{setNavTicker(tk);setTab("history");};
   const [period,setPeriod]=useState("max"); // selected period on dashboard
   const [pos,setPos]=useState([]);
   const [txs,setTxs]=useState([]);
+  const [splits,setSplits]=useState([]);
   const [prc,setPrc_]=useState(()=>{const p=LS.get("il_prc",null);return p?p.p:{};});
   const [pdate,setPdate]=useState(()=>{const p=LS.get("il_prc",null);return p?p.d:"—";});
   const [hist,setHist_]=useState(()=>LS.get("il_hist",{}));
   const [hide,setHide_]=useState(()=>LS.get("il_hide",false));
-  const [sort,setSort]=useState({by:"plPct",dir:"asc"});
+  const [sort,setSort]=useState({by:"mv",dir:"desc"});
   const [busy,setBusy]=useState({p:false,h:false,d:false});
   const [pprog,setPprog]=useState("");
   const [flash,setFlash]=useState(null);
@@ -791,17 +960,32 @@ function App({session}){
   const savePrc=(p,d)=>{setPrc_(p);setPdate(d);LS.set("il_prc",{p,d});};
   const saveHist=h=>{setHist_(h);LS.set("il_hist",h);};
   const saveHide=v=>{setHide_(v);LS.set("il_hide",v);};
-  const flash_=(msg,t="ok")=>{setFlash({msg,t});setTimeout(()=>setFlash(null),3500);};
+  const flash_=(msg,t="ok")=>{setFlash({msg,t});setTimeout(()=>setFlash(null),CFG.FLASH_MS);};
   const mask=v=>hide?<span className="mask">••••</span>:v;
+
+  // Async confirm dialog — window.confirm yerine.
+  // Kullanım: if(!(await confirm_("Silinsin mi?"))) return;
+  const [confirmSt,setConfirmSt]=useState(null);
+  const confirm_=(msg,{okLbl="Evet",cancelLbl="İptal",danger=true}={})=>
+    new Promise(resolve=>setConfirmSt({msg,okLbl,cancelLbl,danger,resolve}));
+  const closeConfirm=(val)=>{if(confirmSt){confirmSt.resolve(val);setConfirmSt(null);}};
+  useEffect(()=>{
+    if(!confirmSt)return;
+    const onKey=e=>{if(e.key==="Escape")closeConfirm(false);else if(e.key==="Enter")closeConfirm(true);};
+    window.addEventListener("keydown",onKey);
+    return()=>window.removeEventListener("keydown",onKey);
+  },[confirmSt]);
 
   const loadData=async()=>{
     setBusy(b=>({...b,d:true}));
-    const[pr,tr]=await Promise.all([
+    const[pr,tr,sr]=await Promise.all([
       sb.from("positions").select("*").eq("user_id",user.id),
-      sb.from("transactions").select("*").eq("user_id",user.id).order("date",{ascending:false})
+      sb.from("transactions").select("*").eq("user_id",user.id).order("date",{ascending:false}),
+      sb.from("splits").select("*").eq("user_id",user.id)
     ]);
     if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker})));
     if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission})));
+    if(sr.data)setSplits(sr.data);
     setBusy(b=>({...b,d:false}));
   };
   useEffect(()=>{loadData();},[]);
@@ -811,10 +995,11 @@ function App({session}){
     const price=prc[p.ticker],cost=p.shares*p.avgCost;
     const mv=price!=null?p.shares*price:null,pl=mv!=null?mv-cost:null;
     const h=hist[p.ticker]||null;
-    return{...p,price,cost,mv,pl,plPct:pl!=null?(pl/cost)*100:null,d1:h?.d1??null,w1:h?.w1??null,m1:h?.m1??null,y1:h?.y1??null};
-  });  const tC=usd.reduce((a,p)=>a+p.cost,0);
+    return{...p,price,cost,mv,pl,plPct:(pl!=null&&cost>0)?(pl/cost)*100:null,d1:h?.d1??null,w1:h?.w1??null,m1:h?.m1??null,y1:h?.y1??null};
+  });
+  const tC=usd.reduce((a,p)=>a+p.cost,0);
   const tM=usd.reduce((a,p)=>a+(p.mv??p.cost),0);
-  const tP=tM-tC,tPct=(tP/tC)*100;
+  const tP=tM-tC,tPct=tC>0?(tP/tC)*100:null;
   const byT={};usd.forEach(p=>{byT[p.type]=(byT[p.type]||0)+(p.mv??p.cost);});
   const pPerf=k=>{const v=usd.filter(p=>p[k]!=null&&p.mv!=null);if(!v.length)return null;const s=v.reduce((a,p)=>a+p.mv,0);return v.reduce((a,p)=>a+p[k]*(p.mv/s),0);};
   const hasH=Object.keys(hist).length>0;
@@ -828,7 +1013,7 @@ function App({session}){
   const fetchPrices=async()=>{
     setBusy(b=>({...b,p:true}));
     const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
-    const np={...prc};let cnt=0;
+    const np={...prc};let cnt=0;const failed=[];
     for(let i=0;i<tickers.length;i++){
       const t=tickers[i];
       setPprog(`${t} (${i+1}/${tickers.length})`);
@@ -836,18 +1021,19 @@ function App({session}){
         const r=await edgeCall("fetch-prices",{ticker:t,mode:"price"});
         const d=await r.json();
         if(d.result?.price){np[t]=d.result.price;cnt++;}
-      }catch(e){}
-      if(i<tickers.length-1)await sleep(7500);
+        else{failed.push(t);console.warn(`[fetchPrices ${t}]`,d.result?.error||d.error||"no price");}
+      }catch(e){failed.push(t);console.warn(`[fetchPrices ${t}]`,e);}
+      if(i<tickers.length-1)await sleep(CFG.RATE_LIMIT_MS);
     }
     savePrc(np,new Date(Date.now()-86400000).toISOString().split("T")[0]);
     setBusy(b=>({...b,p:false}));setPprog("");
-    flash_(`${cnt}/${tickers.length} fiyat güncellendi`);
+    flash_(`${cnt}/${tickers.length} fiyat güncellendi`+(failed.length?` · başarısız: ${failed.join(", ")}`:""),failed.length?"err":"ok");
   };
 
   const fetchHist=async()=>{
     setBusy(b=>({...b,h:true}));
     const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
-    const nh={...hist};const np={...prc};let cnt=0;
+    const nh={...hist};const np={...prc};let cnt=0;const failed=[];
     for(let i=0;i<tickers.length;i++){
       const t=tickers[i];
       setPprog(`${t} tarihi (${i+1}/${tickers.length})`);
@@ -863,19 +1049,24 @@ function App({session}){
             p_m3:v.p_m3,p_m6:v.p_m6,p_y1:v.p_y1
           };
           np[t]=v.price;cnt++;
+        } else {
+          failed.push(t);console.warn(`[fetchHist ${t}]`,v?.error||d.error||"no data");
         }
-      }catch(e){}
-      if(i<tickers.length-1)await sleep(7500);
+      }catch(e){failed.push(t);console.warn(`[fetchHist ${t}]`,e);}
+      if(i<tickers.length-1)await sleep(CFG.RATE_LIMIT_MS);
     }
     saveHist(nh);
     savePrc(np,new Date(Date.now()-86400000).toISOString().split("T")[0]);
     setBusy(b=>({...b,h:false}));setPprog("");
-    flash_(`${cnt}/${tickers.length} tarihi veri yüklendi`);
+    flash_(`${cnt}/${tickers.length} tarihi veri yüklendi`+(failed.length?` · başarısız: ${failed.join(", ")}`:""),failed.length?"err":"ok");
   };
 
   const dlCSV=(rows,hdr,name)=>{const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent([hdr,...rows].join("\n"));a.download=name;a.click();};
-  const expTx=()=>dlCSV(txs.map(t=>`${t.date},${t.ticker},${t.name||""},${t.asset_type||""},${t.way},${t.shares},${t.price},${t.currency||"USD"},${t.total||""},${t.broker||""},${t.commission||0}`),"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Total,Broker,Commission",`txs_${today()}.csv`);
-  const expPos=()=>dlCSV(pos.map(p=>`${p.ticker},${p.name},${p.type},${p.shares},${p.avgCost},${p.currency},${p.broker}`),"Ticker,Name,Type,Shares,AvgCost,Currency,Broker",`pos_${today()}.csv`);
+  // CSV round-trip: virgül / tırnak / satır sonu içeren alanları tırnak içine al.
+  const csvEsc=(v)=>{const s=v==null?"":String(v);return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
+  const csvRow=(cols)=>cols.map(csvEsc).join(",");
+  const expTx=()=>dlCSV(txs.map(t=>csvRow([t.date,t.ticker,t.name||"",t.asset_type||"",t.way,t.shares,t.price,t.currency||"USD",t.total||"",t.broker||"",t.commission||0])),"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Total,Broker,Commission",`txs_${today()}.csv`);
+  const expPos=()=>dlCSV(pos.map(p=>csvRow([p.ticker,p.name,p.type,p.shares,p.avgCost,p.currency,p.broker])),"Ticker,Name,Type,Shares,AvgCost,Currency,Broker",`pos_${today()}.csv`);
 
   const TABS=[["dashboard","Dashboard"],["history","İşlemler"],["add","+ Ekle"],["settings","Ayarlar"]];
 
@@ -898,7 +1089,15 @@ function App({session}){
       {flash&&<div className={"flash "+flash.t}>{flash.msg}</div>}
 
       {/* DASHBOARD */}
-      {tab==="dashboard"&&(()=>{
+      {tab==="dashboard"&&pos.length===0&&(
+        <div className="empty-card">
+          <div className="ic">📊</div>
+          <div className="ttl">Henüz pozisyon yok</div>
+          <div className="sub">İlk yatırımını ekle ve takibe başla. Metin, görüntü, CSV veya manuel giriş yapabilirsin.</div>
+          <button className="pri" onClick={()=>setTab("add")}>+ İlk işlemi ekle</button>
+        </div>
+      )}
+      {tab==="dashboard"&&pos.length>0&&(()=>{
         // Period performance calculation
         const PERIODS=[
           {key:"d1",  lbl:"1G",  priceKey:"p_d1"},
@@ -925,6 +1124,16 @@ function App({session}){
 
         return(
           <div>
+            {/* Fiyat yok uyarısı */}
+            {usd.length>0 && Object.keys(prc).length===0 && !busy.p && (
+              <div className="warn-card">
+                <div>
+                  <div className="wc-ttl">Fiyatlar çekilmedi</div>
+                  <div className="wc-sub">P&L hesaplamaları için güncel fiyatlar gerekli.</div>
+                </div>
+                <button className="pri" onClick={fetchPrices}>Şimdi çek</button>
+              </div>
+            )}
             {/* Summary cards */}
             <div className="g4">
               {[{l:"Maliyet",v:mask("$"+fmt(tC))},{l:"Piyasa Değeri",v:mask("$"+fmt(tM))},
@@ -966,6 +1175,33 @@ function App({session}){
               </div>
             )}
 
+            {/* Değer trendi (mevcut pozisyonların geçmiş fiyatlarla değeri) */}
+            {hasH&&!hide&&(()=>{
+              const CHART=[
+                {lbl:"1Y", priceKey:"p_y1"},
+                {lbl:"6A", priceKey:"p_m6"},
+                {lbl:"3A", priceKey:"p_m3"},
+                {lbl:"1A", priceKey:"p_m1"},
+                {lbl:"1H", priceKey:"p_w1"},
+                {lbl:"1G", priceKey:"p_d1"},
+                {lbl:"Bugün", priceKey:null},
+              ];
+              const data=CHART.map(({lbl,priceKey})=>{
+                if(priceKey===null)return{lbl,value:tM};
+                const valid=usd.filter(p=>p.mv!=null&&hist[p.ticker]?.[priceKey]!=null);
+                if(!valid.length)return null;
+                return{lbl,value:valid.reduce((a,p)=>a+p.shares*hist[p.ticker][priceKey],0)};
+              }).filter(Boolean);
+              if(data.length<2)return null;
+              return(
+                <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+                  <div className="stitle" style={{marginBottom:10}}>Değer Trendi</div>
+                  <SparkChart data={data}/>
+                  <div className="dim" style={{fontSize:10,marginTop:6}}>ℹ Mevcut pozisyonların geçmiş fiyatlarla değeri — gerçek tarihi bakiye değil.</div>
+                </div>
+              );
+            })()}
+
             {/* Varlık dağılımı */}
             <div style={{marginBottom:16}}>
               <div className="stitle">Varlık Dağılımı</div>
@@ -974,7 +1210,7 @@ function App({session}){
                   <div key={t} className="card" style={{flex:1,minWidth:70}}>
                     <div className="lbl">{TL[t]||t}</div>
                     <div className="mono" style={{fontSize:13,fontWeight:600}}>{mask("$"+fmt(v,0))}</div>
-                    <div className="dim" style={{fontSize:10}}>{(v/tM*100).toFixed(1)}%</div>
+                    <div className="dim" style={{fontSize:10}}>{tM>0?(v/tM*100).toFixed(1):"0.0"}%</div>
                   </div>
                 ))}
               </div>
@@ -985,8 +1221,9 @@ function App({session}){
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <div className="stitle">Pozisyonlar</div>
                 <div className="brow">
-                  <button style={{fontSize:11,padding:"3px 9px"}} onClick={loadData} disabled={busy.d}>{busy.d?"...":"Yenile"}</button>
-                  <button style={{fontSize:11,padding:"3px 9px"}} onClick={expPos}>CSV ↗</button>
+                  <button className="pri btn-xs" onClick={()=>setTab("add")}>+ Ekle</button>
+                  <button className="btn-xs" onClick={loadData} disabled={busy.d}>{busy.d?"...":"Yenile"}</button>
+                  <button className="btn-xs" onClick={expPos}>CSV ↗</button>
                 </div>
               </div>
               <div className="tbl-wrap">
@@ -1006,7 +1243,7 @@ function App({session}){
                   </tr></thead>
                   <tbody>
                     {sorted.map(p=>(
-                      <tr key={p.ticker}>
+                      <tr key={p.ticker} className="pos-row" onClick={()=>openHistory(p.ticker)} title={`${p.ticker} işlemlerini göster`}>
                         <td className="l"><div className="tcell"><span className="tsym">{p.ticker}{p.type==="FUND"&&<span className="badge etf">ETF</span>}{p.type==="CRYPTO"&&<span className="badge cry">₿</span>}</span><span className="tname">{p.name}</span></div></td>
                         {!hide&&<td className="r">{p.shares%1===0?p.shares:p.shares.toFixed(4)}</td>}
                         {!hide&&<td className="r">{mask("$"+fmt(p.avgCost))}</td>}
@@ -1024,19 +1261,55 @@ function App({session}){
                 </table>
               </div>
             </div>
-            <div style={{fontSize:11,color:"var(--text2)",marginTop:8}}>{txs.length} işlem · BTC hariç · {usd.length} USD pozisyon{!hasH&&<span style={{marginLeft:8}}>· Tarihi veri için Ayarlar → "Tarihi Veri" butonu</span>}</div>
+            <div style={{fontSize:11,color:"var(--text2)",marginTop:8}}>{txs.length} işlem · {usd.length} USD pozisyon{!hasH&&<span style={{marginLeft:8}}>· Tarihi veri için Ayarlar → "Tarihi Veri" butonu</span>}</div>
+
+            {/* TRY / EUR pozisyonları — fiyat desteği olmadığından yalnızca maliyet */}
+            {["TRY","EUR"].map(cur=>{
+              const items=pos.filter(p=>p.currency===cur);
+              if(!items.length)return null;
+              const cSym=cur==="TRY"?"₺":"€";
+              const totCost=items.reduce((a,p)=>a+p.shares*p.avgCost,0);
+              return(
+                <div key={cur} style={{marginTop:22}}>
+                  <div className="stitle">{cur} Pozisyonları · {mask(cSym+fmt(totCost,0))} maliyet</div>
+                  <div className="tbl-wrap">
+                    <table>
+                      <thead><tr>
+                        <th className="l">Ticker</th>
+                        {!hide&&<th className="r">Adet</th>}
+                        {!hide&&<th className="r">Ort. Maliyet</th>}
+                        {!hide&&<th className="r">Toplam</th>}
+                        <th className="l">Broker</th>
+                      </tr></thead>
+                      <tbody>
+                        {[...items].sort((a,b)=>a.ticker.localeCompare(b.ticker)).map(p=>(
+                          <tr key={p.ticker} className="pos-row" onClick={()=>openHistory(p.ticker)} title={`${p.ticker} işlemlerini göster`}>
+                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span></div></td>
+                            {!hide&&<td className="r">{p.shares%1===0?p.shares:p.shares.toFixed(4)}</td>}
+                            {!hide&&<td className="r">{mask(cSym+fmt(p.avgCost))}</td>}
+                            {!hide&&<td className="r">{mask(cSym+fmt(p.shares*p.avgCost,0))}</td>}
+                            <td className="l" style={{fontSize:11,color:"var(--text2)"}}>{p.broker||"—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="dim" style={{fontSize:10,marginTop:4}}>ℹ {cur} için güncel fiyat desteği yok — yalnızca maliyet gösteriliyor.</div>
+                </div>
+              );
+            })}
           </div>
         );
       })()}
 
       {/* HISTORY */}
       {tab==="history"&&(
-        <HistoryTab txs={txs} user={user} loadData={loadData} flash_={flash_} mask={mask} hideAmts={hide}/>
+        <HistoryTab txs={txs} user={user} loadData={loadData} flash_={flash_} confirm_={confirm_} mask={mask} hideAmts={hide} setTab={setTab} initialSearch={navTicker} onConsume={()=>setNavTicker("")} splits={splits}/>
       )}
 
       {/* ADD */}
       {tab==="add"&&(
-        <AddTab session={session} user={user} pos={pos} loadData={loadData} flash_={flash_}/>
+        <AddTab session={session} user={user} pos={pos} loadData={loadData} flash_={flash_} confirm_={confirm_}/>
       )}
 
       {/* SETTINGS */}
@@ -1060,6 +1333,17 @@ function App({session}){
             <div className="hint">Ticker başına ~8 sn · "Bağlantı Test" ile önce tek ticker dene</div>
           </div>
           <div className="sg">
+            <label>Pozisyon Bakımı</label>
+            <div className="brow">
+              <button onClick={async()=>{
+                const n=await rebuildPositions(user.id);
+                await loadData();
+                flash_(`Pozisyonlar yeniden hesaplandı · ${n} pozisyon`);
+              }}>♻️ Pozisyonları Yeniden Hesapla</button>
+            </div>
+            <div className="hint">Split eklendi/değiştirildiyse basın — tüm işlemler split-aware yeniden hesaplanır.</div>
+          </div>
+          <div className="sg">
             <label>Export</label>
             <div className="brow">
               <button onClick={expTx}>İşlemler CSV</button>
@@ -1075,6 +1359,7 @@ function App({session}){
               [pdate!=="—","Son Fiyat",pdate],
               [true,"Pozisyonlar",pos.length+" açık"],
               [true,"İşlemler",txs.length+" kayıtlı"],
+              [splits.length>0,"Split Kayıtları",splits.length>0?splits.length+" tanımlı":"Yok / okunamıyor"],
             ].map(([ok,l,v])=>(
               <div key={l} className="row">
                 <span style={{fontSize:13}}><span className={"dot "+(ok?"ok":"off")}></span>{l}</span>
@@ -1083,6 +1368,19 @@ function App({session}){
             ))}
           </div>
           <button className="danger" onClick={()=>sb.auth.signOut()} style={{width:"100%"}}>Çıkış Yap</button>
+        </div>
+      )}
+
+      {/* Confirm modal */}
+      {confirmSt&&(
+        <div className="mdl-bd" onClick={()=>closeConfirm(false)}>
+          <div className="mdl-bx" onClick={e=>e.stopPropagation()}>
+            <div className="mdl-msg">{confirmSt.msg}</div>
+            <div className="brow">
+              <button onClick={()=>closeConfirm(false)}>{confirmSt.cancelLbl}</button>
+              <button className={confirmSt.danger?"danger":"pri"} onClick={()=>closeConfirm(true)} autoFocus>{confirmSt.okLbl}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
