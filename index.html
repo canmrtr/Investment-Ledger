@@ -1006,12 +1006,19 @@ function App({session}){
           <div className="sg">
             <label>Fiyat & Veri</label>
             {(busy.p||busy.h)
-              ?<div className="dim" style={{fontSize:13,display:"flex",alignItems:"center",gap:8}}><div className="spin" style={{width:14,height:14}}></div>{pprog}</div>
+              ?<div className="dim" style={{fontSize:13,display:"flex",alignItems:"center",gap:8}}><div className="spin" style={{width:14,height:14}}></div><span className="mono">{pprog}</span></div>
               :<div className="brow">
                 <button onClick={fetchPrices}>Güncel Fiyatlar</button>
                 <button onClick={fetchHist}>Tarihi Veri (1G/1H/1A/1Y)</button>
+                <button onClick={async()=>{
+                  try{
+                    const r=await edgeCall(session,"fetch-prices",{ticker:"NVDA",mode:"price"});
+                    const txt=await r.text();
+                    alert("HTTP "+r.status+"\n\n"+txt.slice(0,600));
+                  }catch(e){alert("HATA: "+e.message);}
+                }} style={{fontSize:11,padding:"5px 10px",color:"var(--warn)",borderColor:"var(--warn)"}}>🔍 Bağlantı Test</button>
               </div>}
-            <div className="hint">Ticker başına ~8 saniye · 13 ticker ≈ 2 dakika · progress Ayarlar'da görünür</div>
+            <div className="hint">Ticker başına ~8 sn · "Bağlantı Test" ile önce tek ticker dene</div>
           </div>
           <div className="sg">
             <label>Export</label>
