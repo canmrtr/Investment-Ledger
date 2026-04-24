@@ -306,6 +306,81 @@ function SparkChart({data}){
   );
 }
 
+// ── AccountSection — Ayarlar içinde şifre + email değişimi ──────
+function AccountSection({user,flash_,confirm_}){
+  const [editing,setEditing]=useState(null); // null | "pw" | "email"
+  const [pw1,setPw1]=useState("");
+  const [pw2,setPw2]=useState("");
+  const [email,setEmail]=useState("");
+  const [busy,setBusy]=useState(false);
+
+  const cancel=()=>{setEditing(null);setPw1("");setPw2("");setEmail("");};
+
+  const savePw=async()=>{
+    if(pw1.length<6){flash_("Şifre en az 6 karakter olmalı","err");return;}
+    if(pw1!==pw2){flash_("Şifreler eşleşmiyor","err");return;}
+    setBusy(true);
+    const{error}=await sb.auth.updateUser({password:pw1});
+    setBusy(false);
+    if(error){flash_(error.message,"err");return;}
+    flash_("Şifre güncellendi ✓");cancel();
+  };
+
+  const saveEmail=async()=>{
+    if(!email||!email.includes("@")){flash_("Geçerli bir e-posta gir","err");return;}
+    if(!(await confirm_(`${email} adresine onay maili gönderilecek. Onay verene kadar eski e-posta geçerli kalır.`,{okLbl:"Devam"})))return;
+    setBusy(true);
+    const{error}=await sb.auth.updateUser({email});
+    setBusy(false);
+    if(error){flash_(error.message,"err");return;}
+    flash_("Onay maili gönderildi — yeni e-postanı kontrol et");cancel();
+  };
+
+  return(
+    <div className="sg">
+      <label>Hesap</label>
+      {/* E-posta satırı */}
+      <div className="row" style={{borderBottom:"none",padding:"5px 0"}}>
+        <div>
+          <div style={{fontSize:11,color:"var(--text2)",textTransform:"uppercase",letterSpacing:".05em"}}>E-posta</div>
+          <div className="mono" style={{fontSize:13}}>{user.email}</div>
+        </div>
+        {editing!=="email"&&<button className="btn-sm" onClick={()=>{setEditing("email");setEmail("");}}>Değiştir</button>}
+      </div>
+      {editing==="email"&&(
+        <div style={{background:"var(--bg3)",borderRadius:8,padding:"10px 12px",marginTop:8}}>
+          <div className="kk" style={{marginBottom:4}}>Yeni e-posta</div>
+          <input className="finp sm" type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="yeni@ornek.com" style={{marginBottom:8}}/>
+          <div className="brow">
+            <button className="pri btn-md" onClick={saveEmail} disabled={busy||!email}>{busy?"Kaydediliyor...":"Onay Gönder"}</button>
+            <button className="btn-md" onClick={cancel} disabled={busy}>İptal</button>
+          </div>
+        </div>
+      )}
+      {/* Şifre satırı */}
+      <div className="row" style={{borderBottom:"none",padding:"5px 0"}}>
+        <div>
+          <div style={{fontSize:11,color:"var(--text2)",textTransform:"uppercase",letterSpacing:".05em"}}>Şifre</div>
+          <div className="mono" style={{fontSize:13,color:"var(--text2)"}}>••••••••</div>
+        </div>
+        {editing!=="pw"&&<button className="btn-sm" onClick={()=>{setEditing("pw");setPw1("");setPw2("");}}>Değiştir</button>}
+      </div>
+      {editing==="pw"&&(
+        <div style={{background:"var(--bg3)",borderRadius:8,padding:"10px 12px",marginTop:8}}>
+          <div className="kk" style={{marginBottom:4}}>Yeni şifre</div>
+          <input className="finp sm" type="password" value={pw1} onChange={e=>setPw1(e.target.value)} placeholder="En az 6 karakter" style={{marginBottom:8}}/>
+          <div className="kk" style={{marginBottom:4}}>Yeni şifre (tekrar)</div>
+          <input className="finp sm" type="password" value={pw2} onChange={e=>setPw2(e.target.value)} placeholder="Tekrar yaz" style={{marginBottom:8}}/>
+          <div className="brow">
+            <button className="pri btn-md" onClick={savePw} disabled={busy||!pw1||!pw2}>{busy?"Kaydediliyor...":"Şifreyi Güncelle"}</button>
+            <button className="btn-md" onClick={cancel} disabled={busy}>İptal</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── ConfirmBox (AddTab dışında!) ─────────────────────────────────
 function ConfirmBox({data,onSave,onCancel}){
   if(!data)return null;
@@ -1464,6 +1539,7 @@ function App({session}){
               <button onClick={expPos}>Pozisyonlar CSV</button>
             </div>
           </div>
+          <AccountSection user={user} flash_={flash_} confirm_={confirm_}/>
           <div style={{borderTop:"0.5px solid var(--border)",paddingTop:16,marginBottom:16}}>
             <div className="stitle">Sistem Durumu</div>
             {[
