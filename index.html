@@ -306,15 +306,16 @@ function SparkChart({data}){
   );
 }
 
-// ── AccountSection — Ayarlar içinde şifre + email değişimi ──────
-function AccountSection({user,flash_,confirm_}){
-  const [editing,setEditing]=useState(null); // null | "pw" | "email"
+// ── AccountSection — Ayarlar içinde hesap yönetimi ──────────────
+function AccountSection({user,profile,flash_,confirm_,onSaved}){
+  const [editing,setEditing]=useState(null); // null | "pw" | "email" | "uname"
   const [pw1,setPw1]=useState("");
   const [pw2,setPw2]=useState("");
   const [email,setEmail]=useState("");
+  const [uname,setUname]=useState("");
   const [busy,setBusy]=useState(false);
 
-  const cancel=()=>{setEditing(null);setPw1("");setPw2("");setEmail("");};
+  const cancel=()=>{setEditing(null);setPw1("");setPw2("");setEmail("");setUname("");};
 
   const savePw=async()=>{
     if(pw1.length<6){flash_("Şifre en az 6 karakter olmalı","err");return;}
@@ -336,9 +337,51 @@ function AccountSection({user,flash_,confirm_}){
     flash_("Onay maili gönderildi — yeni e-postanı kontrol et");cancel();
   };
 
+  const saveUname=async()=>{
+    if(!/^[a-z0-9_]{3,20}$/.test(uname)){
+      flash_("3-20 karakter, küçük harf / rakam / alt tire","err");return;
+    }
+    setBusy(true);
+    const{error}=await sb.from("profiles").upsert({
+      user_id:user.id,username:uname,updated_at:new Date().toISOString()
+    },{onConflict:"user_id"});
+    setBusy(false);
+    if(error){
+      if(error.code==="23505"||(error.message||"").includes("duplicate")){
+        flash_("Bu kullanıcı adı zaten alınmış","err");
+      } else {
+        flash_(error.message,"err");
+      }
+      return;
+    }
+    flash_("Kullanıcı adı kaydedildi ✓");cancel();
+    if(onSaved)onSaved();
+  };
+
   return(
     <div className="sg">
       <label>Hesap</label>
+      {/* Kullanıcı adı satırı */}
+      <div className="row" style={{borderBottom:"none",padding:"5px 0"}}>
+        <div>
+          <div style={{fontSize:11,color:"var(--text2)",textTransform:"uppercase",letterSpacing:".05em"}}>Kullanıcı Adı</div>
+          <div className="mono" style={{fontSize:13}}>
+            {profile?.username?<span>@{profile.username}</span>:<span className="dim">Henüz yok</span>}
+          </div>
+        </div>
+        {editing!=="uname"&&<button className="btn-sm" onClick={()=>{setEditing("uname");setUname(profile?.username||"");}}>{profile?.username?"Değiştir":"Oluştur"}</button>}
+      </div>
+      {editing==="uname"&&(
+        <div style={{background:"var(--bg3)",borderRadius:8,padding:"10px 12px",marginTop:8}}>
+          <div className="kk" style={{marginBottom:4}}>Kullanıcı adı</div>
+          <input className="finp sm" value={uname} onChange={e=>setUname(e.target.value.toLowerCase())} placeholder="ornek_user" style={{marginBottom:4}}/>
+          <div style={{fontSize:10,color:"var(--text3)",marginBottom:8}}>3-20 karakter · küçük harf, rakam, alt tire</div>
+          <div className="brow">
+            <button className="pri btn-md" onClick={saveUname} disabled={busy||!uname}>{busy?"Kaydediliyor...":"Kaydet"}</button>
+            <button className="btn-md" onClick={cancel} disabled={busy}>İptal</button>
+          </div>
+        </div>
+      )}
       {/* E-posta satırı */}
       <div className="row" style={{borderBottom:"none",padding:"5px 0"}}>
         <div>
@@ -1039,6 +1082,7 @@ function App({session}){
   const [pos,setPos]=useState([]);
   const [txs,setTxs]=useState([]);
   const [splits,setSplits]=useState([]);
+  const [profile,setProfile]=useState(null);
   const [prc,setPrc_]=useState(()=>{const p=LS.get("il_prc",null);return p?p.p:{};});
   const [pdate,setPdate]=useState(()=>{const p=LS.get("il_prc",null);return p?p.d:"—";});
   const [hist,setHist_]=useState(()=>LS.get("il_hist",{}));
@@ -1070,15 +1114,17 @@ function App({session}){
 
   const loadData=async()=>{
     setBusy(b=>({...b,d:true}));
-    const[pr,tr,sr,pc]=await Promise.all([
+    const[pr,tr,sr,pc,pf]=await Promise.all([
       sb.from("positions").select("*").eq("user_id",user.id),
       sb.from("transactions").select("*").eq("user_id",user.id).order("date",{ascending:false}),
       sb.from("splits").select("*").eq("user_id",user.id),
-      sb.from("price_cache").select("*")
+      sb.from("price_cache").select("*"),
+      sb.from("profiles").select("*").eq("user_id",user.id).maybeSingle()
     ]);
     if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker})));
     if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission})));
     if(sr.data)setSplits(sr.data);
+    setProfile(pf?.data||null);
     // Paylaşımlı fiyat cache'ini uygula — LS'teki hist/prc üstüne yazar.
     const cachedSet=new Set((pc.data||[]).map(c=>c.ticker));
     if(pc.data&&pc.data.length){
@@ -1539,7 +1585,7 @@ function App({session}){
               <button onClick={expPos}>Pozisyonlar CSV</button>
             </div>
           </div>
-          <AccountSection user={user} flash_={flash_} confirm_={confirm_}/>
+          <AccountSection user={user} profile={profile} flash_={flash_} confirm_={confirm_} onSaved={loadData}/>
           <div style={{borderTop:"0.5px solid var(--border)",paddingTop:16,marginBottom:16}}>
             <div className="stitle">Sistem Durumu</div>
             {[
