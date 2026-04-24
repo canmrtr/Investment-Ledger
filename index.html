@@ -112,6 +112,13 @@
     /* Clickable position rows */
     .pos-row{cursor:pointer;transition:background .12s ease;}
     .pos-row:hover{background:var(--bg3);}
+    /* Segmented control (toggle) */
+    .seg{display:inline-flex;background:var(--bg3);border-radius:7px;padding:2px;}
+    .seg button{background:transparent;border:none;padding:4px 10px;font-size:11px;border-radius:5px;color:var(--text2);cursor:pointer;}
+    .seg button.on{background:var(--bg2);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,0.15);}
+    /* Pie legend row */
+    .pie-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;}
+    .pie-sw{width:10px;height:10px;border-radius:2px;flex:0 0 auto;}
   </style>
 </head>
 <body>
@@ -143,6 +150,15 @@ const sb = supabase.createClient(SUPA_URL, SUPA_ANON, {
 const {useState,useEffect,useRef} = React;
 
 const TL = {US_STOCK:"Hisse",FUND:"ETF/Fon",CRYPTO:"Kripto",BIST:"BIST",GOLD:"Altın",FX:"Döviz"};
+// Pie chart slice + legend renkleri. Sabit — dashboard yeniden açıldığında değişmez.
+const TYPE_COLORS = {
+  US_STOCK: "#30d158",  // yeşil (iOS system green)
+  FUND:     "#0a84ff",  // mavi (iOS system blue)
+  CRYPTO:   "#ff9f0a",  // turuncu
+  BIST:     "#bf5af2",  // mor
+  GOLD:     "#ffd60a",  // sarı
+  FX:       "#8e8e93",  // gri
+};
 const LS = {
   get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
   set:(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
@@ -953,6 +969,7 @@ function App({session}){
   const [hist,setHist_]=useState(()=>LS.get("il_hist",{}));
   const [hide,setHide_]=useState(()=>LS.get("il_hide",false));
   const [sort,setSort]=useState({by:"mv",dir:"desc"});
+  const [distMode,setDistMode]=useState("mv"); // "cost" | "mv" — pie chart mode
   const [busy,setBusy]=useState({p:false,h:false,d:false});
   const [pprog,setPprog]=useState("");
   const [flash,setFlash]=useState(null);
@@ -1040,7 +1057,13 @@ function App({session}){
   const tC=usd.reduce((a,p)=>a+p.cost,0);
   const tM=usd.reduce((a,p)=>a+(p.mv??p.cost),0);
   const tP=tM-tC,tPct=tC>0?(tP/tC)*100:null;
-  const byT={};usd.forEach(p=>{byT[p.type]=(byT[p.type]||0)+(p.mv??p.cost);});
+  // Varlık türü başına iki dağılım: cost ve market value (pie chart toggle için)
+  const byTCost={},byTMV={};
+  usd.forEach(p=>{
+    byTCost[p.type]=(byTCost[p.type]||0)+p.cost;
+    byTMV[p.type]=(byTMV[p.type]||0)+(p.mv??p.cost);
+  });
+  const byT=distMode==="cost"?byTCost:byTMV;
   const pPerf=k=>{const v=usd.filter(p=>p[k]!=null&&p.mv!=null);if(!v.length)return null;const s=v.reduce((a,p)=>a+p.mv,0);return v.reduce((a,p)=>a+p[k]*(p.mv/s),0);};
   const hasH=Object.keys(hist).length>0;
   const sorted=[...usd].sort((a,b)=>{const va=a[sort.by]??0,vb=b[sort.by]??0;return sort.dir==="asc"?va-vb:vb-va;});
@@ -1250,19 +1273,62 @@ function App({session}){
               );
             })()}
 
-            {/* Varlık dağılımı */}
-            <div style={{marginBottom:16}}>
-              <div className="stitle">Varlık Dağılımı</div>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                {Object.entries(byT).sort((a,b)=>b[1]-a[1]).map(([t,v])=>(
-                  <div key={t} className="card" style={{flex:1,minWidth:70}}>
-                    <div className="lbl">{TL[t]||t}</div>
-                    <div className="mono" style={{fontSize:13,fontWeight:600}}>{mask("$"+fmt(v,0))}</div>
-                    <div className="dim" style={{fontSize:10}}>{tM>0?(v/tM*100).toFixed(1):"0.0"}%</div>
+            {/* Varlık dağılımı — pie + legend */}
+            {(()=>{
+              const entries=Object.entries(byT).sort((a,b)=>b[1]-a[1]);
+              const total=entries.reduce((a,[,v])=>a+v,0);
+              if(total<=0)return null;
+              const CX=60,CY=60,R=50;
+              const polar=(a)=>({x:CX+R*Math.cos(a-Math.PI/2),y:CY+R*Math.sin(a-Math.PI/2)});
+              let ang=0;
+              const slices=entries.map(([type,value])=>{
+                const frac=value/total;
+                const start=ang, end=ang+frac*2*Math.PI;
+                ang=end;
+                let path;
+                if(frac>=0.9999){
+                  // tek tür = tam çember, arc yerine iki yarım path
+                  path=`M ${CX} ${CY-R} A ${R} ${R} 0 1 1 ${CX} ${CY+R} A ${R} ${R} 0 1 1 ${CX} ${CY-R} Z`;
+                } else {
+                  const s=polar(end),e=polar(start);
+                  const large=(end-start)<=Math.PI?"0":"1";
+                  path=`M ${CX} ${CY} L ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${R} ${R} 0 ${large} 0 ${e.x.toFixed(2)} ${e.y.toFixed(2)} Z`;
+                }
+                return{type,value,frac,path};
+              });
+              return(
+                <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                    <span className="stitle" style={{marginBottom:0}}>Varlık Dağılımı</span>
+                    <div className="seg">
+                      <button className={distMode==="cost"?"on":""} onClick={()=>setDistMode("cost")}>Maliyet</button>
+                      <button className={distMode==="mv"?"on":""} onClick={()=>setDistMode("mv")}>Piyasa</button>
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div style={{display:"flex",gap:18,alignItems:"center",flexWrap:"wrap"}}>
+                    <svg viewBox="0 0 120 120" style={{width:140,height:140,flex:"0 0 auto"}}>
+                      {slices.map(s=>(
+                        <path key={s.type} d={s.path} fill={TYPE_COLORS[s.type]||"#666"} stroke="var(--bg2)" strokeWidth="1"/>
+                      ))}
+                    </svg>
+                    <div style={{flex:1,minWidth:180}}>
+                      {slices.map(s=>(
+                        <div key={s.type} className="pie-row">
+                          <span className="pie-sw" style={{background:TYPE_COLORS[s.type]||"#666"}}></span>
+                          <span style={{flex:1}}>{TL[s.type]||s.type}</span>
+                          <span className="mono" style={{minWidth:64,textAlign:"right"}}>{mask("$"+fmt(s.value,0))}</span>
+                          <span className="dim" style={{minWidth:46,textAlign:"right",fontSize:11}}>{(s.frac*100).toFixed(1)}%</span>
+                        </div>
+                      ))}
+                      <div style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:600}}>
+                        <span>Toplam</span>
+                        <span className="mono">{mask("$"+fmt(total,0))}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Pozisyonlar listesi */}
             <div style={{marginBottom:8}}>
