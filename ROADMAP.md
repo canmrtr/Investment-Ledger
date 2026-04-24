@@ -13,8 +13,7 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 ## Görselleştirme
 
-- [ ] Pie chart: varlık türlerine göre dağılım
-- (mevcut: kart tabanlı dağılım — pie daha anlaşılır)
+- [x] ~~Pie chart: varlık türlerine göre dağılım~~ (2026-04-24, cost/market toggle'lı)
 
 ## Navigasyon & Sayfalar
 
@@ -38,6 +37,15 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 - [ ] Social feed: benzer risk profilindeki yatırımcıların pozisyonları
   - Privacy: opt-in gerekli, anonim toplam görünümler
 
+## Hesap Yönetimi
+
+- [ ] Account / Profil ekranı (yeni sekme)
+  - Şifre değiştirme (Supabase `auth.updateUser({password})`)
+  - Kullanıcı adı (username) — profile tablosu + unique constraint
+  - Email değiştirme (Supabase verifikasyonlu)
+  - Hesap silme (tüm verinin cascade delete'i)
+  - Avatar / profil resmi (opsiyonel)
+
 ## Açık Sorular
 
 - Provider seçimleri ücretsiz mi? Daily rate limit ne?
@@ -47,7 +55,8 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 ## Sonraki Adım
 
-Bu havuzdan **2-3 item seçip** küçük bir milestone yap. Önerim:
-1. **Pie chart** (kolay, görünür fayda, frontend-only)
-2. **Vadeli mevduat** (basit asset type — provider gerekmez, kullanıcı girer)
-3. **Hisse detay sayfası** (mevcut veriyle de değerli — fundamental gelince zenginleşir)
+Bu havuzdan **2-3 item seçip** küçük bir milestone yap. Güncel öneri:
+1. ✅ ~~Pie chart~~ (tamamlandı)
+2. **Account / Profil ekranı** (şifre + username; temel eksik)
+3. **Vadeli mevduat** (basit asset type — provider gerekmez, kullanıcı girer)
+4. **Hisse detay sayfası** (mevcut veriyle başla, fundamental gelince zenginleşir)
