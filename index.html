@@ -978,17 +978,57 @@ function App({session}){
 
   const loadData=async()=>{
     setBusy(b=>({...b,d:true}));
-    const[pr,tr,sr]=await Promise.all([
+    const[pr,tr,sr,pc]=await Promise.all([
       sb.from("positions").select("*").eq("user_id",user.id),
       sb.from("transactions").select("*").eq("user_id",user.id).order("date",{ascending:false}),
-      sb.from("splits").select("*").eq("user_id",user.id)
+      sb.from("splits").select("*").eq("user_id",user.id),
+      sb.from("price_cache").select("*")
     ]);
     if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker})));
     if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission})));
     if(sr.data)setSplits(sr.data);
+    // Paylaşımlı fiyat cache'ini uygula — LS'teki hist/prc üstüne yazar.
+    const cachedSet=new Set((pc.data||[]).map(c=>c.ticker));
+    if(pc.data&&pc.data.length){
+      const num=v=>v==null?null:+v;
+      const nh={...hist},np={...prc};
+      let latestDate=pdate;
+      for(const c of pc.data){
+        nh[c.ticker]={last:num(c.price),d1:num(c.d1),w1:num(c.w1),m1:num(c.m1),y1:num(c.y1),p_d1:num(c.p_d1),p_w1:num(c.p_w1),p_m1:num(c.p_m1),p_m3:num(c.p_m3),p_m6:num(c.p_m6),p_y1:num(c.p_y1)};
+        if(c.price!=null)np[c.ticker]=+c.price;
+        const d=c.updated_at?.split("T")[0];
+        if(d&&(latestDate==="—"||d>latestDate))latestDate=d;
+      }
+      saveHist(nh);savePrc(np,latestDate);
+    }
+    // Backfill: LS'te olan ama cache'te olmayan ticker'ları cache'e yaz.
+    // Sadece tarihi veri tam olanlar (p_y1 != null), tek seferlik katkı.
+    const toBackfill=Object.keys(hist).filter(t=>!cachedSet.has(t)&&hist[t]?.p_y1!=null);
+    if(toBackfill.length){
+      const rows=toBackfill.map(t=>{
+        const h=hist[t];
+        return{ticker:t,price:h.last,d1:h.d1,w1:h.w1,m1:h.m1,y1:h.y1,p_d1:h.p_d1,p_w1:h.p_w1,p_m1:h.p_m1,p_m3:h.p_m3,p_m6:h.p_m6,p_y1:h.p_y1,updated_at:new Date().toISOString()};
+      });
+      sb.from("price_cache").upsert(rows,{onConflict:"ticker"}).then(({error})=>{
+        if(error)console.warn("[cache backfill]",error.message);
+        else console.log(`[cache backfill] ${rows.length} ticker paylaşımlı cache'e eklendi`);
+      });
+    }
     setBusy(b=>({...b,d:false}));
   };
   useEffect(()=>{loadData();},[]);
+
+  // pos yüklendikten sonra cache'te olmayan USD ticker'lar için arka planda otomatik fetchHist.
+  // Kullanıcı hiçbir butona basmadan chart + period butonlarını görür.
+  useEffect(()=>{
+    if(!pos.length||busy.h||busy.p)return;
+    const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
+    const missing=tickers.filter(t=>!hist[t]||hist[t].p_y1==null);
+    if(missing.length){
+      flash_(`${missing.length} ticker için tarihi veri otomatik yükleniyor...`,"ok");
+      fetchHist(missing);
+    }
+  },[pos]);
 
   // Derived
   const usd=pos.filter(p=>p.currency==="USD").map(p=>{
@@ -1030,9 +1070,9 @@ function App({session}){
     flash_(`${cnt}/${tickers.length} fiyat güncellendi`+(failed.length?` · başarısız: ${failed.join(", ")}`:""),failed.length?"err":"ok");
   };
 
-  const fetchHist=async()=>{
+  const fetchHist=async(tickersOverride)=>{
     setBusy(b=>({...b,h:true}));
-    const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
+    const tickers=tickersOverride||pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
     const nh={...hist};const np={...prc};let cnt=0;const failed=[];
     for(let i=0;i<tickers.length;i++){
       const t=tickers[i];
@@ -1049,6 +1089,14 @@ function App({session}){
             p_m3:v.p_m3,p_m6:v.p_m6,p_y1:v.p_y1
           };
           np[t]=v.price;cnt++;
+          // Paylaşımlı cache'e yaz — diğer user'lar da faydalansın.
+          sb.from("price_cache").upsert({
+            ticker:t,price:v.price,
+            d1:v.d1,w1:v.w1,m1:v.m1,y1:v.y1,
+            p_d1:v.p_d1,p_w1:v.p_w1,p_m1:v.p_m1,
+            p_m3:v.p_m3,p_m6:v.p_m6,p_y1:v.p_y1,
+            updated_at:new Date().toISOString()
+          },{onConflict:"ticker"}).then(({error})=>{if(error)console.warn(`[cache upsert ${t}]`,error.message);});
         } else {
           failed.push(t);console.warn(`[fetchHist ${t}]`,v?.error||d.error||"no data");
         }
