@@ -67,6 +67,28 @@ async function getCikMap() {
   return m;
 }
 
+// BIST ticker listesi — Twelve Data /stocks reference (free tier OK, ~640 ticker)
+let bistListCache = null;
+let bistListCacheAt = 0;
+
+async function getBistList() {
+  const now = Date.now();
+  if (bistListCache && (now - bistListCacheAt) < CIK_TTL_MS) return bistListCache;
+  const apiKey = Deno.env.get("TWELVEDATA_KEY");
+  if (!apiKey) return [];
+  const r = await fetch(`https://api.twelvedata.com/stocks?exchange=XIST&apikey=${apiKey}`);
+  if (!r.ok) return [];
+  const d = await r.json();
+  if (!Array.isArray(d.data)) return [];
+  const list = d.data.map(x => ({
+    ticker: String(x.symbol || "").toUpperCase(),
+    name: x.name || "",
+  })).filter(x => x.ticker);
+  bistListCache = list;
+  bistListCacheAt = now;
+  return list;
+}
+
 // us-gaap concept time serisi → annual (FY) sıralı array, en yeni başta.
 // Aynı fy için birden fazla amendment varsa en son dosyalanmış olanı al.
 function edgarAnnualSeries(facts, concept) {
@@ -327,15 +349,22 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
 
-    // Mode: ticker-list — SEC EDGAR'ın cache'lenmiş ticker DB'sini frontend'e
-    // serve eder (search tab için). Browser SEC'e direkt fetch yapamaz
-    // (User-Agent zorunluluğu); edge function proxy görevi görür.
+    // Mode: ticker-list — US (SEC EDGAR) + BIST (Twelve Data) merged.
+    // Browser SEC'e direkt fetch yapamaz (User-Agent zorunluluğu); edge
+    // function proxy görevi görür. BIST için Twelve Data /stocks reference
+    // free tier'da açık (~640 ticker).
     if (body.mode === "ticker-list") {
-      const db = await getTickerDb();
-      const list = Object.entries(db).map(([ticker, info]) => ({
-        ticker, name: info.name
-      }));
-      return json({ list, count: list.length, fetched_at: new Date().toISOString() });
+      const [usDb, bistList] = await Promise.all([getTickerDb(), getBistList()]);
+      const list = [
+        ...Object.entries(usDb).map(([ticker, info]) => ({ ticker, name: info.name, exchange: "US" })),
+        ...bistList.map(x => ({ ...x, exchange: "XIST" })),
+      ];
+      return json({
+        list, count: list.length,
+        us_count: Object.keys(usDb).length,
+        bist_count: bistList.length,
+        fetched_at: new Date().toISOString()
+      });
     }
 
     const { ticker } = body;

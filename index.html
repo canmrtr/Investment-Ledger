@@ -787,7 +787,7 @@ const fmtCompact = (n) => {
   return ""+n;
 };
 
-function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,closeDetail,hideAmts,mask}){
+function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,flash_,loadData,closeDetail,hideAmts,mask}){
   const [meta,setMeta]=useState(()=>metaCacheGet(ticker));
   const [metaLoading,setMetaLoading]=useState(false);
   const [metaErr,setMetaErr]=useState("");
@@ -826,13 +826,19 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
 
   const p=pos.find(x=>x.ticker===ticker);
   const tickerTxs=txs.filter(t=>t.ticker===ticker);
+  // Effective asset type — held varsa onun type'ı, non-held ise search'ten gelen hint
+  // (BIST veya US_STOCK varsayılan). Provider routing + currency display için kullanılır.
+  const effectiveType = p?.type || assetTypeHint || "US_STOCK";
+  const isBist = effectiveType==="BIST";
+  const displayCurrency = p?.currency || (isBist ? "TRY" : "USD");
+  const sym = displayCurrency==="TRY" ? "₺" : displayCurrency==="EUR" ? "€" : "$";
+
   // Non-held için canlı fiyat (search'ten açıldı, prc[ticker] yok). Held için prc cache'ten.
   const [livePrice,setLivePrice]=useState(null);
   useEffect(()=>{
     if(p)return;
-    // Non-held için live price fetch — search'ten gelen ticker'ın asset_type'ını bilmiyoruz;
-    // pos kayıtlı değilse Massive (US/global) varsayılır. BIST search ileride asset_type'ı geçirecek.
-    edgeCall("fetch-prices",{ticker,mode:"price",asset_type:p?.type})
+    // Non-held için live price fetch — assetTypeHint BIST ise Yahoo, yoksa Massive
+    edgeCall("fetch-prices",{ticker,mode:"price",asset_type:effectiveType})
       .then(r=>r.json())
       .then(d=>{if(d?.result?.price)setLivePrice(d.result.price);})
       .catch(()=>{});
@@ -859,7 +865,7 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
     }
     setMetaLoading(true);setMetaErr("");
     try{
-      const r=await edgeCall("fetch-prices",{ticker,mode:"meta",asset_type:p?.type});
+      const r=await edgeCall("fetch-prices",{ticker,mode:"meta",asset_type:effectiveType});
       const d=await r.json();
       if(d.result&&!d.result.error){
         setMeta(d.result);
@@ -894,10 +900,8 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
     setFundLoading(false);
   };
   useEffect(()=>{
-    const heldType=pos.find(x=>x.ticker===ticker)?.type;
-    // US_STOCK held; veya non-held (search'ten geldi, US ticker varsayımı)
-    const shouldFetch = heldType==="US_STOCK" || !heldType;
-    if(shouldFetch&&!fund)fetchFund(false);
+    // Sadece US_STOCK için fetch (FMP/EDGAR US-only). BIST'te skip.
+    if(effectiveType==="US_STOCK"&&!fund)fetchFund(false);
   },[ticker]);
 
   const exchangeShort={XNAS:"NASDAQ",XNYS:"NYSE",ARCX:"NYSE Arca",BATS:"CBOE",IEXG:"IEX"}[meta?.primary_exchange]||meta?.primary_exchange;
@@ -929,7 +933,7 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
           </div>
           {!hideAmts&&price!=null&&(
             <div style={{textAlign:"right"}}>
-              <div className="mono" style={{fontSize:18,fontWeight:600}}>${fmt(price)}</div>
+              <div className="mono" style={{fontSize:18,fontWeight:600}}>{sym}{fmt(price)}</div>
               {dayChange!=null&&<div className={"mono"+pc(dayChange)} style={{fontSize:12}}>{fmtP(dayChange)} bugün</div>}
             </div>
           )}
@@ -1029,7 +1033,7 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
       )}
 
       {/* Fundamental — değer yatırımı checklist (US_STOCK only) */}
-      {(p?.type==="US_STOCK"||!p)&&(
+      {effectiveType==="US_STOCK"&&(
         <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
             <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
@@ -1803,30 +1807,39 @@ function SearchTab({pos,txs,openDetail,flash_}){
   const qUpper=qTrim.toUpperCase();
 
   // Portföy ticker'ları: aktif pozisyon + geçmiş işlem (kapatılmış pozisyon dahil)
+  // type da tutulur — search'ten detay'a giderken asset_type'ı geçirmek için.
   const portfolioMap=new Map();
-  pos.forEach(p=>portfolioMap.set(p.ticker,{name:p.name||"",held:true}));
-  txs.forEach(t=>{ if(!portfolioMap.has(t.ticker))portfolioMap.set(t.ticker,{name:t.name||"",held:false}); });
+  pos.forEach(p=>portfolioMap.set(p.ticker,{name:p.name||"",held:true,type:p.type}));
+  txs.forEach(t=>{ if(!portfolioMap.has(t.ticker))portfolioMap.set(t.ticker,{name:t.name||"",held:false,type:t.asset_type}); });
 
   const portfolioMatches=qTrim?[...portfolioMap.entries()].filter(([t,info])=>
     t.includes(qUpper)||info.name.toLowerCase().includes(qLower)
-  ).map(([ticker,info])=>({ticker,name:info.name,held:info.held})):[];
+  ).map(([ticker,info])=>({ticker,name:info.name,held:info.held,type:info.type,exchange:info.type==="BIST"?"XIST":"US"})):[];
 
   const portfolioSet=new Set(portfolioMap.keys());
   const allMatches=qTrim&&tickerDb?tickerDb.filter(({ticker,name})=>
     !portfolioSet.has(ticker)&&(ticker.startsWith(qUpper)||(name||"").toLowerCase().includes(qLower))
   ).slice(0,50):[];
 
-  const Row=({ticker,name,held})=>(
-    <div onClick={()=>openDetail(ticker)} className="pos-row" style={{
-      display:"flex",alignItems:"center",gap:10,
-      padding:"11px 14px",borderBottom:"0.5px solid var(--border)"
-    }}>
-      <span style={{fontFamily:"'DM Mono',monospace",fontWeight:600,fontSize:13,minWidth:72}}>{ticker}</span>
-      <span style={{flex:1,fontSize:12,color:"var(--text2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name||"—"}</span>
-      {held&&<span className="badge etf" style={{fontSize:9}}>açık</span>}
-      <span style={{color:"var(--text3)",fontSize:14}}>›</span>
-    </div>
-  );
+  // exchange → asset_type mapping (openDetail'e geçirilir)
+  const exchToType = (ex) => ex==="XIST" ? "BIST" : "US_STOCK";
+
+  const Row=({ticker,name,held,exchange,type})=>{
+    const ex = exchange || (type==="BIST"?"XIST":"US");
+    const at = type || exchToType(ex);
+    return (
+      <div onClick={()=>openDetail(ticker,at)} className="pos-row" style={{
+        display:"flex",alignItems:"center",gap:10,
+        padding:"11px 14px",borderBottom:"0.5px solid var(--border)"
+      }}>
+        <span style={{fontFamily:"'DM Mono',monospace",fontWeight:600,fontSize:13,minWidth:72}}>{ticker}</span>
+        <span style={{flex:1,fontSize:12,color:"var(--text2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name||"—"}</span>
+        {ex==="XIST"&&<span className="badge cry" style={{fontSize:9}}>BIST</span>}
+        {held&&<span className="badge etf" style={{fontSize:9}}>açık</span>}
+        <span style={{color:"var(--text3)",fontSize:14}}>›</span>
+      </div>
+    );
+  };
 
   return(
     <div>
@@ -1842,7 +1855,11 @@ function SearchTab({pos,txs,openDetail,flash_}){
       {!qTrim&&!loading&&(
         <div className="dim" style={{fontSize:13,padding:"30px 0",textAlign:"center"}}>
           Ticker veya şirket adı yazarak başla
-          {tickerDb&&<div style={{fontSize:11,marginTop:6,color:"var(--text3)"}}>{tickerDb.length.toLocaleString("tr-TR")} US hisse aranabilir</div>}
+          {tickerDb&&(()=>{
+            const us=tickerDb.filter(x=>x.exchange!=="XIST").length;
+            const bist=tickerDb.filter(x=>x.exchange==="XIST").length;
+            return <div style={{fontSize:11,marginTop:6,color:"var(--text3)"}}>{us.toLocaleString("tr-TR")} US + {bist.toLocaleString("tr-TR")} BIST hisse aranabilir</div>;
+          })()}
         </div>
       )}
 
@@ -2133,9 +2150,10 @@ function App({session}){
   const [tab,setTab]=useState("dashboard");
   const [navTicker,setNavTicker]=useState("");
   const [selectedTicker,setSelectedTicker]=useState(null); // detay sayfası için
+  const [selectedAssetType,setSelectedAssetType]=useState(null); // search'ten gelen non-held için (BIST vs US)
   const openHistory=tk=>{setNavTicker(tk);setTab("history");};
-  const openDetail=tk=>{setSelectedTicker(tk);setTab("detail");};
-  const closeDetail=()=>{setSelectedTicker(null);setTab("dashboard");};
+  const openDetail=(tk,assetType)=>{setSelectedTicker(tk);setSelectedAssetType(assetType||null);setTab("detail");};
+  const closeDetail=()=>{setSelectedTicker(null);setSelectedAssetType(null);setTab("dashboard");};
   const [period,setPeriod]=useState("max"); // selected period on dashboard
   const [pos,setPos]=useState([]);
   const [txs,setTxs]=useState([]);
@@ -2701,7 +2719,8 @@ function App({session}){
       {/* DETAIL — pos-row click ile açılır, tab listesinde yok */}
       {tab==="detail"&&selectedTicker&&(
         <TickerDetailTab
-          ticker={selectedTicker} pos={pos} txs={txs} prc={prc} hist={hist}
+          ticker={selectedTicker} assetTypeHint={selectedAssetType}
+          pos={pos} txs={txs} prc={prc} hist={hist}
           user={user} confirm_={confirm_} flash_={flash_} loadData={loadData}
           closeDetail={closeDetail} hideAmts={hide} mask={mask}/>
       )}
