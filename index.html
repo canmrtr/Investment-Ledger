@@ -1017,7 +1017,9 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
           {fund?.metrics&&!fundLoading&&(()=>{
             const allScores=Object.entries(fund.metrics).map(([k,v])=>fundScore(k,v)).filter(Boolean);
             const goodN=allScores.filter(s=>s==="good").length;
-            const totalN=allScores.length;
+            // Toplam her zaman tam checklist boyutu (21) — null metrikler de kriter sayılır,
+            // sadece "iyi" işareti almazlar
+            const totalN=Object.keys(fund.metrics).length;
             const fy=fund.raw?.latestFiscalYear;
             const yb=fund.raw?.yearsBackUsed;
             return(
