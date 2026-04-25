@@ -494,6 +494,145 @@ const metaCacheGet = (ticker) => {
 };
 const metaCacheSet = (ticker, data) => LS.set(`meta_${ticker}`, { d: data, t: Date.now() });
 
+// Fundamental cache (FMP TTM + 5Y) — 7 gün TTL
+const FUND_TTL_MS = 7 * 86400000;
+const fundCacheGet = (ticker) => {
+  const c = LS.get(`fund_${ticker}`, null);
+  if (!c || !c.t) return null;
+  if (Date.now() - c.t > FUND_TTL_MS) return null;
+  return c.d;
+};
+const fundCacheSet = (ticker, data) => LS.set(`fund_${ticker}`, { d: data, t: Date.now() });
+
+// Value-investing checklist eşikleri.
+// dir: "high"=büyük iyi, "low"=küçük iyi. Örn. ROE yüksek, P/E düşük olsun.
+const FUND_THRESHOLDS = {
+  revenueGrowth5Y:    {dir:"high", good:0.10,  ok:0.05},
+  earningsGrowth5Y:   {dir:"high", good:0.10,  ok:0.05},
+  grossMargin:        {dir:"high", good:0.40,  ok:0.25},
+  operatingMargin:    {dir:"high", good:0.15,  ok:0.08},
+  netMargin:          {dir:"high", good:0.10,  ok:0.05},
+  fcfMargin:          {dir:"high", good:0.10,  ok:0.05},
+  sgaToGrossProfit:   {dir:"low",  good:0.30,  ok:0.50},
+  depToGrossProfit:   {dir:"low",  good:0.10,  ok:0.25},
+  interestToOpIncome: {dir:"low",  good:0.15,  ok:0.30},
+  liabToEquity:       {dir:"low",  good:0.80,  ok:2.00},
+  retainedToEquity:   {dir:"high", good:1.00,  ok:0.50},
+  roe:                {dir:"high", good:0.15,  ok:0.08},
+  roa:                {dir:"high", good:0.07,  ok:0.03},
+  roic:               {dir:"high", good:0.15,  ok:0.08},
+  pe:                 {dir:"low",  good:15,    ok:25},
+  ps:                 {dir:"low",  good:2,     ok:5},
+  capexToNetIncome:   {dir:"low",  good:0.25,  ok:0.50},
+  capexToSales:       {dir:"low",  good:0.05,  ok:0.10},
+  capexToOcf:         {dir:"low",  good:0.30,  ok:0.50},
+  ebitToInterest:     {dir:"high", good:10,    ok:5},
+  netDebtToFcf:       {dir:"low",  good:2,     ok:5},
+};
+
+const fundScore = (key, val) => {
+  if (val == null || !isFinite(val)) return null;
+  const t = FUND_THRESHOLDS[key];
+  if (!t) return null;
+  // netDebtToFcf negatif = net cash → koşulsuz iyi
+  if (key === "netDebtToFcf" && val < 0) return "good";
+  if (t.dir === "high") {
+    if (val >= t.good) return "good";
+    if (val >= t.ok)   return "neutral";
+    return "bad";
+  } else {
+    if (val <= t.good) return "good";
+    if (val <= t.ok)   return "neutral";
+    return "bad";
+  }
+};
+
+// Checklist gruplaması — UI render sırası
+const FUND_GROUPS = [
+  ["Büyüme (5Y CAGR)", [
+    ["revenueGrowth5Y",    "Gelir Büyüme",  "pct"],
+    ["earningsGrowth5Y",   "Kâr Büyüme",    "pct"],
+  ]],
+  ["Kâr Marjları", [
+    ["grossMargin",        "Brüt Marj",      "pct"],
+    ["operatingMargin",    "Operasyonel",    "pct"],
+    ["netMargin",          "Net Kâr",        "pct"],
+    ["fcfMargin",          "FCF Marj",       "pct"],
+  ]],
+  ["Verimlilik", [
+    ["roe",                "ROE",            "pct"],
+    ["roa",                "ROA",            "pct"],
+    ["roic",               "ROIC",           "pct"],
+  ]],
+  ["Gider Disiplini", [
+    ["sgaToGrossProfit",   "SG&A / Brüt",    "pct"],
+    ["depToGrossProfit",   "D&A / Brüt",     "pct"],
+    ["interestToOpIncome", "Faiz / Op Kâr",  "pct"],
+  ]],
+  ["Bilanço Sağlığı", [
+    ["liabToEquity",       "Yük. / Özk.",    "x"],
+    ["retainedToEquity",   "Birikmiş / Özk.","x"],
+    ["ebitToInterest",     "Faiz Karşılama", "x"],
+    ["netDebtToFcf",       "Net Borç / FCF", "x"],
+  ]],
+  ["Sermaye Yatırımı", [
+    ["capexToNetIncome",   "CapEx / Net Kâr","pct"],
+    ["capexToSales",       "CapEx / Gelir",  "pct"],
+    ["capexToOcf",         "CapEx / OCF",    "pct"],
+  ]],
+  ["Değerleme", [
+    ["pe",                 "F/K (P/E)",      "x"],
+    ["ps",                 "F/S (P/S)",      "x"],
+  ]],
+];
+
+const fmtFundVal = (val, type) => {
+  if (val == null || !isFinite(val)) return "—";
+  if (type === "pct") return (val * 100).toFixed(1) + "%";
+  if (type === "x")   return val.toFixed(2) + "×";
+  return val.toFixed(2);
+};
+
+// "iyi ≥40% · orta ≥25%" gibi eşik metni — listede sublabel olarak gösterilir.
+const fundThreshText = (key, type) => {
+  const t = FUND_THRESHOLDS[key];
+  if (!t) return "";
+  const fmtT = (v) => {
+    if (type === "pct") return (v*100).toFixed(0) + "%";
+    if (type === "x")   return v + "×";
+    return String(v);
+  };
+  const op = t.dir === "high" ? "≥" : "≤";
+  return `iyi ${op}${fmtT(t.good)} · orta ${op}${fmtT(t.ok)}`;
+};
+
+const SCORE_COLOR = { good: "var(--ok)", neutral: "var(--warn)", bad: "var(--err)" };
+
+// Metrik açıklaması (data-tip için, kısa ve sade)
+const FUND_TIP = {
+  revenueGrowth5Y:    "Son 5 yılda yıllık ortalama gelir büyümesi (CAGR). 10%+ güçlü.",
+  earningsGrowth5Y:   "Son 5 yılda yıllık net kâr büyümesi. 10%+ güçlü.",
+  grossMargin:        "Brüt kâr / Gelir. 40%+ güçlü pricing power.",
+  operatingMargin:    "Operasyonel kâr / Gelir. 15%+ verimli operasyon.",
+  netMargin:          "Net kâr / Gelir. 10%+ sağlıklı.",
+  fcfMargin:          "Serbest nakit akışı / Gelir. 10%+ güçlü cash generation.",
+  sgaToGrossProfit:   "SG&A gideri / Brüt kâr. ≤30% gider disiplini.",
+  depToGrossProfit:   "Amortisman / Brüt kâr. ≤10% düşük capital intensity.",
+  interestToOpIncome: "Faiz gideri / Op. kâr. ≤15% sağlam borç servisi.",
+  liabToEquity:       "Toplam Yükümlülük / Özkaynak. ≤0.8 düşük kaldıraç.",
+  retainedToEquity:   "Birikmiş kâr / Özkaynak. 1.0+ uzun süreli kâr birikimi.",
+  roe:                "Net kâr / Özkaynak (TTM). 15%+ güçlü.",
+  roa:                "Net kâr / Toplam varlık (TTM). 7%+ verimli.",
+  roic:               "Yatırılan sermayenin getirisi. 15%+ ekonomik moat işareti.",
+  pe:                 "Fiyat / Kâr (TTM). ≤15 cazip değerleme (sektöre göre).",
+  ps:                 "Fiyat / Satış (TTM). ≤2 cazip (sektöre göre).",
+  capexToNetIncome:   "CapEx / Net kâr. ≤25% düşük yeniden-yatırım yükü.",
+  capexToSales:       "CapEx / Gelir. ≤5% düşük capital intensity.",
+  capexToOcf:         "CapEx / Operasyonel nakit. ≤30% sağlıklı reinvestment.",
+  ebitToInterest:     "Faiz Karşılama (EBIT/Faiz). ≥10× rahat borç servisi.",
+  netDebtToFcf:       "(Borç − Nakit) / FCF. ≤2 yıl borçtan rahat çıkar; negatifse net cash.",
+};
+
 // homepage_url'den domain çıkar — Clearbit logo için.
 const extractDomain = (url) => {
   if (!url) return null;
@@ -517,6 +656,9 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
   const [meta,setMeta]=useState(()=>metaCacheGet(ticker));
   const [metaLoading,setMetaLoading]=useState(false);
   const [metaErr,setMetaErr]=useState("");
+  const [fund,setFund]=useState(()=>fundCacheGet(ticker));
+  const [fundLoading,setFundLoading]=useState(false);
+  const [fundErr,setFundErr]=useState("");
   const [showFullDesc,setShowFullDesc]=useState(false);
   const [showAdd,setShowAdd]=useState(false);
   const [expandedTx,setExpandedTx]=useState(null);   // tıklanan tx.id
@@ -583,6 +725,32 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
     setMetaLoading(false);
   };
   useEffect(()=>{if(!meta)fetchMeta(false);},[ticker]);
+
+  // Fundamental fetch — sadece US_STOCK için anlamlı (FMP US-only).
+  const fetchFund=async(force)=>{
+    if(!force){
+      const cached=fundCacheGet(ticker);
+      if(cached){setFund(cached);return;}
+    }
+    setFundLoading(true);setFundErr("");
+    try{
+      const r=await edgeCall("fetch-fundamentals",{ticker});
+      let d=null;
+      try{d=await r.json();}catch(_){/* non-JSON */}
+      if(r.ok&&d&&d.metrics){
+        setFund(d);
+        fundCacheSet(ticker,d);
+      } else {
+        const msg=d?.error||d?.message||d?.code||`HTTP ${r.status}`;
+        setFundErr(msg);
+      }
+    }catch(e){setFundErr(e.message);}
+    setFundLoading(false);
+  };
+  useEffect(()=>{
+    const isUsStock=pos.find(x=>x.ticker===ticker)?.type==="US_STOCK";
+    if(isUsStock&&!fund)fetchFund(false);
+  },[ticker]);
 
   if(!p){
     return(
@@ -704,6 +872,72 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
                     )}
                   </div>
                 )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Fundamental — değer yatırımı checklist (US_STOCK only) */}
+      {p.type==="US_STOCK"&&(
+        <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <div className="stitle" style={{marginBottom:0}}>Fundamental · Değer Yatırımı Checklist</div>
+            <button className="btn-sm" onClick={()=>fetchFund(true)} disabled={fundLoading}>{fundLoading?"...":(fund?"↻":"Çek")}</button>
+          </div>
+          {fundLoading&&<div className="dim" style={{fontSize:12}}><span className="spin" style={{width:12,height:12,marginRight:8,verticalAlign:"middle"}}></span>Yükleniyor...</div>}
+          {fundErr&&!fundLoading&&<div className="err" style={{fontSize:12}}>{fundErr}</div>}
+          {!fund&&!fundLoading&&!fundErr&&<div className="dim" style={{fontSize:12}}>Henüz çekilmedi.</div>}
+          {fund?.metrics&&!fundLoading&&(()=>{
+            const allScores=Object.entries(fund.metrics).map(([k,v])=>fundScore(k,v)).filter(Boolean);
+            const goodN=allScores.filter(s=>s==="good").length;
+            const totalN=allScores.length;
+            const fy=fund.raw?.latestFiscalYear;
+            const yb=fund.raw?.yearsBackUsed;
+            return(
+              <div>
+                <div style={{fontSize:11,color:"var(--text2)",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
+                  <span>{fy?`FY${fy}`:"TTM"}{yb?` · ${yb}Y CAGR`:""} · <strong style={{color:"var(--text)"}}>{goodN}/{totalN}</strong> kriter ✓</span>
+                  <span style={{display:"flex",gap:10,alignItems:"center",fontSize:10}}>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:4}}><span style={{width:7,height:7,borderRadius:"50%",background:"var(--ok)"}}></span>iyi</span>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:4}}><span style={{width:7,height:7,borderRadius:"50%",background:"var(--warn)"}}></span>orta</span>
+                    <span style={{display:"inline-flex",alignItems:"center",gap:4}}><span style={{width:7,height:7,borderRadius:"50%",background:"var(--err)"}}></span>zayıf</span>
+                  </span>
+                </div>
+                {FUND_GROUPS.map(([groupName,items])=>(
+                  <div key={groupName} style={{marginBottom:14}}>
+                    <div className="stitle" style={{marginBottom:6,fontSize:9}}>{groupName}</div>
+                    <div style={{background:"var(--bg3)",borderRadius:8,overflow:"hidden"}}>
+                      {items.map(([key,label,type],i)=>{
+                        const val=fund.metrics[key];
+                        const score=fundScore(key,val);
+                        const color=score?SCORE_COLOR[score]:"var(--text2)";
+                        const dotColor=score?SCORE_COLOR[score]:"var(--text3)";
+                        return(
+                          <div key={key} data-tip={FUND_TIP[key]}
+                            style={{
+                              display:"flex",alignItems:"center",gap:10,
+                              padding:"8px 12px",
+                              borderTop:i>0?"0.5px solid var(--border)":"none",
+                              cursor:"help"
+                            }}>
+                            <span style={{width:7,height:7,borderRadius:"50%",background:dotColor,flex:"0 0 auto"}}></span>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{fontSize:12,color:"var(--text)",lineHeight:1.3}}>{label}</div>
+                              <div style={{fontSize:10,color:"var(--text3)",marginTop:1,fontFamily:"'SF Mono',monospace"}}>{fundThreshText(key,type)}</div>
+                            </div>
+                            <span className="mono" style={{fontSize:14,fontWeight:600,color,flex:"0 0 auto"}}>
+                              {fmtFundVal(val,type)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                <div style={{fontSize:10,color:"var(--text3)",marginTop:6,lineHeight:1.5}}>
+                  Kaynak: Financial Modeling Prep (TTM + son 5 yıl). Eşikler genel value-investing kılavuzudur; sektör kıyaslaması her metriğe doğrudan uygulanmaz.
+                </div>
               </div>
             );
           })()}

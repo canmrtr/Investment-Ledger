@@ -12,6 +12,7 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
   - `parse-transaction-edge-function.js` — Claude Haiku 4.5 ile metin/görüntü → işlem JSON
   - `fetch-prices-edge-function.js` — Massive.com (Polygon clone) güncel + tarihi fiyat
   - `refresh-price-cache-edge-function.js` — Scheduled (pg_cron 6h), `price_cache`'i stale-first batch ile tazeler
+  - `fetch-fundamentals-edge-function.js` — Financial Modeling Prep (FMP) TTM + 5Y annual; 21 metrik value-investing checklist'e işler
 
 ## Supabase Şeması
 
@@ -147,6 +148,17 @@ Test edilmiş — mevcut Stocks API key ile hepsi çalışır:
 | Bazı endeksler | `I:NDX` | (`I:SPX` premium tier) |
 
 **Desteklenmiyor**: BIST hisseleri (THYAO, ASELS), TEFAS fonları → ROADMAP'te not edildi, alternatif provider gerek.
+
+## Fundamental Veri (FMP)
+
+- **Provider**: Financial Modeling Prep — secret `FMP_KEY` (edge function env'inde).
+- **Endpoint'ler**: FMP **`/stable/`** API (Aug 2025'te `/api/v3` legacy oldu, yeni hesaplar göremez). Path yerine `?symbol=AAPL` query param. Response şeması legacy ile aynı.
+  - `key-metrics-ttm`, `ratios-ttm`, `income-statement` (5Y annual), `balance-sheet-statement` (1Y), `cash-flow-statement` (1Y).
+- **21 metrik**: gelir/kâr 5Y CAGR, 4 marj (gross/op/net/FCF), ROE/ROA/ROIC, gider rasyoları (SG&A, D&A, faiz), bilanço (yük/özk, birikmiş kâr/özk), faiz karşılama, net borç/FCF, CapEx (3 oran), P/E, P/S.
+- **Renk kodlaması**: top-level `FUND_THRESHOLDS` tablosunda her metriğin `good`/`ok` eşikleri var; `fundScore(key,val)` → `good`/`neutral`/`bad`. UI'da yeşil/sarı/kırmızı sol-border + value rengi.
+- **Cache**: LS `fund_${ticker}` (7 gün TTL) — fundamentals yavaş değişir, FMP rate limit dostu.
+- **Kapsam**: sadece `US_STOCK` için gösterilir (FMP US-only). FUND/CRYPTO/BIST/GOLD'da bölüm hidden.
+- **TickerDetailTab** içinde "Şirket Bilgisi" ile "İşlem Geçmişi" arasında render edilir; auto-fetch on mount + manuel ↻.
 
 ## Ölçeklenme Notları
 

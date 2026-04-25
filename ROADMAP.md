@@ -22,9 +22,12 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 ## Fundamental & Analiz
 
-- [ ] Fundamental data provider bulma (Polygon fundamentals / Alpha Vantage / yfinance?)
-- [ ] Fundamental data Supabase'te saklama (yeni tablo)
-- [ ] Checklist kriterleri (ör. PE < X, ROE > Y, Debt/Equity < Z...) — kullanıcı kendi kuralını tanımlayabilsin
+- [x] ~~Fundamental data provider bulma~~ → **Financial Modeling Prep (FMP)** seçildi (2026-04-25)
+- [x] ~~Fundamental veri çeken edge function~~ (`fetch-fundamentals`, 21 metrik, 2026-04-25)
+- [x] ~~TickerDetailTab içinde checklist görünümü~~ (renk kodlamalı, 7 gün LS cache, 2026-04-25)
+- [ ] Fundamental data Supabase'te saklama (yeni tablo) — şu an LS cache yeterli; çok user'da merkezi cache
+- [ ] Kullanıcı kendi eşiklerini tanımlasın (ör. PE < X, ROE > Y) — şu an top-level `FUND_THRESHOLDS` sabit
+- [ ] FMP free tier sınırını test et + rate limit guard ekle
 - [ ] Benchmark karşılaştırması: portföy vs SPY / QQQ / BIST100
 
 ## İçerik
