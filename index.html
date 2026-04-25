@@ -949,15 +949,15 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
           </div>
           <div className="card" data-tip="Mevcut pozisyonun toplam maliyeti (Adet × Ort. Maliyet). Daha önce sattıklarının maliyeti dahil değil." style={{cursor:"help"}}>
             <div className="lbl">Toplam Maliyet</div>
-            <div className="mono" style={{fontSize:16,fontWeight:600}}>{mask("$"+fmt(currentCost,0))}</div>
+            <div className="mono" style={{fontSize:16,fontWeight:600}}>{mask(sym+fmt(currentCost,0))}</div>
           </div>
           <div className="card" data-tip="Bugünkü güncel fiyatla pozisyonun piyasa değeri" style={{cursor:"help"}}>
             <div className="lbl">Piyasa Değeri</div>
-            <div className="mono" style={{fontSize:16,fontWeight:600}}>{mv!=null?mask("$"+fmt(mv,0)):"—"}</div>
+            <div className="mono" style={{fontSize:16,fontWeight:600}}>{mv!=null?mask(sym+fmt(mv,0)):"—"}</div>
           </div>
           <div className="card" data-tip="Toplam P&L = Realized + Unrealized = MV + Toplam Satış − Toplam Alış (komisyonlar dahil)" style={{cursor:"help"}}>
             <div className="lbl">Toplam P&L</div>
-            <div className={"mono"+(totalPL!=null?pc(totalPL):"")} style={{fontSize:16,fontWeight:600}}>{totalPL!=null?mask(fmtD(totalPL)):"—"}</div>
+            <div className={"mono"+(totalPL!=null?pc(totalPL):"")} style={{fontSize:16,fontWeight:600}}>{totalPL!=null?mask((totalPL>=0?"+":"-")+sym+fmt(Math.abs(totalPL),2)):"—"}</div>
             {totalPLPct!=null&&<div className={"mono"+pc(totalPLPct)} style={{fontSize:11,marginTop:2}}>{fmtP(totalPLPct)}</div>}
           </div>
         </div>
@@ -967,16 +967,16 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       {p&&(
         <div style={{display:"flex",flexWrap:"wrap",gap:14,padding:"8px 14px",marginBottom:14,fontSize:11,color:"var(--text2)",background:"var(--bg2)",borderRadius:8,border:"0.5px solid var(--border)"}}>
           <span data-tip="Bugün satın alsan birim başına ödediğin ortalama" style={{cursor:"help"}}>
-            Ort. Maliyet: <span className="mono" style={{color:"var(--text)"}}>{mask("$"+fmt(p.avgCost))}</span>
+            Ort. Maliyet: <span className="mono" style={{color:"var(--text)"}}>{mask(sym+fmt(p.avgCost))}</span>
           </span>
           <span data-tip="Daha önce yaptığın satışlardan gerçekleşen kâr/zarar (komisyonlar dahil)" style={{cursor:"help"}}>
-            Realized: <span className={"mono"+pc(realized)}>{mask(fmtD(realized))}</span>
+            Realized: <span className={"mono"+pc(realized)}>{mask((realized>=0?"+":"-")+sym+fmt(Math.abs(realized),2))}</span>
           </span>
           <span data-tip="Mevcut pozisyondaki kağıttaki kâr/zarar (Piyasa Değeri − Toplam Maliyet)" style={{cursor:"help"}}>
-            Unrealized: <span className={"mono"+(unrealized!=null?pc(unrealized):"")}>{unrealized!=null?mask(fmtD(unrealized)):"—"}</span>
+            Unrealized: <span className={"mono"+(unrealized!=null?pc(unrealized):"")}>{unrealized!=null?mask((unrealized>=0?"+":"-")+sym+fmt(Math.abs(unrealized),2)):"—"}</span>
           </span>
           <span data-tip="Bu ticker için ödenen tüm komisyonların toplamı (Alış + Satış)" style={{cursor:"help"}}>
-            Komisyon: <span className="mono" style={{color:"var(--text)"}}>{mask("$"+fmt(totalCommission,2))}</span>
+            Komisyon: <span className="mono" style={{color:"var(--text)"}}>{mask(sym+fmt(totalCommission,2))}</span>
           </span>
         </div>
       )}
