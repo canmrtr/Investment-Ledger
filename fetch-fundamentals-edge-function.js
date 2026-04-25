@@ -74,13 +74,30 @@ function edgarAnnualSeries(facts, concept) {
   return Object.values(byYear).sort((a, b) => +b.fy - +a.fy);
 }
 
-// Concept'lerin fallback chain'i — en uygun olanı bul (companies use different names)
-function edgarFirstSeries(facts, conceptList) {
+// Concept fallback chain'i — en YENİ verisi olan concept'i seç. ASC 606 gibi
+// taxonomy migration'larında eski concept (Revenues) eski verilerle dolu kalıp
+// yeni concept (RevenueFromContractWith...) yeni verileri tutar; "freshest"
+// stratejisi yeni concept'i tercih eder.
+function edgarFreshestSeries(facts, conceptList) {
+  let best = { concept: null, series: [], maxFy: -Infinity };
   for (const c of conceptList) {
     const s = edgarAnnualSeries(facts, c);
-    if (s.length > 0) return { concept: c, series: s };
+    if (s.length === 0) continue;
+    const maxFy = Math.max(...s.map(x => +x.fy));
+    if (maxFy > best.maxFy) best = { concept: c, series: s, maxFy };
   }
-  return { concept: null, series: [] };
+  return best;
+}
+
+// Concept fallback'i + belirli bir fy için değer ara. Anchor FY'ye sabitlenmiş
+// metrik hesabı için kullanılır (margin'lar cross-year karışmasın).
+function edgarValueAtFy(facts, conceptList, fy) {
+  for (const c of conceptList) {
+    const s = edgarAnnualSeries(facts, c);
+    const match = s.find(x => +x.fy === +fy);
+    if (match) return match.val;
+  }
+  return null;
 }
 
 // Concept eşlemesi — companies aynı item'ı farklı us-gaap concept ile raporlayabilir.
@@ -106,41 +123,53 @@ const CONCEPTS = {
 async function fetchEdgar(ticker) {
   const cikMap = await getCikMap();
   const cik = cikMap[ticker.toUpperCase()];
-  if (!cik) {
-    return { error: `EDGAR'da ticker bulunamadı: ${ticker}` };
-  }
+  if (!cik) return { error: `EDGAR'da ticker bulunamadı: ${ticker}` };
+
   const r = await fetch(`https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`, {
     headers: { "User-Agent": SEC_UA }
   });
-  if (!r.ok) {
-    return { error: `EDGAR companyfacts HTTP ${r.status}` };
-  }
+  if (!r.ok) return { error: `EDGAR companyfacts HTTP ${r.status}` };
   const data = await r.json();
   const facts = data.facts || {};
 
-  // Latest + 5Y series for each concept
-  const series = {};
+  // Anchor FY: NetIncomeLoss en yenisi (her firma her yıl raporlar). Tüm
+  // metrikler bu FY'ye sabitlenir → cross-year karışma olmaz.
+  const niPick = edgarFreshestSeries(facts, CONCEPTS.netIncome);
+  const anchorFy = niPick.series[0]?.fy;
+  if (!anchorFy) return { error: "EDGAR: NetIncomeLoss bulunamadı (firma SEC'e XBRL dosyalamamış olabilir)" };
+
+  // Anchor FY'deki tüm değerleri topla
+  const latest = {};
   for (const k in CONCEPTS) {
-    series[k] = edgarFirstSeries(facts, CONCEPTS[k]).series;
+    latest[k] = edgarValueAtFy(facts, CONCEPTS[k], anchorFy);
   }
 
-  // Latest annual values
-  const latest = {};
-  for (const k in series) latest[k] = series[k][0]?.val ?? null;
+  // SG&A bazı SaaS firmalarında ayrı raporlanır: SellingAndMarketing + GeneralAndAdministrative
+  if (latest.sga == null) {
+    const sm = edgarValueAtFy(facts, ["SellingAndMarketingExpense"], anchorFy);
+    const ga = edgarValueAtFy(facts, ["GeneralAndAdministrativeExpense"], anchorFy);
+    if (sm != null && ga != null) latest.sga = sm + ga;
+  }
 
-  // 5Y CAGR — en eski/en yeni alınır
-  const cagrFromSeries = (s) => {
-    if (!s || s.length < 2) return null;
-    const newest = s[0], oldest = s[Math.min(s.length - 1, 4)];  // max 5 yıl geri
-    const years = (+newest.fy) - (+oldest.fy);
-    return cagr(oldest.val, newest.val, years);
+  // 5Y CAGR — anchorFy'ı newest, anchorFy-N'i oldest (max N=4)
+  const cagrAnchored = (conceptList) => {
+    const pick = edgarFreshestSeries(facts, conceptList);
+    const newestVal = pick.series.find(x => +x.fy === +anchorFy)?.val;
+    if (newestVal == null) return null;
+    for (let years = 4; years >= 1; years--) {
+      const target = +anchorFy - years;
+      const oldest = pick.series.find(x => +x.fy === target);
+      if (oldest) return cagr(oldest.val, newestVal, years);
+    }
+    return null;
   };
-  const revGrowth  = cagrFromSeries(series.revenue);
-  const earnGrowth = cagrFromSeries(series.netIncome);
+  const revGrowth  = cagrAnchored(CONCEPTS.revenue);
+  const earnGrowth = cagrAnchored(CONCEPTS.netIncome);
 
   // Türetilen değerler
   const fcf = (latest.ocf != null && latest.capex != null) ? latest.ocf - Math.abs(latest.capex) : null;
   const totalDebt = (latest.longTermDebt || 0) + (latest.shortTermDebt || 0);
+  const capexAbs = latest.capex != null ? Math.abs(latest.capex) : null;
 
   const metrics = {
     revenueGrowth5Y: revGrowth,
@@ -159,9 +188,9 @@ async function fetchEdgar(ticker) {
     roic: div(latest.netIncome, (latest.totalEquity || 0) + totalDebt - (latest.cash || 0)),
     pe:  null,  // EDGAR mode: market price gerek
     ps:  null,  // EDGAR mode: market price gerek
-    capexToNetIncome: div(latest.capex ? Math.abs(latest.capex) : null, latest.netIncome),
-    capexToSales:     div(latest.capex ? Math.abs(latest.capex) : null, latest.revenue),
-    capexToOcf:       div(latest.capex ? Math.abs(latest.capex) : null, latest.ocf),
+    capexToNetIncome: div(capexAbs, latest.netIncome),
+    capexToSales:     div(capexAbs, latest.revenue),
+    capexToOcf:       div(capexAbs, latest.ocf),
     ebitToInterest:   div(latest.operatingIncome, latest.interestExp),
     netDebtToFcf:     div(totalDebt - (latest.cash || 0), fcf),
   };
@@ -169,8 +198,8 @@ async function fetchEdgar(ticker) {
   return {
     metrics,
     raw: {
-      latestFiscalYear: series.revenue[0]?.fy ?? series.netIncome[0]?.fy ?? null,
-      yearsBackUsed: series.revenue.length >= 2 ? Math.min(series.revenue.length - 1, 4) : 0,
+      latestFiscalYear: anchorFy,
+      yearsBackUsed: 4,  // CAGR target window
       cik,
       entityName: data.entityName,
     }
