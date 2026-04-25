@@ -119,6 +119,17 @@
     /* Pie legend row */
     .pie-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;}
     .pie-sw{width:10px;height:10px;border-radius:2px;flex:0 0 auto;}
+    /* Custom tooltip — data-tip attribute */
+    [data-tip]{position:relative;}
+    [data-tip]:hover::after{
+      content:attr(data-tip);
+      position:absolute;top:100%;left:50%;transform:translateX(-50%);
+      margin-top:6px;background:var(--bg3);color:var(--text);
+      padding:8px 11px;border-radius:7px;font-size:11px;font-family:inherit;
+      white-space:normal;width:max-content;max-width:260px;
+      z-index:50;pointer-events:none;line-height:1.45;
+      box-shadow:0 6px 18px rgba(0,0,0,0.45);border:0.5px solid var(--border2);
+    }
   </style>
 </head>
 <body>
@@ -178,6 +189,50 @@ const edgeCall = (fn, body) => fetch(`${SUPA_URL}/functions/v1/${fn}`, {
   },
   body: JSON.stringify(body)
 });
+
+// ── Return metrics: Total Return & XIRR ──────────────────────────
+// XIRR = düzensiz aralıklı cash flow'ların yıllık getirisi (Excel XIRR).
+// cashflows: [{date: Date, amount: number}] — negatif=yatırım, pozitif=geri dönüş.
+const yearsBetween = (d1, d0) => (d1.getTime() - d0.getTime()) / (365.25 * 86400000);
+const xnpv = (rate, cfs) => cfs.reduce((a, cf) =>
+  a + cf.amount / Math.pow(1 + rate, yearsBetween(cf.date, cfs[0].date)), 0);
+const xirr = (cfs) => {
+  if (!cfs || cfs.length < 2) return null;
+  const sorted = [...cfs].sort((a, b) => a.date - b.date);
+  // En az bir negatif ve bir pozitif cash flow olmalı — yoksa IRR tanımsız
+  const hasNeg = sorted.some(c => c.amount < 0);
+  const hasPos = sorted.some(c => c.amount > 0);
+  if (!hasNeg || !hasPos) return null;
+  let rate = 0.1;
+  for (let i = 0; i < 100; i++) {
+    const n = xnpv(rate, sorted);
+    if (Math.abs(n) < 1e-6) return rate;
+    const deriv = sorted.reduce((a, cf) => {
+      const t = yearsBetween(cf.date, sorted[0].date);
+      return a - t * cf.amount / Math.pow(1 + rate, t + 1);
+    }, 0);
+    if (Math.abs(deriv) < 1e-10) return null;
+    const next = rate - n / deriv;
+    if (!isFinite(next)) return null;
+    if (Math.abs(next - rate) < 1e-7) return next;
+    rate = next;
+  }
+  return null; // yakınsamadı
+};
+
+// Transaction listesi + bugünkü MV → cash flow serisi (XIRR/TR için).
+// BUY: -(total + commission), SELL: (total - commission), bugün: +MV.
+const buildCashflows = (txs, todayMV) => {
+  const cfs = [];
+  for (const t of txs) {
+    const c = +t.commission || 0;
+    const total = +t.total || 0;
+    if (t.way === "BUY") cfs.push({ date: new Date(t.date), amount: -(total + c) });
+    else if (t.way === "SELL") cfs.push({ date: new Date(t.date), amount: total - c });
+  }
+  if (todayMV > 0) cfs.push({ date: new Date(), amount: todayMV });
+  return cfs;
+};
 
 // ── Position rebuild (shared by HistoryTab + CSV import) ─────────
 // SELL pozisyonda yoksa / shares yetmezse güvenli davran:
@@ -1178,6 +1233,16 @@ function App({session}){
   const tC=usd.reduce((a,p)=>a+p.cost,0);
   const tM=usd.reduce((a,p)=>a+(p.mv??p.cost),0);
   const tP=tM-tC,tPct=tC>0?(tP/tC)*100:null;
+  // Total Return: realize + unrealize + komisyonlar dahil, cash-flow tabanlı.
+  // Yatırım = BUY total + commission; Geri dönüş = SELL total - commission.
+  // Sonuç = MV + toplam SELL geliri - toplam BUY gideri.
+  const usdTxs=txs.filter(t=>(t.currency||"USD")==="USD");
+  const totalInvested=usdTxs.filter(t=>t.way==="BUY").reduce((a,t)=>a+(+t.total+(+t.commission||0)),0);
+  const totalReceived=usdTxs.filter(t=>t.way==="SELL").reduce((a,t)=>a+(+t.total-(+t.commission||0)),0);
+  const totalReturn=tM+totalReceived-totalInvested;
+  const totalReturnPct=totalInvested>0?(totalReturn/totalInvested)*100:null;
+  // XIRR — yıllık % (ondalık olarak döner: 0.23 → %23)
+  const annualRate=xirr(buildCashflows(usdTxs,tM));
   // Varlık türü başına iki dağılım: cost ve market value (pie chart toggle için)
   const byTCost={},byTMV={};
   usd.forEach(p=>{
@@ -1290,29 +1355,69 @@ function App({session}){
         </div>
       )}
       {tab==="dashboard"&&pos.length>0&&(()=>{
-        // Period performance calculation
         const PERIODS=[
-          {key:"d1",  lbl:"1G",  priceKey:"p_d1"},
-          {key:"w1",  lbl:"1H",  priceKey:"p_w1"},
-          {key:"m1",  lbl:"1A",  priceKey:"p_m1"},
-          {key:"m3",  lbl:"3A",  priceKey:"p_m3"},
-          {key:"m6",  lbl:"6A",  priceKey:"p_m6"},
-          {key:"y1",  lbl:"1Y",  priceKey:"p_y1"},
-          {key:"max", lbl:"Max", priceKey:null},
+          {key:"d1",  lbl:"1G",  priceKey:"p_d1", days:1},
+          {key:"w1",  lbl:"1H",  priceKey:"p_w1", days:7},
+          {key:"m1",  lbl:"1A",  priceKey:"p_m1", days:30},
+          {key:"m3",  lbl:"3A",  priceKey:"p_m3", days:90},
+          {key:"m6",  lbl:"6A",  priceKey:"p_m6", days:180},
+          {key:"y1",  lbl:"1Y",  priceKey:"p_y1", days:365},
+          {key:"max", lbl:"Max", priceKey:null,   days:null},
         ];
+        const sel=PERIODS.find(p=>p.key===period)||PERIODS[6];
 
-        const periodPerf=(key,priceKey)=>{
-          if(key==="max")return{pl:tP,pct:tPct};
-          const valid=usd.filter(p=>p.mv!=null&&hist[p.ticker]?.[priceKey]!=null);
-          if(!valid.length)return null;
-          const now=valid.reduce((a,p)=>a+p.mv,0);
-          const past=valid.reduce((a,p)=>a+p.shares*hist[p.ticker][priceKey],0);
-          if(past<=0)return null;
-          return{pl:now-past,pct:(now/past-1)*100};
+        // Split-aware shares at given date (returns split-adjusted shares
+        // in today's reference; uses same factor logic as rebuildPositions).
+        const splitsByT={};
+        splits.forEach(s=>{(splitsByT[s.ticker]=splitsByT[s.ticker]||[]).push(s);});
+        const factorAt=(ticker,date)=>{
+          const arr=splitsByT[ticker]||[];
+          return arr.filter(s=>s.split_date>date).reduce((a,s)=>a*+s.ratio,1);
+        };
+        const sharesAt=(ticker,dateStr)=>{
+          let s=0;
+          for(const t of usdTxs){
+            if(t.ticker!==ticker||t.date>dateStr)continue;
+            const f=factorAt(t.ticker,t.date);
+            if(t.way==="BUY")s+=+t.shares*f;
+            else if(t.way==="SELL")s-=+t.shares*f;
+          }
+          return s;
         };
 
-        const sel=PERIODS.find(p=>p.key===period)||PERIODS[6];
-        const perf=periodPerf(sel.key,sel.priceKey);
+        // Period-specific Total Return + XIRR. MAX kullanıldığında App-level değerlere düşer.
+        const computePeriod=()=>{
+          if(sel.key==="max"){
+            return{tr:totalReturn,trPct:totalReturnPct,xirrRate:annualRate,startMV:null};
+          }
+          if(!hasH||sel.priceKey==null)return null;
+          const startDate=new Date(Date.now()-sel.days*86400000).toISOString().split("T")[0];
+          // Period başı portföy değeri — yaklaşık: bugün aktif tickerlar üzerinden.
+          let startMV=0;
+          for(const p of usd){
+            const sh=sharesAt(p.ticker,startDate);
+            if(sh<=0)continue;
+            const pr=hist[p.ticker]?.[sel.priceKey];
+            if(pr==null)continue;
+            startMV+=sh*pr;
+          }
+          if(startMV<=0)return null;
+          const periodTxs=usdTxs.filter(t=>t.date>startDate);
+          const buys=periodTxs.filter(t=>t.way==="BUY").reduce((a,t)=>a+(+t.total+(+t.commission||0)),0);
+          const sells=periodTxs.filter(t=>t.way==="SELL").reduce((a,t)=>a+(+t.total-(+t.commission||0)),0);
+          const tr=(tM+sells)-(startMV+buys);
+          const trPct=(startMV+buys)>0?(tr/(startMV+buys))*100:null;
+          // XIRR cash flows: başta -startMV, period içi BUY/SELL, son +tM
+          const cfs=[{date:new Date(startDate),amount:-startMV}];
+          for(const t of periodTxs){
+            const c=+t.commission||0,tot=+t.total||0;
+            if(t.way==="BUY")cfs.push({date:new Date(t.date),amount:-(tot+c)});
+            else if(t.way==="SELL")cfs.push({date:new Date(t.date),amount:tot-c});
+          }
+          cfs.push({date:new Date(),amount:tM});
+          return{tr,trPct,xirrRate:xirr(cfs),startMV};
+        };
+        const pInfo=computePeriod();
 
         return(
           <div>
@@ -1326,15 +1431,39 @@ function App({session}){
                 <button className="pri" onClick={fetchPrices}>Şimdi çek</button>
               </div>
             )}
-            {/* Summary cards */}
-            <div className="g4">
-              {[{l:"Maliyet",v:mask("$"+fmt(tC))},{l:"Piyasa Değeri",v:mask("$"+fmt(tM))},
-                {l:"P&L ("+sel.lbl+")",v:perf?mask(fmtD(perf.pl)):"—",c:perf?pc(perf.pl):""},
-                {l:"P&L % ("+sel.lbl+")",v:perf?fmtP(perf.pct):"—",c:perf?pc(perf.pct):""}
-              ].map(x=>(
-                <div key={x.l} className="card"><div className="lbl">{x.l}</div><div className={"mono"+(x.c||"")} style={{fontSize:16,fontWeight:600}}>{x.v}</div></div>
-              ))}
-            </div>
+            {/* Summary cards. Maliyet/MV period-bağımsız; TR period'a göre.
+                XIRR sadece ≥1Y periyotlarda anlamlı — kısa periyotta "—" + hint. */}
+            {(()=>{
+              const longPeriod=sel.key==="max"||sel.key==="y1";
+              const cards=[
+                {l:"Maliyet",main:mask("$"+fmt(tC)),
+                 tip:"Mevcut pozisyonların ortalama maliyet bazlı toplamı (Σ shares × avg_cost). Period'dan bağımsız."},
+                {l:"Piyasa Değeri",main:mask("$"+fmt(tM)),
+                 tip:"Bugünkü güncel fiyatlarla portföy değeri (Σ shares × current_price). Period'dan bağımsız."},
+                {l:"Total Return ("+sel.lbl+")",
+                 main:pInfo&&pInfo.trPct!=null?mask(fmtD(pInfo.tr)):"—",
+                 sub:pInfo&&pInfo.trPct!=null?fmtP(pInfo.trPct):null,
+                 mainClass:pInfo?pc(pInfo.tr):"",subClass:pInfo?pc(pInfo.trPct):"",
+                 tip:"Period boyunca toplam getiri: (Bugün MV + Period Satışları) − (Period Başı MV + Period Alımları). Realize + unrealize, komisyonlar dahil."},
+                {l:"Yıllık (XIRR)",
+                 main:longPeriod&&pInfo&&pInfo.xirrRate!=null?fmtP(pInfo.xirrRate*100):"—",
+                 mainClass:longPeriod&&pInfo&&pInfo.xirrRate!=null?pc(pInfo.xirrRate):"",
+                 hint:longPeriod?null:"≥1Y için gösterilir",
+                 tip:"Cash flow tabanlı yıllıklandırılmış iç verim oranı (Excel XIRR). Para zamanlamasını dikkate alır. Kısa periyotlarda matematiksel olarak hesaplanabilir ama yanıltıcı olduğu için ≥1Y'de gösterilir."}
+              ];
+              return(
+                <div className="g4">
+                  {cards.map(x=>(
+                    <div key={x.l} className="card" data-tip={x.tip} style={{cursor:"help"}}>
+                      <div className="lbl">{x.l}</div>
+                      <div className={"mono"+(x.mainClass||"")} style={{fontSize:16,fontWeight:600}}>{x.main}</div>
+                      {x.sub&&<div className={"mono"+(x.subClass||"")} style={{fontSize:11,marginTop:2}}>{x.sub}</div>}
+                      {x.hint&&<div className="dim" style={{fontSize:10,marginTop:2}}>{x.hint}</div>}
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
             {/* Period selector */}
             <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
@@ -1354,15 +1483,12 @@ function App({session}){
               })}
             </div>
 
-            {/* Period performance bar (if hist loaded) */}
-            {hasH&&perf&&(
-              <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  <span className="dim" style={{fontSize:12}}>{sel.lbl} performans</span>
-                  <div style={{display:"flex",gap:16,alignItems:"center"}}>
-                    {!hide&&<span className={"mono "+(perf.pl>=0?"ok":"err")} style={{fontSize:15,fontWeight:600}}>{fmtD(perf.pl)}</span>}
-                    <span className={"mono "+(perf.pct>=0?"ok":"err")} style={{fontSize:18,fontWeight:700}}>{fmtP(perf.pct)}</span>
-                  </div>
+            {/* Period başlangıç bilgisi — hist yoksa veya yetersizse uyarı */}
+            {sel.key!=="max"&&!pInfo&&(
+              <div className="warn-card" style={{marginBottom:16}}>
+                <div>
+                  <div className="wc-ttl">{sel.lbl} için yeterli veri yok</div>
+                  <div className="wc-sub">Tarihi fiyatlar eksik veya bu period başında pozisyonunuz yoktu.</div>
                 </div>
               </div>
             )}
@@ -1469,12 +1595,12 @@ function App({session}){
                     {!hide&&<th className="r" onClick={()=>tsort("avgCost")}>Maliyet{sa("avgCost")}</th>}
                     {!hide&&<th className="r" onClick={()=>tsort("price")}>Fiyat{sa("price")}</th>}
                     {!hide&&<th className="r" onClick={()=>tsort("mv")}>Değer{sa("mv")}</th>}
-                    {!hide&&<th className="r" onClick={()=>tsort("pl")}>P&L${sa("pl")}</th>}
-                    <th className="r" onClick={()=>tsort("plPct")}>P&L%{sa("plPct")}</th>
-                    {hasH&&<th className="r" onClick={()=>tsort("d1")}>1G{sa("d1")}</th>}
-                    {hasH&&<th className="r" onClick={()=>tsort("w1")}>1H{sa("w1")}</th>}
-                    {hasH&&<th className="r" onClick={()=>tsort("m1")}>1A{sa("m1")}</th>}
-                    {hasH&&<th className="r" onClick={()=>tsort("y1")}>1Y{sa("y1")}</th>}
+                    {!hide&&<th className="r" onClick={()=>tsort("pl")} title="Pozisyon başlangıcından bugüne unrealized kâr/zarar (Değer − Maliyet)">P&L${sa("pl")}</th>}
+                    <th className="r" onClick={()=>tsort("plPct")} title="(Değer − Maliyet) / Maliyet × 100 — pozisyonun toplam unrealized getirisi">P&L%{sa("plPct")}</th>
+                    {hasH&&<th className="r" onClick={()=>tsort("d1")} title="Ticker fiyatının son 1 gündeki yüzde değişimi (senin alım tarihinden bağımsız)">1G{sa("d1")}</th>}
+                    {hasH&&<th className="r" onClick={()=>tsort("w1")} title="Ticker fiyatının son 1 haftadaki değişimi">1H{sa("w1")}</th>}
+                    {hasH&&<th className="r" onClick={()=>tsort("m1")} title="Ticker fiyatının son 1 aydaki değişimi">1A{sa("m1")}</th>}
+                    {hasH&&<th className="r" onClick={()=>tsort("y1")} title="Ticker fiyatının son 1 yıldaki değişimi">1Y{sa("y1")}</th>}
                   </tr></thead>
                   <tbody>
                     {sorted.map(p=>(
@@ -1497,6 +1623,9 @@ function App({session}){
               </div>
             </div>
             <div style={{fontSize:11,color:"var(--text2)",marginTop:8}}>{txs.length} işlem · {usd.length} USD pozisyon{!hasH&&<span style={{marginLeft:8}}>· Tarihi veri için Ayarlar → "Tarihi Veri" butonu</span>}</div>
+            <div style={{fontSize:10,color:"var(--text3)",marginTop:6,lineHeight:1.5}}>
+              <strong style={{color:"var(--text2)"}}>P&L $/%</strong>: senin alış maliyetinden bugüne unrealized · <strong style={{color:"var(--text2)"}}>1G/1H/1A/1Y</strong>: ticker fiyatının son N gündeki değişimi (alım tarihinden bağımsız)
+            </div>
 
             {/* TRY / EUR pozisyonları — fiyat desteği olmadığından yalnızca maliyet */}
             {["TRY","EUR"].map(cur=>{
