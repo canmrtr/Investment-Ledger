@@ -8,11 +8,11 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
   Build adımı yok; CDN script'leri. GitHub Pages'e doğrudan deploy (`main` branch root).
   Live URL: `https://canmrtr.github.io/Investment-Ledger/`
 - **Backend**: Supabase (auth, PostgreSQL, RLS, Edge Functions, pg_cron).
-- **Edge Functions** (Supabase'te deploy'lu; kaynağı referans olarak repo'da):
-  - `parse-transaction-edge-function.js` — Claude Haiku 4.5 ile metin/görüntü → işlem JSON
+- **Edge Functions** (Supabase'te deploy'lu, hepsi `--no-verify-jwt`; kaynağı referans olarak repo'da):
+  - `parse-transaction-edge-function.js` — Claude Haiku 4.5 ile metin/görüntü → `{transactions:[...]}` array (multi-line destek)
   - `fetch-prices-edge-function.js` — Massive.com (Polygon clone) güncel + tarihi fiyat
   - `refresh-price-cache-edge-function.js` — Scheduled (pg_cron 6h), `price_cache`'i stale-first batch ile tazeler
-  - `fetch-fundamentals-edge-function.js` — Financial Modeling Prep (FMP) TTM + 5Y annual; 21 metrik value-investing checklist'e işler
+  - `fetch-fundamentals-edge-function.js` — FMP `/stable/` + SEC EDGAR fallback; 21 metrik. Ek mode: `mode:"ticker-list"` → SEC ticker DB proxy (Search tab için)
 
 ## Supabase Şeması
 
@@ -34,28 +34,40 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 ## `index.html` Yapısı (bileşen haritası)
 
 ```
-Root → Login | App
-  App
-    ├─ Dashboard (IIFE)       — summary kartlar (TR + XIRR), pie chart,
-    │                            SparkChart, pozisyon tablosu, TRY/EUR blokları
-    ├─ HistoryTab             — filtre toolbar, accordion (ticker gruplu)
-    ├─ AddTab                 — 4 mod: text/image/csv/manuel
-    │   ├─ ConfirmBox         — parse sonucu onay
-    │   └─ ManuelPosForm      — direkt pozisyon girişi
-    └─ Settings
-        ├─ Fiyat & Veri       — fetchPrices/Hist butonları
-        ├─ Pozisyon Bakımı    — ♻️ rebuildPositions
-        ├─ Export             — CSV
-        ├─ AccountSection     — username + email + password değişimi
-        └─ Sistem Durumu      — bağlantı/durum göstergeleri
+Root → Login (IL mark) | App
+  App (#shell)
+    ├─ #topbar (sticky)       — [IL] logo + nav (Dashboard/İşlemler/Ara/Ayarlar)
+    │                            + sağ aksiyonlar (↻ Güncelle, 👁 hide, + İşlem Ekle)
+    ├─ <main #app-main>
+    │   ├─ Dashboard          — KPI kartlar (TR + XIRR), [Sparkline + Pie] yan yana,
+    │   │                       pozisyon tablosu, TRY/EUR blokları
+    │   ├─ HistoryTab         — filtre toolbar, accordion (ticker gruplu, search)
+    │   ├─ SearchTab          — global ticker arama (10k+ US listed via SEC),
+    │   │                       portföy + tüm hisseler iki ayrı bölüm
+    │   ├─ AddTab             — 4 mod: text/image/csv/manuel; multi-line AI parse
+    │   │   ├─ ConfirmBox     — parse onayı (tek=kv-grid, çoklu=row list + ×)
+    │   │   └─ ManuelPosForm  — direkt pozisyon; tarih→fiyat autofill
+    │   ├─ TickerDetailTab    — held mode (pozisyon kartları) + discovery mode
+    │   │                       (non-held; YOK badge, warn-card, meta+fund only)
+    │   └─ Settings           — Fiyat & Veri, Bakım, Export (CSV), Account, Durum
+    ├─ #bottom-tabs (mobile)  — 3 nav (Dashboard/İşlemler/Ara/Ayarlar; +Ekle filtreli)
+    └─ #fab (mobile)          — Floating "+ İşlem Ekle" sağ alt
 ```
 
 Üst-level yardımcılar (top-level, App/Root dışı):
-- `rebuildPositions(userId)` — split-aware
+- `rebuildPositions(userId)` — split-aware pozisyon yeniden hesabı
 - `xirr(cashflows)` — Newton-Raphson IRR (yıllık return)
 - `buildCashflows(txs, mvNow)` — XIRR için cash flow serisi
 - `SparkChart` — küçük SVG portfolio değer grafiği
 - `AccountSection` — Settings içinde Hesap formu
+- `fmtShares(n)` — adet formatı (integer veya trailing-zero-trimmed ondalık)
+- `fmtDateTR(iso)` — `YYYY-MM-DD` → `DD/MM/YYYY` görüntü; ISO storage'a dokunmaz
+- `parseTRDate(s)` — TR formatı → ISO (manuel override yolu)
+- `safeUrl(url)` — http/https scheme allowlist; provider compromise koruması
+- `enrichParseWithPrice(d)` / `enrichParseListWithPrices(list)` — AI parse fiyat boşsa kapanış autofill (tarih → latest fallback)
+- `NAV_ICONS` — desktop topbar (s=14) + mobile bottom-tabs (s=20) SVG'leri
+- `DEBUG` const (top of script) — `false` ise console.warn/log no-op (production polish)
+- `tickerDbCacheGet/Set` — LS cache 24h TTL (SearchTab için)
 
 ## Returns Hesabı
 
@@ -74,10 +86,26 @@ Dashboard'daki 4 özet kart:
 
 ## Önemli Konvansiyonlar
 
+### Tasarım sistemi (2026-04-25 redesign)
+- **Tema**: yalnız dark — `prefers-color-scheme:light` kaldırıldı.
+- **Renk tokenleri** (`:root`):
+  - `--bg #000` / `--bg2 #0c0c0c` / `--bg3 #141414` / `--bg4 #1c1c1c` (4 katman)
+  - `--text #f0ede8` (sıcak beyaz), `--text2 #666`, `--text3 #333`
+  - `--info #6658ff` (mor brand), `--ok #00d97e`, `--err #ff3366`, `--warn #ffb800`
+  - `--border rgba(255,255,255,0.06)` — hat kullanımı için 1px solid (eski 0.5px değil)
+- **Tipografi**: Google Fonts `DM Sans` (300-700 body) + `DM Mono` (400/500 sayılar/ticker).
+- **Aktif sekme**: pill (soft mor bg `rgba(102,88,255,0.12)` + text), alt çizgi yok.
+- **FAB mobile**: 54px daire, `var(--info)` mor, mor shadow, sağ alt sabit (`bottom:76px`).
+
 ### Para & formatlama
 - USD → `$`, TRY → `₺`, EUR → `€`
-- `fmt(n, d=2)`, `fmtD(n)` (±$), `fmtP(n)` (±%) helperleri kullanılır
+- `fmt(n, d=2)`, `fmtD(n)` (±$), `fmtP(n)` (±%), `fmtShares(n)` adet için
 - Gizli mod (`hide` state): `mask()` ile tüm $ tutarları `••••`
+
+### Tarih
+- **Storage**: ISO `YYYY-MM-DD` (Supabase date). Internal hesaplar/sıralama hep ISO.
+- **Görüntü**: `DD/MM/YYYY` — `fmtDateTR(iso)` helper'ı kullan.
+- **Input**: `<input type="date">` (native picker, locale-aware, value ISO).
 
 ### CFG sabitleri (top-level)
 ```js
@@ -149,16 +177,29 @@ Test edilmiş — mevcut Stocks API key ile hepsi çalışır:
 
 **Desteklenmiyor**: BIST hisseleri (THYAO, ASELS), TEFAS fonları → ROADMAP'te not edildi, alternatif provider gerek.
 
-## Fundamental Veri (FMP)
+## Fundamental Veri (FMP + EDGAR fallback)
 
-- **Provider**: Financial Modeling Prep — secret `FMP_KEY` (edge function env'inde).
-- **Endpoint'ler**: FMP **`/stable/`** API (Aug 2025'te `/api/v3` legacy oldu, yeni hesaplar göremez). Path yerine `?symbol=AAPL` query param. Response şeması legacy ile aynı.
-  - `key-metrics-ttm`, `ratios-ttm`, `income-statement` (5Y annual), `balance-sheet-statement` (1Y), `cash-flow-statement` (1Y).
+- **Primary provider**: Financial Modeling Prep — secret `FMP_KEY` (edge function env'inde).
+- **Fallback**: SEC EDGAR — FMP "Special Endpoint" 402 (NOW/MNSO/NNOX gibi out-of-plan ticker'lar) gelirse otomatik düşer. Ücretsiz, sınırsız, tüm SEC dosyalayıcılarını kapsar.
+- **Endpoint'ler**:
+  - FMP **`/stable/`** API (Aug 2025'te `/api/v3` legacy oldu). `?symbol=AAPL` query param. Response şeması legacy ile aynı: `key-metrics-ttm`, `ratios-ttm`, `income-statement` (5Y annual), `balance-sheet-statement` (1Y), `cash-flow-statement` (1Y).
+  - EDGAR `data.sec.gov/api/xbrl/companyfacts/CIK*.json` — User-Agent header zorunlu.
 - **21 metrik**: gelir/kâr 5Y CAGR, 4 marj (gross/op/net/FCF), ROE/ROA/ROIC, gider rasyoları (SG&A, D&A, faiz), bilanço (yük/özk, birikmiş kâr/özk), faiz karşılama, net borç/FCF, CapEx (3 oran), P/E, P/S.
-- **Renk kodlaması**: top-level `FUND_THRESHOLDS` tablosunda her metriğin `good`/`ok` eşikleri var; `fundScore(key,val)` → `good`/`neutral`/`bad`. UI'da yeşil/sarı/kırmızı sol-border + value rengi.
-- **Cache**: LS `fund_${ticker}` (7 gün TTL) — fundamentals yavaş değişir, FMP rate limit dostu.
-- **Kapsam**: sadece `US_STOCK` için gösterilir (FMP US-only). FUND/CRYPTO/BIST/GOLD'da bölüm hidden.
-- **TickerDetailTab** içinde "Şirket Bilgisi" ile "İşlem Geçmişi" arasında render edilir; auto-fetch on mount + manuel ↻.
+- **EDGAR mode kısıtı**: P/E ve P/S null kalır (market price gerek). Diğer 19 metrik us-gaap line item'larından derive edilir.
+- **EDGAR FY anchoring**: `NetIncomeLoss`'un en yeni fy'si anchor → tüm metrikler aynı fy'den okunur (cross-year karışma yok). ASC 606 gibi taxonomy migration'larda freshest-concept stratejisi (`Revenues` vs `RevenueFromContractWith...`).
+- **Source badge**: response'da `source: "fmp"|"edgar"` döner; TickerDetailTab başlığında küçük rozet.
+- **Renk kodlaması**: top-level `FUND_THRESHOLDS` tablosunda her metriğin `good`/`ok` eşikleri var; `fundScore(key,val)` → `good`/`neutral`/`bad`. UI'da pill renkler.
+- **Cache**: LS `fund_${ticker}` (7 gün TTL).
+- **Kapsam**: `US_STOCK` (held) + non-held discovery (search'ten gelen) için aktif. FUND/CRYPTO/BIST/GOLD'da bölüm hidden.
+
+## Search Tab (global ticker arama)
+
+- **Veri kaynağı**: SEC EDGAR `company_tickers.json` — ~10.350 US listed (NYSE/NASDAQ).
+- **Proxy**: Edge function `fetch-fundamentals` `mode:"ticker-list"` (browser SEC'e doğrudan fetch yapamaz, User-Agent zorunluluğu).
+- **Cache**: LS `sec_ticker_db` (24 saat TTL); ilk Ara sekmesi açılışında lazy fetch.
+- **Match**: ticker prefix (büyük harf) + şirket adı substring (case-insensitive).
+- **Render**: 2 bölüm — "Portföyünden" (held + geçmiş işlem ticker'ları, "açık" badge) + "Tüm hisseler" (max 50 sonuç). Click → `openDetail(ticker)`.
+- **Discovery mode (non-held)**: TickerDetailTab `!p` durumunda position summary kartlarını gizler; `YOK` badge + turuncu warn-card + meta + fundamental + "+ Ekle" CTA gösterir. Live price `fetch-prices` ile auto-fetch edilir.
 
 ## Ölçeklenme Notları
 
@@ -176,17 +217,30 @@ Test edilmiş — mevcut Stocks API key ile hepsi çalışır:
 - Edge function `pos` değiştiğinde useEffect ile auto-fetch tetikler → `busy.h/p` guard'ı korunmalı.
 - XIRR `<1Y` periyotlarda matematiksel olarak hesaplanabilir ama yanıltıcı; UI bilinçli olarak gizliyor.
 - Native HTML `title` attribute tooltip'i Chrome/Safari'de 1-2 sn gecikmeli — bu yüzden `data-tip` + custom CSS pseudo-element kullanılıyor.
+- **iOS Safari/Chrome auto-zoom**: input `font-size < 16px` ise focus'ta sayfayı zoomlar ve session boyu kalır. Mobile media query (`max-width:640px`) altında `input/textarea/select { font-size: 16px }` zorunlu.
+- **FMP "Special Endpoint" 402**: NOW gibi mid-cap'ler FMP free tier'a kapalı; edge function otomatik EDGAR'a düşer. EDGAR mode'unda P/E ve P/S null kalır (price gerek).
+- **fetch-prices weekend**: Cumartesi/Pazar tarihleri için 403; AI parse autofill'inde önce date-spesifik dener, fail olursa `mode:price` (no date) ile latest close'a fallback yapar.
+- **AI parse response shape**: edge function her zaman `{transactions:[...]}` array döner (multi-line + tek işlem hep array). Eski tek-obje format için FE side'da `Array.isArray(d.transactions) ? ... : (d.ticker ? [d] : [])` guard'ı var.
+- **localStorage scope**: `il_hide`/`il_prc`/`il_hist` user-agnostic; signOut handler bunları temizler. `fund_*`, `meta_*`, `sec_ticker_db` public market data, user-bound değil.
+- **SearchTab → TickerDetailTab non-held flow**: detail page `pos.find(...)` boş dönerse "discovery mode" — pozisyon kartları gizli, YOK badge + warn-card aktif. Yeni eklenen `+ Ekle` flow rebuildPositions sonrası held mode'a otomatik geçer.
+
+## Hooks (otomatik validasyon)
+
+`.claude/settings.local.json` içinde `PostToolUse` hook'u tanımlı:
+
+- **`.claude/hooks/babel-check.sh`** — Edit/Write/MultiEdit sonrası `index.html` ise babel/JSX parse'ı koşar. Parse fail olursa exit 2 + stderr ile asistan feedback alır, düzeltir. Build adımı yok — parse fail = canlı sitede tüm kullanıcılar broken page görür.
 
 ## Agent Kuralları
 
 `.claude/agents/` altında tanımlı agent'lar. Tetikleyici durumda **kullanıcıya sormadan otomatik** çağır.
 
-- **`babel-checker`** — `index.html` edit'i sonrası **`.claude/hooks/babel-check.sh` hook'u tarafından zaten otomatik koşulur** (PostToolUse → Edit/Write/MultiEdit). Hook fail olursa stderr'i Claude'a feedback olarak gelir, agent'ı manuel çağırmaya gerek yok. Hook devre dışıysa veya kaçınılmaz şekilde bypass olduysa agent fallback olarak çağırılabilir.
-- **`edge-reviewer`** — `*-edge-function.js` dosyasına edit yaptıktan sonra, kullanıcıya "deploy et" önermeden **önce**. Security / error-handling / Deno pitfall raporu.
-- **`ui-builder`** — yeni bir UI component (tab, card, form, modal, tablo) eklenecek veya mevcut component'in görsel/yapısal değişikliği yapılacak ise kod yazımını bu agent'a delege et. Tasarım sistemi + Türkçe UI konvansiyonlarını biliyor. 1-2 satır string/copy tweak için skip OK.
+- **`babel-checker`** — `index.html` edit'i sonrası **hook tarafından otomatik koşulur**; agent'ı manuel çağırmaya gerek yok. Hook devre dışıysa fallback olarak çağırılabilir.
+- **`edge-reviewer`** — `*-edge-function.js` edit'inden sonra, kullanıcıya "deploy et" önermeden **önce**. Security / error-handling / Deno pitfall raporu.
+- **`ui-builder`** — yeni bir UI component (tab, card, form, modal, tablo) eklenecek veya mevcut component'in görsel/yapısal değişikliği yapılacak ise kod yazımını delege et. Tasarım sistemi + Türkçe UI konvansiyonlarını biliyor. 1-2 satır string/copy tweak için skip OK.
 - **`sql-writer`** — Supabase migration, RLS policy, pg_cron job veya schema SQL'i yazılacak ise. Proje gotcha'larını (jobname column yok, `SUPABASE_` prefix, `transactions.way` enum vb.) biliyor.
 - **`rls-auditor`** — yeni tablo eklenince **veya** mevcut RLS policy değişince, SQL uygulanmadan önce. Read-only audit; user data isolation doğrular.
-- **`client-security-auditor`** — auth flow / form / kullanıcı girdisi rendering eden yerlerde `index.html` değişikliği yaptıktan sonra. Ayrıca güvenlik-hassas commit'ten önce manuel çağrı uygundur. XSS, secret leak, LS hijyeni, privacy-mode (`hide`) regression'lerini tarar.
+- **`client-security-auditor`** — auth flow / form / kullanıcı girdisi rendering eden yerlerde `index.html` değişikliği yaptıktan sonra. Ayrıca güvenlik-hassas commit'ten önce manuel çağrı uygundur. XSS, secret leak, LS hijyeni, privacy-mode regression'lerini tarar.
+- **`test-runner`** — Playwright + Chromium ile canlı (veya localhost) E2E test. Major feature sonrası veya deploy öncesi manuel çağrı. Mid-session eklenen agent'lar registry'ye girmeyebilir; bu durumda `cd /tmp && npm install --no-save playwright` + manuel script de seçenek.
 
 ## Test & Doğrulama
 
@@ -204,13 +258,19 @@ Test edilmiş — mevcut Stocks API key ile hepsi çalışır:
 
 ## Yol Haritası / Açık Konular
 
-Detaylı liste için **`ROADMAP.md`** dosyasına bakın. Öne çıkan başlıklar:
+Detaylı liste için **`ROADMAP.md`** dosyasına bakın. Tamamlananlar:
+- ✅ Pie chart, Account screen, Returns (TR + XIRR), TickerDetailTab
+- ✅ Fundamentals (FMP 21-metric checklist + EDGAR fallback)
+- ✅ Search tab (10k+ US listed via SEC proxy)
+- ✅ Multi-line AI parse, weekend price fallback, manuel date-price autofill
+- ✅ Major redesign (DM Sans/Mono, dark palette, top navbar + bottom tabs + FAB)
 
-- **Asset type genişletme**: BIST (alternatif provider gerek), altın (`C:XAUUSD` ile mümkün), TEFAS fonları, vadeli mevduat
-- **Görselleştirme**: ✅ pie chart yapıldı; başka chart varyasyonları olabilir
-- **Returns**: ✅ TR + XIRR (period-aware) yapıldı
-- **Account**: ✅ password / email / username yapıldı
-- **Sayfalar**: hisse detay sayfası, asset type başına ayrı sayfa
-- **Fundamental + checklist**: provider seçimi açık (Polygon fundamentals, Alpha Vantage, yfinance)
+Açık başlıklar:
+- **BIST genişletme** (Twelve Data değerlendirme — bir sonraki sprint)
+- **Asset type'lar**: altın (`C:XAUUSD` ile mümkün), TEFAS fonları, vadeli mevduat
+- **EDGAR + market price**: P/E ve P/S için CommonStockSharesOutstanding × current price
+- **Sektör-aware fundamental eşikler**: tech P/E ≤30, utility ≤15 vs.
+- **Portföy-geneli checklist tablosu**: tüm pozisyonlar tek tabloda
+- **Tarihsel fundamental trend**: 5 yıl gelir/marj/ROE eğrisi
 - **Sosyal**: risk profili, anonim feed (privacy gerektirir)
-- **Eğitim**: Investment Basics modülü (compound, diversification, ratios...)
+- **Eğitim**: Investment Basics modülü
