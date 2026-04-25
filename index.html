@@ -48,6 +48,10 @@
       #fab{display:flex;}
       #topbar{padding:0 14px;}
       .topbar-right .btn-add-primary{display:none;}
+      /* iOS Safari/Chrome input'a tıklandığında font-size < 16px ise sayfayı
+         otomatik zoom-in eder ve kalıcı zoom hissi verir. Mobile'da input
+         font'unu 16px'e çıkarmak bu davranışı engeller. */
+      input,textarea,select,.finp,.finp.sm{font-size:16px;}
     }
     /* Base — ghost stil (default). Özel class'lı butonlar (.tab, .btab, .eye-btn, #fab vb.) cascade ile bunu override eder. */
     button{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;padding:7px 14px;transition:opacity .12s,background .12s;}
