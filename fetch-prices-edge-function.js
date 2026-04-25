@@ -38,6 +38,43 @@ Deno.serve(async (req) => {
           result = { price: last, d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1), p_d1, p_w1, p_m1, p_m3, p_m6, p_y1 };
         }
       }
+    } else if (mode === "meta") {
+      // Ticker referansı — şirket bilgisi, sektör, market cap, logo url, vb.
+      const url = `https://api.massive.com/v3/reference/tickers/${ticker}?apiKey=${massiveKey}`;
+      const r = await fetch(url);
+      if (r.ok) {
+        const d = await r.json();
+        const x = d.results;
+        if (x) {
+          result = {
+            name: x.name,
+            market: x.market,                 // stocks / crypto / fx / indices
+            locale: x.locale,                 // us / global
+            primary_exchange: x.primary_exchange,
+            type: x.type,                     // CS / ETF / ADR vb.
+            currency: x.currency_name,
+            market_cap: x.market_cap,
+            description: x.description,
+            homepage_url: x.homepage_url,
+            sic_description: x.sic_description, // sektör string
+            total_employees: x.total_employees,
+            list_date: x.list_date,
+            phone_number: x.phone_number,
+            address: x.address,
+            // Branding URL'leri Polygon'da auth-protected — frontend doğrudan
+            // çekemez. Edge function üzerinden proxy gerekir; URL'i yine de
+            // gönderiyoruz, frontend isterse kendi proxy çağrısını yapar.
+            logo_url: x.branding?.logo_url,
+            icon_url: x.branding?.icon_url,
+            shares_outstanding: x.weighted_shares_outstanding || x.share_class_shares_outstanding,
+          };
+        } else {
+          result = { error: "results yok", raw: JSON.stringify(d).slice(0, 200) };
+        }
+      } else {
+        const errText = await r.text();
+        result = { error: `HTTP ${r.status}`, raw: errText.slice(0, 200) };
+      }
     } else {
       // Price mode — belirli bir tarihin kapanış fiyatı
       const url = `https://api.massive.com/v1/open-close/${ticker}/${priceDate}?apiKey=${massiveKey}`;

@@ -361,6 +361,454 @@ function SparkChart({data}){
   );
 }
 
+// ── AddTxInline — Detail sayfasından hızlı işlem ekleme ────────
+// Tek ticker için: Manuel form veya AI ile metin parse.
+function AddTxInline({ticker,user,pos,loadData,flash_,onClose}){
+  const [mode,setMode]=useState("manuel");
+  const E={date:today(),way:"BUY",shares:"",price:"",broker:"",commission:""};
+  const [form,setForm]=useState(E);
+  const [saving,setSaving]=useState(false);
+  const [aiText,setAiText]=useState("");
+  const [aiParsing,setAiParsing]=useState(false);
+  const [aiParsed,setAiParsed]=useState(null);
+  const [aiErr,setAiErr]=useState("");
+
+  const tkPos=pos.find(x=>x.ticker===ticker);
+
+  const saveManual=async()=>{
+    if(!form.shares||!form.price){flash_("Adet ve fiyat zorunlu","err");return;}
+    setSaving(true);
+    const sh=+form.shares,pr=+form.price;
+    const{error}=await sb.from("transactions").insert({
+      user_id:user.id,date:form.date,ticker,
+      name:tkPos?.name||ticker,
+      asset_type:tkPos?.type||"US_STOCK",
+      way:form.way,shares:sh,price:pr,
+      currency:tkPos?.currency||"USD",
+      total:+(sh*pr).toFixed(4),
+      broker:form.broker||"",
+      commission:+(form.commission||0),
+      exchange:"",notes:"Detay sayfasından"
+    });
+    setSaving(false);
+    if(error){flash_(error.message,"err");return;}
+    await rebuildPositions(user.id);await loadData();
+    flash_(`${ticker} ${form.way==="BUY"?"alış":"satış"} eklendi ✓`);
+    onClose();
+  };
+
+  const parseAI=async()=>{
+    if(!aiText.trim())return;
+    setAiParsing(true);setAiErr("");setAiParsed(null);
+    try{
+      // Ticker'ı prompt'a göm — AI doğru ticker bulsun
+      const r=await edgeCall("parse-transaction",{text:`Ticker: ${ticker}. ${aiText}`});
+      const d=await r.json();
+      if(!r.ok||d.error)throw new Error(d.message||d.error||`HTTP ${r.status}`);
+      d.ticker=ticker; // güvenlik: ticker'ı override et
+      if(!d.name)d.name=tkPos?.name||ticker;
+      setAiParsed(d);
+    }catch(e){setAiErr("Hata: "+e.message);}
+    setAiParsing(false);
+  };
+
+  const saveAI=async()=>{
+    if(!aiParsed)return;
+    const p=aiParsed;
+    const{error}=await sb.from("transactions").insert({
+      user_id:user.id,date:p.date,ticker,
+      name:p.name||tkPos?.name||ticker,
+      asset_type:p.asset_type||tkPos?.type||"US_STOCK",
+      way:p.way,shares:+p.shares,price:+p.price,
+      currency:p.currency||tkPos?.currency||"USD",
+      total:+((+p.shares)*(+p.price)).toFixed(4),
+      broker:p.broker||"",commission:+(p.commission||0),
+      exchange:p.exchange||"",notes:p.notes||""
+    });
+    if(error){flash_(error.message,"err");return;}
+    await rebuildPositions(user.id);await loadData();
+    flash_("İşlem eklendi ✓");
+    onClose();
+  };
+
+  return(
+    <div className="cbox" style={{marginTop:10,marginBottom:14}}>
+      <div className="seg" style={{marginBottom:12}}>
+        <button className={mode==="manuel"?"on":""} onClick={()=>setMode("manuel")}>📌 Manuel</button>
+        <button className={mode==="ai"?"on":""} onClick={()=>setMode("ai")}>📝 AI ile</button>
+      </div>
+
+      {mode==="manuel"&&(
+        <div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+            <div><div className="kk" style={{marginBottom:3}}>Tarih</div>
+              <input className="finp sm" type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))} max={today()}/></div>
+            <div><div className="kk" style={{marginBottom:3}}>İşlem</div>
+              <select className="finp sm" value={form.way} onChange={e=>setForm(f=>({...f,way:e.target.value}))}>
+                <option value="BUY">Alış</option><option value="SELL">Satış</option>
+              </select></div>
+            <div><div className="kk" style={{marginBottom:3}}>Broker</div>
+              <input className="finp sm" value={form.broker} onChange={e=>setForm(f=>({...f,broker:e.target.value}))} placeholder="Akbank..."/></div>
+            <div><div className="kk" style={{marginBottom:3}}>Adet *</div>
+              <input className="finp sm" type="number" value={form.shares} onChange={e=>setForm(f=>({...f,shares:e.target.value}))} placeholder="0"/></div>
+            <div><div className="kk" style={{marginBottom:3}}>Fiyat *</div>
+              <input className="finp sm" type="number" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} placeholder="0.00"/></div>
+            <div><div className="kk" style={{marginBottom:3}}>Komisyon</div>
+              <input className="finp sm" type="number" value={form.commission} onChange={e=>setForm(f=>({...f,commission:e.target.value}))} placeholder="0"/></div>
+          </div>
+          {form.shares&&form.price&&(
+            <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: ${fmt((+form.shares)*(+form.price),2)}</div>
+          )}
+          <div className="brow">
+            <button className="pri btn-md" onClick={saveManual} disabled={saving||!form.shares||!form.price}>{saving?"...":"Kaydet"}</button>
+            <button className="btn-md" onClick={onClose} disabled={saving}>İptal</button>
+          </div>
+        </div>
+      )}
+
+      {mode==="ai"&&(
+        <div>
+          <textarea value={aiText} onChange={e=>setAiText(e.target.value)} rows={3}
+            placeholder={`"5 adet $200 bugün Akbank komisyon $2"\n"3 adet $150 dün satış QNB"`}
+            style={{lineHeight:1.5,marginBottom:8,resize:"vertical"}}/>
+          <div className="brow" style={{marginBottom:aiParsed||aiErr?10:0}}>
+            <button className="pri btn-md" onClick={parseAI} disabled={aiParsing||!aiText.trim()}>{aiParsing?"Parse...":"AI Parse"}</button>
+            <button className="btn-md" onClick={onClose} disabled={aiParsing}>İptal</button>
+          </div>
+          {aiErr&&<div className="flash err" style={{fontSize:12}}>{aiErr}</div>}
+          <ConfirmBox data={aiParsed} onSave={saveAI} onCancel={()=>setAiParsed(null)}/>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── TickerDetailTab — pozisyon + meta + transactions ───────────
+// LS cache: 7 gün TTL (ticker meta'sı yavaş değişir)
+const META_TTL_MS = 7 * 86400000;
+const metaCacheGet = (ticker) => {
+  const c = LS.get(`meta_${ticker}`, null);
+  if (!c || !c.t) return null;
+  if (Date.now() - c.t > META_TTL_MS) return null;
+  return c.d;
+};
+const metaCacheSet = (ticker, data) => LS.set(`meta_${ticker}`, { d: data, t: Date.now() });
+
+// homepage_url'den domain çıkar — Clearbit logo için.
+const extractDomain = (url) => {
+  if (!url) return null;
+  try {
+    return new URL(url.startsWith("http") ? url : "https://" + url).hostname.replace(/^www\./, "");
+  } catch (e) { return null; }
+};
+
+// Sayı formatı: 4014264110200 → "4.01T", 166000 → "166K"
+const fmtCompact = (n) => {
+  if (n == null) return "—";
+  const abs = Math.abs(n);
+  if (abs >= 1e12) return (n/1e12).toFixed(2)+"T";
+  if (abs >= 1e9)  return (n/1e9).toFixed(2)+"B";
+  if (abs >= 1e6)  return (n/1e6).toFixed(1)+"M";
+  if (abs >= 1e3)  return (n/1e3).toFixed(1)+"K";
+  return ""+n;
+};
+
+function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,closeDetail,hideAmts,mask}){
+  const [meta,setMeta]=useState(()=>metaCacheGet(ticker));
+  const [metaLoading,setMetaLoading]=useState(false);
+  const [metaErr,setMetaErr]=useState("");
+  const [showFullDesc,setShowFullDesc]=useState(false);
+  const [showAdd,setShowAdd]=useState(false);
+  const [expandedTx,setExpandedTx]=useState(null);   // tıklanan tx.id
+  const [editTxId,setEditTxId]=useState(null);
+  const [editForm,setEditForm]=useState({});
+  const [savingTx,setSavingTx]=useState(false);
+
+  const startEditTx=t=>{
+    setEditTxId(t.id);
+    setEditForm({date:t.date,way:t.way,shares:t.shares,price:t.price,currency:t.currency||"USD",broker:t.broker||"",commission:t.commission||0,notes:t.notes||""});
+  };
+  const cancelEditTx=()=>{setEditTxId(null);setEditForm({});};
+  const saveEditTx=async(t)=>{
+    setSavingTx(true);
+    const{error}=await sb.from("transactions").update({
+      date:editForm.date,way:editForm.way,shares:+editForm.shares,price:+editForm.price,
+      currency:editForm.currency,total:+((+editForm.shares)*(+editForm.price)).toFixed(4),
+      broker:editForm.broker,commission:+(editForm.commission||0),notes:editForm.notes||""
+    }).eq("id",t.id).eq("user_id",user.id);
+    if(error){flash_(error.message,"err");}
+    else{await rebuildPositions(user.id);await loadData();flash_("Güncellendi ✓");setEditTxId(null);setEditForm({});}
+    setSavingTx(false);
+  };
+  const delTxRow=async(t)=>{
+    if(!(await confirm_(`${t.date} tarihli ${t.way==="BUY"?"alış":"satış"} silinsin mi?`,{okLbl:"Sil"})))return;
+    await sb.from("transactions").delete().eq("id",t.id).eq("user_id",user.id);
+    await rebuildPositions(user.id);await loadData();flash_("Silindi ✓");
+    setExpandedTx(null);
+  };
+
+  const p=pos.find(x=>x.ticker===ticker);
+  const tickerTxs=txs.filter(t=>t.ticker===ticker);
+  const price=prc[ticker];
+  const currentCost=p?p.shares*p.avgCost:0;
+  const mv=p&&price!=null?p.shares*price:null;
+  const dayChange=hist[ticker]?.d1; // % değişim son 1G
+
+  // Realize / Unrealize / Toplam — bu ticker için tüm zaman
+  const totalInvested=tickerTxs.filter(t=>t.way==="BUY").reduce((a,t)=>a+(+t.total+(+t.commission||0)),0);
+  const totalReceived=tickerTxs.filter(t=>t.way==="SELL").reduce((a,t)=>a+(+t.total-(+t.commission||0)),0);
+  const totalCommission=tickerTxs.reduce((a,t)=>a+(+t.commission||0),0);
+  const realized=totalReceived+currentCost-totalInvested;
+  const unrealized=mv!=null?mv-currentCost:null;
+  const totalPL=unrealized!=null?realized+unrealized:null;
+  const totalPLPct=totalInvested>0&&totalPL!=null?(totalPL/totalInvested)*100:null;
+
+  // Meta fetch — cache'te yoksa veya zorla yenile
+  const fetchMeta=async(force)=>{
+    if(!force){
+      const cached=metaCacheGet(ticker);
+      if(cached){setMeta(cached);return;}
+    }
+    setMetaLoading(true);setMetaErr("");
+    try{
+      const r=await edgeCall("fetch-prices",{ticker,mode:"meta"});
+      const d=await r.json();
+      if(d.result&&!d.result.error){
+        setMeta(d.result);
+        metaCacheSet(ticker,d.result);
+      } else {
+        setMetaErr(d.result?.error||d.error||"Bilinmeyen hata");
+      }
+    }catch(e){setMetaErr(e.message);}
+    setMetaLoading(false);
+  };
+  useEffect(()=>{if(!meta)fetchMeta(false);},[ticker]);
+
+  if(!p){
+    return(
+      <div>
+        <button className="btn-sm" onClick={closeDetail} style={{marginBottom:14}}>← Dashboard'a dön</button>
+        <div className="empty-card">
+          <div className="ic">❓</div>
+          <div className="ttl">{ticker} pozisyonunda yok</div>
+          <div className="sub">Bu ticker mevcut pozisyonlarınızda bulunmuyor.</div>
+        </div>
+      </div>
+    );
+  }
+
+  const exchangeShort={XNAS:"NASDAQ",XNYS:"NYSE",ARCX:"NYSE Arca",BATS:"CBOE",IEXG:"IEX"}[meta?.primary_exchange]||meta?.primary_exchange;
+
+  return(
+    <div>
+      {/* Header */}
+      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+        <button className="btn-sm" onClick={closeDetail}>← Geri</button>
+        <div style={{flex:1}}></div>
+        <button className="btn-sm" onClick={()=>fetchMeta(true)} disabled={metaLoading}>{metaLoading?"...":"↻ Meta"}</button>
+      </div>
+
+      {/* Ticker + price */}
+      <div className="card" style={{marginBottom:14,padding:"16px 18px"}}>
+        <div style={{display:"flex",alignItems:"flex-start",gap:14}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:"flex",alignItems:"baseline",gap:10,flexWrap:"wrap"}}>
+              <span style={{fontSize:22,fontWeight:700,fontFamily:"'SF Mono',monospace"}}>{ticker}</span>
+              {p.type==="FUND"&&<span className="badge etf">ETF</span>}
+              {p.type==="CRYPTO"&&<span className="badge cry">₿</span>}
+            </div>
+            <div className="dim" style={{fontSize:13,marginTop:2}}>
+              {meta?.name||p.name||"—"}
+              {exchangeShort&&<span> · {exchangeShort}</span>}
+              {meta?.type&&<span> · {meta.type}</span>}
+            </div>
+          </div>
+          {!hideAmts&&price!=null&&(
+            <div style={{textAlign:"right"}}>
+              <div className="mono" style={{fontSize:18,fontWeight:600}}>${fmt(price)}</div>
+              {dayChange!=null&&<div className={"mono"+pc(dayChange)} style={{fontSize:12}}>{fmtP(dayChange)} bugün</div>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Pozisyon özeti — 4 ana kart */}
+      <div className="g4" style={{marginBottom:8}}>
+        <div className="card" data-tip="Pozisyondaki toplam adet (split-adjusted)" style={{cursor:"help"}}>
+          <div className="lbl">Adet</div>
+          <div className="mono" style={{fontSize:16,fontWeight:600}}>{p.shares%1===0?p.shares:p.shares.toFixed(4)}</div>
+        </div>
+        <div className="card" data-tip="Mevcut pozisyonun toplam maliyeti (Adet × Ort. Maliyet). Daha önce sattıklarının maliyeti dahil değil." style={{cursor:"help"}}>
+          <div className="lbl">Toplam Maliyet</div>
+          <div className="mono" style={{fontSize:16,fontWeight:600}}>{mask("$"+fmt(currentCost,0))}</div>
+        </div>
+        <div className="card" data-tip="Bugünkü güncel fiyatla pozisyonun piyasa değeri" style={{cursor:"help"}}>
+          <div className="lbl">Piyasa Değeri</div>
+          <div className="mono" style={{fontSize:16,fontWeight:600}}>{mv!=null?mask("$"+fmt(mv,0)):"—"}</div>
+        </div>
+        <div className="card" data-tip="Toplam P&L = Realized + Unrealized = MV + Toplam Satış − Toplam Alış (komisyonlar dahil)" style={{cursor:"help"}}>
+          <div className="lbl">Toplam P&L</div>
+          <div className={"mono"+(totalPL!=null?pc(totalPL):"")} style={{fontSize:16,fontWeight:600}}>{totalPL!=null?mask(fmtD(totalPL)):"—"}</div>
+          {totalPLPct!=null&&<div className={"mono"+pc(totalPLPct)} style={{fontSize:11,marginTop:2}}>{fmtP(totalPLPct)}</div>}
+        </div>
+      </div>
+
+      {/* Detay satırı — Ort. Maliyet · Realized · Unrealized · Komisyon */}
+      <div style={{display:"flex",flexWrap:"wrap",gap:14,padding:"8px 14px",marginBottom:14,fontSize:11,color:"var(--text2)",background:"var(--bg2)",borderRadius:8,border:"0.5px solid var(--border)"}}>
+        <span data-tip="Bugün satın alsan birim başına ödediğin ortalama" style={{cursor:"help"}}>
+          Ort. Maliyet: <span className="mono" style={{color:"var(--text)"}}>{mask("$"+fmt(p.avgCost))}</span>
+        </span>
+        <span data-tip="Daha önce yaptığın satışlardan gerçekleşen kâr/zarar (komisyonlar dahil)" style={{cursor:"help"}}>
+          Realized: <span className={"mono"+pc(realized)}>{mask(fmtD(realized))}</span>
+        </span>
+        <span data-tip="Mevcut pozisyondaki kağıttaki kâr/zarar (Piyasa Değeri − Toplam Maliyet)" style={{cursor:"help"}}>
+          Unrealized: <span className={"mono"+(unrealized!=null?pc(unrealized):"")}>{unrealized!=null?mask(fmtD(unrealized)):"—"}</span>
+        </span>
+        <span data-tip="Bu ticker için ödenen tüm komisyonların toplamı (Alış + Satış)" style={{cursor:"help"}}>
+          Komisyon: <span className="mono" style={{color:"var(--text)"}}>{mask("$"+fmt(totalCommission,2))}</span>
+        </span>
+      </div>
+
+      {/* Şirket bilgisi */}
+      {(meta||metaLoading||metaErr)&&(
+        <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
+          <div className="stitle" style={{marginBottom:10}}>Şirket Bilgisi</div>
+          {metaLoading&&<div className="dim" style={{fontSize:12}}><span className="spin" style={{width:12,height:12,marginRight:8,verticalAlign:"middle"}}></span>Yükleniyor...</div>}
+          {metaErr&&<div className="err" style={{fontSize:12}}>{metaErr}</div>}
+          {meta&&!metaLoading&&(()=>{
+            const rows=[
+              ["Sektör",meta.sic_description?meta.sic_description.replace(/_/g," ").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()):null],
+              ["Market Cap",meta.market_cap?"$"+fmtCompact(meta.market_cap):null],
+              ["Hisse Sayısı",meta.shares_outstanding?fmtCompact(meta.shares_outstanding):null],
+              ["Çalışan",meta.total_employees?meta.total_employees.toLocaleString("en-US"):null],
+              ["Halka Açılma",meta.list_date],
+              ["Web",meta.homepage_url],
+            ].filter(([,v])=>v);
+            return(
+              <div>
+                <div className="kv" style={{marginBottom:meta.description?12:0}}>
+                  {rows.map(([k,v])=>(
+                    <div key={k}>
+                      <div className="kk">{k}</div>
+                      <div className="kv_">{k==="Web"?<a href={v} target="_blank" rel="noopener" style={{color:"var(--info)",textDecoration:"none"}}>{extractDomain(v)} ↗</a>:v}</div>
+                    </div>
+                  ))}
+                </div>
+                {meta.description&&(
+                  <div style={{fontSize:12,lineHeight:1.55,color:"var(--text2)"}}>
+                    {showFullDesc?meta.description:meta.description.slice(0,260)+(meta.description.length>260?"…":"")}
+                    {meta.description.length>260&&(
+                      <button onClick={()=>setShowFullDesc(s=>!s)} style={{background:"none",border:"none",color:"var(--info)",fontSize:12,cursor:"pointer",padding:"0 0 0 4px"}}>
+                        {showFullDesc?"daha az":"devamı"}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* İşlem geçmişi */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+        <div className="stitle" style={{marginBottom:0}}>İşlem Geçmişi · {tickerTxs.length}</div>
+        {!showAdd&&<button className="pri btn-sm" onClick={()=>setShowAdd(true)}>+ Ekle</button>}
+      </div>
+      {showAdd&&(
+        <AddTxInline ticker={ticker} user={user} pos={pos} loadData={loadData} flash_={flash_} onClose={()=>setShowAdd(false)}/>
+      )}
+      {tickerTxs.length===0?(
+        <div className="dim" style={{fontSize:13,padding:"14px 0"}}>Bu ticker için işlem yok.</div>
+      ):(
+        <div style={{border:"0.5px solid var(--border)",borderRadius:12,overflow:"hidden"}}>
+          {tickerTxs.map(t=>{
+            const cSym=t.currency==="TRY"?"₺":"$";
+            const isOpen=expandedTx===t.id;
+            const isEdit=editTxId===t.id;
+            return(
+              <div key={t.id} style={{borderBottom:"0.5px solid var(--border)"}}>
+                {/* Özet satır */}
+                <div onClick={()=>!isEdit&&setExpandedTx(isOpen?null:t.id)}
+                  style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 14px",cursor:isEdit?"default":"pointer"}}>
+                  <div style={{display:"flex",gap:10,alignItems:"center",flex:1,flexWrap:"wrap"}}>
+                    <span style={{fontSize:11,color:"var(--text2)",fontFamily:"monospace",minWidth:72}}>{t.date}</span>
+                    <span className={t.way==="BUY"?"ok":"err"} style={{fontSize:11,minWidth:28}}>{t.way==="BUY"?"Alış":"Satış"}</span>
+                    <span className="mono" style={{fontSize:12}}>{(+t.shares)%1===0?t.shares:(+t.shares).toFixed(4)} adet</span>
+                    {!hideAmts&&<span className="mono dim" style={{fontSize:12}}>{mask(cSym+fmt(t.price))}</span>}
+                    {!hideAmts&&<span className="mono" style={{fontSize:12,fontWeight:600}}>{mask(cSym+fmt(t.total,0))}</span>}
+                    {t.broker&&<span className="dim" style={{fontSize:10}}>{t.broker}</span>}
+                    {!hideAmts&&+t.commission>0&&<span className="dim" style={{fontSize:10}}>Kom: {mask(cSym+fmt(+t.commission,2))}</span>}
+                  </div>
+                  <span style={{color:"var(--text3)",fontSize:11,marginLeft:8}}>{isOpen?"▲":"▼"}</span>
+                </div>
+
+                {/* Expand: detay + Düzenle/Sil */}
+                {isOpen&&!isEdit&&(
+                  <div style={{padding:"10px 14px 12px",background:"var(--bg2)",borderTop:"0.5px solid var(--border)"}}>
+                    <div className="kv" style={{marginBottom:10}}>
+                      {[
+                        ["Tarih",t.date],
+                        ["İşlem",t.way==="BUY"?"Alış":"Satış"],
+                        ["Adet",(+t.shares)%1===0?t.shares:(+t.shares).toFixed(6)],
+                        ["Birim Fiyat",hideAmts?"••••":cSym+fmt(t.price)],
+                        ["Toplam",hideAmts?"••••":cSym+fmt(t.total,2)],
+                        ["Komisyon",hideAmts?"••••":cSym+fmt(+t.commission||0,2)],
+                        ["Para Birimi",t.currency||"USD"],
+                        ["Broker",t.broker||"—"],
+                        ["Borsa",t.exchange||"—"],
+                        ["Tür",TL[t.asset_type]||t.asset_type||"—"],
+                      ].map(([k,v])=>(
+                        <div key={k}><div className="kk">{k}</div><div className="kv_">{String(v)}</div></div>
+                      ))}
+                    </div>
+                    {t.notes&&(
+                      <div style={{marginBottom:10}}>
+                        <div className="kk" style={{marginBottom:3}}>Not</div>
+                        <div style={{fontSize:12,color:"var(--text2)"}}>{t.notes}</div>
+                      </div>
+                    )}
+                    <div className="brow">
+                      <button className="btn-sm" onClick={()=>startEditTx(t)}>Düzenle</button>
+                      <button className="btn-sm btn-danger-out" onClick={()=>delTxRow(t)}>Sil</button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Edit form */}
+                {isEdit&&(
+                  <div style={{padding:"12px 14px",background:"var(--bg3)",borderTop:"0.5px solid var(--border)"}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+                      <div><div className="kk" style={{marginBottom:3}}>Tarih</div><input className="finp sm" value={editForm.date} onChange={e=>setEditForm(f=>({...f,date:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>İşlem</div>
+                        <select className="finp sm" value={editForm.way} onChange={e=>setEditForm(f=>({...f,way:e.target.value}))}>
+                          <option value="BUY">Alış</option><option value="SELL">Satış</option>
+                        </select></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Para</div>
+                        <select className="finp sm" value={editForm.currency} onChange={e=>setEditForm(f=>({...f,currency:e.target.value}))}>
+                          <option>USD</option><option>TRY</option><option>EUR</option>
+                        </select></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Adet</div><input className="finp sm" type="number" value={editForm.shares} onChange={e=>setEditForm(f=>({...f,shares:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Fiyat</div><input className="finp sm" type="number" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Komisyon</div><input className="finp sm" type="number" value={editForm.commission} onChange={e=>setEditForm(f=>({...f,commission:e.target.value}))}/></div>
+                      <div style={{gridColumn:"span 3"}}><div className="kk" style={{marginBottom:3}}>Broker</div><input className="finp sm" value={editForm.broker} onChange={e=>setEditForm(f=>({...f,broker:e.target.value}))}/></div>
+                    </div>
+                    <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: {editForm.currency==="TRY"?"₺":"$"}{fmt((+editForm.shares)*(+editForm.price),2)}</div>
+                    <div className="brow">
+                      <button className="pri btn-md" onClick={()=>saveEditTx(t)} disabled={savingTx}>{savingTx?"...":"Kaydet"}</button>
+                      <button className="btn-md" onClick={cancelEditTx} disabled={savingTx}>İptal</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── AccountSection — Ayarlar içinde hesap yönetimi ──────────────
 function AccountSection({user,profile,flash_,confirm_,onSaved}){
   const [editing,setEditing]=useState(null); // null | "pw" | "email" | "uname"
@@ -655,6 +1103,7 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,init
                       {!hideAmts&&<span className="mono dim" style={{fontSize:12}}>{mask((t.currency==="TRY"?"₺":"$")+fmt(t.price))}</span>}
                       {!hideAmts&&<span className="mono" style={{fontSize:12,fontWeight:600}}>{mask((t.currency==="TRY"?"₺":"$")+fmt(t.total,0))}</span>}
                       {t.broker&&<span className="dim" style={{fontSize:10}}>{t.broker}</span>}
+                      {!hideAmts&&+t.commission>0&&<span className="dim" style={{fontSize:10}}>Kom: {mask((t.currency==="TRY"?"₺":"$")+fmt(+t.commission,2))}</span>}
                       {(()=>{
                         const af=(splits||[]).filter(s=>s.ticker===t.ticker&&s.split_date>t.date);
                         if(!af.length)return null;
@@ -1132,7 +1581,10 @@ function App({session}){
   const user=session.user;
   const [tab,setTab]=useState("dashboard");
   const [navTicker,setNavTicker]=useState("");
+  const [selectedTicker,setSelectedTicker]=useState(null); // detay sayfası için
   const openHistory=tk=>{setNavTicker(tk);setTab("history");};
+  const openDetail=tk=>{setSelectedTicker(tk);setTab("detail");};
+  const closeDetail=()=>{setSelectedTicker(null);setTab("dashboard");};
   const [period,setPeriod]=useState("max"); // selected period on dashboard
   const [pos,setPos]=useState([]);
   const [txs,setTxs]=useState([]);
@@ -1604,7 +2056,7 @@ function App({session}){
                   </tr></thead>
                   <tbody>
                     {sorted.map(p=>(
-                      <tr key={p.ticker} className="pos-row" onClick={()=>openHistory(p.ticker)} title={`${p.ticker} işlemlerini göster`}>
+                      <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)} title={`${p.ticker} detayına git`}>
                         <td className="l"><div className="tcell"><span className="tsym">{p.ticker}{p.type==="FUND"&&<span className="badge etf">ETF</span>}{p.type==="CRYPTO"&&<span className="badge cry">₿</span>}</span><span className="tname">{p.name}</span></div></td>
                         {!hide&&<td className="r">{p.shares%1===0?p.shares:p.shares.toFixed(4)}</td>}
                         {!hide&&<td className="r">{mask("$"+fmt(p.avgCost))}</td>}
@@ -1647,7 +2099,7 @@ function App({session}){
                       </tr></thead>
                       <tbody>
                         {[...items].sort((a,b)=>a.ticker.localeCompare(b.ticker)).map(p=>(
-                          <tr key={p.ticker} className="pos-row" onClick={()=>openHistory(p.ticker)} title={`${p.ticker} işlemlerini göster`}>
+                          <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)} title={`${p.ticker} detayına git`}>
                             <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span></div></td>
                             {!hide&&<td className="r">{p.shares%1===0?p.shares:p.shares.toFixed(4)}</td>}
                             {!hide&&<td className="r">{mask(cSym+fmt(p.avgCost))}</td>}
@@ -1674,6 +2126,14 @@ function App({session}){
       {/* ADD */}
       {tab==="add"&&(
         <AddTab session={session} user={user} pos={pos} loadData={loadData} flash_={flash_} confirm_={confirm_}/>
+      )}
+
+      {/* DETAIL — pos-row click ile açılır, tab listesinde yok */}
+      {tab==="detail"&&selectedTicker&&(
+        <TickerDetailTab
+          ticker={selectedTicker} pos={pos} txs={txs} prc={prc} hist={hist}
+          user={user} confirm_={confirm_} flash_={flash_} loadData={loadData}
+          closeDetail={closeDetail} hideAmts={hide} mask={mask}/>
       )}
 
       {/* SETTINGS */}
