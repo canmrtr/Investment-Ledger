@@ -271,10 +271,11 @@ const enrichParseWithPrice = async (d) => {
       return j?.result?.price || null;
     } catch (_) { return null; }
   };
+  const at = d.asset_type;  // edge function BIST routing için
   // 1) Tarih-spesifik kapanış
-  let price = await tryFetch({ ticker, mode: "price", date: d.date });
+  let price = await tryFetch({ ticker, mode: "price", date: d.date, asset_type: at });
   // 2) Fallback: latest (hafta sonu / future date / 403 senaryoları)
-  if (!price) price = await tryFetch({ ticker, mode: "price" });
+  if (!price) price = await tryFetch({ ticker, mode: "price", asset_type: at });
   return price ? { ...d, price } : d;
 };
 
@@ -829,7 +830,9 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
   const [livePrice,setLivePrice]=useState(null);
   useEffect(()=>{
     if(p)return;
-    edgeCall("fetch-prices",{ticker,mode:"price"})
+    // Non-held için live price fetch — search'ten gelen ticker'ın asset_type'ını bilmiyoruz;
+    // pos kayıtlı değilse Massive (US/global) varsayılır. BIST search ileride asset_type'ı geçirecek.
+    edgeCall("fetch-prices",{ticker,mode:"price",asset_type:p?.type})
       .then(r=>r.json())
       .then(d=>{if(d?.result?.price)setLivePrice(d.result.price);})
       .catch(()=>{});
@@ -856,7 +859,7 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
     }
     setMetaLoading(true);setMetaErr("");
     try{
-      const r=await edgeCall("fetch-prices",{ticker,mode:"meta"});
+      const r=await edgeCall("fetch-prices",{ticker,mode:"meta",asset_type:p?.type});
       const d=await r.json();
       if(d.result&&!d.result.error){
         setMeta(d.result);
@@ -1580,7 +1583,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_}){
     if(NAMES[upper])set({name:NAMES[upper]});
     setFetchP(true);setCurPrice(null);
     try{
-      const r=await edgeCall("fetch-prices",{ticker:upper,mode:"price",date:useDate});
+      const r=await edgeCall("fetch-prices",{ticker:upper,mode:"price",date:useDate,asset_type:form.type});
       const d=await r.json();
       if(d.result?.price){
         const p=d.result.price;
@@ -2200,11 +2203,11 @@ function App({session}){
   };
   useEffect(()=>{loadData();},[]);
 
-  // pos yüklendikten sonra cache'te olmayan USD ticker'lar için arka planda otomatik fetchHist.
-  // Kullanıcı hiçbir butona basmadan chart + period butonlarını görür.
+  // pos yüklendikten sonra cache'te olmayan ticker'lar için arka planda otomatik fetchHist.
+  // USD (Massive) + BIST (Twelve Data) — provider erişimi olan her tür dahil.
   useEffect(()=>{
     if(!pos.length||busy.h||busy.p)return;
-    const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
+    const tickers=pos.filter(p=>p.currency==="USD"||p.type==="BIST").map(p=>p.ticker);
     const missing=tickers.filter(t=>!hist[t]||hist[t].p_y1==null);
     if(missing.length){
       flash_(`${missing.length} ticker için tarihi veri otomatik yükleniyor...`,"ok");
@@ -2250,33 +2253,37 @@ function App({session}){
 
   const fetchPrices=async()=>{
     setBusy(b=>({...b,p:true}));
-    const tickers=pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
+    // Provider erişimi olan tüm pozisyonlar: USD-denominated (Massive) + BIST (Twelve Data)
+    const fetchable=pos.filter(p=>p.currency==="USD"||p.type==="BIST");
     const np={...prc};let cnt=0;const failed=[];
-    for(let i=0;i<tickers.length;i++){
-      const t=tickers[i];
-      setPprog(`${t} (${i+1}/${tickers.length})`);
+    for(let i=0;i<fetchable.length;i++){
+      const p=fetchable[i],t=p.ticker;
+      setPprog(`${t} (${i+1}/${fetchable.length})`);
       try{
-        const r=await edgeCall("fetch-prices",{ticker:t,mode:"price"});
+        const r=await edgeCall("fetch-prices",{ticker:t,mode:"price",asset_type:p.type});
         const d=await r.json();
         if(d.result?.price){np[t]=d.result.price;cnt++;}
         else{failed.push(t);DEBUG && console.warn(`[fetchPrices ${t}]`,d.result?.error||d.error||"no price");}
       }catch(e){failed.push(t);DEBUG && console.warn(`[fetchPrices ${t}]`,e);}
-      if(i<tickers.length-1)await sleep(CFG.RATE_LIMIT_MS);
+      if(i<fetchable.length-1)await sleep(CFG.RATE_LIMIT_MS);
     }
     savePrc(np,new Date(Date.now()-86400000).toISOString().split("T")[0]);
     setBusy(b=>({...b,p:false}));setPprog("");
-    flash_(`${cnt}/${tickers.length} fiyat güncellendi`+(failed.length?` · başarısız: ${failed.join(", ")}`:""),failed.length?"err":"ok");
+    flash_(`${cnt}/${fetchable.length} fiyat güncellendi`+(failed.length?` · başarısız: ${failed.join(", ")}`:""),failed.length?"err":"ok");
   };
 
   const fetchHist=async(tickersOverride)=>{
     setBusy(b=>({...b,h:true}));
-    const tickers=tickersOverride||pos.filter(p=>p.currency==="USD").map(p=>p.ticker);
+    // tickersOverride array of strings ise, asset_type'ı pos'tan lookup et
+    const fetchable = tickersOverride
+      ? tickersOverride.map(t=>{const p=pos.find(x=>x.ticker===t);return{ticker:t,type:p?.type};})
+      : pos.filter(p=>p.currency==="USD"||p.type==="BIST").map(p=>({ticker:p.ticker,type:p.type}));
     const nh={...hist};const np={...prc};let cnt=0;const failed=[];
-    for(let i=0;i<tickers.length;i++){
-      const t=tickers[i];
-      setPprog(`${t} tarihi (${i+1}/${tickers.length})`);
+    for(let i=0;i<fetchable.length;i++){
+      const {ticker:t,type:at}=fetchable[i];
+      setPprog(`${t} tarihi (${i+1}/${fetchable.length})`);
       try{
-        const r=await edgeCall("fetch-prices",{ticker:t,mode:"historical"});
+        const r=await edgeCall("fetch-prices",{ticker:t,mode:"historical",asset_type:at});
         const d=await r.json();
         const v=d.result;
         if(v?.price){
@@ -2299,12 +2306,12 @@ function App({session}){
           failed.push(t);DEBUG && console.warn(`[fetchHist ${t}]`,v?.error||d.error||"no data");
         }
       }catch(e){failed.push(t);DEBUG && console.warn(`[fetchHist ${t}]`,e);}
-      if(i<tickers.length-1)await sleep(CFG.RATE_LIMIT_MS);
+      if(i<fetchable.length-1)await sleep(CFG.RATE_LIMIT_MS);
     }
     saveHist(nh);
     savePrc(np,new Date(Date.now()-86400000).toISOString().split("T")[0]);
     setBusy(b=>({...b,h:false}));setPprog("");
-    flash_(`${cnt}/${tickers.length} tarihi veri yüklendi`+(failed.length?` · başarısız: ${failed.join(", ")}`:""),failed.length?"err":"ok");
+    flash_(`${cnt}/${fetchable.length} tarihi veri yüklendi`+(failed.length?` · başarısız: ${failed.join(", ")}`:""),failed.length?"err":"ok");
   };
 
   const dlCSV=(rows,hdr,name)=>{const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent([hdr,...rows].join("\n"));a.download=name;a.click();};
