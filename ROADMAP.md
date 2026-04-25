@@ -77,10 +77,10 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 ## Bug & UX Backlog
 
-- [ ] **Chrome ilk açılışta zoomed** — viewport meta veya font-size root değeri Chrome'da yanlış ölçek tetikleyebilir. İncelenecek (Safari'de sorun yok).
+- [x] ~~**iOS Chrome zoom**~~ — input font-size 13px iOS WebKit auto-zoom tetikliyordu. Mobile media query'de input/textarea/select 16px'e bumped (2026-04-25)
 - [ ] **AI parse — fiyat boşsa kapanış otomatik gelsin** — AI parse-transaction sonucunda fiyat null/boşsa, edge function `fetch-prices` ile o tarihin (veya en yakın iş günü) kapanış fiyatını otomatik dolduralım. Şu an sessizce boş kalıyor.
 - [ ] **AI parse — birden fazla işlem** — input'a "AAPL 10 adet $150 alış 2024-01-15; MSFT 5 adet $300 satış 2024-02-10" gibi çoklu satır verince Claude tek bir array dönsün, FE tek tek confirm edebilsin (bulk add).
-- [ ] **Manuel ekle — tarih fiyatı otomatik dolsun** — Manuel form'da tarih seçildiğinde o tarihin fiyatı `fetch-prices?date=` ile çekilip `form.price`'a otomatik girsin (kullanıcı override edebilir). Şu an manuel girmek gerekiyor.
+- [x] ~~**Manuel ekle — tarih fiyatı otomatik dolsun**~~ — Tarih input onChange'inde ticker doluysa fetchPrice tetiklenir (2026-04-25)
 
 ## Güvenlik Hardening (post-redesign audit, 2026-04-25)
 

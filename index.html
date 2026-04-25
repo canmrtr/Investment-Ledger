@@ -1551,7 +1551,13 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_}){
           <div>
             <div className="kk" style={{marginBottom:4}}>Tarih</div>
             <input className="finp" type="date" value={form.date}
-              onChange={e=>{set({date:e.target.value});setCurPrice(null);}}
+              onChange={e=>{
+                const newDate=e.target.value;
+                set({date:newDate});
+                setCurPrice(null);
+                // Ticker zaten girilmişse, yeni tarihin fiyatını otomatik çek
+                if(form.ticker&&newDate)fetchPrice(form.ticker,newDate);
+              }}
               max={today()}/>
           </div>
           <div>
