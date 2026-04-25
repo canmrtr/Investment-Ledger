@@ -10,9 +10,16 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 - **Backend**: Supabase (auth, PostgreSQL, RLS, Edge Functions, pg_cron).
 - **Edge Functions** (Supabase'te deploy'lu, hepsi `--no-verify-jwt`; kaynağı referans olarak repo'da):
   - `parse-transaction-edge-function.js` — Claude Haiku 4.5 ile metin/görüntü → `{transactions:[...]}` array (multi-line destek)
-  - `fetch-prices-edge-function.js` — Massive.com (Polygon clone) güncel + tarihi fiyat
+  - `fetch-prices-edge-function.js` — Multi-provider router: Massive (US/FX/Crypto/GOLD), Yahoo Finance (BIST price/historical), Twelve Data + borsa-mcp (BIST meta paralel merge)
   - `refresh-price-cache-edge-function.js` — Scheduled (pg_cron 6h), `price_cache`'i stale-first batch ile tazeler
-  - `fetch-fundamentals-edge-function.js` — FMP `/stable/` + SEC EDGAR fallback; 21 metrik. Ek mode: `mode:"ticker-list"` → SEC ticker DB proxy (Search tab için)
+  - `fetch-fundamentals-edge-function.js` — FMP `/stable/` + SEC EDGAR fallback; 21 metrik. Ek mode: `mode:"ticker-list"` → SEC EDGAR (US, ~10.348) + Twelve Data /stocks XIST (BIST, ~636) merged ticker DB
+
+- **Secrets** (Supabase Edge Function env, `Deno.env.get(...)`):
+  - `MASSIVE_KEY` — Polygon clone (US/FX/Crypto/GOLD)
+  - `FMP_KEY` — Financial Modeling Prep (US fundamentals)
+  - `TWELVEDATA_KEY` — BIST reference + ticker list
+  - `ANTHROPIC_KEY` — Claude API (parse-transaction)
+  - SEC EDGAR + Yahoo + borsa-mcp auth-free; key gerekmez
 
 ## Supabase Şeması
 
@@ -163,9 +170,19 @@ TYPE_COLORS = {
 4. **Yazma**: her başarılı `fetch-prices` sonucu `price_cache`'e upsert (paylaşım)
 5. **Cron**: `refresh-price-cache` her 6 saatte bir en stale 5 ticker'ı tazeler
 
-## Massive.com (Polygon clone) Ticker Formatları
+## Price Provider Routing
 
-Test edilmiş — mevcut Stocks API key ile hepsi çalışır:
+`fetch-prices` edge function multi-provider. Frontend `asset_type` parametresini geçirir; edge function ona göre route eder:
+
+| asset_type | Provider | Endpoint | Notlar |
+|------------|----------|----------|--------|
+| `US_STOCK` / `FUND` / default | Massive (Polygon clone) | `api.massive.com/v1/open-close`, `/v2/aggs`, `/v3/reference/tickers` | MASSIVE_KEY |
+| `CRYPTO` | Massive | ticker `X:BTCUSD` formatı | aynı key |
+| `FX` / `GOLD` | Massive | `C:USDTRY`, `C:XAUUSD` | aynı key |
+| `BIST` (price/historical) | **Yahoo Finance** unofficial | `query1.finance.yahoo.com/v8/finance/chart/THYAO.IS` | Auth yok; UA header gerek |
+| `BIST` (meta) | **Twelve Data + borsa-mcp** paralel | `/stocks?exchange=XIST` (TD) + `borsamcp.fastmcp.app/mcp` `get_profile` (MCP) | TWELVEDATA_KEY |
+
+### Massive.com (Polygon clone) Ticker Formatları
 
 | Asset | Format | Örnek |
 |-------|--------|-------|
@@ -175,7 +192,25 @@ Test edilmiş — mevcut Stocks API key ile hepsi çalışır:
 | Spot altın | `C:XAUUSD` | (1 ons USD) |
 | Bazı endeksler | `I:NDX` | (`I:SPX` premium tier) |
 
-**Desteklenmiyor**: BIST hisseleri (THYAO, ASELS), TEFAS fonları → ROADMAP'te not edildi, alternatif provider gerek.
+### BIST Provider Mimarisi
+
+- **Yahoo Finance** chart endpoint — auth-free, ~5 yıl stabil. `THYAO` → `THYAO.IS`. Edge function `User-Agent: Mozilla/...` header gönderir (Yahoo bot-block koruması). Twelve Data Basic plan US dışı market data verdiği için seçildi.
+- **Twelve Data /stocks reference** — free tier'da 636 BIST ticker (XIST exchange). Sadece name + currency + type. Search tab ticker DB'si bu kaynaktan.
+- **borsa-mcp** (saidsurucu/borsa-mcp, MIT, public hosted) — JSON-RPC over HTTP+SSE. 3 step handshake (initialize → notifications/initialized → tools/call). Module-level session cache (auto re-init on 401/404). `get_profile` BIST için sektör, industry, market cap, F/K, temettü yield, 52W high/low döner. Risk: tek dev hosted instance; B planı self-host (Docker, Python 3.11) veya `yahoo-finance2` npm.
+- **İş Yatırım MaliTablo** — Faz 5b için planlandı (henüz integre değil). `?companyCode=THYAO&exchange=TRY&financialGroup=XI_29&yearN=&periodN=` formatında 147-row tam finansal veri (bilanço + gelir + nakit). 4 quarter cumulative (period: 3/6/9/12). 21-metrik checklist için ham veri kaynağı.
+
+### Search Tab Ticker DB
+
+`fetch-fundamentals` mode:`"ticker-list"` SEC EDGAR + Twelve Data /stocks XIST listesini birleştirir (~10.984 entry: 10.348 US + 636 BIST). Module-level cache 24h TTL. Frontend LS cache 24h. Her entry: `{ticker, name, exchange: "US"|"XIST"}`.
+
+## Currency Handling
+
+- BIST → TRY (₺), US/global → USD ($), bazı pozisyonlar EUR (€).
+- TickerDetailTab içinde `effectiveType = p?.type ?? assetTypeHint ?? "US_STOCK"`; `displayCurrency = p?.currency ?? (effectiveType==="BIST" ? "TRY" : "USD")`; `sym = ₺/€/$`.
+- Pozisyon kartları (g4: Maliyet/MV/P&L), detay satırı (Realized/Unrealized/Komisyon), header price hepsi `sym` kullanır.
+- Manuel form: type=BIST seçilince currency otomatik TRY (set ediliyor onChange'de).
+- Storage: `transactions.price` ve `positions.avg_cost` ham değer (kullanıcının para birimi); `currency` field ayrıca tutuluyor.
+- Ön-sıralama / total: TRY bloku ayrıca özet kartlarda gösteriliyor; **portföy toplamında USD'ye fx conversion henüz yok** (ROADMAP).
 
 ## Fundamental Veri (FMP + EDGAR fallback)
 
@@ -218,6 +253,11 @@ Test edilmiş — mevcut Stocks API key ile hepsi çalışır:
 - XIRR `<1Y` periyotlarda matematiksel olarak hesaplanabilir ama yanıltıcı; UI bilinçli olarak gizliyor.
 - Native HTML `title` attribute tooltip'i Chrome/Safari'de 1-2 sn gecikmeli — bu yüzden `data-tip` + custom CSS pseudo-element kullanılıyor.
 - **iOS Safari/Chrome auto-zoom**: input `font-size < 16px` ise focus'ta sayfayı zoomlar ve session boyu kalır. Mobile media query (`max-width:640px`) altında `input/textarea/select { font-size: 16px }` zorunlu.
+- **BIST currency display**: `fmtD(n)` "+$1,234.56" hardcoded `$` döner. BIST için `${(n>=0?"+":"-")+sym+fmt(Math.abs(n),2)}` inline kullan, fmtD'yi parametrik yap diye refactor etme (US tarafına yan etki getirir).
+- **Yahoo Finance .IS suffix**: BIST tickerını `THYAO.IS` formatına çevir (edge function tdPrice yapar). Frontend ham ticker geçer.
+- **borsa-mcp session expire**: 401/404'te oturum yenilenir; ilk handshake ~500ms ekstra latency.
+- **Twelve Data Basic plan limit**: Sadece US market data açık. BIST için sadece /stocks reference data (ticker list) çalışır. Real-time/historical price ve fundamentals 402 döner — bu yüzden Yahoo + borsa-mcp seçildi.
+- **İş Yatırım MaliTablo parametreleri**: `financialGroup=XI_KONSOL` GEÇERSİZ; doğru: `XI_29`, `UFRS`, veya `UFRS_K`. `exchange=TRY` (boş bırakma — `value:[]` döner). `period`: 3/6/9/12 (Q1/H1/9M/Yıllık cumulative).
 - **FMP "Special Endpoint" 402**: NOW gibi mid-cap'ler FMP free tier'a kapalı; edge function otomatik EDGAR'a düşer. EDGAR mode'unda P/E ve P/S null kalır (price gerek).
 - **fetch-prices weekend**: Cumartesi/Pazar tarihleri için 403; AI parse autofill'inde önce date-spesifik dener, fail olursa `mode:price` (no date) ile latest close'a fallback yapar.
 - **AI parse response shape**: edge function her zaman `{transactions:[...]}` array döner (multi-line + tek işlem hep array). Eski tek-obje format için FE side'da `Array.isArray(d.transactions) ? ... : (d.ticker ? [d] : [])` guard'ı var.
@@ -261,16 +301,18 @@ Test edilmiş — mevcut Stocks API key ile hepsi çalışır:
 Detaylı liste için **`ROADMAP.md`** dosyasına bakın. Tamamlananlar:
 - ✅ Pie chart, Account screen, Returns (TR + XIRR), TickerDetailTab
 - ✅ Fundamentals (FMP 21-metric checklist + EDGAR fallback)
-- ✅ Search tab (10k+ US listed via SEC proxy)
+- ✅ Search tab (~11k ticker: 10.348 SEC US + 636 Twelve Data BIST)
 - ✅ Multi-line AI parse, weekend price fallback, manuel date-price autofill
 - ✅ Major redesign (DM Sans/Mono, dark palette, top navbar + bottom tabs + FAB)
+- ✅ **BIST entegrasyonu (Faz 1-5a)** — Yahoo Finance price/historical, Twelve Data /stocks DB, borsa-mcp profile, currency-aware display, manuel ekleme + search + non-held discovery
 
 Açık başlıklar:
-- **BIST genişletme** (Twelve Data değerlendirme — bir sonraki sprint)
-- **Asset type'lar**: altın (`C:XAUUSD` ile mümkün), TEFAS fonları, vadeli mevduat
+- **BIST Faz 5b**: İş Yatırım MaliTablo'dan 21-metrik fundamentals checklist
+- **Asset type'lar**: altın (`C:XAUUSD` ile mümkün), TEFAS fonları (borsa-mcp `get_fund_data` mevcut), vadeli mevduat
 - **EDGAR + market price**: P/E ve P/S için CommonStockSharesOutstanding × current price
 - **Sektör-aware fundamental eşikler**: tech P/E ≤30, utility ≤15 vs.
 - **Portföy-geneli checklist tablosu**: tüm pozisyonlar tek tabloda
 - **Tarihsel fundamental trend**: 5 yıl gelir/marj/ROE eğrisi
+- **Asset type seçimi → ekleme akışı**: context-free + butonlardan girince önce type seçtir
 - **Sosyal**: risk profili, anonim feed (privacy gerektirir)
 - **Eğitim**: Investment Basics modülü

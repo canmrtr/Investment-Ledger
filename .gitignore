@@ -4,3 +4,6 @@
 # Editor / OS noise
 *.swp
 *~
+
+# Obsidian (kullanıcı vault index'i)
+.obsidian/

@@ -6,9 +6,11 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 ## Asset Type Genişletme
 
-- [ ] BIST hisseleri (provider + edge function)
+- [x] ~~**BIST hisseleri**~~ (2026-04-25) — fiyat: Yahoo Finance unofficial chart endpoint (`THYAO.IS` formatı); search: Twelve Data /stocks (~636 ticker, free reference); meta enrichment: borsa-mcp (saidsurucu, MIT, hosted) get_profile → sektör, market cap, F/K, temettü, 52H. Manuel ekleme + search + non-held discovery hepsi BIST-aware.
+  - [ ] **Faz 5b: BIST fundamentals checklist** — İş Yatırım MaliTablo endpoint'inden (`?financialGroup=XI_29&exchange=TRY&periodN=...`) 147-row finansal veriden 21-metrik value-investing checklist'i derive et. Türkçe item descriptions → us-gaap concept eşlemesi gerekir (Hasılat→revenue, Brüt Kar→grossProfit, Net Dönem Karı→netIncome vs.). Her şey US tarafıyla aynı UI'da görünür.
+  - [ ] BIST için price-cache TRY-aware olsun (şu an `prc[ticker]` raw değer; pos.currency="TRY" ile FE doğru sembolleri seçiyor — sağlam ama TRY/USD fx conversion için hazırlık gerek)
 - [ ] Altın / emtia (gram, ons; TL & USD fiyat)
-- [ ] Türkiye fonları (TEFAS entegrasyonu)
+- [ ] Türkiye fonları (TEFAS entegrasyonu — borsa-mcp `get_fund_data` aracı destekliyor, hazır kaynak)
 - [ ] Vadeli mevduat (faiz oranı, vade, getiri hesabı)
 
 ## Görselleştirme
@@ -91,6 +93,15 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 - [x] ~~**signOut sırasında privacy/cache LS temizliği**~~ — `il_hide`/`il_prc`/`il_hist` signOut handler'da temizleniyor (2026-04-25)
 - [x] ~~**console.warn/log temizliği**~~ — `DEBUG` const ile 9 console call gated (2026-04-25)
 - [x] ~~**External link hardening**~~ — `safeUrl()` helper + `rel="noopener noreferrer"` (2026-04-25)
+
+### Post-BIST audit (2026-04-25)
+
+- [ ] **CDN script SRI + version pin** — `supabase-js@2` floating major; React/Babel pinned ama `integrity=` yok. SRI hash + exact version'a geç (low-risk; CDN compromise korunması).
+- [ ] **`meta.description` length cap** — Polygon/Yahoo/borsa-mcp upstream provider compromise edilirse multi-MB string LS quota'yı patlatabilir. Cache yazımı ve render öncesi ~5KB cap.
+- [ ] **`tickerDb` LS quota güvenliği** — 10k+ entry × ~50 byte ≈ 500KB; LS quota'ya yakın. Fallback: memory-only cache LS write fail olursa.
+- [ ] **Username + search input maxLength** — Frontend `<input>` no maxLength; user 1MB paste edince regex/filter loop CPU yiyor. `maxLength={20}` username, `{64}` search input.
+- [ ] **Web row null guard** — `extractDomain(v)` malformed URL'de null dönerse "null ↗" render eder. Row'u tamamen filtrele.
+- [ ] **TickerDetailTab `effectiveType` useEffect deps** — assetTypeHint mid-render değişirse stale closure ile yanlış provider çağrılır. Deps array'a ekle.
 
 ## Açık Sorular
 
