@@ -188,6 +188,9 @@
 // ── CONFIG ──────────────────────────────────────────────────────
 const SUPA_URL  = "https://jfetubcilmuthpddkodg.supabase.co";
 const SUPA_ANON = "sb_publishable_fB2va7QAJaGjwdn0ULNr9g_SbO2fCPy";
+// Debug logging — production'da false. Console'a edge function hatalarını
+// loglamak istersen true yap.
+const DEBUG = false;
 
 const CFG = {
   RATE_LIMIT_MS:    7500,   // fiyat çekme arası bekleme (edge function rate limit)
@@ -229,6 +232,14 @@ const fmtDateTR = (s)=>{
   if(!s||typeof s!=="string")return s||"";
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+};
+// Adet formatı — tam sayıyı integer, kesirli olanı trailing-sıfırsız ondalıklı.
+// 8 → "8", 255.4200 → "255.42", 1.234567 → "1.2346" (4 haneye yuvarla)
+const fmtShares = (n, maxDec=4)=>{
+  if(n==null||isNaN(+n))return "—";
+  const num=+n;
+  if(num%1===0)return String(num);
+  return String(+num.toFixed(maxDec));
 };
 // "DD/MM/YYYY" → "YYYY-MM-DD"; geçersizse null
 const parseTRDate = (s)=>{
@@ -708,6 +719,16 @@ const extractDomain = (url) => {
   } catch (e) { return null; }
 };
 
+// Güvenli href — sadece http/https protokolüne izin ver. javascript:/data: gibi
+// URL'leri (provider compromise edilirse) engelle. Geçersizse "#" döner.
+const safeUrl = (url) => {
+  if (!url || typeof url !== "string") return "#";
+  try {
+    const u = new URL(url.startsWith("http") ? url : "https://" + url);
+    return (u.protocol === "http:" || u.protocol === "https:") ? u.href : "#";
+  } catch (e) { return "#"; }
+};
+
 // Sayı formatı: 4014264110200 → "4.01T", 166000 → "166K"
 const fmtCompact = (n) => {
   if (n == null) return "—";
@@ -871,7 +892,7 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
       <div className="g4" style={{marginBottom:8}}>
         <div className="card" data-tip="Pozisyondaki toplam adet (split-adjusted)" style={{cursor:"help"}}>
           <div className="lbl">Adet</div>
-          <div className="mono" style={{fontSize:16,fontWeight:600}}>{p.shares%1===0?p.shares:p.shares.toFixed(4)}</div>
+          <div className="mono" style={{fontSize:16,fontWeight:600}}>{fmtShares(p.shares)}</div>
         </div>
         <div className="card" data-tip="Mevcut pozisyonun toplam maliyeti (Adet × Ort. Maliyet). Daha önce sattıklarının maliyeti dahil değil." style={{cursor:"help"}}>
           <div className="lbl">Toplam Maliyet</div>
@@ -925,7 +946,7 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
                   {rows.map(([k,v])=>(
                     <div key={k}>
                       <div className="kk">{k}</div>
-                      <div className="kv_">{k==="Web"?<a href={v} target="_blank" rel="noopener" style={{color:"var(--info)",textDecoration:"none"}}>{extractDomain(v)} ↗</a>:v}</div>
+                      <div className="kv_">{k==="Web"?<a href={safeUrl(v)} target="_blank" rel="noopener noreferrer" style={{color:"var(--info)",textDecoration:"none"}}>{extractDomain(v)} ↗</a>:v}</div>
                     </div>
                   ))}
                 </div>
@@ -1035,7 +1056,7 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
                   <div style={{display:"flex",gap:10,alignItems:"center",flex:1,flexWrap:"wrap"}}>
                     <span style={{fontSize:11,color:"var(--text2)",fontFamily:"monospace",minWidth:80}}>{fmtDateTR(t.date)}</span>
                     <span className={t.way==="BUY"?"ok":"err"} style={{fontSize:11,minWidth:28}}>{t.way==="BUY"?"Alış":"Satış"}</span>
-                    <span className="mono" style={{fontSize:12}}>{(+t.shares)%1===0?t.shares:(+t.shares).toFixed(4)} adet</span>
+                    <span className="mono" style={{fontSize:12}}>{fmtShares(t.shares)} adet</span>
                     {!hideAmts&&<span className="mono dim" style={{fontSize:12}}>{mask(cSym+fmt(t.price))}</span>}
                     {!hideAmts&&<span className="mono" style={{fontSize:12,fontWeight:600}}>{mask(cSym+fmt(t.total,0))}</span>}
                     {t.broker&&<span className="dim" style={{fontSize:10}}>{t.broker}</span>}
@@ -1051,7 +1072,7 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
                       {[
                         ["Tarih",fmtDateTR(t.date)],
                         ["İşlem",t.way==="BUY"?"Alış":"Satış"],
-                        ["Adet",(+t.shares)%1===0?t.shares:(+t.shares).toFixed(6)],
+                        ["Adet",fmtShares(t.shares,6)],
                         ["Birim Fiyat",hideAmts?"••••":cSym+fmt(t.price)],
                         ["Toplam",hideAmts?"••••":cSym+fmt(t.total,2)],
                         ["Komisyon",hideAmts?"••••":cSym+fmt(+t.commission||0,2)],
@@ -1400,7 +1421,7 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,init
                     <div style={{display:"flex",gap:10,alignItems:"center",flex:1,flexWrap:"wrap"}}>
                       <span style={{fontSize:11,color:"var(--text2)",fontFamily:"monospace",minWidth:80}}>{fmtDateTR(t.date)}</span>
                       <span className={t.way==="BUY"?"ok":"err"} style={{fontSize:11,minWidth:28}}>{t.way==="BUY"?"Alış":"Satış"}</span>
-                      <span className="mono" style={{fontSize:12}}>{(+t.shares)%1===0?t.shares:(+t.shares).toFixed(4)} adet</span>
+                      <span className="mono" style={{fontSize:12}}>{fmtShares(t.shares)} adet</span>
                       {!hideAmts&&<span className="mono dim" style={{fontSize:12}}>{mask((t.currency==="TRY"?"₺":"$")+fmt(t.price))}</span>}
                       {!hideAmts&&<span className="mono" style={{fontSize:12,fontWeight:600}}>{mask((t.currency==="TRY"?"₺":"$")+fmt(t.total,0))}</span>}
                       {t.broker&&<span className="dim" style={{fontSize:10}}>{t.broker}</span>}
@@ -1455,11 +1476,11 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_}){
         // Tarihin fiyatını otomatik maliyet olarak doldur
         set({avgCost:p.toFixed(2)});
       } else if(d.result?.error||d.error){
-        console.warn(`[fetchPrice ${upper}]`,d.result?.error||d.error);
+        DEBUG && console.warn(`[fetchPrice ${upper}]`,d.result?.error||d.error);
         flash_(`${upper}: ${d.result?.error||d.error}`,"err");
       }
     }catch(e){
-      console.warn(`[fetchPrice ${upper}]`,e);
+      DEBUG && console.warn(`[fetchPrice ${upper}]`,e);
       flash_(`${upper} fiyatı alınamadı: ${e.message}`,"err");
     }
     setFetchP(false);
@@ -1605,7 +1626,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_}){
             <div key={p.ticker} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:"0.5px solid var(--border)"}}>
               <div>
                 <span style={{fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{p.ticker}</span>
-                <span className="dim" style={{fontSize:11,marginLeft:8}}>{(+p.shares)%1===0?p.shares:(+p.shares).toFixed(4)} adet · ${fmt(p.avgCost)} ort.</span>
+                <span className="dim" style={{fontSize:11,marginLeft:8}}>{fmtShares(p.shares)} adet · ${fmt(p.avgCost)} ort.</span>
                 {p.broker&&<span className="dim" style={{fontSize:10,marginLeft:6}}>· {p.broker}</span>}
               </div>
               <div className="brow" style={{gap:5}}>
@@ -1956,8 +1977,8 @@ function App({session}){
         return{ticker:t,price:h.last,d1:h.d1,w1:h.w1,m1:h.m1,y1:h.y1,p_d1:h.p_d1,p_w1:h.p_w1,p_m1:h.p_m1,p_m3:h.p_m3,p_m6:h.p_m6,p_y1:h.p_y1,updated_at:new Date().toISOString()};
       });
       sb.from("price_cache").upsert(rows,{onConflict:"ticker"}).then(({error})=>{
-        if(error)console.warn("[cache backfill]",error.message);
-        else console.log(`[cache backfill] ${rows.length} ticker paylaşımlı cache'e eklendi`);
+        if(error)DEBUG && console.warn("[cache backfill]",error.message);
+        else DEBUG && console.log(`[cache backfill] ${rows.length} ticker paylaşımlı cache'e eklendi`);
       });
     }
     setBusy(b=>({...b,d:false}));
@@ -2023,8 +2044,8 @@ function App({session}){
         const r=await edgeCall("fetch-prices",{ticker:t,mode:"price"});
         const d=await r.json();
         if(d.result?.price){np[t]=d.result.price;cnt++;}
-        else{failed.push(t);console.warn(`[fetchPrices ${t}]`,d.result?.error||d.error||"no price");}
-      }catch(e){failed.push(t);console.warn(`[fetchPrices ${t}]`,e);}
+        else{failed.push(t);DEBUG && console.warn(`[fetchPrices ${t}]`,d.result?.error||d.error||"no price");}
+      }catch(e){failed.push(t);DEBUG && console.warn(`[fetchPrices ${t}]`,e);}
       if(i<tickers.length-1)await sleep(CFG.RATE_LIMIT_MS);
     }
     savePrc(np,new Date(Date.now()-86400000).toISOString().split("T")[0]);
@@ -2058,11 +2079,11 @@ function App({session}){
             p_d1:v.p_d1,p_w1:v.p_w1,p_m1:v.p_m1,
             p_m3:v.p_m3,p_m6:v.p_m6,p_y1:v.p_y1,
             updated_at:new Date().toISOString()
-          },{onConflict:"ticker"}).then(({error})=>{if(error)console.warn(`[cache upsert ${t}]`,error.message);});
+          },{onConflict:"ticker"}).then(({error})=>{if(error)DEBUG && console.warn(`[cache upsert ${t}]`,error.message);});
         } else {
-          failed.push(t);console.warn(`[fetchHist ${t}]`,v?.error||d.error||"no data");
+          failed.push(t);DEBUG && console.warn(`[fetchHist ${t}]`,v?.error||d.error||"no data");
         }
-      }catch(e){failed.push(t);console.warn(`[fetchHist ${t}]`,e);}
+      }catch(e){failed.push(t);DEBUG && console.warn(`[fetchHist ${t}]`,e);}
       if(i<tickers.length-1)await sleep(CFG.RATE_LIMIT_MS);
     }
     saveHist(nh);
@@ -2369,7 +2390,7 @@ function App({session}){
                     {sorted.map(p=>(
                       <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)} title={`${p.ticker} detayına git`}>
                         <td className="l"><div className="tcell"><span className="tsym">{p.ticker}{p.type==="FUND"&&<span className="badge etf">ETF</span>}{p.type==="CRYPTO"&&<span className="badge cry">₿</span>}</span><span className="tname">{p.name}</span></div></td>
-                        {!hide&&<td className="r">{p.shares%1===0?p.shares:p.shares.toFixed(4)}</td>}
+                        {!hide&&<td className="r">{fmtShares(p.shares)}</td>}
                         {!hide&&<td className="r">{mask("$"+fmt(p.avgCost))}</td>}
                         {!hide&&<td className="r">{p.price?mask("$"+fmt(p.price)):"—"}</td>}
                         {!hide&&<td className="r">{p.mv?mask("$"+fmt(p.mv,0)):"—"}</td>}
@@ -2412,7 +2433,7 @@ function App({session}){
                         {[...items].sort((a,b)=>a.ticker.localeCompare(b.ticker)).map(p=>(
                           <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)} title={`${p.ticker} detayına git`}>
                             <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span></div></td>
-                            {!hide&&<td className="r">{p.shares%1===0?p.shares:p.shares.toFixed(4)}</td>}
+                            {!hide&&<td className="r">{fmtShares(p.shares)}</td>}
                             {!hide&&<td className="r">{mask(cSym+fmt(p.avgCost))}</td>}
                             {!hide&&<td className="r">{mask(cSym+fmt(p.shares*p.avgCost,0))}</td>}
                             <td className="l" style={{fontSize:11,color:"var(--text2)"}}>{p.broker||"—"}</td>
@@ -2503,7 +2524,11 @@ function App({session}){
               </div>
             ))}
           </div>
-          <button className="danger" onClick={()=>sb.auth.signOut()} style={{width:"100%"}}>Çıkış Yap</button>
+          <button className="danger" onClick={()=>{
+            // Cross-account leak'i önle: privacy mode + cache LS key'lerini temizle.
+            ["il_hide","il_prc","il_hist"].forEach(k=>localStorage.removeItem(k));
+            sb.auth.signOut();
+          }} style={{width:"100%"}}>Çıkış Yap</button>
         </div>
       )}
       </main>
