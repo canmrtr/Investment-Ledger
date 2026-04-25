@@ -256,19 +256,26 @@ const parseTRDate = (s)=>{
 };
 
 // AI parse sonucunda price boşsa, ticker+date için kapanış fiyatını
-// otomatik çekip parsed objesine doldurur. Fetch fail olursa sessiz geçer
-// (kullanıcı ConfirmBox'tan manuel girebilir).
+// otomatik çekip parsed objesine doldurur. Önce tarih-spesifik dener;
+// hafta sonu / market kapalı / Polygon 403 olursa latest (mode:price,
+// no date) fallback'i denenir. Hepsi fail olursa sessizce orijinal d
+// döner — kullanıcı ConfirmBox'tan manuel girebilir.
 const enrichParseWithPrice = async (d) => {
   if (!d || !d.ticker || !d.date) return d;
   if (d.price != null && +d.price > 0) return d;
-  try {
-    const r = await edgeCall("fetch-prices", {
-      ticker: String(d.ticker).toUpperCase(), mode: "price", date: d.date
-    });
-    const j = await r.json();
-    if (j?.result?.price) return { ...d, price: j.result.price };
-  } catch (e) { /* sessizce geç */ }
-  return d;
+  const ticker = String(d.ticker).toUpperCase();
+  const tryFetch = async (body) => {
+    try {
+      const r = await edgeCall("fetch-prices", body);
+      const j = await r.json();
+      return j?.result?.price || null;
+    } catch (_) { return null; }
+  };
+  // 1) Tarih-spesifik kapanış
+  let price = await tryFetch({ ticker, mode: "price", date: d.date });
+  // 2) Fallback: latest (hafta sonu / future date / 403 senaryoları)
+  if (!price) price = await tryFetch({ ticker, mode: "price" });
+  return price ? { ...d, price } : d;
 };
 
 const edgeCall = (fn, body) => fetch(`${SUPA_URL}/functions/v1/${fn}`, {
