@@ -177,6 +177,17 @@ Test edilmiş — mevcut Stocks API key ile hepsi çalışır:
 - XIRR `<1Y` periyotlarda matematiksel olarak hesaplanabilir ama yanıltıcı; UI bilinçli olarak gizliyor.
 - Native HTML `title` attribute tooltip'i Chrome/Safari'de 1-2 sn gecikmeli — bu yüzden `data-tip` + custom CSS pseudo-element kullanılıyor.
 
+## Agent Kuralları
+
+`.claude/agents/` altında tanımlı agent'lar. Tetikleyici durumda **kullanıcıya sormadan otomatik** çağır.
+
+- **`babel-checker`** — `index.html` edit'i sonrası **`.claude/hooks/babel-check.sh` hook'u tarafından zaten otomatik koşulur** (PostToolUse → Edit/Write/MultiEdit). Hook fail olursa stderr'i Claude'a feedback olarak gelir, agent'ı manuel çağırmaya gerek yok. Hook devre dışıysa veya kaçınılmaz şekilde bypass olduysa agent fallback olarak çağırılabilir.
+- **`edge-reviewer`** — `*-edge-function.js` dosyasına edit yaptıktan sonra, kullanıcıya "deploy et" önermeden **önce**. Security / error-handling / Deno pitfall raporu.
+- **`ui-builder`** — yeni bir UI component (tab, card, form, modal, tablo) eklenecek veya mevcut component'in görsel/yapısal değişikliği yapılacak ise kod yazımını bu agent'a delege et. Tasarım sistemi + Türkçe UI konvansiyonlarını biliyor. 1-2 satır string/copy tweak için skip OK.
+- **`sql-writer`** — Supabase migration, RLS policy, pg_cron job veya schema SQL'i yazılacak ise. Proje gotcha'larını (jobname column yok, `SUPABASE_` prefix, `transactions.way` enum vb.) biliyor.
+- **`rls-auditor`** — yeni tablo eklenince **veya** mevcut RLS policy değişince, SQL uygulanmadan önce. Read-only audit; user data isolation doğrular.
+- **`client-security-auditor`** — auth flow / form / kullanıcı girdisi rendering eden yerlerde `index.html` değişikliği yaptıktan sonra. Ayrıca güvenlik-hassas commit'ten önce manuel çağrı uygundur. XSS, secret leak, LS hijyeni, privacy-mode (`hide`) regression'lerini tarar.
+
 ## Test & Doğrulama
 
 - Babel parse sanity check (büyük edit'lerden sonra):

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Nav Alternatifleri</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { background: #0a0a0a; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ── Shared tokens ─────────────────────────────────────────────────
+const C = {
+  bg:"#000", s1:"#0c0c0c", s2:"#141414", s3:"#1c1c1c",
+  bd:"rgba(255,255,255,0.06)", bd2:"rgba(102,88,255,0.28)",
+  tx:"#f0ede8", tx2:"#666", tx3:"#333",
+  ac:"#6658ff", acDim:"rgba(102,88,255,0.12)",
+  ok:"#00d97e", err:"#ff3366",
+};
+const F = { body:"'DM Sans',sans-serif", mono:"'DM Mono',monospace" };
+
+const NAV = [
+  { id:"dashboard",   label:"Dashboard",  icon: <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg> },
+  { id:"portfolio",   label:"Portföy",    icon: <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="3" y1="4" x2="13" y2="4"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="3" y1="12" x2="13" y2="12"/></svg> },
+  { id:"transactions",label:"İşlemler",   icon: <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="2,12 6,7 9,10 14,4"/></svg> },
+  { id:"analysis",    label:"Analiz",     icon: <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="6"/><polyline points="8,5 8,8 10,10"/></svg> },
+];
+
+// ── Mock page content (same for all) ─────────────────────────────
+function PageContent({ compact }) {
+  return (
+    <div style={{ padding: compact ? "16px 20px" : "20px 24px" }}>
+      {/* KPI row */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:8, marginBottom:12 }}>
+        {[["Portföy","$48,219","ok"],["P&L","+$6,412","ok"],["XIRR","18.4%","ac"],["Pozisyon","6",""]].map(([l,v,col])=>(
+          <div key={l} style={{ background:C.s2, border:`1px solid ${C.bd}`, borderRadius:10, padding:"12px 14px" }}>
+            <div style={{ fontSize:9, color:C.tx2, fontFamily:F.body, textTransform:"uppercase", letterSpacing:".08em", marginBottom:6 }}>{l}</div>
+            <div style={{ fontFamily:F.mono, fontSize:16, fontWeight:500, color:col==="ok"?C.ok:col==="ac"?C.ac:C.tx }}>{v}</div>
+          </div>
+        ))}
+      </div>
+      {/* Fake table */}
+      <div style={{ background:C.s1, border:`1px solid ${C.bd}`, borderRadius:12, overflow:"hidden" }}>
+        <div style={{ padding:"12px 16px", borderBottom:`1px solid ${C.bd}`, fontSize:12, fontWeight:600, color:C.tx, fontFamily:F.body }}>Pozisyonlar</div>
+        {[["AAPL","Apple Inc.","$182.50","+$2,437","ok"],["MSFT","Microsoft","$415.20","-$124","err"],["QQQ","Invesco QQQ","$445.00","+$612","ok"],["BTC","Bitcoin","$67,500","+$6,375","ok"]].map(([sym,name,price,pl,col])=>(
+          <div key={sym} style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr 1fr", padding:"10px 16px", borderBottom:`1px solid ${C.bd}`, alignItems:"center" }}>
+            <div>
+              <div style={{ fontFamily:F.mono, fontSize:11, fontWeight:500, color:C.tx }}>{sym}</div>
+              <div style={{ fontSize:10, color:C.tx2, fontFamily:F.body, marginTop:1 }}>{name}</div>
+            </div>
+            <div style={{ fontFamily:F.mono, fontSize:11, color:C.tx2, textAlign:"right" }}>{price}</div>
+            <div style={{ fontFamily:F.mono, fontSize:11, color:col==="ok"?C.ok:C.err, textAlign:"right" }}>{pl}</div>
+            <div style={{ display:"flex", justifyContent:"flex-end" }}>
+              <div style={{ width:40, height:20, background:`${col==="ok"?C.ok:C.err}15`, borderRadius:4 }}/>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── A: Icon-only sidebar (56px) ───────────────────────────────────
+function NavA() {
+  const [active, setActive] = React.useState("dashboard");
+  return (
+    <div style={{ display:"flex", height:520, background:C.bg, borderRadius:16, overflow:"hidden", border:`1px solid ${C.bd}`, fontFamily:F.body }}>
+      {/* Sidebar */}
+      <div style={{ width:56, background:C.s1, borderRight:`1px solid ${C.bd}`, display:"flex", flexDirection:"column", alignItems:"center", padding:"16px 0", gap:4, flexShrink:0 }}>
+        {/* Logo mark */}
+        <div style={{ width:32, height:32, background:C.ac, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", marginBottom:12 }}>IL</div>
+        {NAV.map(item => (
+          <button key={item.id} onClick={() => setActive(item.id)}
+            title={item.label}
+            style={{ width:36, height:36, border:"none", borderRadius:8, background: active===item.id ? C.acDim : "transparent", color: active===item.id ? C.ac : C.tx2, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", transition:"background .12s,color .12s" }}>
+            {item.icon}
+          </button>
+        ))}
+        <div style={{ flex:1 }}/>
+        {/* Add button */}
+        <button style={{ width:32, height:32, border:"none", borderRadius:8, background:C.ac, color:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, lineHeight:1 }}>+</button>
+        {/* Avatar */}
+        <div style={{ width:28, height:28, background:C.acDim, border:`1px solid ${C.bd2}`, borderRadius:"50%", display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, color:C.ac, fontWeight:600, marginTop:8 }}>U</div>
+      </div>
+      {/* Content */}
+      <div style={{ flex:1, overflow:"hidden" }}>
+        <div style={{ height:44, borderBottom:`1px solid ${C.bd}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px", background:"rgba(0,0,0,.7)" }}>
+          <span style={{ fontSize:13, fontWeight:600, color:C.tx }}>{NAV.find(n=>n.id===active)?.label}</span>
+          <div style={{ display:"flex", gap:6 }}>
+            <div style={{ background:C.s2, border:`1px solid ${C.bd}`, borderRadius:6, padding:"5px 10px", fontSize:10, color:C.tx2, cursor:"pointer" }}>↻ Güncelle</div>
+          </div>
+        </div>
+        <PageContent compact/>
+      </div>
+    </div>
+  );
+}
+
+// ── B: Hover-expand sidebar (56px → 200px) ────────────────────────
+function NavB() {
+  const [active, setActive] = React.useState("dashboard");
+  const [hovered, setHovered] = React.useState(false);
+  const w = hovered ? 200 : 56;
+  return (
+    <div style={{ display:"flex", height:520, background:C.bg, borderRadius:16, overflow:"hidden", border:`1px solid ${C.bd}`, fontFamily:F.body }}>
+      {/* Sidebar */}
+      <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{ width:w, background:C.s1, borderRight:`1px solid ${C.bd}`, display:"flex", flexDirection:"column", padding:"16px 0", flexShrink:0, transition:"width .2s ease", overflow:"hidden" }}>
+        {/* Logo */}
+        <div style={{ display:"flex", alignItems:"center", gap:10, padding:"0 12px", marginBottom:16, minWidth:176 }}>
+          <div style={{ width:32, height:32, background:C.ac, borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>IL</div>
+          {hovered && <div style={{ fontSize:12, fontWeight:600, color:C.tx, whiteSpace:"nowrap", opacity: hovered?1:0, transition:"opacity .15s" }}>Investment Ledger</div>}
+        </div>
+        {NAV.map(item => (
+          <button key={item.id} onClick={() => setActive(item.id)}
+            style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", border:"none", background: active===item.id ? C.acDim : "transparent", color: active===item.id ? C.ac : C.tx2, cursor:"pointer", transition:"background .12s", whiteSpace:"nowrap", minWidth:176 }}>
+            <span style={{ flexShrink:0 }}>{item.icon}</span>
+            {hovered && <span style={{ fontSize:12, fontWeight: active===item.id?500:400 }}>{item.label}</span>}
+          </button>
+        ))}
+        <div style={{ flex:1 }}/>
+        <div style={{ padding:"0 12px" }}>
+          <button style={{ width:hovered?176:32, height:32, border:"none", borderRadius:8, background:C.ac, color:"#fff", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", gap:6, fontSize:12, fontWeight:500, transition:"width .2s", overflow:"hidden" }}>
+            <span style={{ fontSize:16, lineHeight:1 }}>+</span>
+            {hovered && <span style={{ whiteSpace:"nowrap" }}>İşlem Ekle</span>}
+          </button>
+        </div>
+      </div>
+      {/* Content */}
+      <div style={{ flex:1, overflow:"hidden", minWidth:0 }}>
+        <div style={{ height:44, borderBottom:`1px solid ${C.bd}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px", background:"rgba(0,0,0,.7)" }}>
+          <span style={{ fontSize:13, fontWeight:600, color:C.tx }}>{NAV.find(n=>n.id===active)?.label}</span>
+        </div>
+        <PageContent compact/>
+      </div>
+    </div>
+  );
+}
+
+// ── C: Top navbar ─────────────────────────────────────────────────
+function NavC() {
+  const [active, setActive] = React.useState("dashboard");
+  return (
+    <div style={{ height:520, background:C.bg, borderRadius:16, overflow:"hidden", border:`1px solid ${C.bd}`, fontFamily:F.body, display:"flex", flexDirection:"column" }}>
+      {/* Top bar */}
+      <div style={{ height:52, borderBottom:`1px solid ${C.bd}`, display:"flex", alignItems:"center", padding:"0 20px", gap:0, background:C.s1, flexShrink:0 }}>
+        {/* Logo */}
+        <div style={{ display:"flex", alignItems:"center", gap:8, marginRight:24 }}>
+          <div style={{ width:28, height:28, background:C.ac, borderRadius:7, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:"#fff" }}>IL</div>
+          <span style={{ fontSize:12, fontWeight:600, color:C.tx }}>Investment Ledger</span>
+        </div>
+        {/* Nav links */}
+        {NAV.map(item => (
+          <button key={item.id} onClick={() => setActive(item.id)}
+            style={{ display:"flex", alignItems:"center", gap:6, padding:"0 14px", height:52, border:"none", background:"transparent", color: active===item.id ? C.ac : C.tx2, cursor:"pointer", fontSize:12, fontWeight: active===item.id?500:400, borderBottom: active===item.id?`2px solid ${C.ac}`:"2px solid transparent", marginBottom:-1, fontFamily:F.body, transition:"color .12s" }}>
+            {item.icon}{item.label}
+          </button>
+        ))}
+        <div style={{ flex:1 }}/>
+        <button style={{ background:C.ac, border:"none", borderRadius:7, color:"#fff", padding:"7px 13px", fontSize:12, fontWeight:500, cursor:"pointer", display:"flex", alignItems:"center", gap:5, fontFamily:F.body }}>
+          <span style={{ fontSize:15, lineHeight:1 }}>+</span> Ekle
+        </button>
+      </div>
+      {/* Content */}
+      <div style={{ flex:1, overflow:"auto" }}>
+        <PageContent/>
+      </div>
+    </div>
+  );
+}
+
+// ── D: Topbar + breadcrumb (minimal) ─────────────────────────────
+function NavD() {
+  const [active, setActive] = React.useState("dashboard");
+  return (
+    <div style={{ height:520, background:C.bg, borderRadius:16, overflow:"hidden", border:`1px solid ${C.bd}`, fontFamily:F.body, display:"flex", flexDirection:"column" }}>
+      {/* Slim topbar: just logo + add */}
+      <div style={{ height:44, borderBottom:`1px solid ${C.bd}`, display:"flex", alignItems:"center", padding:"0 20px", background:C.s1, flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+          <div style={{ width:24, height:24, background:C.ac, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, color:"#fff" }}>IL</div>
+          <span style={{ fontSize:12, fontWeight:600, color:C.tx }}>Investment Ledger</span>
+        </div>
+        <div style={{ flex:1 }}/>
+        <button style={{ background:C.ac, border:"none", borderRadius:6, color:"#fff", padding:"6px 12px", fontSize:11, fontWeight:500, cursor:"pointer", fontFamily:F.body }}>+ Ekle</button>
+      </div>
+      {/* Tab row */}
+      <div style={{ display:"flex", gap:0, borderBottom:`1px solid ${C.bd}`, background:C.bg, padding:"0 20px", flexShrink:0 }}>
+        {NAV.map(item => (
+          <button key={item.id} onClick={() => setActive(item.id)}
+            style={{ padding:"10px 14px", border:"none", background:"transparent", color: active===item.id ? C.ac : C.tx2, cursor:"pointer", fontSize:12, fontWeight: active===item.id?500:400, borderBottom: active===item.id?`2px solid ${C.ac}`:"2px solid transparent", marginBottom:-1, fontFamily:F.body, display:"flex", alignItems:"center", gap:6, transition:"color .12s" }}>
+            {item.label}
+          </button>
+        ))}
+      </div>
+      {/* Content */}
+      <div style={{ flex:1, overflow:"auto" }}>
+        <PageContent/>
+      </div>
+    </div>
+  );
+}
+
+// ── Mobile mock content ───────────────────────────────────────────
+function MobileContent() {
+  return (
+    <div style={{ padding:"14px 14px 0", fontFamily:F.body }}>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+        {[["Portföy","$48,219","ok"],["P&L","+$6,412","ok"],["XIRR","18.4%","ac"],["Pozisyon","6",""]].map(([l,v,col])=>(
+          <div key={l} style={{ background:C.s2, border:`1px solid ${C.bd}`, borderRadius:10, padding:"11px 12px" }}>
+            <div style={{ fontSize:8, color:C.tx2, textTransform:"uppercase", letterSpacing:".08em", marginBottom:5 }}>{l}</div>
+            <div style={{ fontFamily:F.mono, fontSize:15, fontWeight:500, color:col==="ok"?C.ok:col==="ac"?C.ac:C.tx }}>{v}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ background:C.s1, border:`1px solid ${C.bd}`, borderRadius:12, overflow:"hidden" }}>
+        <div style={{ padding:"10px 12px", borderBottom:`1px solid ${C.bd}`, fontSize:11, fontWeight:600, color:C.tx }}>Pozisyonlar</div>
+        {[["AAPL","Apple","+$2,437","ok"],["MSFT","Microsoft","-$124","err"],["QQQ","QQQ ETF","+$612","ok"]].map(([sym,name,pl,col])=>(
+          <div key={sym} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 12px", borderBottom:`1px solid ${C.bd}` }}>
+            <div>
+              <div style={{ fontFamily:F.mono, fontSize:11, fontWeight:500, color:C.tx }}>{sym}</div>
+              <div style={{ fontSize:10, color:C.tx2, marginTop:1 }}>{name}</div>
+            </div>
+            <div style={{ fontFamily:F.mono, fontSize:11, color:col==="ok"?C.ok:C.err }}>{pl}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Mobile M1: Bottom Tab Bar ─────────────────────────────────────
+function MobileM1() {
+  const [active, setActive] = React.useState("dashboard");
+  return (
+    <div style={{ width:320, height:580, background:C.bg, borderRadius:24, overflow:"hidden", border:`1px solid ${C.bd}`, display:"flex", flexDirection:"column", fontFamily:F.body, position:"relative" }}>
+      {/* Topbar — just title + add */}
+      <div style={{ height:44, borderBottom:`1px solid ${C.bd}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 16px", background:C.s1, flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+          <div style={{ width:22, height:22, background:C.ac, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:700, color:"#fff" }}>IL</div>
+          <span style={{ fontSize:12, fontWeight:600, color:C.tx }}>{NAV.find(n=>n.id===active)?.label}</span>
+        </div>
+        <button style={{ background:C.ac, border:"none", borderRadius:6, color:"#fff", padding:"6px 10px", fontSize:11, fontWeight:500, cursor:"pointer", fontFamily:F.body }}>+ Ekle</button>
+      </div>
+      {/* Content */}
+      <div style={{ flex:1, overflowY:"auto" }}>
+        <MobileContent/>
+      </div>
+      {/* Bottom tab bar */}
+      <div style={{ height:60, borderTop:`1px solid ${C.bd}`, background:C.s1, display:"flex", alignItems:"center", flexShrink:0 }}>
+        {NAV.map(item => (
+          <button key={item.id} onClick={() => setActive(item.id)}
+            style={{ flex:1, height:"100%", border:"none", background:"transparent", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4, cursor:"pointer", color: active===item.id ? C.ac : C.tx2, transition:"color .12s", fontFamily:F.body }}>
+            <span style={{ opacity: active===item.id ? 1 : 0.7 }}>{item.icon}</span>
+            <span style={{ fontSize:9, fontWeight: active===item.id ? 500 : 400 }}>{item.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Mobile M2: Hamburger + Drawer ────────────────────────────────
+function MobileM2() {
+  const [active, setActive] = React.useState("dashboard");
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div style={{ width:320, height:580, background:C.bg, borderRadius:24, overflow:"hidden", border:`1px solid ${C.bd}`, display:"flex", flexDirection:"column", fontFamily:F.body, position:"relative" }}>
+      {/* Topbar */}
+      <div style={{ height:44, borderBottom:`1px solid ${C.bd}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 16px", background:C.s1, flexShrink:0, zIndex:10 }}>
+        <button onClick={() => setOpen(o=>!o)} style={{ background:"transparent", border:"none", color:C.tx, cursor:"pointer", padding:0, display:"flex", flexDirection:"column", gap:3, alignItems:"center", justifyContent:"center", width:20 }}>
+          <span style={{ display:"block", width:16, height:1.5, background: open ? C.ac : C.tx, transition:"background .15s, transform .15s", transform: open ? "rotate(45deg) translate(3px,3px)" : "none" }}/>
+          <span style={{ display:"block", width:16, height:1.5, background: open ? "transparent" : C.tx, transition:"background .15s", opacity: open ? 0 : 1 }}/>
+          <span style={{ display:"block", width:16, height:1.5, background: open ? C.ac : C.tx, transition:"background .15s, transform .15s", transform: open ? "rotate(-45deg) translate(3px,-3px)" : "none" }}/>
+        </button>
+        <span style={{ fontSize:12, fontWeight:600, color:C.tx }}>{NAV.find(n=>n.id===active)?.label}</span>
+        <button style={{ background:C.ac, border:"none", borderRadius:6, color:"#fff", padding:"6px 10px", fontSize:11, fontWeight:500, cursor:"pointer", fontFamily:F.body }}>+ Ekle</button>
+      </div>
+      {/* Drawer overlay */}
+      {open && (
+        <div style={{ position:"absolute", top:44, left:0, right:0, bottom:0, zIndex:20 }} onClick={() => setOpen(false)}>
+          <div style={{ width:200, height:"100%", background:C.s1, borderRight:`1px solid ${C.bd}`, padding:"12px 8px" }} onClick={e => e.stopPropagation()}>
+            {NAV.map(item => (
+              <button key={item.id} onClick={() => { setActive(item.id); setOpen(false); }}
+                style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 10px", border:"none", width:"100%", borderRadius:8, background: active===item.id ? C.acDim : "transparent", color: active===item.id ? C.ac : C.tx2, cursor:"pointer", fontSize:12, fontWeight: active===item.id?500:400, fontFamily:F.body, transition:"background .12s" }}>
+                {item.icon}{item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* Content */}
+      <div style={{ flex:1, overflowY:"auto" }}>
+        <MobileContent/>
+      </div>
+    </div>
+  );
+}
+
+// ── Mobile M3: Tab strip (swipeable labels) ───────────────────────
+function MobileM3() {
+  const [active, setActive] = React.useState("dashboard");
+  return (
+    <div style={{ width:320, height:580, background:C.bg, borderRadius:24, overflow:"hidden", border:`1px solid ${C.bd}`, display:"flex", flexDirection:"column", fontFamily:F.body }}>
+      {/* Topbar */}
+      <div style={{ height:44, borderBottom:`1px solid ${C.bd}`, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 16px", background:C.s1, flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+          <div style={{ width:22, height:22, background:C.ac, borderRadius:6, display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:700, color:"#fff" }}>IL</div>
+          <span style={{ fontSize:12, fontWeight:600, color:C.tx }}>Investment Ledger</span>
+        </div>
+        <button style={{ background:C.ac, border:"none", borderRadius:6, color:"#fff", padding:"6px 10px", fontSize:11, fontWeight:500, cursor:"pointer", fontFamily:F.body }}>+ Ekle</button>
+      </div>
+      {/* Scrollable tab strip */}
+      <div style={{ display:"flex", overflowX:"auto", borderBottom:`1px solid ${C.bd}`, background:C.bg, flexShrink:0, scrollbarWidth:"none" }}>
+        {NAV.map(item => (
+          <button key={item.id} onClick={() => setActive(item.id)}
+            style={{ padding:"10px 16px", border:"none", background:"transparent", color: active===item.id ? C.ac : C.tx2, cursor:"pointer", fontSize:12, fontWeight: active===item.id?500:400, borderBottom: active===item.id?`2px solid ${C.ac}`:"2px solid transparent", marginBottom:-1, fontFamily:F.body, whiteSpace:"nowrap", flexShrink:0, transition:"color .12s" }}>
+            {item.label}
+          </button>
+        ))}
+      </div>
+      {/* Content */}
+      <div style={{ flex:1, overflowY:"auto" }}>
+        <MobileContent/>
+      </div>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas title="Navigation Alternatifleri">
+      <DCSection id="desktop" title="Masaüstü">
+        <DCArtboard id="A" label="A · İkon Sidebar (56px)" width={700} height={520}>
+          <NavA/>
+        </DCArtboard>
+        <DCArtboard id="B" label="B · Hover Expand Sidebar" width={700} height={520}>
+          <NavB/>
+        </DCArtboard>
+        <DCArtboard id="C" label="C · Top Navbar ★ Önerilen" width={700} height={520}>
+          <NavC/>
+        </DCArtboard>
+        <DCArtboard id="D" label="D · Slim Topbar + Tabs" width={700} height={520}>
+          <NavD/>
+        </DCArtboard>
+      </DCSection>
+      <DCSection id="mobile" title="Mobil">
+        <DCArtboard id="M1" label="M1 · Bottom Tab Bar ★ Önerilen" width={320} height={580}>
+          <MobileM1/>
+        </DCArtboard>
+        <DCArtboard id="M2" label="M2 · Hamburger Drawer" width={320} height={580}>
+          <MobileM2/>
+        </DCArtboard>
+        <DCArtboard id="M3" label="M3 · Tab Strip" width={320} height={580}>
+          <MobileM3/>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
