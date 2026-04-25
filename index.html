@@ -1003,8 +1003,12 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
       {/* Fundamental — değer yatırımı checklist (US_STOCK only) */}
       {p.type==="US_STOCK"&&(
         <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <div className="stitle" style={{marginBottom:0}}>Fundamental · Değer Yatırımı Checklist</div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <div className="stitle" style={{marginBottom:0}}>Fundamental · Değer Yatırımı Checklist</div>
+              {fund?.source==="edgar"&&<span className="badge etf" data-tip="FMP free planında yok; SEC EDGAR'dan çekildi. PE/PS bu modda boş kalır." style={{cursor:"help"}}>EDGAR</span>}
+              {fund?.source==="fmp"&&<span className="badge etf" style={{opacity:.5}}>FMP</span>}
+            </div>
             <button className="btn-sm" onClick={()=>fetchFund(true)} disabled={fundLoading}>{fundLoading?"...":(fund?"↻":"Çek")}</button>
           </div>
           {fundLoading&&<div className="dim" style={{fontSize:12}}><span className="spin" style={{width:12,height:12,marginRight:8,verticalAlign:"middle"}}></span>Yükleniyor...</div>}
@@ -1058,7 +1062,7 @@ function TickerDetailTab({ticker,pos,txs,prc,hist,user,confirm_,flash_,loadData,
                   </div>
                 ))}
                 <div style={{fontSize:10,color:"var(--text3)",marginTop:6,lineHeight:1.5}}>
-                  Kaynak: Financial Modeling Prep (TTM + son 5 yıl). Eşikler genel value-investing kılavuzudur; sektör kıyaslaması her metriğe doğrudan uygulanmaz.
+                  Kaynak: {fund?.source==="edgar"?"SEC EDGAR (annual 10-K, son 5 yıl). PE/PS bu modda boş — market price gerek.":"Financial Modeling Prep (TTM + son 5 yıl)"}. Eşikler genel value-investing kılavuzudur; sektör kıyaslaması her metriğe doğrudan uygulanmaz.
                 </div>
               </div>
             );

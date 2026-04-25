@@ -32,11 +32,9 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 - [ ] **Sektör-aware eşikler** — tech için P/E ≤30, utility için ≤15 vs.; ticker'ın `sic_description` veya FMP `sector` ile profile seç
 - [ ] **Portföy-geneli checklist tablosu** — tüm US_STOCK pozisyonlar için tek tablo, her sıra ticker, kolon kriter, skoru özet
 - [ ] Tarihsel fundamental trend — son 5 yıl gelir/marj/ROE eğrisi (mini chart, FY'leri y/y göster)
-- [ ] **SEC EDGAR fallback** (FMP boşluğunu doldur) — `data.sec.gov/api/xbrl/companyfacts/CIK*.json`, ücretsiz/sınırsız, NOW/MNSO/NNOX gibi tüm SEC dosyalayıcılarını kapsar. Edge function akışı: FMP dene → 402 alırsa EDGAR'a düş. İş kalemleri:
-  - Ticker→CIK mapping (`company_tickers.json` 1× indir, Supabase'te tablo veya KV)
-  - us-gaap line item eşleme: `Revenues`, `GrossProfit`, `NetIncomeLoss`, `OperatingIncomeLoss`, `Assets`, `Liabilities`, `StockholdersEquity`, `RetainedEarnings`, `CashAndCashEquivalents`, `LongTermDebt`, `InterestExpense` vs.
-  - Ratio'ları derive et: P/E (price ÷ EPS), P/S (mcap ÷ revenue), ROE (NI ÷ equity), margins
-  - User-Agent header zorunlu (SEC ToS), rate limit 10 req/sn
+- [x] ~~**SEC EDGAR fallback**~~ (FMP boşluğunu doldur, 2026-04-25) — companyfacts API + module-level CIK cache (24h TTL). FMP `Special Endpoint` 402 → EDGAR'a düşer. 19/21 metrik EDGAR'dan derive (PE/PS şu an null; market price entegrasyonu ileride).
+  - [ ] Iterate: PE/PS için EDGAR shares + fetch-prices ile market cap hesabı (`CommonStockSharesOutstanding` × current price)
+  - [ ] Ticker→CIK mapping'i Supabase'e taşı (cold start latency'sini azalt)
 - [ ] **Twelve Data fallback (BIST için, opsiyonel)** — `XIST` exchange free tier (800/gün); SEC bitince ve THYAO/ASELS gibi BIST hisseleri eklemek istersek
 
 ## İçerik
