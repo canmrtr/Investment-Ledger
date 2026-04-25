@@ -31,6 +31,18 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 - [ ] Haber entegrasyonu (ticker bazlı; yine provider gerek)
 
+## Öğrenme & Eğitim
+
+- [ ] **Investment Basics** — uygulama içi temel finansal okuryazarlık modülü
+  - Compound interest (bileşik faiz)
+  - Diversification (çeşitlendirme)
+  - Risk-return ilişkisi
+  - Asset allocation (varlık dağılımı stratejileri)
+  - Dollar-Cost Averaging
+  - P/E, ROE, EPS gibi temel oranların ne anlama geldiği
+  - Format: kısa makaleler / kart serisi / interaktif "lesson" gibi
+  - Yeni kullanıcılar için onboarding ile entegre olabilir
+
 ## Sosyal & Kişiselleştirme
 
 - [ ] Yatırımcı risk profili (anket → muhafazakar / dengeli / agresif)
