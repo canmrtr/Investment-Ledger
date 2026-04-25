@@ -991,8 +991,16 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
         </div>
       )}
 
-      {/* Şirket bilgisi */}
-      {(meta||metaLoading||metaErr)&&(
+      {/* Şirket bilgisi — meta'da gösterilebilir bir alan yoksa hiç render etme
+          (ör. Twelve Data BIST sadece name/exchange/type/currency dönüyor, hepsi
+          header'da zaten). */}
+      {(()=>{
+        const hasDetailMeta = meta && (
+          meta.sic_description || meta.market_cap || meta.shares_outstanding ||
+          meta.total_employees || meta.list_date || meta.homepage_url || meta.description
+        );
+        if (!hasDetailMeta && !metaLoading && !metaErr) return null;
+        return (
         <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
           <div className="stitle" style={{marginBottom:10}}>Şirket Bilgisi</div>
           {metaLoading&&<div className="dim" style={{fontSize:12}}><span className="spin" style={{width:12,height:12,marginRight:8,verticalAlign:"middle"}}></span>Yükleniyor...</div>}
@@ -1030,7 +1038,8 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
             );
           })()}
         </div>
-      )}
+        );
+      })()}
 
       {/* Fundamental — değer yatırımı checklist (US_STOCK only) */}
       {effectiveType==="US_STOCK"&&(
