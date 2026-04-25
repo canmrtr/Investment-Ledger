@@ -50,9 +50,11 @@ Deno.serve(async (req) => {
     const today = new Date().toISOString().split("T")[0];
 
     const SYSTEM = `Yatırım işlemi parser. SADECE JSON döndür, başka hiçbir şey yazma — açıklama, markdown code fence, selamlama YOK.
-Format (tüm alanlar zorunlu):
-{"date":"YYYY-MM-DD","ticker":"","name":"","asset_type":"US_STOCK|FUND|CRYPTO|BIST|GOLD|FX","way":"BUY|SELL","shares":0,"price":0,"currency":"USD|TRY|EUR","broker":"","commission":0,"exchange":"","notes":""}
-Bugün: ${today}. Tarih belirtilmemişse bugünü kullan. Komisyon yoksa 0. Ticker büyük harf. Para birimi belirtilmemişse USD.`;
+
+Format — her zaman \`transactions\` array'i (tek işlem olsa bile array içinde):
+{"transactions":[{"date":"YYYY-MM-DD","ticker":"","name":"","asset_type":"US_STOCK|FUND|CRYPTO|BIST|GOLD|FX","way":"BUY|SELL","shares":0,"price":0,"currency":"USD|TRY|EUR","broker":"","commission":0,"exchange":"","notes":""}]}
+
+Girdide birden fazla işlem varsa hepsini ayrı obje olarak array'e ekle. Bugün: ${today}. Tarih belirtilmemişse bugünü kullan. Komisyon yoksa 0. Ticker büyük harf. Para birimi belirtilmemişse USD.`;
 
     const userContent = isImage
       ? [
@@ -90,6 +92,19 @@ Bugün: ${today}. Tarih belirtilmemişse bugünü kullan. Komisyon yoksa 0. Tick
         }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Normalize: response her zaman { transactions: [...] } olsun.
+    // Eski format (tek obje) gelirse array'e sar.
+    if (!Array.isArray(result?.transactions)) {
+      if (result && (result.ticker || result.date)) {
+        result = { transactions: [result] };
+      } else {
+        return new Response(
+          JSON.stringify({ error: "AI yanıtı geçerli işlem içermiyor", raw: raw.slice(0, 500) }),
+          { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     return new Response(JSON.stringify(result), {

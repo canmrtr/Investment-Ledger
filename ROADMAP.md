@@ -79,7 +79,7 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 - [x] ~~**iOS Chrome zoom**~~ — input font-size 13px iOS WebKit auto-zoom tetikliyordu. Mobile media query'de input/textarea/select 16px'e bumped (2026-04-25)
 - [x] ~~**AI parse — fiyat boşsa kapanış otomatik gelsin**~~ — `enrichParseWithPrice()` helper'ı eklendi, AddTab + AddTxInline parse flow'larından geçiyor (2026-04-25)
-- [ ] **AI parse — birden fazla işlem** — input'a "AAPL 10 adet $150 alış 2024-01-15; MSFT 5 adet $300 satış 2024-02-10" gibi çoklu satır verince Claude tek bir array dönsün, FE tek tek confirm edebilsin (bulk add).
+- [x] ~~**AI parse — birden fazla işlem**~~ — Edge function `{transactions: [...]}` array döner; FE bulk ConfirmBox + per-row remove + bulk insert + rebuildPositions (2026-04-25)
 - [x] ~~**Manuel ekle — tarih fiyatı otomatik dolsun**~~ — Tarih input onChange'inde ticker doluysa fetchPrice tetiklenir (2026-04-25)
 
 ## Güvenlik Hardening (post-redesign audit, 2026-04-25)

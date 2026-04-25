@@ -278,6 +278,10 @@ const enrichParseWithPrice = async (d) => {
   return price ? { ...d, price } : d;
 };
 
+// Multi-line parse için array enrichment — paralel çalışır
+const enrichParseListWithPrices = async (list) =>
+  Promise.all((list||[]).map(d => enrichParseWithPrice(d)));
+
 const edgeCall = (fn, body) => fetch(`${SUPA_URL}/functions/v1/${fn}`, {
   method: "POST",
   headers: {
@@ -510,17 +514,19 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose}){
       const r=await edgeCall("parse-transaction",{text:`Ticker: ${ticker}. ${aiText}`});
       const d=await r.json();
       if(!r.ok||d.error)throw new Error(d.message||d.error||`HTTP ${r.status}`);
-      d.ticker=ticker; // güvenlik: ticker'ı override et
-      if(!d.name)d.name=tkPos?.name||ticker;
-      setAiParsed(await enrichParseWithPrice(d));
+      const list = Array.isArray(d.transactions) ? d.transactions : (d.ticker && d.date ? [d] : []);
+      if(list.length===0)throw new Error("Geçersiz yanıt — işlem bulunamadı");
+      // Detay sayfasından eklendiği için ticker'ı zorla override et + name fallback
+      list.forEach(t=>{ t.ticker=ticker; if(!t.name)t.name=tkPos?.name||ticker; });
+      setAiParsed(await enrichParseListWithPrices(list));
     }catch(e){setAiErr("Hata: "+e.message);}
     setAiParsing(false);
   };
 
-  const saveAI=async()=>{
-    if(!aiParsed)return;
-    const p=aiParsed;
-    const{error}=await sb.from("transactions").insert({
+  const saveAI=async(list)=>{
+    const items = Array.isArray(list) ? list : (aiParsed||[]);
+    if(!items||items.length===0)return;
+    const rows = items.map(p=>({
       user_id:user.id,date:p.date,ticker,
       name:p.name||tkPos?.name||ticker,
       asset_type:p.asset_type||tkPos?.type||"US_STOCK",
@@ -529,10 +535,11 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose}){
       total:+((+p.shares)*(+p.price)).toFixed(4),
       broker:p.broker||"",commission:+(p.commission||0),
       exchange:p.exchange||"",notes:p.notes||""
-    });
+    }));
+    const{error}=await sb.from("transactions").insert(rows);
     if(error){flash_(error.message,"err");return;}
     await rebuildPositions(user.id);await loadData();
-    flash_("İşlem eklendi ✓");
+    flash_(rows.length===1?"İşlem eklendi ✓":`${rows.length} işlem eklendi ✓`);
     onClose();
   };
 
@@ -1277,26 +1284,73 @@ function AccountSection({user,profile,flash_,confirm_,onSaved}){
 }
 
 // ── ConfirmBox (AddTab dışında!) ─────────────────────────────────
+// Parse sonuç onayı — array (1 veya N işlem) destekler. Tek işlemde detay
+// kv-grid; çoklu işlemde compact satır listesi + per-row remove.
 function ConfirmBox({data,onSave,onCancel}){
-  if(!data)return null;
-  const c=data.currency==="TRY"?"₺":"$";
-  const rows=[
-    ["Tarih",fmtDateTR(data.date)],["Ticker",data.ticker],["Şirket",data.name||"—"],
-    ["Tür",TL[data.asset_type]||data.asset_type||"—"],
-    ["İşlem",data.way==="BUY"?"Alış":"Satış"],["Adet",data.shares],
-    ["Fiyat",c+fmt(data.price)],["Toplam",c+fmt((+data.shares)*(+data.price),0)],
-    ["Broker",data.broker||"—"],["Komisyon",data.commission?("$"+data.commission):"—"]
-  ];
+  const initial = Array.isArray(data) ? data : (data ? [data] : []);
+  const [items,setItems] = useState(initial);
+  // data prop'u dışarıdan değişirse (yeni parse) state'i resetle
+  useEffect(()=>{ setItems(Array.isArray(data) ? data : (data ? [data] : [])); },[data]);
+  if(!items||items.length===0)return null;
+
+  const symFor = (cur)=>cur==="TRY"?"₺":(cur==="EUR"?"€":"$");
+
+  // Tek işlem: detay kv-grid (mevcut görünüm aynen)
+  if(items.length===1){
+    const d=items[0];
+    const c=symFor(d.currency);
+    const rows=[
+      ["Tarih",fmtDateTR(d.date)],["Ticker",d.ticker],["Şirket",d.name||"—"],
+      ["Tür",TL[d.asset_type]||d.asset_type||"—"],
+      ["İşlem",d.way==="BUY"?"Alış":"Satış"],["Adet",fmtShares(d.shares)],
+      ["Fiyat",c+fmt(d.price)],["Toplam",c+fmt((+d.shares)*(+d.price),0)],
+      ["Broker",d.broker||"—"],["Komisyon",d.commission?(c+fmt(+d.commission,2)):"—"]
+    ];
+    return(
+      <div className="cbox" style={{marginTop:16}}>
+        <div className="lbl" style={{marginBottom:12}}>Parse sonucu — doğrula</div>
+        <div className="kv">
+          {rows.map(([k,v])=>(
+            <div key={k}><div className="kk">{k}</div><div className="kv_">{String(v)}</div></div>
+          ))}
+        </div>
+        <div className="brow">
+          <button className="pri" onClick={()=>onSave(items)}>Kaydet</button>
+          <button onClick={onCancel}>İptal</button>
+        </div>
+      </div>
+    );
+  }
+
+  // Çoklu işlem: satır listesi
+  const remove=(idx)=>setItems(items.filter((_,i)=>i!==idx));
   return(
     <div className="cbox" style={{marginTop:16}}>
-      <div className="lbl" style={{marginBottom:12}}>Parse sonucu — doğrula</div>
-      <div className="kv">
-        {rows.map(([k,v])=>(
-          <div key={k}><div className="kk">{k}</div><div className="kv_">{String(v)}</div></div>
-        ))}
+      <div className="lbl" style={{marginBottom:12}}>Parse sonucu — {items.length} işlem doğrula</div>
+      <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>
+        {items.map((tx,idx)=>{
+          const c=symFor(tx.currency);
+          const total=(+tx.shares)*(+tx.price);
+          return(
+            <div key={idx} style={{
+              padding:"9px 12px",background:"var(--bg3)",borderRadius:8,
+              display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"
+            }}>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"var(--text2)",minWidth:80}}>{fmtDateTR(tx.date)}</span>
+              <span style={{fontWeight:600,fontSize:13,minWidth:60}}>{tx.ticker}</span>
+              <span className={tx.way==="BUY"?"ok":"err"} style={{fontSize:11,minWidth:32}}>{tx.way==="BUY"?"Alış":"Satış"}</span>
+              <span className="mono" style={{fontSize:12,color:"var(--text2)"}}>
+                {fmtShares(tx.shares)} × {c}{fmt(tx.price)}
+              </span>
+              <span className="mono" style={{fontSize:12,fontWeight:600,marginLeft:"auto"}}>{c}{fmt(total,0)}</span>
+              <button onClick={()=>remove(idx)} title="Bu işlemi listeden çıkar"
+                style={{padding:"3px 8px",fontSize:14,lineHeight:1,color:"var(--err)",borderColor:"rgba(255,51,102,0.25)",background:"transparent"}}>×</button>
+            </div>
+          );
+        })}
       </div>
       <div className="brow">
-        <button className="pri" onClick={onSave}>Kaydet</button>
+        <button className="pri" onClick={()=>onSave(items)}>{items.length} İşlemi Kaydet</button>
         <button onClick={onCancel}>İptal</button>
       </div>
     </div>
@@ -1698,8 +1752,10 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
       const r=await edgeCall("parse-transaction",body);
       const d=await r.json();
       if(!r.ok||d.error||d.code)throw new Error(d.message||d.error||`HTTP ${r.status}`);
-      if(!d.ticker||!d.date)throw new Error("Geçersiz yanıt — ticker veya tarih eksik");
-      setParsed(await enrichParseWithPrice(d));
+      // Yeni edge function `transactions` array döner; eski tek-obje formatına da fallback
+      const list = Array.isArray(d.transactions) ? d.transactions : (d.ticker && d.date ? [d] : []);
+      if(list.length===0)throw new Error("Geçersiz yanıt — işlem bulunamadı");
+      setParsed(await enrichParseListWithPrices(list));
     }catch(e){setParseErr("Hata: "+e.message);}
     setParsing(false);
   };
@@ -1717,33 +1773,23 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
     callParse({imageBase64:b64,imageType:imgFile.type||"image/png"});
   };
 
-  const saveTx=async()=>{
-    if(!parsed)return;
-    const p=parsed;
-    const ex=pos.find(x=>x.ticker===p.ticker);
-    const{error}=await sb.from("transactions").insert({
+  // Bulk save — parsed bir array (1 veya N işlem). Hepsini batch insert et,
+  // sonra rebuildPositions ile pozisyon tablosunu split-aware yeniden hesapla.
+  const saveTx=async(list)=>{
+    const items = Array.isArray(list) ? list : (parsed||[]);
+    if(!items||items.length===0)return;
+    const rows = items.map(p=>({
       user_id:user.id,date:p.date,ticker:p.ticker,name:p.name||"",
       asset_type:p.asset_type,way:p.way,shares:+p.shares,price:+p.price,
       currency:p.currency||"USD",total:+((+p.shares)*(+p.price)).toFixed(4),
       broker:p.broker||"",commission:+(p.commission||0),exchange:p.exchange||"",notes:p.notes||""
-    });
+    }));
+    const{error}=await sb.from("transactions").insert(rows);
     if(error){flash_(error.message,"err");return;}
-    if(p.way==="BUY"){
-      const ns=(ex?.shares||0)+(+p.shares);
-      const na=((ex?.shares||0)*(ex?.avgCost||0)+(+p.shares)*(+p.price))/ns;
-      await sb.from("positions").upsert({
-        user_id:user.id,ticker:p.ticker,name:p.name||"",type:p.asset_type,
-        shares:+ns.toFixed(6),avg_cost:+na.toFixed(6),currency:p.currency||"USD",
-        broker:p.broker||"",updated_at:new Date().toISOString()
-      },{onConflict:"user_id,ticker"});
-    }else if(p.way==="SELL"&&ex){
-      const ns=ex.shares-(+p.shares);
-      if(ns<=CFG.DUST_THRESHOLD)await sb.from("positions").delete().eq("user_id",user.id).eq("ticker",p.ticker);
-      else await sb.from("positions").update({shares:+ns.toFixed(6),updated_at:new Date().toISOString()}).eq("user_id",user.id).eq("ticker",p.ticker);
-    }
+    await rebuildPositions(user.id);
     await loadData();
     setParsed(null);setTextInput("");setImgFile(null);
-    flash_("Kaydedildi ✓");
+    flash_(rows.length===1?"Kaydedildi ✓":`${rows.length} işlem kaydedildi ✓`);
   };
 
   const handleFile=f=>{
