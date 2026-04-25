@@ -255,6 +255,22 @@ const parseTRDate = (s)=>{
   return `${yy}-${String(mm).padStart(2,"0")}-${String(dd).padStart(2,"0")}`;
 };
 
+// AI parse sonucunda price boşsa, ticker+date için kapanış fiyatını
+// otomatik çekip parsed objesine doldurur. Fetch fail olursa sessiz geçer
+// (kullanıcı ConfirmBox'tan manuel girebilir).
+const enrichParseWithPrice = async (d) => {
+  if (!d || !d.ticker || !d.date) return d;
+  if (d.price != null && +d.price > 0) return d;
+  try {
+    const r = await edgeCall("fetch-prices", {
+      ticker: String(d.ticker).toUpperCase(), mode: "price", date: d.date
+    });
+    const j = await r.json();
+    if (j?.result?.price) return { ...d, price: j.result.price };
+  } catch (e) { /* sessizce geç */ }
+  return d;
+};
+
 const edgeCall = (fn, body) => fetch(`${SUPA_URL}/functions/v1/${fn}`, {
   method: "POST",
   headers: {
@@ -489,7 +505,7 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose}){
       if(!r.ok||d.error)throw new Error(d.message||d.error||`HTTP ${r.status}`);
       d.ticker=ticker; // güvenlik: ticker'ı override et
       if(!d.name)d.name=tkPos?.name||ticker;
-      setAiParsed(d);
+      setAiParsed(await enrichParseWithPrice(d));
     }catch(e){setAiErr("Hata: "+e.message);}
     setAiParsing(false);
   };
@@ -1676,7 +1692,7 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
       const d=await r.json();
       if(!r.ok||d.error||d.code)throw new Error(d.message||d.error||`HTTP ${r.status}`);
       if(!d.ticker||!d.date)throw new Error("Geçersiz yanıt — ticker veya tarih eksik");
-      setParsed(d);
+      setParsed(await enrichParseWithPrice(d));
     }catch(e){setParseErr("Hata: "+e.message);}
     setParsing(false);
   };
