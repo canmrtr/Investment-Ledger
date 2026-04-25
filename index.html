@@ -991,13 +991,12 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
         </div>
       )}
 
-      {/* Şirket bilgisi — meta'da gösterilebilir bir alan yoksa hiç render etme
-          (ör. Twelve Data BIST sadece name/exchange/type/currency dönüyor, hepsi
-          header'da zaten). */}
+      {/* Şirket bilgisi — meta'da gösterilebilir bir alan yoksa hiç render etme. */}
       {(()=>{
         const hasDetailMeta = meta && (
-          meta.sic_description || meta.market_cap || meta.shares_outstanding ||
-          meta.total_employees || meta.list_date || meta.homepage_url || meta.description
+          meta.sic_description || meta.industry || meta.market_cap || meta.shares_outstanding ||
+          meta.total_employees || meta.list_date || meta.homepage_url || meta.description ||
+          meta.pe_ratio || meta.dividend_yield || meta.week_52_high
         );
         if (!hasDetailMeta && !metaLoading && !metaErr) return null;
         return (
@@ -1006,12 +1005,18 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
           {metaLoading&&<div className="dim" style={{fontSize:12}}><span className="spin" style={{width:12,height:12,marginRight:8,verticalAlign:"middle"}}></span>Yükleniyor...</div>}
           {metaErr&&<div className="err" style={{fontSize:12}}>{metaErr}</div>}
           {meta&&!metaLoading&&(()=>{
+            const titleCase=(s)=>s?s.replace(/_/g," ").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()):s;
             const rows=[
-              ["Sektör",meta.sic_description?meta.sic_description.replace(/_/g," ").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()):null],
-              ["Market Cap",meta.market_cap?"$"+fmtCompact(meta.market_cap):null],
+              ["Sektör",titleCase(meta.sic_description)],
+              ["Endüstri",isBist?titleCase(meta.industry):null],
+              ["Market Cap",meta.market_cap?sym+fmtCompact(meta.market_cap):null],
               ["Hisse Sayısı",meta.shares_outstanding?fmtCompact(meta.shares_outstanding):null],
-              ["Çalışan",meta.total_employees?meta.total_employees.toLocaleString("en-US"):null],
+              ["Çalışan",meta.total_employees?meta.total_employees.toLocaleString("tr-TR"):null],
               ["Halka Açılma",meta.list_date],
+              ["F/K (P/E)",meta.pe_ratio?meta.pe_ratio.toFixed(2):null],
+              ["Temettü Verimi",meta.dividend_yield!=null?meta.dividend_yield.toFixed(2)+"%":null],
+              ["52H Yüksek",meta.week_52_high?sym+fmt(meta.week_52_high,2):null],
+              ["52H Düşük",meta.week_52_low?sym+fmt(meta.week_52_low,2):null],
               ["Web",meta.homepage_url],
             ].filter(([,v])=>v);
             return(

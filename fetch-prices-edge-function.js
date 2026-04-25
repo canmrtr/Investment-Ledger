@@ -102,6 +102,67 @@ async function tdMeta(ticker, apiKey) {
   };
 }
 
+// ── borsa-mcp (BIST profile — sektör, market cap, PE, temettü, 52W) ─
+// Public hosted MCP server (saidsurucu/borsa-mcp, MIT). yfinance üzerinden
+// BIST profili veriyor. SSE-format JSON-RPC; session ID handshake gerek.
+const MCP_URL = "https://borsamcp.fastmcp.app/mcp";
+let mcpSession = null;
+
+async function mcpInitialize() {
+  const r = await fetch(MCP_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json, text/event-stream"
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0", id: 1, method: "initialize",
+      params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "investment-ledger", version: "1.0" } }
+    })
+  });
+  const sid = r.headers.get("mcp-session-id");
+  if (!sid) throw new Error("MCP session header yok");
+  // initialized notification (gerek olabilir, server tolere ediyor ama gönderiyoruz)
+  await fetch(MCP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "mcp-session-id": sid },
+    body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })
+  });
+  return sid;
+}
+
+async function mcpCallTool(toolName, args) {
+  if (!mcpSession) mcpSession = await mcpInitialize();
+  const doCall = async (sid) => fetch(MCP_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "mcp-session-id": sid },
+    body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name: toolName, arguments: args } })
+  });
+  let r = await doCall(mcpSession);
+  if (r.status === 401 || r.status === 404) {
+    // Session expired → re-init and retry once
+    mcpSession = await mcpInitialize();
+    r = await doCall(mcpSession);
+  }
+  if (!r.ok) throw new Error(`MCP HTTP ${r.status}`);
+  // SSE response: "event: message\ndata: {...}\n\n"
+  const text = await r.text();
+  const dataLine = text.split("\n").find(l => l.startsWith("data: "));
+  if (!dataLine) throw new Error("MCP: data satırı yok");
+  const j = JSON.parse(dataLine.slice(6));
+  if (j.error) throw new Error(j.error.message || "MCP error");
+  return j.result?.structuredContent || null;
+}
+
+async function mcpProfile(ticker) {
+  try {
+    const result = await mcpCallTool("get_profile", { symbol: ticker, market: "bist" });
+    return result?.profile || null;
+  } catch (_) {
+    return null;  // sessizce başarısız ol; çağıran fallback yapar
+  }
+}
+
 // ── Massive (US/global) ──────────────────────────────────────────────
 
 async function massivePrice(ticker, date, apiKey) {
@@ -218,8 +279,36 @@ Deno.serve(async (req) => {
         ? await yfHistorical(cleanTicker)
         : await massiveHistorical(ticker, fromDate, toDate, massiveKey);
     } else if (mode === "meta") {
-      // BIST meta için Twelve Data /stocks (reference, free tier OK)
-      if (isBist) { result = await tdMeta(cleanTicker, tdKey); source = "twelvedata"; }
+      // BIST: Twelve Data /stocks (name) + borsa-mcp get_profile (sektör, market cap, PE...)
+      // paralel çek + merge.
+      if (isBist) {
+        const [td, prof] = await Promise.all([
+          tdMeta(cleanTicker, tdKey),
+          mcpProfile(cleanTicker),
+        ]);
+        result = {
+          name: td?.name || prof?.name || cleanTicker,
+          market: "stocks",
+          locale: "tr",
+          primary_exchange: "XIST",
+          type: td?.type || "Common Stock",
+          currency: prof?.currency || td?.currency || "TRY",
+          // borsa-mcp profile alanları
+          sic_description: prof?.sector || null,
+          industry: prof?.industry || null,
+          market_cap: prof?.market_cap || null,
+          homepage_url: prof?.website ? prof.website.split(/\s|\/?http/)[0].trim() : null,
+          total_employees: prof?.employees || null,
+          country: prof?.country || "Turkey",
+          // BIST-spesifik mini stats (FE ek satır olarak gösterir)
+          pe_ratio: prof?.pe_ratio || null,
+          dividend_yield: prof?.dividend_yield || null,
+          week_52_high: prof?.week_52_high || null,
+          week_52_low: prof?.week_52_low || null,
+          beta: prof?.beta || null,
+        };
+        source = prof ? "twelvedata+borsa-mcp" : "twelvedata";
+      }
       else result = await massiveMeta(ticker, massiveKey);
     } else {
       // Default: price mode — BIST için Yahoo

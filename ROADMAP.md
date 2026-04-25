@@ -19,6 +19,7 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 - [ ] Her yatırım türü için ana sayfadan ayrı sayfa / tab
 - [ ] Hisse başı detay sayfası (özet + işlem geçmişi + fundamental + haber)
+- [ ] **Portföy Analiz sayfası** — yeni sekme. İçerik/kapsam sonra detaylandırılacak.
 
 ## Fundamental & Analiz
 
@@ -76,6 +77,7 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 - [x] ~~**Adet kolonu trailing-zero temizliği**~~ — `fmtShares()` helper'a alındı, 7 site güncellendi (2026-04-25)
 - [ ] **Fundamental "ticker kapsam dışı" mesajı** — FMP 402 + "Special Endpoint" body'si geldiğinde edge function spesifik error code (örn. `"OUT_OF_PLAN"`) dönsün; FE bunu kırmızı `err` yerine turuncu `warn-card` ile "Bu ticker FMP free planında yok — alternatif provider gerekiyor" şeklinde göstersin. NOW gibi küçük/orta hisselerde tetikleniyor.
+- [ ] **Asset type seçimi → ekleme akışı** — "+ İşlem Ekle" / FAB gibi context-free butonlardan girildiğinde, formu açmadan önce kullanıcıya asset type (US_STOCK / BIST / FUND / CRYPTO / GOLD / FX) seçtir. AddTab default açıldığında bu adım görünür; kullanıcı seçince form gelir + type pre-fill'lenir. Detay sayfasının "+ Ekle" butonu gibi context'ten gelenlerde bu adım atlanır (ticker'ın type'ı zaten biliniyor).
 
 ## Bug & UX Backlog
 
