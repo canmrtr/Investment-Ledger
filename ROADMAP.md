@@ -72,7 +72,7 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 ## UI Polish
 
-- [ ] **Adet kolonu trailing-zero temizliği** — SOFI gibi fractional pozisyonlarda Dashboard tablosu `255.4200` gösteriyor; `255.42` olmalı. `toFixed(4)` yerine `+num.toFixed(4)` (Number cast trailing sıfırları atar) veya helper. TickerDetailTab'taki "Adet" kartı ve History sayfasındaki "adet" yazıları aynı kalıbı kullanıyor — hepsini ortak bir `fmtShares()`'e geçir.
+- [x] ~~**Adet kolonu trailing-zero temizliği**~~ — `fmtShares()` helper'a alındı, 7 site güncellendi (2026-04-25)
 - [ ] **Fundamental "ticker kapsam dışı" mesajı** — FMP 402 + "Special Endpoint" body'si geldiğinde edge function spesifik error code (örn. `"OUT_OF_PLAN"`) dönsün; FE bunu kırmızı `err` yerine turuncu `warn-card` ile "Bu ticker FMP free planında yok — alternatif provider gerekiyor" şeklinde göstersin. NOW gibi küçük/orta hisselerde tetikleniyor.
 
 ## Bug & UX Backlog
@@ -84,9 +84,9 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 ## Güvenlik Hardening (post-redesign audit, 2026-04-25)
 
-- [ ] **signOut sırasında privacy/cache LS temizliği** — `il_hide`, `il_prc`, `il_hist` user-agnostic key'lerle saklanıyor. Ortak tarayıcıda sonraki kullanıcı eski hide-toggle ve cache state'ini görür. signOut handler'da temizle veya key'leri user.id ile scope'la.
-- [ ] **console.warn/log temizliği** — 5 yerde edge function ticker error'ları console'a yazılıyor (PII yok ama production polish). Kaldır veya `if(DEBUG)` guard.
-- [ ] **External link hardening** — Şirket Bilgisi'ndeki `homepage_url` anchor'ı şu an `rel="noopener"`; `noreferrer` da ekle. `extractDomain()` içinde scheme allowlist (`http`/`https` only) — Massive provider compromise edilirse `javascript:` URL render edilmemeli.
+- [x] ~~**signOut sırasında privacy/cache LS temizliği**~~ — `il_hide`/`il_prc`/`il_hist` signOut handler'da temizleniyor (2026-04-25)
+- [x] ~~**console.warn/log temizliği**~~ — `DEBUG` const ile 9 console call gated (2026-04-25)
+- [x] ~~**External link hardening**~~ — `safeUrl()` helper + `rel="noopener noreferrer"` (2026-04-25)
 
 ## Açık Sorular
 
