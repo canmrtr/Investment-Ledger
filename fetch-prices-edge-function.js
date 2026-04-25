@@ -1,9 +1,13 @@
 // Multi-provider price fetcher.
 //   - US/global stocks, ETF, FX, crypto → Massive.com (Polygon clone)
-//   - BIST hisseleri (XIST exchange) → Twelve Data
+//   - BIST hisseleri:
+//     · price + historical → Yahoo Finance unofficial chart endpoint (free, no auth)
+//     · meta → Twelve Data /stocks reference (free tier OK)
+//   Twelve Data free tier US-only market data verir; reference data tüm
+//   borsalar için açık. Yahoo `THYAO.IS` formatını kullanır.
 //
 // Routing: body'de `asset_type:"BIST"` gelirse veya ticker `.IS` suffix'liyse
-// Twelve Data, aksi halde Massive. Frontend asset_type'ı geçirmeyi tercih eder.
+// BIST kolu, aksi halde Massive.
 //
 // Body: { ticker, mode, date?, from?, to?, asset_type? }
 // Modes: "price" (default), "historical", "meta"
@@ -16,45 +20,70 @@ const corsHeaders = {
 const yesterdayISO = () => new Date(Date.now() - 86400000).toISOString().split("T")[0];
 const yearAgoISO   = () => new Date(Date.now() - 366 * 86400000).toISOString().split("T")[0];
 
-// ── Twelve Data (BIST) ───────────────────────────────────────────────
+// ── Yahoo Finance (BIST price/historical) ───────────────────────────
+// Unofficial chart endpoint — auth yok, ücretsiz, ~5 yıl stabil. Yahoo
+// `.IS` suffix'i ile BIST'i destekler (THYAO.IS, ASELS.IS).
+// User-Agent gerekli (Yahoo bot algılaması browser-benzeri header bekler).
+const YF_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36";
 
-async function tdPrice(ticker, date, apiKey) {
-  // Spesifik tarih için time_series; tarih yoksa /price (en güncel)
-  const url = date
-    ? `https://api.twelvedata.com/time_series?symbol=${ticker}&exchange=XIST&interval=1day&start_date=${date}&end_date=${date}&apikey=${apiKey}`
-    : `https://api.twelvedata.com/price?symbol=${ticker}&exchange=XIST&apikey=${apiKey}`;
-  const r = await fetch(url);
-  if (!r.ok) return { error: `Twelve Data HTTP ${r.status}` };
+async function yfChart(ticker, range = "1y", interval = "1d") {
+  // BIST için ticker → "THYAO" gelirse "THYAO.IS"e çevir
+  const sym = /\.[A-Z]+$/i.test(ticker) ? ticker : `${ticker}.IS`;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=${range}&interval=${interval}`;
+  const r = await fetch(url, { headers: { "User-Agent": YF_UA } });
+  if (!r.ok) return { error: `Yahoo HTTP ${r.status}` };
   const d = await r.json();
-  if (d.status === "error" || d.code) return { error: d.message || `code ${d.code}` };
-  if (date) {
-    const v = Array.isArray(d.values) ? d.values[0] : null;
-    if (v?.close) return { price: parseFloat(v.close), currency: "TRY" };
-    return { error: "Tarihte veri yok" };
-  } else {
-    if (d.price) return { price: parseFloat(d.price), currency: "TRY" };
-    return { error: "Fiyat alınamadı" };
-  }
+  if (d.chart?.error) return { error: d.chart.error.description || "Yahoo chart error" };
+  const res = d.chart?.result?.[0];
+  if (!res) return { error: "Yahoo: result yok" };
+  return { meta: res.meta, ts: res.timestamp || [], close: res.indicators?.quote?.[0]?.close || [] };
 }
 
-async function tdHistorical(ticker, from, to, apiKey) {
-  const url = `https://api.twelvedata.com/time_series?symbol=${ticker}&exchange=XIST&interval=1day&start_date=${from}&end_date=${to}&order=asc&outputsize=400&apikey=${apiKey}`;
-  const r = await fetch(url);
-  if (!r.ok) return {};
-  const d = await r.json();
-  if (d.status === "error" || !Array.isArray(d.values) || d.values.length < 2) return {};
-  // Twelve Data bar'ları en yeni-en eski sıralayabilir (order=asc gönderdik ama yine de güvenli)
-  const bars = d.values
-    .map(v => ({ t: new Date(v.datetime).getTime(), c: parseFloat(v.close) }))
-    .filter(b => !isNaN(b.c))
-    .sort((a, b) => a.t - b.t);
+async function yfPrice(ticker, date) {
+  // Tarih verilmezse meta.regularMarketPrice; verilirse o tarihteki close
+  if (!date) {
+    const c = await yfChart(ticker, "5d");
+    if (c.error) return { error: c.error };
+    const last = c.meta?.regularMarketPrice ?? c.close.filter(v => v != null).pop();
+    if (last == null) return { error: "Fiyat yok" };
+    return { price: last, currency: c.meta?.currency || "TRY" };
+  }
+  // Spesifik tarih için 1y range çekip o tarihin yakınını bul
+  const c = await yfChart(ticker, "1y");
+  if (c.error) return { error: c.error };
+  const target = new Date(date).getTime() / 1000;
+  let bestIdx = -1, bestDiff = Infinity;
+  for (let i = 0; i < c.ts.length; i++) {
+    const diff = Math.abs(c.ts[i] - target);
+    if (diff < bestDiff && c.close[i] != null) { bestDiff = diff; bestIdx = i; }
+  }
+  if (bestIdx < 0) return { error: "Tarihte veri yok" };
+  return { price: c.close[bestIdx], currency: c.meta?.currency || "TRY" };
+}
+
+async function yfHistorical(ticker) {
+  const c = await yfChart(ticker, "1y");
+  if (c.error) return {};
+  const bars = [];
+  for (let i = 0; i < c.ts.length; i++) {
+    if (c.close[i] != null) bars.push({ t: c.ts[i] * 1000, c: c.close[i] });
+  }
+  if (bars.length < 2) return {};
+  bars.sort((a, b) => a.t - b.t);
   const n = bars.length, last = bars[n - 1].c;
   const get = (i) => (i >= 0 && i < n ? bars[i].c : null);
   const chg = (old) => (old != null ? (last / old - 1) * 100 : null);
   const p_d1 = get(n-2), p_w1 = get(n-6), p_m1 = get(n-22);
   const p_m3 = get(n-66), p_m6 = get(n-132), p_y1 = get(0);
-  return { price: last, currency: "TRY", d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1), p_d1, p_w1, p_m1, p_m3, p_m6, p_y1 };
+  return {
+    price: last,
+    currency: c.meta?.currency || "TRY",
+    d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1),
+    p_d1, p_w1, p_m1, p_m3, p_m6, p_y1
+  };
 }
+
+// ── Twelve Data (BIST meta — reference data free tier) ──────────────
 
 async function tdMeta(ticker, apiKey) {
   const url = `https://api.twelvedata.com/stocks?symbol=${ticker}&exchange=XIST&apikey=${apiKey}`;
@@ -70,7 +99,6 @@ async function tdMeta(ticker, apiKey) {
     primary_exchange: "XIST",
     type: x.type || "Common Stock",
     currency: x.currency || "TRY",
-    // Twelve Data /stocks limited fields; description/market_cap için fundamentals endpoint gerek
   };
 }
 
@@ -171,11 +199,11 @@ Deno.serve(async (req) => {
     const cleanTicker = ticker.replace(/\.IS$/i, "");
 
     // Provider key check
-    if (isBist && !tdKey) {
-      return json({ ticker, result: { error: "TWELVEDATA_KEY secret eksik" }, date: "" });
-    }
     if (!isBist && !massiveKey) {
       return json({ ticker, result: { error: "MASSIVE_KEY secret eksik" }, date: "" });
+    }
+    if (isBist && mode === "meta" && !tdKey) {
+      return json({ ticker, result: { error: "TWELVEDATA_KEY secret eksik" }, date: "" });
     }
 
     const priceDate = date || yesterdayISO();
@@ -183,23 +211,24 @@ Deno.serve(async (req) => {
     const toDate    = to   || yesterdayISO();
 
     let result = {};
+    let source = isBist ? "yahoo" : "massive";
 
     if (mode === "historical") {
       result = isBist
-        ? await tdHistorical(cleanTicker, fromDate, toDate, tdKey)
+        ? await yfHistorical(cleanTicker)
         : await massiveHistorical(ticker, fromDate, toDate, massiveKey);
     } else if (mode === "meta") {
-      result = isBist
-        ? await tdMeta(cleanTicker, tdKey)
-        : await massiveMeta(ticker, massiveKey);
+      // BIST meta için Twelve Data /stocks (reference, free tier OK)
+      if (isBist) { result = await tdMeta(cleanTicker, tdKey); source = "twelvedata"; }
+      else result = await massiveMeta(ticker, massiveKey);
     } else {
-      // Default: price mode
+      // Default: price mode — BIST için Yahoo
       result = isBist
-        ? await tdPrice(cleanTicker, date, tdKey)  // BIST: tarih yoksa /price latest
+        ? await yfPrice(cleanTicker, date)
         : await massivePrice(ticker, priceDate, massiveKey);
     }
 
-    return json({ ticker, result, date: priceDate, source: isBist ? "twelvedata" : "massive" });
+    return json({ ticker, result, date: priceDate, source });
 
   } catch (err) {
     return json({ error: err.message }, 500);
