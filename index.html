@@ -1576,14 +1576,16 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_}){
 
   const NAMES={SCHD:"Schwab US Dividend ETF",SPY:"SPDR S&P 500 ETF",QQQ:"Invesco QQQ Trust",MCHI:"iShares MSCI China ETF",VT:"Vanguard Total World ETF",NVDA:"NVIDIA Corp",SOFI:"SoFi Technologies",GOOGL:"Alphabet Inc",META:"Meta Platforms",KO:"Coca-Cola Co",UBER:"Uber Technologies",MNSO:"MINISO Group",AEVA:"Aeva Technologies",PYPL:"PayPal Holdings",SKLZ:"Skillz Inc",NNOX:"Nano-X Imaging",TSLA:"Tesla Inc",AAPL:"Apple Inc",MSFT:"Microsoft Corp",AMZN:"Amazon.com",BTC:"Bitcoin"};
 
-  const fetchPrice=async(tk,date)=>{
+  const fetchPrice=async(tk,date,typeOverride)=>{
     const upper=(tk||form.ticker).toUpperCase();
     const useDate=date||form.date||today();
+    // typeOverride: onChange'lerden çağrıldığında stale closure yerine yeni tipi geçirmek için
+    const at=typeOverride||form.type;
     if(!upper)return;
     if(NAMES[upper])set({name:NAMES[upper]});
     setFetchP(true);setCurPrice(null);
     try{
-      const r=await edgeCall("fetch-prices",{ticker:upper,mode:"price",date:useDate,asset_type:form.type});
+      const r=await edgeCall("fetch-prices",{ticker:upper,mode:"price",date:useDate,asset_type:at});
       const d=await r.json();
       if(d.result?.price){
         const p=d.result.price;
@@ -1683,7 +1685,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_}){
                 {fetchP?<div className="spin" style={{width:12,height:12}}></div>:"↻"}
               </button>
             </div>
-            {curPrice&&<div style={{fontSize:11,color:"var(--ok)",marginTop:4}}>{fmtDateTR(form.date)} fiyatı: ${fmt(curPrice)}</div>}
+            {curPrice&&<div style={{fontSize:11,color:"var(--ok)",marginTop:4}}>{fmtDateTR(form.date)} fiyatı: {form.currency==="TRY"?"₺":form.currency==="EUR"?"€":"$"}{fmt(curPrice)}</div>}
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Şirket Adı</div>
@@ -1691,7 +1693,16 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_}){
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Varlık Türü</div>
-            <select className="finp" value={form.type} onChange={e=>set({type:e.target.value})}>
+            <select className="finp" value={form.type} onChange={e=>{
+              const newType=e.target.value;
+              const upd={type:newType};
+              // BIST → TRY varsayılanı; kullanıcı manuel override edebilir
+              if(newType==="BIST")upd.currency="TRY";
+              set(upd);
+              // Type değişince eski fiyat geçersiz; ticker varsa yeniden çek
+              setCurPrice(null);
+              if(form.ticker)fetchPrice(form.ticker,form.date,newType);
+            }}>
               <option value="US_STOCK">Hisse (US)</option>
               <option value="FUND">ETF / Fon</option>
               <option value="CRYPTO">Kripto</option>
