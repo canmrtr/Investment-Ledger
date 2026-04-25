@@ -68,6 +68,10 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
   - Hesap silme (tüm verinin cascade delete'i)
   - Avatar / profil resmi (opsiyonel)
 
+## Search
+
+- [x] ~~**Global ticker arama**~~ — Yeni "Ara" sekmesi (Variant C). SEC EDGAR ticker DB (10k+ US hisse) edge function üzerinden proxy + LS cache (24h). Match: ticker prefix + şirket adı substring. Portföydekiler ayrı bölüm "açık" badge ile. Sonuca tıklanınca TickerDetailTab non-held mode'da açılır (meta + fundamental, position summary gizli, "+ Ekle" CTA aktif). (2026-04-25)
+
 ## UI Polish
 
 - [x] ~~**Adet kolonu trailing-zero temizliği**~~ — `fmtShares()` helper'a alındı, 7 site güncellendi (2026-04-25)

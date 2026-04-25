@@ -29,31 +29,42 @@ const div = (a, b) => (a == null || b == null || b === 0) ? null : a / b;
 
 // ── SEC EDGAR helpers ────────────────────────────────────────────────
 
-// Module-level ticker→CIK cache. Edge function instance lifetime boyunca tutulur.
-// Cold start'larda yeniden fetch edilir (~1MB, ~10k entry, OK).
-let cikCache = null;
-let cikCacheAt = 0;
+// Module-level ticker DB cache: { TICKER: {cik, name} }. Edge function
+// instance lifetime boyunca tutulur, cold start'larda yeniden fetch edilir.
+let tickerDbCache = null;
+let tickerDbCacheAt = 0;
 const CIK_TTL_MS = 24 * 60 * 60 * 1000;  // 24 saat
 
-async function getCikMap() {
+async function getTickerDb() {
   const now = Date.now();
-  if (cikCache && (now - cikCacheAt) < CIK_TTL_MS) return cikCache;
+  if (tickerDbCache && (now - tickerDbCacheAt) < CIK_TTL_MS) return tickerDbCache;
   const r = await fetch("https://www.sec.gov/files/company_tickers.json", {
     headers: { "User-Agent": SEC_UA }
   });
   if (!r.ok) throw new Error(`SEC ticker map fetch HTTP ${r.status}`);
   const data = await r.json();
   // Format: { "0": { cik_str: 320193, ticker: "AAPL", title: "Apple Inc." }, ... }
-  const map = {};
+  const db = {};
   for (const k in data) {
     const e = data[k];
     if (e.ticker && e.cik_str != null) {
-      map[String(e.ticker).toUpperCase()] = String(e.cik_str).padStart(10, "0");
+      db[String(e.ticker).toUpperCase()] = {
+        cik: String(e.cik_str).padStart(10, "0"),
+        name: e.title || "",
+      };
     }
   }
-  cikCache = map;
-  cikCacheAt = now;
-  return map;
+  tickerDbCache = db;
+  tickerDbCacheAt = now;
+  return db;
+}
+
+// Geriye uyumluluk: ticker→CIK map'i sadece CIK döner
+async function getCikMap() {
+  const db = await getTickerDb();
+  const m = {};
+  for (const k in db) m[k] = db[k].cik;
+  return m;
 }
 
 // us-gaap concept time serisi → annual (FY) sıralı array, en yeni başta.
@@ -314,7 +325,20 @@ Deno.serve(async (req) => {
   });
 
   try {
-    const { ticker } = await req.json();
+    const body = await req.json();
+
+    // Mode: ticker-list — SEC EDGAR'ın cache'lenmiş ticker DB'sini frontend'e
+    // serve eder (search tab için). Browser SEC'e direkt fetch yapamaz
+    // (User-Agent zorunluluğu); edge function proxy görevi görür.
+    if (body.mode === "ticker-list") {
+      const db = await getTickerDb();
+      const list = Object.entries(db).map(([ticker, info]) => ({
+        ticker, name: info.name
+      }));
+      return json({ list, count: list.length, fetched_at: new Date().toISOString() });
+    }
+
+    const { ticker } = body;
     const fmpKey = Deno.env.get("FMP_KEY");
     if (!ticker) return json({ error: "ticker required" }, 400);
     if (!fmpKey) return json({ error: "FMP_KEY secret eksik" }, 500);
