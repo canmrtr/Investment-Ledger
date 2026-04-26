@@ -207,6 +207,23 @@
         transform:none;margin-top:0;max-width:none;width:auto;
       }
     }
+    /* Touch tap-to-show — data-tip-visible attribute ile hover ile aynı görünüm */
+    [data-tip][data-tip-visible]::after{
+      content:attr(data-tip);
+      position:absolute;top:100%;left:50%;transform:translateX(-50%);
+      margin-top:6px;background:var(--bg3);color:var(--text);
+      padding:8px 11px;border-radius:7px;font-size:11px;font-family:inherit;
+      white-space:normal;width:max-content;max-width:min(260px,80vw);
+      z-index:50;pointer-events:none;line-height:1.45;
+      box-shadow:0 6px 18px rgba(0,0,0,0.45);border:0.5px solid var(--border2);
+    }
+    @media (max-width:640px){
+      [data-tip][data-tip-visible]::after{
+        position:fixed;top:auto;bottom:140px;left:12px;right:12px;
+        transform:none;margin-top:0;max-width:none;width:auto;
+        z-index:150;
+      }
+    }
   </style>
 </head>
 <body>
@@ -3253,6 +3270,29 @@ function App({session}){
     window.addEventListener("keydown",onKey);
     return()=>window.removeEventListener("keydown",onKey);
   },[confirmSt]);
+
+  // Touch tooltip — dokunmatik cihazlarda hover çalışmadığı için tap-to-show.
+  // Tıklanan veya üst elementinde data-tip olan non-interactive element'e
+  // data-tip-visible attribute'u ekle → CSS ile hover ile aynı görünüme kavuşur.
+  // 2.5 sn sonra otomatik kapanır; dışarı dokunulunca hemen kapanır.
+  useEffect(()=>{
+    let hideTimer=null;
+    const handle=(e)=>{
+      // Mevcut açık tooltip'leri temizle
+      document.querySelectorAll("[data-tip-visible]").forEach(el=>el.removeAttribute("data-tip-visible"));
+      clearTimeout(hideTimer);
+      const target=e.target.closest("[data-tip]");
+      if(!target)return;
+      // button ve a tag'leri için gösterme — bunlar zaten tıklanabilir (data-tip-force ile override edilebilir)
+      const tag=target.tagName.toLowerCase();
+      const isInteractive=(tag==="button"||tag==="a")&&!target.dataset.tipForce;
+      if(isInteractive)return;
+      target.setAttribute("data-tip-visible","");
+      hideTimer=setTimeout(()=>target.removeAttribute("data-tip-visible"),2500);
+    };
+    document.addEventListener("touchstart",handle,{passive:true});
+    return()=>{document.removeEventListener("touchstart",handle);clearTimeout(hideTimer);};
+  },[]);
 
   const loadData=async()=>{
     setBusy(b=>({...b,d:true}));
