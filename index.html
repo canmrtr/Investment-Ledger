@@ -109,7 +109,7 @@
     .g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:16px;}
     .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:16px;}
     .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
-    @media(max-width:500px){.g4{grid-template-columns:repeat(2,1fr);}.g3{grid-template-columns:1fr 1fr;}}
+    @media(max-width:500px){.g4{grid-template-columns:repeat(2,1fr);}.g3{grid-template-columns:1fr 1fr;}.g3>*:first-child{grid-column:1/-1;}}
     .dashboard-charts{display:grid;grid-template-columns:1fr 340px;gap:12px;margin-bottom:16px;align-items:start;}
     .dashboard-charts > .card{margin-bottom:0!important;}
     .dashboard-charts:has(> .card:only-child){grid-template-columns:1fr;}
@@ -3427,6 +3427,16 @@ function App({session}){
     return()=>document.removeEventListener("visibilitychange",handle);
   },[pos.length,lastFetchAt,busy.p,busy.h]);
 
+  // Her 30 dakikada bir fiyatları otomatik yenile (sekme açık kaldığında).
+  useEffect(()=>{
+    if(!pos.length)return;
+    const id=setInterval(()=>{
+      const age=lastFetchAt?Date.now()-lastFetchAt:Infinity;
+      if(age>30*60*1000&&!busy.p&&!busy.h)fetchPrices();
+    },30*60*1000);
+    return()=>clearInterval(id);
+  },[pos.length,lastFetchAt,busy.p,busy.h]);
+
   // pos yüklendikten sonra cache'te olmayan ticker'lar için arka planda otomatik fetchHist.
   // USD (Massive) + BIST (Twelve Data) — provider erişimi olan her tür dahil.
   useEffect(()=>{
@@ -3610,24 +3620,18 @@ function App({session}){
             <button className={displayCur==="USD"?"on":""} onClick={()=>setDisplayCur("USD")} aria-label="USD göster">$</button>
             <button className={displayCur==="TRY"?"on":""} onClick={()=>setDisplayCur("TRY")} aria-label="TRY göster">₺</button>
           </div>
-          {(()=>{
-            if(busy.p||busy.h)return(
-              <button disabled data-tip={pprog} style={{minWidth:90}}>
-                <span className="spin" style={{width:11,height:11,marginRight:5,verticalAlign:"middle"}}/>
-                {pprog||"…"}
-              </button>
-            );
-            const stale=!lastFetchAt||(Date.now()-lastFetchAt>30*60*1000);
-            const age=fmtAge(lastFetchAt);
-            return stale?(
-              <button onClick={fetchPrices} data-tip="Güncel fiyatları çek">↻ Güncelle</button>
-            ):(
-              <button onClick={fetchPrices} data-tip={`Son güncelleme: ${age} — tıkla ile yenile`}
-                style={{border:"none",background:"transparent",color:"var(--text3)",fontSize:11,cursor:"pointer",padding:"4px 8px"}}>
-                {age}
-              </button>
-            );
-          })()}
+          {(busy.p||busy.h)&&(
+            <button disabled style={{minWidth:90}}>
+              <span className="spin" style={{width:11,height:11,marginRight:5,verticalAlign:"middle"}}/>
+              {pprog||"…"}
+            </button>
+          )}
+          {!(busy.p||busy.h)&&lastFetchAt&&(
+            <span style={{fontSize:11,color:"var(--text3)",padding:"4px 4px",whiteSpace:"nowrap"}}
+              data-tip="Fiyatlar otomatik yenilenir · Ayarlar'dan manuel güncelle">
+              {fmtAge(lastFetchAt)}
+            </span>
+          )}
           <button className={"eye-btn"+(hide?" on":"")} onClick={()=>saveHide(!hide)} aria-pressed={hide} aria-label={hide?"Tutarları göster":"Tutarları gizle"}>{hide?<IconEyeOff/>:<IconEye/>}</button>
           <button className="pri btn-add-primary" onClick={()=>setTab("add")}>+ İşlem Ekle</button>
         </div>
@@ -3992,10 +3996,11 @@ function App({session}){
           </div>
           <div className="sg">
             <label>Fiyat & Veri</label>
+            <div className="hint" style={{marginBottom:10}}>Portföyündeki tüm tickerların güncel fiyatları çekilir. Sekme ön plana geldiğinde ve her 30 dakikada bir otomatik yenilenir.</div>
             {(busy.p||busy.h)
               ?<div className="dim" style={{fontSize:13,display:"flex",alignItems:"center",gap:8}}><div className="spin" style={{width:14,height:14}}></div><span className="mono">{pprog}</span></div>
               :<div className="brow">
-                <button onClick={fetchPrices}>Güncel Fiyatlar</button>
+                <button onClick={fetchPrices}>↻ Şimdi Güncelle{lastFetchAt&&<span className="dim" style={{fontSize:10,marginLeft:6}}>{fmtAge(lastFetchAt)}</span>}</button>
                 <button onClick={fetchHist}>Tarihi Veri (1G/1H/1A/1Y)</button>
                 <button onClick={async()=>{
                   setConnTest({loading:true});
