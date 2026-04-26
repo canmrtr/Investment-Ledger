@@ -13,7 +13,8 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
     - [ ] Sektör-aware + reel büyüme eşikleri (TR enflasyonu nominal CAGR'ı şişiriyor → `revenueGrowth5Y` ≥10% kriteri otomatik geçiyor; CPI deflate veya sektör median kıyası gerek)
   - [ ] BIST için price-cache TRY-aware olsun (şu an `prc[ticker]` raw değer; pos.currency="TRY" ile FE doğru sembolleri seçiyor — sağlam ama TRY/USD fx conversion için hazırlık gerek)
 - [ ] Altın / emtia (gram, ons; TL & USD fiyat)
-- [ ] Türkiye fonları (TEFAS entegrasyonu — borsa-mcp `get_fund_data` aracı destekliyor, hazır kaynak)
+- [ ] **Türkiye fonları (TEFAS entegrasyonu)** — borsa-mcp `get_fund_data` aracı destekliyor, hazır kaynak. Sıradaki sprint'te (Portföy Sağlık Tablosu sonrası) ele alınacak.
+- [ ] **Kripto fiyat akışı sağlamlaştırma** — Mevcut fetch-prices `BTC` formatlı ham ticker'da Massive bulamıyor; `X:BTCUSD` zorunlu. Edge function tarafında ticker normalize (CRYPTO asset_type ise `X:${ticker}USD` autoprefix) + frontend manuel girişte symbol picker. Sıradaki sprint.
 - [ ] Vadeli mevduat (faiz oranı, vade, getiri hesabı)
 
 ## Görselleştirme
@@ -40,7 +41,7 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 - [ ] FMP free tier sınırını test et + rate limit guard ekle
 - [ ] Benchmark karşılaştırması: portföy vs SPY / QQQ / BIST100
 - [ ] **Sektör-aware eşikler** — tech için P/E ≤30, utility için ≤15 vs.; ticker'ın `sic_description` veya FMP `sector` ile profile seç
-- [ ] **Portföy-geneli checklist tablosu** — tüm US_STOCK pozisyonlar için tek tablo, her sıra ticker, kolon kriter, skoru özet
+- [x] ~~**Portföy-geneli checklist tablosu**~~ (2026-04-26) — Analiz Tab 5. kart "Portföy Sağlık Tablosu" (Bölge ile Komisyon arasında); 8 kritik metrik (P/E, ROE, Net/Op Marj, Gelir/Kâr 5Y, Borç/Özk, NetBorç/FCF) + Skor kolonu; sticky ticker + horizontal scroll; renk pill (FUND_THRESHOLDS); filter chip Hepsi/US/BIST; "Eksikleri Çek" CTA + sıralı fetch + progress; default sıralama en kötü skor üstte; satır click → openDetail (Analiz'e geri).
 - [ ] Tarihsel fundamental trend — son 5 yıl gelir/marj/ROE eğrisi (mini chart, FY'leri y/y göster)
 - [x] ~~**SEC EDGAR fallback**~~ (FMP boşluğunu doldur, 2026-04-25) — companyfacts API + module-level CIK cache (24h TTL). FMP `Special Endpoint` 402 → EDGAR'a düşer. 19/21 metrik EDGAR'dan derive (PE/PS şu an null; market price entegrasyonu ileride).
   - [ ] Iterate: PE/PS için EDGAR shares + fetch-prices ile market cap hesabı (`CommonStockSharesOutstanding` × current price)

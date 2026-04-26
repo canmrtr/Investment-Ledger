@@ -41,6 +41,17 @@
     .pick-card{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;text-align:left;color:var(--text);transition:border-color .15s,background .15s;}
     .pick-card:hover{border-color:var(--info);background:var(--bg4);}
     .pick-card:focus-visible{outline:2px solid var(--info);outline-offset:2px;}
+    /* Portföy Sağlık Tablosu — sticky ticker + renk pill metrik hücreler */
+    .health-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .health-tbl{min-width:680px;}
+    .health-tbl th,.health-tbl td{white-space:nowrap;}
+    .health-sticky{position:sticky;left:0;background:var(--bg2);z-index:2;}
+    .health-tbl tbody tr:hover .health-sticky{background:var(--bg3);}
+    .hp{display:inline-block;padding:2px 7px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;line-height:1.4;}
+    .hp-ok{background:rgba(0,217,126,0.14);color:var(--ok);}
+    .hp-warn{background:rgba(255,184,0,0.14);color:var(--warn);}
+    .hp-err{background:rgba(255,51,102,0.14);color:var(--err);}
+    .hp-na{background:var(--bg3);color:var(--text3);}
     #app-main{flex:1;max-width:920px;margin:0 auto;padding:24px 20px 60px;width:100%;}
     #bottom-tabs{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--bg2);border-top:1px solid var(--border);z-index:100;}
     #bottom-tabs .btab{flex:1;height:100%;background:transparent;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;transition:color .12s;}
@@ -2374,10 +2385,83 @@ const buildSlicesPath = (sliceArr, CX, CY, R) => {
   });
 };
 
-function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates}){
+function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,openDetail}){
   const [filter,setFilter]=useState("all");
   const dSym = displaySym(displayCur);
   const cnv = (amt, from) => convert(amt, from, displayCur, fxRates);
+  // Sağlık tablosu state — ticker bazlı fund cache, mount'ta LS'ten topla.
+  const [fundCache,setFundCache]=useState(()=>{
+    const c={};
+    pos.forEach(p=>{
+      if(p.type!=="US_STOCK"&&p.type!=="BIST")return;
+      const v=fundCacheGet(p.ticker);
+      if(v?.metrics)c[p.ticker]=v;
+    });
+    return c;
+  });
+  const [fundBusy,setFundBusy]=useState(false);
+  const [fundProg,setFundProg]=useState("");
+  const [healthFilter,setHealthFilter]=useState("all"); // all | US_STOCK | BIST
+  // pos değişince yeni eklenen pozisyonların cache'lerini de topla
+  useEffect(()=>{
+    setFundCache(prev=>{
+      const next={...prev};
+      pos.forEach(p=>{
+        if(p.type!=="US_STOCK"&&p.type!=="BIST")return;
+        if(next[p.ticker])return;
+        const v=fundCacheGet(p.ticker);
+        if(v?.metrics)next[p.ticker]=v;
+      });
+      return next;
+    });
+  },[pos]);
+  // Sağlık tablosu için 8 kritik metrik (default; tüm 21 metrik FUND_THRESHOLDS'ta)
+  const HEALTH_METRICS=[
+    ["pe",                "P/E",          "x"],
+    ["roe",               "ROE",          "pct"],
+    ["netMargin",         "Net Marj",     "pct"],
+    ["operatingMargin",   "Op Marj",      "pct"],
+    ["revenueGrowth5Y",   "Gelir 5Y",     "pct"],
+    ["earningsGrowth5Y",  "Kâr 5Y",       "pct"],
+    ["liabToEquity",      "Borç/Özk",     "x"],
+    ["netDebtToFcf",      "NetBorç/FCF",  "x"],
+  ];
+  const healthEligible = pos.filter(p=>p.type==="US_STOCK"||p.type==="BIST");
+  const healthFiltered = healthFilter==="all" ? healthEligible : healthEligible.filter(p=>p.type===healthFilter);
+  const healthMissing = healthFiltered.filter(p=>!fundCache[p.ticker]);
+  // Bir pozisyonun skoru: kaç metrik "good" (yeşil) / toplam değerli (null hariç)
+  const rowScore = (m) => {
+    if(!m) return {good:0,total:0};
+    let good=0,total=0;
+    HEALTH_METRICS.forEach(([key])=>{
+      const s=fundScore(key,m[key]);
+      if(s===null)return;
+      total++;
+      if(s==="good")good++;
+    });
+    return {good,total};
+  };
+  const fetchAllFund = async () => {
+    if(healthMissing.length===0||fundBusy)return;
+    setFundBusy(true);
+    const next={...fundCache};
+    for(let i=0;i<healthMissing.length;i++){
+      const p=healthMissing[i];
+      setFundProg(`${p.ticker} (${i+1}/${healthMissing.length})`);
+      try{
+        const r=await edgeCall("fetch-fundamentals",{ticker:p.ticker,asset_type:p.type});
+        const d=await r.json();
+        if(r.ok&&d?.metrics){
+          next[p.ticker]=d;
+          fundCacheSet(p.ticker,d);
+          setFundCache({...next});  // her başarıda UI tazele
+        }
+      }catch(e){DEBUG && console.warn(`[health ${p.ticker}]`,e);}
+      if(i<healthMissing.length-1) await new Promise(r=>setTimeout(r,800));
+    }
+    setFundBusy(false);
+    setFundProg("");
+  };
   // Pozisyon ham MV (orijinal currency'de) → display cur'a çevir
   const mvDisp = (p) => {
     const raw = (prc[p.ticker] || 0) * p.shares;
@@ -2591,6 +2675,104 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates}){
           Heuristik: US_STOCK/FUND→US, BIST→Türkiye, CRYPTO→Global·Kripto, GOLD→Global·Emtia, FX→Döviz. ETF içerikleri (MCHI=Çin gibi) ileride.
         </div>
       </div>
+
+      {/* Portföy Sağlık Tablosu — tüm US/BIST pozisyonların 8 metrikte özet renk pill tablosu */}
+      {healthEligible.length>0 && (
+        <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:10,gap:10,flexWrap:"wrap"}}>
+            <div className="stitle" style={{marginBottom:0}}>Portföy Sağlık Tablosu</div>
+            <span style={{fontSize:10,color:"var(--text3)"}}>renk = metrik eşik (yeşil iyi · sarı orta · kırmızı zayıf)</span>
+          </div>
+
+          {/* Filter chips: Hepsi / US / BIST */}
+          {(() => {
+            const types=["all"];
+            if(healthEligible.some(p=>p.type==="US_STOCK"))types.push("US_STOCK");
+            if(healthEligible.some(p=>p.type==="BIST"))types.push("BIST");
+            if(types.length<=2)return null;
+            return(
+              <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+                {types.map(t=>(
+                  <button key={t} className={"mtab"+(healthFilter===t?" on":"")}
+                    onClick={()=>setHealthFilter(t)}>
+                    {t==="all"?"Hepsi":TYPE_LABEL_SHORT[t]||t}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
+
+          {/* Eksik fetch CTA + progress */}
+          {healthMissing.length>0 && (
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"8px 10px",background:"var(--bg3)",borderRadius:8,marginBottom:10,flexWrap:"wrap"}}>
+              <span style={{fontSize:11,color:"var(--text2)"}}>
+                {fundBusy
+                  ? <><span className="spin" style={{width:11,height:11,marginRight:6,verticalAlign:"middle"}}></span>Çekiliyor: {fundProg}</>
+                  : `${healthMissing.length} pozisyonun fundamental verisi henüz çekilmemiş.`}
+              </span>
+              {!fundBusy && <button className="pri btn-xs" onClick={fetchAllFund}>Eksikleri Çek</button>}
+            </div>
+          )}
+
+          {/* Tablo: sticky ticker + 8 metrik + skor. Sıralama: önce score asc (en kötü üstte), null'lar sonda. */}
+          {(() => {
+            const rows = healthFiltered.map(p => {
+              const fund = fundCache[p.ticker];
+              const m = fund?.metrics || null;
+              const sc = rowScore(m);
+              return {p, m, sc, hasData: !!m};
+            }).sort((a,b) => {
+              if(a.hasData !== b.hasData) return a.hasData ? -1 : 1;
+              if(!a.hasData) return a.p.ticker.localeCompare(b.p.ticker);
+              const aPct = a.sc.total>0 ? a.sc.good/a.sc.total : 1;
+              const bPct = b.sc.total>0 ? b.sc.good/b.sc.total : 1;
+              return aPct - bPct;
+            });
+            return(
+              <div className="tbl-wrap health-wrap">
+                <table className="health-tbl">
+                  <thead><tr>
+                    <th scope="col" className="l health-sticky">Ticker</th>
+                    {HEALTH_METRICS.map(([k,lbl])=>(
+                      <th key={k} scope="col" className="r" data-tip={fundThreshText(k, HEALTH_METRICS.find(x=>x[0]===k)[2])}>{lbl}</th>
+                    ))}
+                    <th scope="col" className="r" data-tip="Yeşil sayım / değerli metrik sayımı">Skor</th>
+                  </tr></thead>
+                  <tbody>
+                    {rows.map(({p,m,sc,hasData}) => (
+                      <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker,p.type,"analysis")}>
+                        <td className="l health-sticky">
+                          <span className="tsym">{p.ticker}</span>
+                          {p.type==="BIST"&&<span style={{fontSize:9,color:"var(--text3)",marginLeft:5}}>BIST</span>}
+                        </td>
+                        {hasData ? HEALTH_METRICS.map(([k,lbl,type])=>{
+                          const v=m[k];
+                          const s=fundScore(k,v);
+                          const cls = s==="good"?"hp-ok":s==="neutral"?"hp-warn":s==="bad"?"hp-err":"hp-na";
+                          return(
+                            <td key={k} className="r"><span className={"hp "+cls}>{fmtFundVal(v,type)}</span></td>
+                          );
+                        }) : HEALTH_METRICS.map(([k])=>(
+                          <td key={k} className="r dim" style={{fontSize:11}}>—</td>
+                        ))}
+                        <td className="r">
+                          {hasData
+                            ? <span className="hp" style={{background:"var(--bg4)",color:sc.good/sc.total>=0.66?"var(--ok)":sc.good/sc.total>=0.4?"var(--warn)":"var(--err)",fontWeight:600}}>{sc.good}/{sc.total}</span>
+                            : <span className="dim" style={{fontSize:11}}>—</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+
+          <div style={{fontSize:10,color:"var(--text3)",marginTop:8,lineHeight:1.5}}>
+            Eşikler `FUND_THRESHOLDS`'tan; kolon başlığında hover ile detay. BIST için P/S henüz yok (—). TR enflasyon nominal CAGR'ı şişiriyor — BIST büyüme metriklerine ihtiyatla bak.
+          </div>
+        </div>
+      )}
 
       {/* Toplam Komisyon — display cur'a convert edilmiş tek tutar */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
@@ -3442,7 +3624,7 @@ function App({session}){
 
       {/* ANALYSIS */}
       {tab==="analysis"&&(
-        <AnalysisTab pos={pos} txs={txs} splits={splits} prc={prc} hide={hide} mask={mask} setTab={setTab} displayCur={displayCur} fxRates={fxRates}/>
+        <AnalysisTab pos={pos} txs={txs} splits={splits} prc={prc} hide={hide} mask={mask} setTab={setTab} displayCur={displayCur} fxRates={fxRates} openDetail={openDetail}/>
       )}
 
       {/* SEARCH */}
