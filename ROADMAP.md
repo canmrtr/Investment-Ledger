@@ -12,8 +12,13 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
     - [ ] BIST bankalar (UFRS grubu, Roman numeral itemCode'lar): ayrı mapping + `ISY_KNOWN_BANKS` set'i kaldır
     - [ ] Sektör-aware + reel büyüme eşikleri (TR enflasyonu nominal CAGR'ı şişiriyor → `revenueGrowth5Y` ≥10% kriteri otomatik geçiyor; CPI deflate veya sektör median kıyası gerek)
   - [ ] BIST için price-cache TRY-aware olsun (şu an `prc[ticker]` raw değer; pos.currency="TRY" ile FE doğru sembolleri seçiyor — sağlam ama TRY/USD fx conversion için hazırlık gerek)
-- [ ] Altın / emtia (gram, ons; TL & USD fiyat)
-- [ ] **Türkiye fonları (TEFAS entegrasyonu)** — borsa-mcp `get_fund_data` aracı destekliyor, hazır kaynak. Sıradaki sprint'te (Portföy Sağlık Tablosu sonrası) ele alınacak.
+- [x] ~~**Altın / emtia (MVP — ons & USD)**~~ (2026-04-26) — Edge function `fetch-prices`'a GOLD normalize bloğu (XAU/XAG/XPT/XPD + Türkçe ad ALTIN/GUMUS/PLATIN/PALADYUM → `C:{SYM}USD`). Frontend ManuelPosForm GOLD seçilince 4 emtia chip (🥇 Altın · 🥈 Gümüş · ⚪ Platin · 🪙 Paladyum). Dashboard fetchPrices/fetchHist filter'larına GOLD ve CRYPTO eklendi. **Edge function deploy gerekli.**
+  - [ ] **Gram + TRY display** (sonraki iterasyon) — `positions.unit` kolonu (`null|"ounce"|"gram"`) schema migration; frontend birim-aware render: USD/ons → TRY/gram conversion (fxRates ile). Kullanıcı `5 gram altın ₺6800` şeklinde girip sistem otomatik takip eder.
+- [ ] **Türkiye fonları (TEFAS entegrasyonu)** — ⚠ **BLOCKER (2026-04-26)**: borsa-mcp `get_fund_data` ve `screen_funds` çalışmıyor — TEFAS resmi endpoint'leri (`BindComparisonFundReturns`, `BindHistoryAllocation`) `404 ERR-006 "Method not found or disabled"` dönüyor. Sprint ertelendi. Yeni provider keşfi gerek:
+  - TEFAS Next.js network analizi → güncel endpoint'leri bul
+  - Alternatif scrape kaynakları (Investing.com TR, Mynet Finans, Bigpara, Fonbul) test et
+  - tefas-crawler / yfinance Python lib'leri Deno-uyumlu mu? Worker'da çalıştırılabilir mi?
+  - Provider seçilince edge function (yeni veya fetch-prices'a TEFAS dalı) + frontend FUND tip ayrımı (US ETF vs TEFAS).
 - [x] ~~**Kripto fiyat akışı sağlamlaştırma**~~ (2026-04-26) — Edge function `fetch-prices`'a CRYPTO ticker normalize bloğu (BTC/eth/BTC-USD/BTC/USDT → `X:{BASE}USD`); empty/over-length guard (`base.length>10` reject, `split(/[-_/]/)[0]` ile USDT/USDC quote strip). Frontend ManuelPosForm CRYPTO modunda 12 popüler kripto chip picker (BTC/ETH/SOL/BNB/XRP/ADA/DOGE/AVAX/DOT/MATIC/LINK/UNI). Tip değişiminde currency USD default. **Edge function deploy gerekli** — fetch-prices-edge-function.js Supabase Dashboard'da güncellensin.
 - [ ] **FX/GOLD ham ticker normalize** (post-CRYPTO sprint not) — Edge function şu an `asset_type:"FX"`'le `USDTRY` (C: prefix'siz) gelirse 404 dönüyor sessizce. CRYPTO normalize gibi C: autoprefix + length/format guard ekle. Frontend `C:USDTRY` explicit gönderdiği için aktif bug değil ama future-proofing.
 - [ ] Vadeli mevduat (faiz oranı, vade, getiri hesabı)

@@ -274,7 +274,30 @@ Deno.serve(async (req) => {
         cryptoTicker = `X:${base}USD`;
       }
     }
-    const massiveTicker = isCrypto ? cryptoTicker : ticker;
+    // GOLD normalize: emtia kodları (XAU/XAG/XPT/XPD) → C:{SYM}USD.
+    // Türkçe ad da kabul: ALTIN→XAU, GUMUS/GÜMÜŞ→XAG, PLATIN→XPT, PALADYUM→XPD.
+    // Massive C: prefix'i forex/emtia için ortak; XAUUSD = 1 ons spot altın USD.
+    const isGold = asset_type === "GOLD";
+    let goldTicker = ticker;
+    if (isGold) {
+      if (/^[XCI]:/i.test(ticker)) {
+        goldTicker = ticker.toUpperCase();
+      } else {
+        const upper = ticker.toUpperCase().replace(/Ü/g,"U").replace(/Ş/g,"S").replace(/[^A-Z]/g, "");
+        const map = {
+          XAU:"XAU", ALTIN:"XAU", GOLD:"XAU",
+          XAG:"XAG", GUMUS:"XAG", SILVER:"XAG",
+          XPT:"XPT", PLATIN:"XPT", PLATINUM:"XPT",
+          XPD:"XPD", PALADYUM:"XPD", PALLADIUM:"XPD",
+        };
+        const sym = map[upper];
+        if (!sym) {
+          return json({ ticker, result: { error: "Geçersiz emtia kodu (XAU/XAG/XPT/XPD)" }, date: "" });
+        }
+        goldTicker = `C:${sym}USD`;
+      }
+    }
+    const massiveTicker = isCrypto ? cryptoTicker : isGold ? goldTicker : ticker;
 
     // Provider key check
     if (!isBist && !massiveKey) {

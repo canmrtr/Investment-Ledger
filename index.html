@@ -346,6 +346,16 @@ const enrichParseListWithPrices = async (list) =>
 
 // SEC ticker DB cache — SearchTab tarafından lazy yüklenir, edge function
 // `fetch-fundamentals` mode:"ticker-list" üzerinden proxy ile gelir.
+// Massive desteği olan emtialar — picker chip listesi.
+// Edge function `asset_type:"GOLD"` ile bu sembolleri `C:{SYM}USD` formatına çevirir.
+// MVP: pozisyon ons cinsinden (1 ons = 31.1035 gram); gram/TRY display schema migration sonrası.
+const COMMODITY_SYMBOLS = [
+  {sym:"XAU", name:"Altın",     icon:"🥇"},
+  {sym:"XAG", name:"Gümüş",     icon:"🥈"},
+  {sym:"XPT", name:"Platin",    icon:"⚪"},
+  {sym:"XPD", name:"Paladyum",  icon:"🪙"},
+];
+
 // Massive desteği olan popüler kriptolar — picker chip listesi.
 // Edge function `asset_type:"CRYPTO"` ile bu sembolleri `X:{SYM}USD` formatına çevirir.
 const CRYPTO_SYMBOLS = [
@@ -1883,6 +1893,18 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
                 </div>
               </div>
             )}
+            {form.type==="GOLD"&&!editTk&&(
+              <div style={{marginTop:6}}>
+                <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Emtia (1 ons = 31.1035 g):</div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                  {COMMODITY_SYMBOLS.map(({sym,name,icon})=>(
+                    <button key={sym} type="button" className="btn-xs"
+                      onClick={()=>{set({ticker:sym,name:`${name} (1 ons)`});setCurPrice(null);fetchPrice(sym);}}
+                      style={{fontSize:10,padding:"3px 8px"}}>{icon} {sym}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             {priceNote&&(
               <div style={{
                 fontSize:11,
@@ -3104,7 +3126,7 @@ function App({session}){
   // USD (Massive) + BIST (Twelve Data) — provider erişimi olan her tür dahil.
   useEffect(()=>{
     if(!pos.length||busy.h||busy.p)return;
-    const tickers=pos.filter(p=>p.currency==="USD"||p.type==="BIST").map(p=>p.ticker);
+    const tickers=pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO").map(p=>p.ticker);
     const missing=tickers.filter(t=>!hist[t]||hist[t].p_y1==null);
     if(missing.length){
       flash_(`${missing.length} ticker için tarihi veri otomatik yükleniyor...`,"ok");
@@ -3176,7 +3198,7 @@ function App({session}){
   const fetchPrices=async()=>{
     setBusy(b=>({...b,p:true}));
     // Provider erişimi olan tüm pozisyonlar: USD-denominated (Massive) + BIST (Twelve Data)
-    const fetchable=pos.filter(p=>p.currency==="USD"||p.type==="BIST");
+    const fetchable=pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO");
     const np={...prc};let cnt=0;const failed=[];
     for(let i=0;i<fetchable.length;i++){
       const p=fetchable[i],t=p.ticker;
@@ -3201,7 +3223,7 @@ function App({session}){
     // tickersOverride array of strings ise, asset_type'ı pos'tan lookup et
     const fetchable = tickersOverride
       ? tickersOverride.map(t=>{const p=pos.find(x=>x.ticker===t);return{ticker:t,type:p?.type};})
-      : pos.filter(p=>p.currency==="USD"||p.type==="BIST").map(p=>({ticker:p.ticker,type:p.type}));
+      : pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO").map(p=>({ticker:p.ticker,type:p.type}));
     const nh={...hist};const np={...prc};let cnt=0;const failed=[];
     for(let i=0;i<fetchable.length;i++){
       const {ticker:t,type:at}=fetchable[i];
