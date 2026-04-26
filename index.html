@@ -336,9 +336,10 @@ const enrichParseWithPrice = async (d) => {
   const at = d.asset_type;  // edge function BIST routing için
   // 1) Tarih-spesifik kapanış
   let price = await tryFetch({ ticker, mode: "price", date: d.date, asset_type: at });
+  if (price) return { ...d, price, _priceAutoFilled: true };
   // 2) Fallback: latest (hafta sonu / future date / 403 senaryoları)
-  if (!price) price = await tryFetch({ ticker, mode: "price", asset_type: at });
-  return price ? { ...d, price } : d;
+  price = await tryFetch({ ticker, mode: "price", asset_type: at });
+  return price ? { ...d, price, _priceAutoFilled: true, _priceFallback: true } : d;
 };
 
 // Multi-line parse için array enrichment — paralel çalışır
@@ -1507,11 +1508,16 @@ function ConfirmBox({data,onSave,onCancel}){
   if(items.length===1){
     const d=items[0];
     const c=symFor(d.currency);
+    const priceVal = d._priceFallback
+      ? <span style={{display:"flex",alignItems:"center",gap:6}}>{c+fmt(d.price)}<span style={{fontSize:10,padding:"1px 6px",borderRadius:10,background:"rgba(255,184,0,0.15)",color:"var(--warn)",fontWeight:600}}>⚠ son kapanış</span></span>
+      : d._priceAutoFilled
+        ? <span style={{display:"flex",alignItems:"center",gap:6}}>{c+fmt(d.price)}<span style={{fontSize:10,padding:"1px 6px",borderRadius:10,background:"rgba(0,217,126,0.12)",color:"var(--ok)",fontWeight:600}}>↻ otomatik</span></span>
+        : c+fmt(d.price);
     const rows=[
       ["Tarih",fmtDateTR(d.date)],["Ticker",d.ticker],["Şirket",d.name||"—"],
       ["Tür",TL[d.asset_type]||d.asset_type||"—"],
       ["İşlem",d.way==="BUY"?"Alış":"Satış"],["Adet",fmtShares(d.shares)],
-      ["Fiyat",c+fmt(d.price)],["Toplam",c+fmt((+d.shares)*(+d.price),0)],
+      ["Fiyat",priceVal],["Toplam",c+fmt((+d.shares)*(+d.price),0)],
       ["Broker",d.broker||"—"],["Komisyon",d.commission?(c+fmt(+d.commission,2)):"—"]
     ];
     return(
@@ -1519,7 +1525,7 @@ function ConfirmBox({data,onSave,onCancel}){
         <div className="lbl" style={{marginBottom:12}}>Parse sonucu — doğrula</div>
         <div className="kv">
           {rows.map(([k,v])=>(
-            <div key={k}><div className="kk">{k}</div><div className="kv_">{String(v)}</div></div>
+            <div key={k}><div className="kk">{k}</div><div className="kv_">{typeof v==="string"?v:v}</div></div>
           ))}
         </div>
         <div className="brow">
@@ -1547,8 +1553,10 @@ function ConfirmBox({data,onSave,onCancel}){
               <span style={{fontFamily:"'DM Mono',monospace",fontSize:11,color:"var(--text2)",minWidth:80}}>{fmtDateTR(tx.date)}</span>
               <span style={{fontWeight:600,fontSize:13,minWidth:60}}>{tx.ticker}</span>
               <span className={tx.way==="BUY"?"ok":"err"} style={{fontSize:11,minWidth:32}}>{tx.way==="BUY"?"Alış":"Satış"}</span>
-              <span className="mono" style={{fontSize:12,color:"var(--text2)"}}>
+              <span className="mono" style={{fontSize:12,color:"var(--text2)",display:"flex",alignItems:"center",gap:5}}>
                 {fmtShares(tx.shares)} × {c}{fmt(tx.price)}
+                {tx._priceFallback && <span style={{fontSize:10,padding:"1px 5px",borderRadius:10,background:"rgba(255,184,0,0.15)",color:"var(--warn)",fontWeight:600}}>⚠ son kapanış</span>}
+                {!tx._priceFallback && tx._priceAutoFilled && <span style={{fontSize:10,padding:"1px 5px",borderRadius:10,background:"rgba(0,217,126,0.12)",color:"var(--ok)",fontWeight:600}}>↻ otomatik</span>}
               </span>
               <span className="mono" style={{fontSize:12,fontWeight:600,marginLeft:"auto"}}>{c}{fmt(total,0)}</span>
               <button onClick={()=>remove(idx)} data-tip="Bu işlemi listeden çıkar"

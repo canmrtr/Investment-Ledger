@@ -121,6 +121,7 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 ## Bug & UX Backlog
 
 - [ ] **AI parse autofill pill (ConfirmBox)** `[S]` `[P1]` — multi-line parse'ta fiyat fallback olduysa ConfirmBox satırında "⚠ tarih fallback" pill göster; şu an sessizce fallback'liyor.
+- [ ] **ConfirmBox inline edit** `[M]` `[P1]` — AI parse sonrası doğrulama kutusunda alanlar düzenlenebilir olsun. Tek işlem: kv-grid'deki değerler tıklanabilir input'a dönüşsün (Tarih, Fiyat, Adet, Broker, Komisyon). Çoklu işlem: her satırda küçük ✎ ikonu → satır inline edit moduna geçsin. Kaydet'e basmadan önce kullanıcı AI hatasını düzeltebilsin.
 - [ ] **Dashboard ↻ Güncelle başarısız ticker ayrıntısı** `[S]` `[P2]` — şu an "başarısız: AAPL" toast; Settings → Sistem Durumu'nda per-ticker hata sebebi (HTTP 403, bulunamadı vb.).
 
 ## Güvenlik & Süreç
