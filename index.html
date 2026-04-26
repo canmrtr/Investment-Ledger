@@ -144,6 +144,7 @@
     .login-field label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;}
     /* Mode tabs in Add */
     .mtab{flex:1;min-width:70px;font-size:12px;}
+    .mtab.sm{flex:0 0 auto;min-width:auto;padding:3px 9px;font-size:11px;}
     .mtab.on{background:var(--info);border-color:var(--info);color:#fff;}
     /* Modal */
     .mdl-bd{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);animation:fadeIn .15s ease;}
@@ -346,6 +347,18 @@ const enrichParseListWithPrices = async (list) =>
 
 // SEC ticker DB cache — SearchTab tarafından lazy yüklenir, edge function
 // `fetch-fundamentals` mode:"ticker-list" üzerinden proxy ile gelir.
+// Dashboard pozisyon blokları — varlık türüne göre gruplama (currency yerine asset_type).
+// Her blok kendi natural currency'sinde ham değerlerle render olur. Üst KPI'lar tüm
+// pozisyonları display cur'a convert ediyor (ayrı sistem).
+const BLOCK_TYPES = [
+  {type:"US_STOCK", label:"US Hisse",  cur:"USD", sym:"$", badge:null},
+  {type:"FUND",     label:"ETF / Fon", cur:"USD", sym:"$", badge:"etf"},
+  {type:"BIST",     label:"BIST",      cur:"TRY", sym:"₺", badge:null},
+  {type:"CRYPTO",   label:"Kripto",    cur:"USD", sym:"$", badge:"cry"},
+  {type:"GOLD",     label:"Altın",     cur:"USD", sym:"$", badge:null},
+  {type:"FX",       label:"Döviz",     cur:"USD", sym:"$", badge:null},
+];
+
 // Massive desteği olan emtialar — picker chip listesi.
 // Edge function `asset_type:"GOLD"` ile bu sembolleri `C:{SYM}USD` formatına çevirir.
 // MVP: pozisyon ons cinsinden (1 ons = 31.1035 gram); gram/TRY display schema migration sonrası.
@@ -2808,7 +2821,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
             return(
               <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
                 {types.map(t=>(
-                  <button key={t} className={"mtab"+(healthFilter===t?" on":"")}
+                  <button key={t} className={"mtab sm"+(healthFilter===t?" on":"")}
                     onClick={()=>setHealthFilter(t)}>
                     {t==="all"?"Hepsi":TYPE_LABEL_SHORT[t]||t}
                   </button>
@@ -3592,108 +3605,63 @@ function App({session}){
             })()}
             </div>
 
-            {/* Pozisyon tabloları — currency başına ayrı blok.
-                Her tablo kendi currency'sinde ham değerlerle render olur.
-                Üst KPI'lar tüm pozisyonları display cur'a convert ederek toplar. */}
-            {usd.length>0 && (()=>{
-              const totMv=usd.reduce((a,p)=>a+(p.mv ?? p.cost),0);
+            {/* Pozisyon tabloları — varlık türüne göre 6 ayrı blok (US Hisse / ETF / BIST /
+                Kripto / Altın / Döviz). Her blok kendi natural currency'sinde ham değerlerle.
+                Üst KPI'lar tüm pozisyonları display cur'a convert ediyor (ayrı sistem). */}
+            {BLOCK_TYPES.map((cfg, idx) => {
+              const items = pos.filter(p => p.type===cfg.type && p.currency===cfg.cur).map(wrapPos);
+              if(items.length===0) return null;
+              const sortedItems = sortPos(items, sort);
+              const totMv = items.reduce((a,p)=>a+(p.mv ?? p.cost),0);
               return(
-              <div style={{marginBottom:8}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                  <div className="stitle">USD Pozisyonları · {mask("$"+fmt(totMv,0))}</div>
-                  <div className="brow">
-                    <button className="pri btn-xs" onClick={()=>setTab("add")}>+ Ekle</button>
-                    <button className="btn-xs" onClick={loadData} disabled={busy.d}>{busy.d?"...":"Yenile"}</button>
+                <div key={cfg.type} style={{marginTop:idx===0?0:22,marginBottom:8}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                    <div className="stitle" style={{marginBottom:0}}>{cfg.label} · {mask(cfg.sym+fmt(totMv,0))}</div>
+                    <div className="brow">
+                      <button className="pri btn-xs" onClick={()=>setTab("add")}>+ Ekle</button>
+                      {idx===0&&<button className="btn-xs" onClick={loadData} disabled={busy.d}>{busy.d?"...":"Yenile"}</button>}
+                    </div>
+                  </div>
+                  <div className="tbl-wrap">
+                    <table>
+                      <thead><tr>
+                        <th scope="col" className="l" onClick={()=>tsort("ticker")}>Ticker{sa("ticker")}</th>
+                        {!hide&&<th scope="col" className="r" onClick={()=>tsort("shares")}>Adet{sa("shares")}</th>}
+                        {!hide&&<th scope="col" className="r" onClick={()=>tsort("avgCost")}>Maliyet{sa("avgCost")}</th>}
+                        {!hide&&<th scope="col" className="r" onClick={()=>tsort("price")}>Fiyat{sa("price")}</th>}
+                        {!hide&&<th scope="col" className="r" onClick={()=>tsort("mv")}>Değer{sa("mv")}</th>}
+                        {!hide&&<th scope="col" className="r" onClick={()=>tsort("pl")} data-tip="Pozisyon başlangıcından bugüne unrealized kâr/zarar (Değer − Maliyet)">{`P&L${cfg.sym}`}{sa("pl")}</th>}
+                        <th scope="col" className="r" onClick={()=>tsort("plPct")} data-tip="(Değer − Maliyet) / Maliyet × 100">P&L%{sa("plPct")}</th>
+                        {hasH&&<th scope="col" className="r" onClick={()=>tsort("d1")} data-tip="Son 1 gündeki yüzde değişim">1G{sa("d1")}</th>}
+                        {hasH&&<th scope="col" className="r" onClick={()=>tsort("w1")} data-tip="Son 1 haftadaki değişim">1H{sa("w1")}</th>}
+                        {hasH&&<th scope="col" className="r" onClick={()=>tsort("m1")} data-tip="Son 1 aydaki değişim">1A{sa("m1")}</th>}
+                        {hasH&&<th scope="col" className="r" onClick={()=>tsort("y1")} data-tip="Son 1 yıldaki değişim">1Y{sa("y1")}</th>}
+                      </tr></thead>
+                      <tbody>
+                        {sortedItems.map(p=>(
+                          <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
+                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}{cfg.badge==="etf"&&<span className="badge etf">ETF</span>}{cfg.badge==="cry"&&<span className="badge cry">₿</span>}</span><span className="tname">{p.name}</span></div></td>
+                            {!hide&&<td className="r">{fmtShares(p.shares)}</td>}
+                            {!hide&&<td className="r">{mask(cfg.sym+fmt(p.avgCost))}</td>}
+                            {!hide&&<td className="r">{p.price?mask(cfg.sym+fmt(p.price)):"—"}</td>}
+                            {!hide&&<td className="r">{p.mv?mask(cfg.sym+fmt(p.mv,0)):"—"}</td>}
+                            {!hide&&<td className={"r"+pc(p.pl)}>{fmtSign(p.pl,cfg.sym)}</td>}
+                            <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
+                            {hasH&&<td className={"r"+pc(p.d1)}>{fmtP(p.d1)}</td>}
+                            {hasH&&<td className={"r"+pc(p.w1)}>{fmtP(p.w1)}</td>}
+                            {hasH&&<td className={"r"+pc(p.m1)}>{fmtP(p.m1)}</td>}
+                            {hasH&&<td className={"r"+pc(p.y1)}>{fmtP(p.y1)}</td>}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
-                <div className="tbl-wrap">
-                  <table>
-                    <thead><tr>
-                      <th scope="col" className="l" onClick={()=>tsort("ticker")}>Ticker{sa("ticker")}</th>
-                      {!hide&&<th scope="col" className="r" onClick={()=>tsort("shares")}>Adet{sa("shares")}</th>}
-                      {!hide&&<th scope="col" className="r" onClick={()=>tsort("avgCost")}>Maliyet{sa("avgCost")}</th>}
-                      {!hide&&<th scope="col" className="r" onClick={()=>tsort("price")}>Fiyat{sa("price")}</th>}
-                      {!hide&&<th scope="col" className="r" onClick={()=>tsort("mv")}>Değer{sa("mv")}</th>}
-                      {!hide&&<th scope="col" className="r" onClick={()=>tsort("pl")} data-tip="Pozisyon başlangıcından bugüne unrealized kâr/zarar (Değer − Maliyet)">P&L${sa("pl")}</th>}
-                      <th scope="col" className="r" onClick={()=>tsort("plPct")} data-tip="(Değer − Maliyet) / Maliyet × 100 — pozisyonun toplam unrealized getirisi">P&L%{sa("plPct")}</th>
-                      {hasH&&<th scope="col" className="r" onClick={()=>tsort("d1")} data-tip="Ticker fiyatının son 1 gündeki yüzde değişimi (senin alım tarihinden bağımsız)">1G{sa("d1")}</th>}
-                      {hasH&&<th scope="col" className="r" onClick={()=>tsort("w1")} data-tip="Ticker fiyatının son 1 haftadaki değişimi">1H{sa("w1")}</th>}
-                      {hasH&&<th scope="col" className="r" onClick={()=>tsort("m1")} data-tip="Ticker fiyatının son 1 aydaki değişimi">1A{sa("m1")}</th>}
-                      {hasH&&<th scope="col" className="r" onClick={()=>tsort("y1")} data-tip="Ticker fiyatının son 1 yıldaki değişimi">1Y{sa("y1")}</th>}
-                    </tr></thead>
-                    <tbody>
-                      {sorted.map(p=>(
-                        <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
-                          <td className="l"><div className="tcell"><span className="tsym">{p.ticker}{p.type==="FUND"&&<span className="badge etf">ETF</span>}{p.type==="CRYPTO"&&<span className="badge cry">₿</span>}</span><span className="tname">{p.name}</span></div></td>
-                          {!hide&&<td className="r">{fmtShares(p.shares)}</td>}
-                          {!hide&&<td className="r">{mask("$"+fmt(p.avgCost))}</td>}
-                          {!hide&&<td className="r">{p.price?mask("$"+fmt(p.price)):"—"}</td>}
-                          {!hide&&<td className="r">{p.mv?mask("$"+fmt(p.mv,0)):"—"}</td>}
-                          {!hide&&<td className={"r"+pc(p.pl)}>{fmtSign(p.pl,"$")}</td>}
-                          <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
-                          {hasH&&<td className={"r"+pc(p.d1)}>{fmtP(p.d1)}</td>}
-                          {hasH&&<td className={"r"+pc(p.w1)}>{fmtP(p.w1)}</td>}
-                          {hasH&&<td className={"r"+pc(p.m1)}>{fmtP(p.m1)}</td>}
-                          {hasH&&<td className={"r"+pc(p.y1)}>{fmtP(p.y1)}</td>}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
               );
-            })()}
-
-            {/* TRY pozisyonları — BIST için Yahoo Finance fiyat desteği aktif (Faz 1, 2026-04-25).
-                Mantık USD tablosuyla aynı; sembol ₺. */}
-            {try_.length>0 && (()=>{
-              const totMv=try_.reduce((a,p)=>a+(p.mv ?? p.cost),0);
-              return(
-              <div style={{marginTop:22,marginBottom:8}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                  <div className="stitle" style={{marginBottom:0}}>TRY Pozisyonları · {mask("₺"+fmt(totMv,0))}</div>
-                  <button className="pri btn-xs" onClick={()=>setTab("add")}>+ Ekle</button>
-                </div>
-                <div className="tbl-wrap">
-                  <table>
-                    <thead><tr>
-                      <th scope="col" className="l" onClick={()=>tsortTry("ticker")}>Ticker{saTry("ticker")}</th>
-                      {!hide&&<th scope="col" className="r" onClick={()=>tsortTry("shares")}>Adet{saTry("shares")}</th>}
-                      {!hide&&<th scope="col" className="r" onClick={()=>tsortTry("avgCost")}>Maliyet{saTry("avgCost")}</th>}
-                      {!hide&&<th scope="col" className="r" onClick={()=>tsortTry("price")}>Fiyat{saTry("price")}</th>}
-                      {!hide&&<th scope="col" className="r" onClick={()=>tsortTry("mv")}>Değer{saTry("mv")}</th>}
-                      {!hide&&<th scope="col" className="r" onClick={()=>tsortTry("pl")} data-tip="Pozisyon başlangıcından bugüne unrealized kâr/zarar (Değer − Maliyet)">P&L₺{saTry("pl")}</th>}
-                      <th scope="col" className="r" onClick={()=>tsortTry("plPct")} data-tip="(Değer − Maliyet) / Maliyet × 100">P&L%{saTry("plPct")}</th>
-                      {hasH&&<th scope="col" className="r" onClick={()=>tsortTry("d1")} data-tip="Son 1 gündeki yüzde değişim">1G{saTry("d1")}</th>}
-                      {hasH&&<th scope="col" className="r" onClick={()=>tsortTry("w1")} data-tip="Son 1 haftadaki değişim">1H{saTry("w1")}</th>}
-                      {hasH&&<th scope="col" className="r" onClick={()=>tsortTry("m1")} data-tip="Son 1 aydaki değişim">1A{saTry("m1")}</th>}
-                      {hasH&&<th scope="col" className="r" onClick={()=>tsortTry("y1")} data-tip="Son 1 yıldaki değişim">1Y{saTry("y1")}</th>}
-                    </tr></thead>
-                    <tbody>
-                      {sortedTry.map(p=>(
-                        <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
-                          <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span></div></td>
-                          {!hide&&<td className="r">{fmtShares(p.shares)}</td>}
-                          {!hide&&<td className="r">{mask("₺"+fmt(p.avgCost))}</td>}
-                          {!hide&&<td className="r">{p.price?mask("₺"+fmt(p.price)):"—"}</td>}
-                          {!hide&&<td className="r">{p.mv?mask("₺"+fmt(p.mv,0)):"—"}</td>}
-                          {!hide&&<td className={"r"+pc(p.pl)}>{fmtSign(p.pl,"₺")}</td>}
-                          <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
-                          {hasH&&<td className={"r"+pc(p.d1)}>{fmtP(p.d1)}</td>}
-                          {hasH&&<td className={"r"+pc(p.w1)}>{fmtP(p.w1)}</td>}
-                          {hasH&&<td className={"r"+pc(p.m1)}>{fmtP(p.m1)}</td>}
-                          {hasH&&<td className={"r"+pc(p.y1)}>{fmtP(p.y1)}</td>}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-              );
-            })()}
+            })}
 
             <div style={{fontSize:11,color:"var(--text2)",marginTop:8}}>
-              {txs.length} işlem · {usd.length} USD{try_.length>0?` · ${try_.length} TRY`:""}{eur.length>0?` · ${eur.length} EUR`:""}
+              {txs.length} işlem · {pos.length} pozisyon
               {!hasH&&<span style={{marginLeft:8}}>· Tarihi veri için Ayarlar → "Tarihi Veri" butonu</span>}
             </div>
             <div style={{fontSize:10,color:"var(--text3)",marginTop:6,lineHeight:1.5}}>

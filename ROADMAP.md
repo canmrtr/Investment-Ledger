@@ -46,7 +46,7 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 ## Navigasyon & Sayfalar
 
-- [ ] **Dashboard pozisyonları varlık türüne göre gruplansın** (currency yerine asset_type) — Şu an USD/TRY/EUR currency bazlı blok; kripto USD altında hisselerle karışıyor. Hedef: 6 ayrı blok (US Hisse · ETF · BIST · Kripto · Altın · Döviz) + cost-only EUR. Her blok kendi orijinal currency'sinde ham; üst KPI'lar display currency'de convert. Boş bloklar gizli, sort state per-block, blok başlığında toplam + Ekle CTA. Pie chart (Varlık Dağılımı) ile hizalanır.
+- [x] ~~**Dashboard pozisyonları varlık türüne göre gruplansın**~~ (2026-04-26) — `BLOCK_TYPES` config (US Hisse · ETF · BIST · Kripto · Altın · Döviz) ile 6 ayrı price-aware blok; her blok kendi natural currency sembolü; boş tipler gizli; sort state ortak; ilk blokta `+ Ekle` + `Yenile` butonları. EUR cost-only blok ayrı tutuldu (provider yok). Footer "X işlem · Y pozisyon" generic.
 - [ ] Her yatırım türü için ana sayfadan ayrı sayfa / tab
 - [x] ~~Hisse başı detay sayfası~~ (2026-04-25) — `TickerDetailTab` (held + non-held discovery): pozisyon kartları, transaction list, meta (borsa-mcp/Polygon), fundamental checklist (US: FMP/EDGAR; BIST: İş Yatırım), "+ Ekle" CTA. Haber entegrasyonu hâlâ açık (aşağıda).
 - [x] ~~**Portföy Analiz sayfası**~~ (2026-04-25) — yeni "Analiz" sekmesi (nav pos.3, pie icon). 4 kart: Varlık Dağılımı (filter chip ile type→ticker breakdown), Bölge Dağılımı (heuristik US/TR/Crypto/Emtia/Döviz pie), Toplam Komisyon (currency başına KPI + broker × yıl bar breakdown), Kazanan/Kaybeden Trade (BUY+SELL bağımsız split-adjusted win-rate stacked bar). Test: Sprint 1 30/30 + Sprint 2 25/25 PASS, sıfır console error.

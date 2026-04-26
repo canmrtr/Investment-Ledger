@@ -44,14 +44,18 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 Root → Login (IL mark) | App
   App (#shell)
     ├─ #topbar (sticky)       — [IL] logo + nav (Dashboard/İşlemler/Analiz/Ara/Ayarlar)
-    │                            + sağ aksiyonlar (↻ Güncelle, 👁 hide, + İşlem Ekle)
+    │                            + sağ aksiyonlar (.cur-seg $/₺ toggle, ↻ Güncelle, 👁 hide, + İşlem Ekle)
     ├─ <main #app-main>
-    │   ├─ Dashboard          — KPI kartlar (TR + XIRR), [Sparkline + Pie] yan yana,
-    │   │                       pozisyon tablosu, TRY/EUR blokları
+    │   ├─ Dashboard          — KPI kartlar (TR + XIRR, display cur'da convert),
+    │   │                       [Sparkline + Pie] yan yana, pozisyon blokları VARLIK
+    │   │                       TÜRÜNE göre (US Hisse/ETF/BIST/Kripto/Altın/Döviz —
+    │   │                       BLOCK_TYPES config), EUR cost-only ayrı blok
     │   ├─ HistoryTab         — filtre toolbar, accordion (ticker gruplu, search)
-    │   ├─ AnalysisTab        — 4 kart: Varlık Dağılımı (filter chip ile type→ticker),
+    │   ├─ AnalysisTab        — 5 kart: Varlık Dağılımı (filter chip ile type→ticker),
     │   │                       Bölge Dağılımı (heuristik US/TR/Crypto/Emtia/Döviz),
-    │   │                       Toplam Komisyon (currency başına KPI + broker × yıl bar),
+    │   │                       **Portföy Sağlık Tablosu** (8 metrik renk pill +
+    │   │                       collapsible: 🟢/🟡/🔴 aggregate rozet üstte),
+    │   │                       Toplam Komisyon (collapsible: KPI üstte + Detay ▾),
     │   │                       Kazanan/Kaybeden Trade (BUY+SELL bağımsız, split-adj)
     │   ├─ SearchTab          — global ticker arama (~11k: 10.348 US + 636 BIST),
     │   │                       portföy + tüm hisseler iki ayrı bölüm
@@ -59,12 +63,18 @@ Root → Login (IL mark) | App
     │   │                       picker context-free (FAB/+İşlem'den); detay'dan gelen
     │   │                       AddTxInline picker görmez
     │   │   ├─ ConfirmBox     — parse onayı (tek=kv-grid, çoklu=row list + ×)
-    │   │   └─ ManuelPosForm  — `prefillType` prop; tarih→fiyat autofill
+    │   │   └─ ManuelPosForm  — `prefillType` prop; tarih→fiyat autofill;
+    │   │                       CRYPTO/GOLD modunda chip picker (CRYPTO_SYMBOLS /
+    │   │                       COMMODITY_SYMBOLS); priceNote inline persistent uyarı
     │   ├─ TickerDetailTab    — held mode (pozisyon kartları) + discovery mode
-    │   │                       (non-held; YOK badge, warn-card, meta+fund only)
-    │   └─ Settings           — Fiyat & Veri, Bakım, Export (CSV), Account, Durum
-    ├─ #bottom-tabs (mobile)  — 5 nav (Dashboard/İşlemler/Analiz/Ara/Ayarlar; +Ekle filtreli, FAB ayrı)
-    └─ #fab (mobile)          — Floating "+ İşlem Ekle" sağ alt
+    │   │                       (non-held; YOK badge, warn-card, meta+fund only);
+    │   │                       FAB context-aware "il-detail-add" event listener
+    │   └─ Settings           — Fiyat & Veri (test result inline), Bakım, Export (CSV),
+    │                           Account, Durum (FX Kuru satırı dahil)
+    ├─ #bottom-tabs (mobile)  — 5 nav (Dashboard/İşlemler/Analiz/Ara/Ayarlar; detail'de
+    │                           fromTab vurgusu); +Ekle filtreli, FAB ayrı
+    └─ #fab (mobile)          — Context-aware: Detail'de + Ekle (custom event),
+                                Search'te input focus, Settings'te gizli, default + İşlem Ekle
 ```
 
 Üst-level yardımcılar (top-level, App/Root dışı):
@@ -80,26 +90,43 @@ Root → Login (IL mark) | App
 - `enrichParseWithPrice(d)` / `enrichParseListWithPrices(list)` — AI parse fiyat boşsa kapanış autofill (tarih → latest fallback)
 - `NAV_ICONS` — desktop topbar (s=14) + mobile bottom-tabs (s=20) SVG'leri (5 entry: dashboard/history/analysis/search/settings)
 - `ADD_TYPES` — AddTab type picker için 6 entry (US_STOCK/BIST/FUND/CRYPTO/GOLD/FX) + icon/label/desc
+- `BLOCK_TYPES` — Dashboard pozisyon blokları için 6 entry (US Hisse/ETF/BIST/Kripto/Altın/Döviz) — currency-yerine asset_type bazlı gruplama
+- `CRYPTO_SYMBOLS` — ManuelPosForm CRYPTO chip picker için 12 popüler kripto (BTC/ETH/SOL/...)
+- `COMMODITY_SYMBOLS` — ManuelPosForm GOLD chip picker için 4 emtia (XAU/XAG/XPT/XPD + ikon)
 - `REGION_OF` / `REGION_META` — AnalysisTab bölge dağılımı heuristik (asset_type → region key + label/color)
 - `sym_(cur)` — currency code → ₺/€/$ sembol map (AnalysisTab içi)
+- `displaySym(cur)` — top-level currency → sembol map (FX conversion için merkez yardımcı)
+- `convert(amt, from, to, fxRates)` — USD↔TRY↔EUR çevrim helper'ı (EUR↔TRY için EUR→USD→TRY chain)
+- `fxCacheGet/Set` — LS `il_fx` cache 24h TTL (Frankfurter API rates)
+- `fmtSign(n, sym)` — currency-aware signed format (`+₺X` / `-$X`); `fmtD`'nin parametrik versiyonu
+- `sanitizeMeta(data)` — provider compromise koruması: `meta.description` 5KB cap (`META_DESC_CAP`)
 - `buildSlicesPath(arr,cx,cy,r)` — pie SVG path generator (Varlık + Bölge pie'ları paylaşır)
 - `DEBUG` const (top of script) — `false` ise console.warn/log no-op (production polish)
-- `tickerDbCacheGet/Set` — LS cache 24h TTL (SearchTab için, key `sec_ticker_db_v2` — v1 BIST eklenmeden önce yazılan cache'leri invalidate eder)
+- `tickerDbCacheGet/Set` — LS cache 24h TTL + memory fallback `_tickerDbMem` (LS quota fail için); SearchTab için, key `sec_ticker_db_v2`
 
 ## Returns Hesabı
 
-Dashboard'daki 4 özet kart:
+Dashboard'daki 4 özet kart (hepsi **display currency**'de — toggle ile $ veya ₺):
 
 | Kart | Değer | Period bağımlı |
 |------|-------|---------------|
-| Maliyet | Σ shares × avg_cost (mevcut pozisyonlar) | Hayır |
-| Piyasa Değeri | Σ shares × current_price | Hayır |
+| Maliyet | Σ convert(shares × avg_cost, p.currency, displayCur) | Hayır |
+| Piyasa Değeri | Σ convert(shares × current_price, p.currency, displayCur) | Hayır |
 | Total Return | (MV + period_sells) − (start_MV + period_buys) | Evet |
 | Yıllık (XIRR) | Cash-flow tabanlı IRR (yıllık) — sadece ≥1Y | Evet |
 
-- **Total Return**: Realize + unrealize, komisyonlar dahil. Period seçilince start_MV `mvAtDate(period_start)` ile yaklaşık hesaplanır (sadece bugün aktif olan ticker'lar üzerinden).
+- **Total Return**: Realize + unrealize, komisyonlar dahil. Period seçilince start_MV `mvAtDate(period_start)` ile yaklaşık hesaplanır (tüm pos'lar üzerinden, convert ile display cur'a çevrilir).
 - **XIRR**: `<` 1 yıl periyotlarda kart "—" gösterir + "≥1Y için gösterilir" hint. Çok kısa periyotlarda extrapolation yanıltıcı olduğu için.
 - Tüm kartlar `data-tip` attribute ile özel CSS tooltip'li (anlık görünür).
+- **FX kuru yok** durumunda `convert()` null döner; pozisyon toplama 0 olarak girer ama warn-card görünür ("FX kuru yok · ↻ Güncelle").
+
+## FX (Currency Conversion)
+
+- **Provider**: Frankfurter API (`https://api.frankfurter.dev/v1/latest?from=USD&to=TRY,EUR`) — ECB resmi rates, auth-free, CORS-friendly, browser doğrudan fetch (edge function bypass).
+- **State**: `fxRates = {USDTRY: 32.5, EURUSD: 1.08}`. Frankfurter `USD→EUR` döner; bizim convert helper'ı `EUR→USD` bekler — `1 / d.rates.EUR` ile invert.
+- **Cache**: `LS.il_fx` 24h TTL (`fxCacheGet/Set`). Mount'ta + ↻ Güncelle ile tetiklenir; pos/txs değişince EUR pozisyon varsa otomatik refresh.
+- **Display Currency Toggle**: Topbar `.cur-seg` segmented buton (`$ ₺`); state `displayCur ∈ {"USD","TRY"}` LS persist (`il_disp_cur`).
+- **Konvansiyon**: Ham pozisyon değerleri orijinal currency'sinde storage; sadece display sırasında convert. TickerDetailTab + HistoryTab orijinal currency'de kalır (toggle dokunmaz); Dashboard KPI + Sparkline + Pie + AnalysisTab tüm kartları display cur'a convert eder.
 
 ## Önemli Konvansiyonlar
 
@@ -116,9 +143,10 @@ Dashboard'daki 4 özet kart:
 - **FAB mobile**: 54px daire, `var(--info)` mor, mor shadow, sağ alt sabit (`bottom:76px`).
 
 ### Para & formatlama
-- USD → `$`, TRY → `₺`, EUR → `€`
-- `fmt(n, d=2)`, `fmtD(n)` (±$), `fmtP(n)` (±%), `fmtShares(n)` adet için
-- Gizli mod (`hide` state): `mask()` ile tüm $ tutarları `••••`
+- USD → `$`, TRY → `₺`, EUR → `€` (`displaySym(cur)` helper)
+- `fmt(n, d=2)`, `fmtD(n)` (±$ — sadece USD), `fmtSign(n, sym)` (currency-aware ±sym), `fmtP(n)` (±%), `fmtShares(n)` adet için
+- Gizli mod (`hide` state): `mask()` ile tüm tutarları `••••`
+- **Display Currency**: Topbar toggle ile $ veya ₺. Dashboard KPI + Pie + Analiz convert; pozisyon tablosu blokları kendi natural currency'sinde. Bkz. "FX (Currency Conversion)" bölümü.
 
 ### Tarih
 - **Storage**: ISO `YYYY-MM-DD` (Supabase date). Internal hesaplar/sıralama hep ISO.
@@ -361,14 +389,25 @@ Detaylı liste için **`ROADMAP.md`** dosyasına bakın. Tamamlananlar:
 - ✅ **Mikro UX fix bundle** (2026-04-25) — Input maxLength (username 20 / search 64), Web row null guard, FMP `OUT_OF_PLAN` warn-card, TickerDetailTab effectiveType useEffect deps
 - ✅ **Kontrast + pie alignment polish** (2026-04-25) — `--text2 #b8b8b8 + font-weight:500` (3.66 → 11.4 contrast), pie row `flex:0 0 70/56px` (kolon hizalama bug fix)
 - ✅ **Analiz Tab** (2026-04-25, Sprint 1+2) — yeni "Analiz" sekmesi (nav pos.3, pie icon), 4 kart: Varlık (filtreli) + Bölge (heuristik) + Komisyon (broker × yıl) + Win/Loss (BUY+SELL bağımsız split-adjusted). 55/55 test PASS.
+- ✅ **FX conversion + global currency toggle** (2026-04-26) — Topbar `$ ₺` segmented (`displayCur` LS persist), Frankfurter API rates (`api.frankfurter.dev/v1/latest`), `convert(amt,from,to,fx)` USD↔TRY↔EUR helper. Dashboard KPI + Sparkline + Pie + Analiz 3 kartı tüm pozisyonları display cur'a convert; **Bölge bug fix** (BIST TRY artık doğru topluyor); TRY pozisyon tablosu price-aware; FX yok warn-card.
+- ✅ **UI Quick Wins + 2-day cleanup + Hardening** (2026-04-26) — title→data-tip migration (14 yer); confirm modal danger=true autoFocus cancel + Enter koruması; HistoryTab edit form'a komisyon input; AddTab tip picker `.pick-card` CSS hover (anti-pattern düzeltildi); USD tablo fmtD→fmtSign; tüm `<th scope="col">`; TickerDetailTab navigation `fromTab` (Search/History'den geri doğru tab); detail'de bottom-tabs/topbar fromTab vurgusu; FAB context-aware (custom event "il-detail-add", Search input focus, Settings'te gizli); Settings inline test response + FX kuru durumu satırı; Eye `aria-pressed` + logo `aria-label`; AddTxInline `assetType` prop; Manuel form notu; `meta.list_date` fmtDateTR; CDN SRI pin (supabase-js@2.104.1 + React/ReactDOM 18.2.0 + Babel 7.23.2 sha384); `sanitizeMeta` 5KB cap; `_tickerDbMem` LS quota fallback.
+- ✅ **Crypto MVP** (2026-04-26) — Edge function CRYPTO ticker normalize (BTC/eth/BTC-USD/BTC/USDT → `X:{BASE}USD`); `split(/[-_/]/)[0]` quote currency strip; empty/over-length guard. ManuelPosForm `CRYPTO_SYMBOLS` chip picker (12 popüler). Dashboard fetch filter'larına CRYPTO eklendi.
+- ✅ **Gold MVP** (2026-04-26, ons & USD) — Edge function GOLD normalize (XAU/XAG/XPT/XPD + Türkçe ad → `C:{SYM}USD`). `COMMODITY_SYMBOLS` chip picker (4 emtia). Dashboard fetch filter'larına GOLD dahil. **Gram + TRY display + işçilik premium** ROADMAP'te (schema unit kolonu sonraki sprint).
+- ✅ **AnalysisTab Portföy Sağlık Tablosu** (2026-04-26) — 5. kart, 8 metrik renk pill (P/E, ROE, Net/Op Marj, Gelir/Kâr 5Y, Borç/Özk, NetBorç/FCF) + Skor; sticky ticker + horizontal scroll; "Eksikleri Çek" CTA + sıralı fetch + progress; default kapalı + 3 rozet (🟢/🟡/🔴 aggregate sayım) + Detay ▾ toggle; satır click → openDetail.
+- ✅ **AnalysisTab Komisyon kartı collapsible** (2026-04-26) — KPI üstte sabit + Detay ▾; Broker/Yıl breakdown sadece commOpen iken render.
+- ✅ **Dashboard varlık türü gruplaması** (2026-04-26) — Currency-bazlı USD/TRY/EUR blok yerine `BLOCK_TYPES` config ile 6 type-bazlı blok (US Hisse · ETF · BIST · Kripto · Altın · Döviz) + EUR cost-only ayrı blok. Her blok kendi natural currency sembolü, sort state ortak.
+- ✅ **`fetchPrice` weekend & inline uyarı** (2026-04-26) — ManuelPosForm fetchPrice'a `priceNote` state ile persistent inline kart (ok/warn/err). Tarih için veri yoksa otomatik latest close fallback + sarı warn-card "⚠ X tarihi için veri yok — Y kapanışı kullanıldı".
 
-Açık başlıklar:
-- **Asset type'lar**: altın (`C:XAUUSD` ile mümkün), TEFAS fonları (borsa-mcp `get_fund_data` mevcut), vadeli mevduat
-- **EDGAR + market price**: P/E ve P/S için CommonStockSharesOutstanding × current price
-- **Sektör-aware fundamental eşikler**: tech P/E ≤30, utility ≤15 vs.
-- **Portföy-geneli checklist tablosu**: tüm pozisyonlar tek tabloda
-- **Tarihsel fundamental trend**: 5 yıl gelir/marj/ROE eğrisi
-- **FX conversion**: portföy USD/TRY/EUR blend için fetch-prices C:USDTRY/EURUSD ile (Analiz Genel mode'undaki mixed sum'ı düzeltir)
-- **Touch tooltip**: `data-tip` mobil'de görünmüyor; tap-to-show pattern (~30 yer)
+Açık başlıklar (detay için `ROADMAP.md`):
+- **TR altın birimleri** (gram + çeyrek + yarım + tam + Cumhuriyet + Reşat + Ata) — schema migration + birim picker + işçilik premium göstergesi
+- **TEFAS entegrasyonu** ⚠ BLOCKER (borsa-mcp + TEFAS resmi endpoint 404; provider keşfi gerek)
+- **FX/GOLD ham ticker normalize** — edge function future-proofing
+- **Dark/Light tema desteği** — `data-theme` attribute + light tokens + Settings 3-button segmented
+- **Sektör-aware fundamental eşikler** — tech P/E ≤30, utility ≤15 vs.
+- **EDGAR + market price** — P/E ve P/S için CommonStockSharesOutstanding × current price
+- **Tarihsel fundamental trend** — 5 yıl gelir/marj/ROE mini chart
+- **AI parse autofill UX** — fallback gösterimi ConfirmBox satırlarında pill ile
+- **Touch tooltip** — `data-tip` mobil tap-to-show pattern (~35+ yer)
+- **Periyodik agent denetim turu** — her 2-3 sprint sonrası 5 specialized agent paralel health check (ilk tur TEFAS sprint sonrası)
 - **Sosyal**: risk profili, anonim feed (privacy gerektirir)
 - **Eğitim**: Investment Basics modülü
