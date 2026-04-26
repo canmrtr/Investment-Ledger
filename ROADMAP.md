@@ -13,7 +13,24 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
     - [ ] Sektör-aware + reel büyüme eşikleri (TR enflasyonu nominal CAGR'ı şişiriyor → `revenueGrowth5Y` ≥10% kriteri otomatik geçiyor; CPI deflate veya sektör median kıyası gerek)
   - [ ] BIST için price-cache TRY-aware olsun (şu an `prc[ticker]` raw değer; pos.currency="TRY" ile FE doğru sembolleri seçiyor — sağlam ama TRY/USD fx conversion için hazırlık gerek)
 - [x] ~~**Altın / emtia (MVP — ons & USD)**~~ (2026-04-26) — Edge function `fetch-prices`'a GOLD normalize bloğu (XAU/XAG/XPT/XPD + Türkçe ad ALTIN/GUMUS/PLATIN/PALADYUM → `C:{SYM}USD`). Frontend ManuelPosForm GOLD seçilince 4 emtia chip (🥇 Altın · 🥈 Gümüş · ⚪ Platin · 🪙 Paladyum). Dashboard fetchPrices/fetchHist filter'larına GOLD ve CRYPTO eklendi. **Edge function deploy gerekli.**
-  - [ ] **Gram + TRY display** (sonraki iterasyon) — `positions.unit` kolonu (`null|"ounce"|"gram"`) schema migration; frontend birim-aware render: USD/ons → TRY/gram conversion (fxRates ile). Kullanıcı `5 gram altın ₺6800` şeklinde girip sistem otomatik takip eder.
+  - [ ] **TR altın birimleri (gram + çeyrek + yarım + tam + Cumhuriyet + Reşat + Ata)** (Altın iterasyon 2, sonraki sprint) — Mevcut MVP sadece ons/USD; TR yatırımcısı için yetersiz. Kapsam:
+    - `positions.unit` kolonu (schema migration; sql-writer agent): `null | "ounce" | "gram" | "quarter" | "half" | "full" | "cumhuriyet" | "resat" | "ata"`
+    - `GOLD_UNITS` sabit (top-level): birim × gram ağırlık × saflık
+      - Gram (1.00 g, 24 ayar = 0.999)
+      - Çeyrek (1.75 g, 22 ayar = 0.916)
+      - Yarım (3.50 g, 22 ayar)
+      - Tam / Ziynet (7.00 g, 22 ayar)
+      - Cumhuriyet (7.20 g, 22 ayar)
+      - Reşat (7.20 g, 22 ayar)
+      - Ata (7.20 g, 22 ayar)
+      - Ons (31.1035 g, 24 ayar) — mevcut MVP
+    - ManuelPosForm GOLD seçilince Birim picker (8 chip); saflık birime göre auto, kullanıcı manuel override
+    - `shares` = adet (kullanıcı "5 çeyrek altın" → shares=5)
+    - `avgCost` = TRY/adet (kullanıcının ödediği gerçek fiyat, işçilik dahil)
+    - Spot saf değer hesabı: USD/ons (Massive) → USD/gram → TRY/gram (fxRates) → TRY/adet (× ağırlık × saflık)
+    - Dashboard render: "5 çeyrek altın · ₺12,000/ad · ₺60,000 toplam · Spot saf ₺55,000 · Premium %9"
+    - **Premium işçilik göstergesi** — kullanıcının ödediği fiyat ile spot saf altın eşdeğeri farkı (yatırım kararı için faydalı)
+    - Currency default TRY (type=GOLD currency=TRY); USD/ons MVP geriye uyumlu kalır
 - [ ] **Türkiye fonları (TEFAS entegrasyonu)** — ⚠ **BLOCKER (2026-04-26)**: borsa-mcp `get_fund_data` ve `screen_funds` çalışmıyor — TEFAS resmi endpoint'leri (`BindComparisonFundReturns`, `BindHistoryAllocation`) `404 ERR-006 "Method not found or disabled"` dönüyor. Sprint ertelendi. Yeni provider keşfi gerek:
   - TEFAS Next.js network analizi → güncel endpoint'leri bul
   - Alternatif scrape kaynakları (Investing.com TR, Mynet Finans, Bigpara, Fonbul) test et
@@ -29,6 +46,7 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 ## Navigasyon & Sayfalar
 
+- [ ] **Dashboard pozisyonları varlık türüne göre gruplansın** (currency yerine asset_type) — Şu an USD/TRY/EUR currency bazlı blok; kripto USD altında hisselerle karışıyor. Hedef: 6 ayrı blok (US Hisse · ETF · BIST · Kripto · Altın · Döviz) + cost-only EUR. Her blok kendi orijinal currency'sinde ham; üst KPI'lar display currency'de convert. Boş bloklar gizli, sort state per-block, blok başlığında toplam + Ekle CTA. Pie chart (Varlık Dağılımı) ile hizalanır.
 - [ ] Her yatırım türü için ana sayfadan ayrı sayfa / tab
 - [x] ~~Hisse başı detay sayfası~~ (2026-04-25) — `TickerDetailTab` (held + non-held discovery): pozisyon kartları, transaction list, meta (borsa-mcp/Polygon), fundamental checklist (US: FMP/EDGAR; BIST: İş Yatırım), "+ Ekle" CTA. Haber entegrasyonu hâlâ açık (aşağıda).
 - [x] ~~**Portföy Analiz sayfası**~~ (2026-04-25) — yeni "Analiz" sekmesi (nav pos.3, pie icon). 4 kart: Varlık Dağılımı (filter chip ile type→ticker breakdown), Bölge Dağılımı (heuristik US/TR/Crypto/Emtia/Döviz pie), Toplam Komisyon (currency başına KPI + broker × yıl bar breakdown), Kazanan/Kaybeden Trade (BUY+SELL bağımsız split-adjusted win-rate stacked bar). Test: Sprint 1 30/30 + Sprint 2 25/25 PASS, sıfır console error.
@@ -36,6 +54,8 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
   - [ ] ETF underlying region (MCHI=Çin gibi) — şu an FUND→US default
   - [ ] Win/Loss time horizon seçimi (current price yerine 1A/3A/6A/1Y window)
   - [ ] Win/Loss: sold-out ticker'lar için live price fetch (şu an cache'te yoksa "noPrice" sayım dışı)
+  - [ ] **Toplam Komisyon kartı: KPI üstte sabit, breakdown collapsible** — Mevcut yapı KPI + Broker breakdown + Yıl breakdown hep açık (uzun kart). Hedef: KPI rakamı her zaman görünür; altında "Detay ▾" toggle (default kapalı). HistoryTab accordion pattern'iyle tutarlı. Effort: ~10-15 dk.
+  - [ ] **Portföy Sağlık Tablosu: kapalı özet + collapsible detay** — Mevcut yapı tüm satırlar açılır açılmaz görünüyor. Hedef: Default kapalı; üstte 3 büyük rozet (🟢 Yeşil: N · 🟡 Sarı: N · 🔴 Kırmızı: N — portföy genelinde fundScore aggregate sayımları). Yanında "Detay ▾" toggle, tıklanınca firma listesi açılır. Filter chip (Hepsi/US/BIST) kapalı modda da rozet sayılarını günceller. "Eksikleri Çek" CTA kapalı modda da görünür. Effort: ~15-20 dk.
 
 ## Fundamental & Analiz
 
@@ -94,6 +114,15 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 - [x] ~~**Adet kolonu trailing-zero temizliği**~~ — `fmtShares()` helper'a alındı, 7 site güncellendi (2026-04-25)
 - [x] ~~**Fundamental "ticker kapsam dışı" mesajı**~~ (2026-04-25) — Edge function `code:"OUT_OF_PLAN"` döner (FMP 402 + EDGAR fallback de fail olunca); FE turuncu `warn-card` "Ticker FMP free planında yok" + alternatif provider notu ile gösterir.
 - [x] ~~**Asset type seçimi → ekleme akışı**~~ (2026-04-25) — AddTab açılınca 6 kart picker (US/BIST/FUND/CRYPTO/GOLD/FX); seçimden sonra context header "Tip: X · [Tipi değiştir]" + mevcut 4 mode tab. ManuelPosForm `prefillType` prop ile type+currency (BIST→TRY) pre-fill; `key={pickedType}` ile tip değişiminde clean remount. AddTxInline (Detay'dan "+ Ekle") değişmedi — context zaten var. Test: 29/29 PASS (Playwright + Chromium).
+- [ ] **Dark/Light tema desteği** — Şu an tek dark tema (`prefers-color-scheme:light` redesign'da kaldırılmıştı). Yapılacaklar:
+  - `:root` color tokenleri light variant (bg/bg2/bg3/bg4, text/text2/text3, border, info/ok/err/warn light kontrast)
+  - `data-theme` attribute (`<html data-theme="light|dark|system">`) + CSS scope (`[data-theme="light"] { ... }`)
+  - Settings → Görünüm bölümü: 3-button segmented (Sistem · Açık · Koyu)
+  - LS persist (`il_theme`); "system" modunda `prefers-color-scheme` dinler
+  - SVG ikonları currentColor kullanıyor mu kontrol (NAV_ICONS, IconEye/EyeOff vb.)
+  - Pie chart slice color'ları (TYPE_COLORS, REGION_META) light'ta yeterli kontrast doğrula
+  - "Dark-only" notu CLAUDE.md "Tasarım sistemi" bölümünden kaldır
+  - Effort: ~yarım gün (token paleti + scope CSS ana iş; component'lar zaten token kullanıyor)
 
 ## Bug & UX Backlog
 
@@ -116,6 +145,17 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 - [x] ~~**Username + search input maxLength**~~ (2026-04-25) — Username `maxLength={20}` (rule note ile uyumlu), Search `maxLength={64}`.
 - [x] ~~**Web row null guard**~~ (2026-04-25) — Web row değeri sadece `extractDomain` parse edebildiğinde geçer; null URL'de satır filtrelenir.
 - [x] ~~**TickerDetailTab `effectiveType` useEffect deps**~~ (2026-04-25) — Live-price + meta fetch + fund fetch useEffect'lerinin deps'lerine `effectiveType` eklendi; stale closure provider mismatch'i kapatıldı.
+
+## Süreç & Denetim (2026-04-26)
+
+- [ ] **Periyodik agent denetim turu (her 2-3 sprint)** — Major sprint'ler bittikten sonra ana iş kapanmadan önce 5 specialized agent paralel olarak general health check yapar:
+  - **client-security-auditor** — XSS vektörü, secret leak, LS hijyeni, auth state, user-data isolation, external resource safety
+  - **edge-reviewer** — Tüm `*-edge-function.js`'leri (parse-transaction, fetch-prices, fetch-fundamentals, refresh-price-cache) — Deno pitfall, env misuse, error handling, rate limit
+  - **rls-auditor** — Mevcut Supabase tabloları + RLS policy'leri (positions, transactions, splits, profiles, price_cache) — user data isolation halen sağlam mı
+  - **ui-builder** — Son sprint'lerde eklenen yeni component'lar tasarım sistemi konvansiyonlarına uyuyor mu (CSS class'ları, color tokens, Türkçe microcopy, empty/loading state)
+  - **product-owner** — Backlog grooming, son 2-3 sprint'in kapadığı/açtığı item'lar, sıradaki 5 öncelik impact × effort dengesinde, stale item temizliği
+  - Tetikleyici: ana ajan proaktif (kullanıcı talep etmese de). Çıktı: her agent ≤200 kelime + en kritik 2-3 bulgu, tek bir özet sayfa olarak sunulur.
+  - İlk tur: TEFAS sprint'i bittikten sonra (5+ sprint birikmiş olur).
 
 ## Fiyat Akışı UX Notları (2026-04-26)
 
