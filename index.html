@@ -20,11 +20,18 @@
       --ok:#00d97e;--err:#ff3366;--info:#6658ff;--warn:#ffb800;
       --r:10px;--rl:16px;
     }
+    [data-theme="light"]{
+      --bg:#ffffff;--bg2:#f5f5f5;--bg3:#ebebeb;--bg4:#e0e0e0;
+      --border:rgba(0,0,0,0.08);--border2:rgba(82,72,212,0.28);
+      --text:#1a1a1a;--text2:#4a4a4a;--text3:#808080;
+      --info:#5248d4;
+      --topbar-bg:rgba(255,255,255,0.90);
+    }
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
     body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;min-height:100vh;}
     #app{display:contents;}
     #shell{display:flex;flex-direction:column;min-height:100vh;}
-    #topbar{height:52px;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:100;}
+    #topbar{height:52px;background:var(--topbar-bg,rgba(0,0,0,0.85));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:100;}
     .topbar-left{display:flex;align-items:center;gap:9px;margin-right:28px;}
     .logo-mark{width:28px;height:28px;background:var(--info);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;letter-spacing:-0.03em;flex-shrink:0;}
     .logo-text{font-size:13px;font-weight:600;color:var(--text);letter-spacing:-0.02em;}
@@ -365,10 +372,10 @@ const BLOCK_TYPES = [
 // Edge function `asset_type:"GOLD"` ile bu sembolleri `C:{SYM}USD` formatına çevirir.
 // MVP: pozisyon ons cinsinden (1 ons = 31.1035 gram); gram/TRY display schema migration sonrası.
 const COMMODITY_SYMBOLS = [
-  {sym:"XAU", name:"Altın",     icon:"🥇"},
-  {sym:"XAG", name:"Gümüş",     icon:"🥈"},
-  {sym:"XPT", name:"Platin",    icon:"⚪"},
-  {sym:"XPD", name:"Paladyum",  icon:"🪙"},
+  {sym:"XAU", name:"Altın"},
+  {sym:"XAG", name:"Gümüş"},
+  {sym:"XPT", name:"Platin"},
+  {sym:"XPD", name:"Paladyum"},
 ];
 
 // Massive desteği olan popüler kriptolar — picker chip listesi.
@@ -517,6 +524,25 @@ const NAV_ICONS = {
   settings:  (s)=><svg width={s} height={s} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="2"/><path d="M8 1.5v1.5 M8 13v1.5 M14.5 8h-1.5 M3 8H1.5 M12.6 3.4l-1.1 1.1 M4.5 11.5l-1.1 1.1 M12.6 12.6l-1.1-1.1 M4.5 4.5L3.4 3.4"/></svg>,
 };
 const IconPlus = ()=><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="11" y1="4" x2="11" y2="18"/><line x1="4" y1="11" x2="18" y2="11"/></svg>;
+
+// Varlık türü SVG ikonları — currentColor, ölçeklendirilebilir (s parametresi).
+// NAV_ICONS pattern ile aynı — hardcoded renk yok.
+const ASSET_ICONS = {
+  US_STOCK: (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
+  BIST:     (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="1"/><path d="M3 11 L12 4 L21 11"/><line x1="9" y1="21" x2="9" y2="15"/><line x1="15" y1="21" x2="15" y2="15"/></svg>,
+  FUND:     (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="16" width="20" height="4" rx="1"/><rect x="4" y="10" width="16" height="4" rx="1"/><rect x="7" y="4" width="10" height="4" rx="1"/></svg>,
+  CRYPTO:   (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 20 7 20 17 12 22 4 17 4 7"/><path d="M9 9 C9 9 9 7 12 7 C15 7 15 9 15 10 C15 11.5 12 12 12 12 C15 12 15 13.5 15 15 C15 16 15 18 12 18 C9 18 9 16 9 16"/><line x1="12" y1="6" x2="12" y2="7"/><line x1="12" y1="18" x2="12" y2="19"/></svg>,
+  GOLD:     (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>,
+  FX:       (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12 C2 12 6 4 12 4 C18 4 22 12 22 12 C22 12 18 20 12 20 C6 20 2 12 2 12 Z"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="4" x2="12" y2="2"/><line x1="12" y1="20" x2="12" y2="22"/></svg>,
+};
+
+// Emtia SVG ikonları (COMMODITY_SYMBOLS için)
+const COMMODITY_ICONS = {
+  XAU: (s=16)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>,
+  XAG: (s=16)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12 L11 15 L16 9"/></svg>,
+  XPT: (s=16)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>,
+  XPD: (s=16)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3 L21 7.5 V16.5 L12 21 L3 16.5 V7.5 Z"/><circle cx="12" cy="12" r="3"/></svg>,
+};
 
 // ── Login ────────────────────────────────────────────────────────
 function Login(){
@@ -1923,10 +1949,12 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
               <div style={{marginTop:6}}>
                 <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Emtia (1 ons = 31.1035 g):</div>
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-                  {COMMODITY_SYMBOLS.map(({sym,name,icon})=>(
+                  {COMMODITY_SYMBOLS.map(({sym,name})=>(
                     <button key={sym} type="button" className="btn-xs"
                       onClick={()=>{set({ticker:sym,name:`${name} (1 ons)`});setCurPrice(null);fetchPrice(sym);}}
-                      style={{fontSize:10,padding:"3px 8px"}}>{icon} {sym}</button>
+                      style={{fontSize:10,padding:"3px 8px",display:"inline-flex",alignItems:"center",gap:4}}>
+                      <span style={{color:"var(--warn)",display:"flex"}}>{COMMODITY_ICONS[sym]&&COMMODITY_ICONS[sym](14)}</span>{sym}
+                    </button>
                   ))}
                 </div>
               </div>
@@ -2155,12 +2183,12 @@ function SearchTab({pos,txs,openDetail,flash_}){
 // seçtirir. Detay sayfasından gelen "+ Ekle" akışı AddTxInline kullandığı
 // için bu adım sadece AddTab'a özel.
 const ADD_TYPES = [
-  {type:"US_STOCK", icon:"🇺🇸", label:"US Hisse",   desc:"NYSE / NASDAQ — AAPL, TSLA"},
-  {type:"BIST",     icon:"🇹🇷", label:"BIST",       desc:"Borsa İstanbul — THYAO, ASELS"},
-  {type:"FUND",     icon:"📊", label:"ETF / Fon",  desc:"SPY, QQQ, VT"},
-  {type:"CRYPTO",   icon:"₿",  label:"Kripto",     desc:"BTC, ETH"},
-  {type:"GOLD",     icon:"🪙", label:"Altın",      desc:"Spot ons (XAUUSD)"},
-  {type:"FX",       icon:"💱", label:"Döviz",      desc:"USDTRY, EURUSD"},
+  {type:"US_STOCK", label:"US Hisse",   desc:"NYSE / NASDAQ — AAPL, TSLA"},
+  {type:"BIST",     label:"BIST",       desc:"Borsa İstanbul — THYAO, ASELS"},
+  {type:"FUND",     label:"ETF / Fon",  desc:"SPY, QQQ, VT"},
+  {type:"CRYPTO",   label:"Kripto",     desc:"BTC, ETH"},
+  {type:"GOLD",     label:"Altın",      desc:"Spot ons (XAUUSD)"},
+  {type:"FX",       label:"Döviz",      desc:"USDTRY, EURUSD"},
 ];
 
 function AddTab({session,user,pos,loadData,flash_,confirm_}){
@@ -2330,10 +2358,10 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
           <div className="lbl" style={{marginBottom:6,fontSize:13}}>Hangi tür işlem ekliyorsun?</div>
           <div style={{fontSize:11,color:"var(--text2)",marginBottom:14}}>Devam etmek için varlık türünü seç. Sonradan değiştirebilirsin.</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
-            {ADD_TYPES.map(({type,icon,label,desc})=>(
+            {ADD_TYPES.map(({type,label,desc})=>(
               <button key={type} data-test={`pick-${type}`} className="pick-card"
                 onClick={()=>setPickedType(type)}>
-                <span style={{fontSize:24}}>{icon}</span>
+                <span style={{color:"var(--info)",display:"flex",alignItems:"center"}}>{ASSET_ICONS[type]&&ASSET_ICONS[type](28)}</span>
                 <span style={{fontSize:14,fontWeight:600}}>{label}</span>
                 <span style={{fontSize:11,color:"var(--text2)"}}>{desc}</span>
               </button>
@@ -2350,7 +2378,7 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
     <div>
       {/* Tip context header */}
       <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,marginBottom:14,fontSize:12}}>
-        <span style={{fontSize:18}}>{pickedMeta.icon}</span>
+        <span style={{color:"var(--info)",display:"flex",alignItems:"center"}}>{ASSET_ICONS[pickedMeta.type]&&ASSET_ICONS[pickedMeta.type](18)}</span>
         <span><span className="dim">Tip:</span> <strong>{pickedMeta.label}</strong></span>
         <div style={{flex:1}}></div>
         <button className="btn-xs" onClick={resetType} data-test="change-type">Tipi değiştir</button>
@@ -3085,6 +3113,7 @@ function App({session}){
   const [hist,setHist_]=useState(()=>LS.get("il_hist",{}));
   const [hide,setHide_]=useState(()=>LS.get("il_hide",false));
   const [displayCur,setDisplayCur_]=useState(()=>LS.get("il_disp_cur","USD"));
+  const [themeMode,setThemeMode_]=useState(()=>LS.get("il_theme","system"));
   const [fxRates,setFxRates]=useState(()=>{const c=fxCacheGet();return c?c.rates:null;});
   const [fxAt,setFxAt]=useState(()=>{const c=fxCacheGet();return c?c.t:null;});
   const [sort,setSort]=useState({by:"mv",dir:"desc"});
@@ -3099,6 +3128,23 @@ function App({session}){
   const saveHist=h=>{setHist_(h);LS.set("il_hist",h);};
   const saveHide=v=>{setHide_(v);LS.set("il_hide",v);};
   const setDisplayCur=v=>{setDisplayCur_(v);LS.set("il_disp_cur",v);};
+  const applyTheme=(mode)=>{
+    let resolved=mode;
+    if(mode==="system"){
+      resolved=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";
+    }
+    document.documentElement.setAttribute("data-theme",resolved);
+  };
+  const setThemeMode=v=>{setThemeMode_(v);LS.set("il_theme",v);applyTheme(v);};
+  // Tema init — mount'ta bir kez çalıştır
+  useEffect(()=>{
+    applyTheme(themeMode);
+    // "system" modunda sistem tercihi değişirse otomatik güncelle
+    const mq=window.matchMedia("(prefers-color-scheme: dark)");
+    const handler=()=>{if(LS.get("il_theme","system")==="system")applyTheme("system");};
+    mq.addEventListener("change",handler);
+    return()=>mq.removeEventListener("change",handler);
+  },[]);
   // FX rate fetch — Frankfurter API (ECB resmi rates, auth-free, CORS-friendly).
   // Browser'dan doğrudan çağrılır; edge function gerekmez. Hafta içi günlük güncellenir.
   // Mount'ta + ↻ Güncelle ile tetiklenir; LS cache 24h TTL, fail'de last-known kalır.
@@ -3712,6 +3758,15 @@ function App({session}){
       {/* SETTINGS */}
       {tab==="settings"&&(
         <div>
+          <div className="sg">
+            <label>Görünüm</label>
+            <div className="seg">
+              {[["system","Sistem"],["light","Açık"],["dark","Koyu"]].map(([v,l])=>(
+                <button key={v} className={themeMode===v?"on":""} onClick={()=>setThemeMode(v)}>{l}</button>
+              ))}
+            </div>
+            <div className="hint">Tema tercihi tarayıcıda kaydedilir.</div>
+          </div>
           <div className="sg">
             <label>Fiyat & Veri</label>
             {(busy.p||busy.h)

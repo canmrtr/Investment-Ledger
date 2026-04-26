@@ -115,8 +115,8 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
 ## UI Polish
 
-- [ ] **Asset type ikonları: emoji → custom SVG** `[M]` `[P1]` — `ADD_TYPES`, `COMMODITY_SYMBOLS`, `BLOCK_TYPES` emoji'leri platform-bağımlı. `ASSET_ICONS` + `COMMODITY_ICONS` top-level map; currentColor; mevcut NAV_ICONS pattern. AddTab picker, ManuelPosForm chip, Dashboard block badge, TickerDetailTab header hepsi yeni ikon kullansın.
-- [ ] **Dark/Light tema desteği** `[M]` `[P1]` — `:root` light token variant; `data-theme` attribute + CSS scope; Settings 3-button segmented (Sistem/Açık/Koyu); LS persist `il_theme`; SVG currentColor kontrol; pie renk kontrast doğrula.
+- [x] ~~**Asset type ikonları: emoji → custom SVG**~~ (2026-04-26) — `ASSET_ICONS` + `COMMODITY_ICONS` top-level map; stroke="currentColor"; AddTab picker, ManuelPosForm chip render güncellendi.
+- [x] ~~**Dark/Light tema desteği**~~ (2026-04-26) — `[data-theme="light"]` CSS tokens; `applyTheme()` + `matchMedia` sistem tercihi; Settings "Görünüm" 3-button segmented (Sistem/Açık/Koyu); LS `il_theme` persist.
 
 ## Bug & UX Backlog
 
