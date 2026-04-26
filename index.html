@@ -285,6 +285,16 @@ const fmtShares = (n, maxDec=4)=>{
   if(num%1===0)return String(num);
   return String(+num.toFixed(maxDec));
 };
+const fmtAge = (ts)=>{
+  if(!ts)return null;
+  const sec=Math.floor((Date.now()-ts)/1000);
+  if(sec<60)return "az önce";
+  const min=Math.floor(sec/60);
+  if(min<60)return `${min} dk önce`;
+  const hr=Math.floor(min/60);
+  if(hr<24)return `${hr} sa önce`;
+  return `${Math.floor(hr/24)} gün önce`;
+};
 // Currency / FX — display currency toggle (USD/TRY) için merkez yardımcılar.
 // fxRates: {USDTRY: 32.5, EURUSD: 1.08} formatında. EUR↔TRY için EUR→USD→TRY chain.
 const FX_TTL_MS = 86400000;  // 24 saat
@@ -3122,6 +3132,8 @@ function App({session}){
   const [distMode,setDistMode]=useState("mv"); // "cost" | "mv" — pie chart mode
   const [busy,setBusy]=useState({p:false,h:false,d:false});
   const [pprog,setPprog]=useState("");
+  const [lastFetchAt,setLastFetchAt_]=useState(()=>LS.get("il_last_fetch",null));
+  const setLastFetchAt=ts=>{setLastFetchAt_(ts);LS.set("il_last_fetch",ts);};
   const [flash,setFlash]=useState(null);
   const [connTest,setConnTest]=useState(null);  // {ok:bool, status:int, body:str} — Settings → Bağlantı Test çıktısı
 
@@ -3240,6 +3252,18 @@ function App({session}){
     if(!fresh || missingEur) fetchFxRates();
   },[pos.length, txs.length]);
 
+  // Sekme geri geldiğinde fiyatlar 30 dk'dan eskiyse otomatik güncelle.
+  useEffect(()=>{
+    if(!pos.length)return;
+    const handle=()=>{
+      if(document.visibilityState!=="visible")return;
+      const age=lastFetchAt?Date.now()-lastFetchAt:Infinity;
+      if(age>30*60*1000&&!busy.p&&!busy.h)fetchPrices();
+    };
+    document.addEventListener("visibilitychange",handle);
+    return()=>document.removeEventListener("visibilitychange",handle);
+  },[pos.length,lastFetchAt,busy.p,busy.h]);
+
   // pos yüklendikten sonra cache'te olmayan ticker'lar için arka planda otomatik fetchHist.
   // USD (Massive) + BIST (Twelve Data) — provider erişimi olan her tür dahil.
   useEffect(()=>{
@@ -3333,6 +3357,7 @@ function App({session}){
     // FX rate refresh — display currency conversion için güncel kur
     fetchFxRates();
     setBusy(b=>({...b,p:false}));setPprog("");
+    setLastFetchAt(Date.now());
     flash_(`${cnt}/${fetchable.length} fiyat güncellendi`+(failed.length?` · başarısız: ${failed.join(", ")}`:""),failed.length?"err":"ok");
   };
 
@@ -3409,7 +3434,24 @@ function App({session}){
             <button className={displayCur==="USD"?"on":""} onClick={()=>setDisplayCur("USD")} aria-label="USD göster">$</button>
             <button className={displayCur==="TRY"?"on":""} onClick={()=>setDisplayCur("TRY")} aria-label="TRY göster">₺</button>
           </div>
-          <button onClick={fetchPrices} disabled={busy.p||busy.h} data-tip={busy.p||busy.h?pprog:"Güncel fiyatları çek"}>{busy.p||busy.h?<span className="spin" style={{width:11,height:11,marginRight:5,verticalAlign:"middle"}}></span>:"↻ "}Güncelle</button>
+          {(()=>{
+            if(busy.p||busy.h)return(
+              <button disabled data-tip={pprog} style={{minWidth:90}}>
+                <span className="spin" style={{width:11,height:11,marginRight:5,verticalAlign:"middle"}}/>
+                {pprog||"…"}
+              </button>
+            );
+            const stale=!lastFetchAt||(Date.now()-lastFetchAt>30*60*1000);
+            const age=fmtAge(lastFetchAt);
+            return stale?(
+              <button onClick={fetchPrices} data-tip="Güncel fiyatları çek">↻ Güncelle</button>
+            ):(
+              <button onClick={fetchPrices} data-tip={`Son güncelleme: ${age} — tıkla ile yenile`}
+                style={{border:"none",background:"transparent",color:"var(--text3)",fontSize:11,cursor:"pointer",padding:"4px 8px"}}>
+                {age}
+              </button>
+            );
+          })()}
           <button className={"eye-btn"+(hide?" on":"")} onClick={()=>saveHide(!hide)} aria-pressed={hide} aria-label={hide?"Tutarları göster":"Tutarları gizle"}>{hide?<IconEyeOff/>:<IconEye/>}</button>
           <button className="pri btn-add-primary" onClick={()=>setTab("add")}>+ İşlem Ekle</button>
         </div>
@@ -3513,7 +3555,7 @@ function App({session}){
               <div className="warn-card">
                 <div>
                   <div className="wc-ttl">FX kuru yok</div>
-                  <div className="wc-sub">{skipped} pozisyon ({displayCur==="USD"?"₺/€":"$/€"}) toplama dahil edilemiyor. ↻ Güncelle ile çek.</div>
+                  <div className="wc-sub">{skipped} pozisyon ({displayCur==="USD"?"₺/€":"$/€"}) toplama dahil edilemiyor. Fiyatları güncelle.</div>
                 </div>
                 <button className="pri" onClick={fetchFxRates}>Şimdi çek</button>
               </div>
@@ -3641,7 +3683,6 @@ function App({session}){
                     </div>
                     <div className="brow">
                       <button className="pri btn-xs" onClick={()=>setTab("add")}>+ Ekle</button>
-                      {idx===0&&<button className="btn-xs" onClick={loadData} disabled={busy.d}>{busy.d?"...":"Yenile"}</button>}
                     </div>
                   </div>
                   <div className="tbl-wrap">
