@@ -2077,6 +2077,13 @@ function SearchTab({pos,txs,openDetail,flash_}){
   const [q,setQ]=useState("");
   const [tickerDb,setTickerDb]=useState(()=>tickerDbCacheGet());
   const [loading,setLoading]=useState(false);
+  const [recent,setRecent]=useState(()=>LS.get("il_recent_search",[]));
+  const clearRecent=()=>{setRecent([]);LS.set("il_recent_search",[]);};
+  const handleOpen=(ticker,type)=>{
+    const next=[ticker,...recent.filter(t=>t!==ticker)].slice(0,8);
+    setRecent(next);LS.set("il_recent_search",next);
+    openDetail(ticker,type);
+  };
 
   useEffect(()=>{
     if(tickerDb)return;
@@ -2117,11 +2124,14 @@ function SearchTab({pos,txs,openDetail,flash_}){
   // exchange → asset_type mapping (openDetail'e geçirilir)
   const exchToType = (ex) => ex==="XIST" ? "BIST" : "US_STOCK";
 
+  const nameFor=(ticker)=>{const pm=portfolioMap.get(ticker);if(pm?.name)return pm.name;return tickerDb?.find(x=>x.ticker===ticker)?.name||"";};
+  const typeFor=(ticker)=>{const pm=portfolioMap.get(ticker);if(pm?.type)return pm.type;return tickerDb?.find(x=>x.ticker===ticker)?.exchange==="XIST"?"BIST":"US_STOCK";};
+
   const Row=({ticker,name,held,exchange,type})=>{
     const ex = exchange || (type==="BIST"?"XIST":"US");
     const at = type || exchToType(ex);
     return (
-      <div onClick={()=>openDetail(ticker,at)} className="pos-row" style={{
+      <div onClick={()=>handleOpen(ticker,at)} className="pos-row" style={{
         display:"flex",alignItems:"center",gap:10,
         padding:"11px 14px",borderBottom:"0.5px solid var(--border)"
       }}>
@@ -2147,13 +2157,33 @@ function SearchTab({pos,txs,openDetail,flash_}){
       </div>}
 
       {!qTrim&&!loading&&(
-        <div className="dim" style={{fontSize:13,padding:"30px 0",textAlign:"center"}}>
-          Ticker veya şirket adı yazarak başla
-          {tickerDb&&(()=>{
-            const us=tickerDb.filter(x=>x.exchange!=="XIST").length;
-            const bist=tickerDb.filter(x=>x.exchange==="XIST").length;
-            return <div style={{fontSize:11,marginTop:6,color:"var(--text3)"}}>{us.toLocaleString("tr-TR")} US + {bist.toLocaleString("tr-TR")} BIST hisse aranabilir</div>;
-          })()}
+        <div>
+          {recent.length>0&&(
+            <div style={{marginBottom:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <span className="stitle" style={{marginBottom:0}}>Son Aramalar</span>
+                <button onClick={clearRecent} style={{fontSize:11,color:"var(--text3)",background:"transparent",border:"none",cursor:"pointer",padding:"2px 4px"}}>Temizle</button>
+              </div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {recent.map(t=>(
+                  <button key={t} onClick={()=>handleOpen(t,typeFor(t))}
+                    style={{fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:600,
+                      padding:"5px 12px",borderRadius:8,background:"var(--bg3)",
+                      border:"1px solid var(--border)",cursor:"pointer",color:"var(--text)"}}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="dim" style={{fontSize:13,padding:recent.length>0?"12px 0":"30px 0",textAlign:"center"}}>
+            Ticker veya şirket adı yazarak başla
+            {tickerDb&&(()=>{
+              const us=tickerDb.filter(x=>x.exchange!=="XIST").length;
+              const bist=tickerDb.filter(x=>x.exchange==="XIST").length;
+              return <div style={{fontSize:11,marginTop:6,color:"var(--text3)"}}>{us.toLocaleString("tr-TR")} US + {bist.toLocaleString("tr-TR")} BIST hisse aranabilir</div>;
+            })()}
+          </div>
         </div>
       )}
 
