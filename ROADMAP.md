@@ -103,9 +103,9 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 
 ### Post-BIST audit (2026-04-25)
 
-- [ ] **CDN script SRI + version pin** — `supabase-js@2` floating major; React/Babel pinned ama `integrity=` yok. SRI hash + exact version'a geç (low-risk; CDN compromise korunması).
-- [ ] **`meta.description` length cap** — Polygon/Yahoo/borsa-mcp upstream provider compromise edilirse multi-MB string LS quota'yı patlatabilir. Cache yazımı ve render öncesi ~5KB cap.
-- [ ] **`tickerDb` LS quota güvenliği** — 10k+ entry × ~50 byte ≈ 500KB; LS quota'ya yakın. Fallback: memory-only cache LS write fail olursa.
+- [x] ~~**CDN script SRI + version pin**~~ (2026-04-26) — supabase-js@2.104.1 + React/ReactDOM 18.2.0 + Babel 7.23.2 hepsi exact version pin + sha384 integrity hash + crossorigin="anonymous". Hash hesaplama notu HTML comment'inde.
+- [x] ~~**`meta.description` length cap**~~ (2026-04-26) — `sanitizeMeta()` helper + `META_DESC_CAP=5000`; cache yazımı ve render setMeta ikisinde de uygulandı.
+- [x] ~~**`tickerDb` LS quota güvenliği**~~ (2026-04-26) — `_tickerDbMem` memory-only fallback; LS write fail (sessiz catch) olsa bile session boyu cache çalışır.
 - [x] ~~**Username + search input maxLength**~~ (2026-04-25) — Username `maxLength={20}` (rule note ile uyumlu), Search `maxLength={64}`.
 - [x] ~~**Web row null guard**~~ (2026-04-25) — Web row değeri sadece `extractDomain` parse edebildiğinde geçer; null URL'de satır filtrelenir.
 - [x] ~~**TickerDetailTab `effectiveType` useEffect deps**~~ (2026-04-25) — Live-price + meta fetch + fund fetch useEffect'lerinin deps'lerine `effectiveType` eklendi; stale closure provider mismatch'i kapatıldı.
@@ -130,30 +130,30 @@ Quick wins paketinde (commit `04e7870`) 8 fix uygulandı: title→data-tip migra
 
 Kalan bulgular (severity: HIGH/MED/LOW), sprintlere gruplu:
 
-### Sprint A — Navigation polish (½–1 gün, HIGH öncelik)
-- [ ] **TickerDetailTab "← Geri" → fromTab**: Detay'a Search/HistoryTab'dan gelen kullanıcı dashboard'a düşüyor. `openDetail(ticker, assetType, fromTab)` + `closeDetail` parametreli. (HIGH)
-- [ ] **Detail tab'ında bottom-tabs/topbar nav aktif değil**: Mobile'da hangi sekmedeyim belirsiz; desktop'ta da aktif tab vurgusu yok. Detail'de önceki tab aktif gösterilsin veya bottom-tabs gizlensin. (HIGH)
-- [ ] **FAB context-awareness**: mevcut "+ İşlem Ekle"; Search'te "+ Ticker ara" / Detail'da "+ Ekle (THYAO)" gibi tab-bilinçli. (MED — UX/UI Gaps'ten devralındı)
+### Sprint A — Navigation polish (½–1 gün, HIGH öncelik) ✅ 2026-04-26
+- [x] ~~**TickerDetailTab "← Geri" → fromTab**~~ — `openDetail(tk, assetType, fromTab)` + `selectedFromTab` state; default `tab||"dashboard"` ile call site değişikliği gerekmedi.
+- [x] ~~**Detail tab'ında bottom-tabs/topbar nav aktif değil**~~ — `tab==="detail"&&selectedFromTab===id` durumunda hem topbar-nav hem bottom-tabs `on` class'ı verir.
+- [x] ~~**FAB context-awareness**~~ — Detail'da `il-detail-add` custom event ile `setShowAdd(true)`; Search'te input focus + scrollIntoView; Settings'te gizli; default + İşlem Ekle.
 
-### Sprint B — Table a11y + currency consistency (½ gün, MED)
-- [ ] **`<th scope="col">`** tüm tablolarda eksik (USD/TRY/EUR + CSV önizleme + History accordion). Screen reader'lar kolon ilişkisini kuramıyor. (MED)
-- [ ] **CSV önizleme `<table aria-label>`** + th scope. (HIGH)
-- [ ] **USD tablosunda `fmtD` hardcoded $**: Tutarlılık için `fmtSign(p.pl,"$")` ile normalize, `fmtD`'yi tek noktadan kullan. (HIGH — tip karışıklığı)
-- [ ] **EUR tablosu sort yok**: USD/TRY tablolarında sort var, EUR statik; en azından Ticker alfabetik. (MED)
-- [ ] **HistoryTab tx satırlarında `openDetail` yok**: Detay'a gitme yolu sadece pozisyon tablosundan. (MED)
-- [ ] **HistoryTab accordion ticker `fontFamily:"monospace"`**: Diğer ticker'lar DM Mono; sistem mono ile farklı render. (MED)
+### Sprint B — Table a11y + currency consistency (kısmen ✅ 2026-04-26)
+- [x] ~~**`<th scope="col">`** tüm tablolarda~~ — USD/TRY/EUR + CSV önizleme tüm `<th>`'larına eklendi (replace_all pass).
+- [x] ~~**CSV önizleme `<table aria-label>`** + th scope~~ — `aria-label="CSV önizleme — ilk 5 işlem"` + map'te `key={h}` zaten vardı.
+- [x] ~~**USD tablosunda `fmtD` hardcoded $**~~ — `fmtSign(p.pl,"$")` ile normalize; tek `fmtD` call site kaldı (top-level helper olarak duruyor).
+- [ ] **EUR tablosu sort yok**: USD/TRY tablolarında sort var, EUR statik; en azından Ticker alfabetik. (MED — kalan)
+- [ ] **HistoryTab tx satırlarında `openDetail` yok**: Detay'a gitme yolu sadece pozisyon tablosundan. (MED — kalan)
+- [ ] **HistoryTab accordion ticker `fontFamily:"monospace"`**: Diğer ticker'lar DM Mono; sistem mono ile farklı render. (MED — kalan)
 
-### Sprint C — Form UX bundle (½ gün, MED)
-- [ ] **HistoryTab edit formunda komisyon input yok**: `editForm.commission` state + `saveEdit` field var ama UI yok. Komisyon görünmez güncelleniyor olabilir. (HIGH)
-- [ ] **Pozisyonları Yeniden Hesapla — confirm yok**: Destructive (DELETE+INSERT cascade), `confirm_(...)` ile guard. (MED)
-- [ ] **Confirm modal backdrop click destructive guard**: `danger=true`'da backdrop click iptal sayma; explicit "İptal" butonu zorunlu. (MED)
-- [ ] **AddTab CSV import: skip count bildirim**: Geçersiz satırlar sessizce atlanıyor; `flash_("X işlem alındı, Y satır atlandı")`. (MED)
-- [ ] **AddTab tip picker hover anti-pattern**: `onMouseEnter/Leave` ile inline DOM mutasyon (React anti-pattern). `:hover` CSS veya `useState` ile control. (HIGH)
-- [ ] **AnalysisTab FX yok warn-card eksik**: Dashboard'da var; Analiz'de sessizce 0 ekleniyor. (MED)
-- [ ] **AnalysisTab Komisyon KPI label**: `{displayCur}` yerine `Toplam ({displayCur})` veya `Tüm Komisyon` ile bağlam ver. (MED)
-- [ ] **TickerDetailTab metaErr**: küçük `.err` span yerine `.warn-card` (tutarlılık). (LOW)
-- [ ] **fundLoading "..."**: spin icon ile değiştir. (MED)
-- [ ] **Login error/success → `.flash err/ok`**: Inline style yerine class. (MED)
+### Sprint C — Form UX bundle (kısmen ✅ 2026-04-26)
+- [x] ~~**HistoryTab edit formunda komisyon input yok**~~ — Komisyon input + `step="any"` shares/price'a da eklendi; EUR sembolü doğru gösterildi.
+- [x] ~~**AddTab tip picker hover anti-pattern**~~ — `.pick-card` CSS class + `:hover` + `:focus-visible`; inline DOM mutation kaldırıldı.
+- [ ] **Pozisyonları Yeniden Hesapla — confirm yok**: Destructive (DELETE+INSERT cascade), `confirm_(...)` ile guard. (MED — kalan)
+- [ ] **Confirm modal backdrop click destructive guard**: `danger=true`'da backdrop click iptal sayma; explicit "İptal" butonu zorunlu. (MED — kalan)
+- [ ] **AddTab CSV import: skip count bildirim**: Geçersiz satırlar sessizce atlanıyor; `flash_("X işlem alındı, Y satır atlandı")`. (MED — kalan)
+- [ ] **AnalysisTab FX yok warn-card eksik**: Dashboard'da var; Analiz'de sessizce 0 ekleniyor. (MED — kalan)
+- [ ] **AnalysisTab Komisyon KPI label**: `{displayCur}` yerine `Toplam ({displayCur})` veya `Tüm Komisyon` ile bağlam ver. (MED — kalan)
+- [ ] **TickerDetailTab metaErr**: küçük `.err` span yerine `.warn-card` (tutarlılık). (LOW — kalan)
+- [ ] **fundLoading "..."**: spin icon ile değiştir. (MED — kalan)
+- [ ] **Login error/success → `.flash err/ok`**: Inline style yerine class. (MED — kalan)
 
 ### Sprint D — Mobile + touch (1 gün, MED)
 - [ ] **Touch device tooltip pattern**: `data-tip` hover-only (~35+ yer); tap-to-show + outside-tap-close. KPI kartları + fundamental satırları + cur-seg en kritik. (MED — UX/UI Gaps'ten devralındı)

@@ -37,6 +37,10 @@
     .cur-seg button{background:transparent;border:none;color:var(--text2);padding:4px 9px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;cursor:pointer;border-radius:6px;line-height:1;transition:background .12s,color .12s;min-width:26px;}
     .cur-seg button:hover{color:var(--text);}
     .cur-seg button.on{background:rgba(102,88,255,0.18);color:var(--text);}
+    /* AddTab tip picker — CSS hover (önceki inline DOM mutation anti-pattern'i değiştirdi) */
+    .pick-card{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;text-align:left;color:var(--text);transition:border-color .15s,background .15s;}
+    .pick-card:hover{border-color:var(--info);background:var(--bg4);}
+    .pick-card:focus-visible{outline:2px solid var(--info);outline-offset:2px;}
     #app-main{flex:1;max-width:920px;margin:0 auto;padding:24px 20px 60px;width:100%;}
     #bottom-tabs{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--bg2);border-top:1px solid var(--border);z-index:100;}
     #bottom-tabs .btab{flex:1;height:100%;background:transparent;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;transition:color .12s;}
@@ -187,10 +191,19 @@
 <body>
 <div id="app"><div style="display:flex;align-items:center;justify-content:center;height:80vh;gap:10px;color:#888;font-size:13px;"><div class="spin"></div>Yükleniyor...</div></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<!-- CDN scripts: exact version pin + SRI hash. Version değiştirilirse hash'i `openssl dgst -sha384 -binary | openssl base64 -A` ile yeniden hesapla. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.104.1/dist/umd/supabase.js"
+        integrity="sha384-bYM/KZp3sHR8/mPjlAsotoCaDWykHXDhYAE3eJalEburZQwZAsMSeQxer09tprOT"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"
+        integrity="sha384-tMH8h3BGESGckSAVGZ82T9n90ztNXxvdwvdM6UoR56cYcf+0iGXBliJ29D+wZ/x8"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"
+        integrity="sha384-bm7MnzvK++ykSwVJ2tynSE5TRdN+xL418osEVF2DE/L/gfWHj91J2Sphe582B1Bh"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"
+        integrity="sha384-aGlMNK3U/x0wl4lEH5jD1PGhJlX9hApuPmIiA5gtiYCOQ1J8ejIdC0btaU/TMoBD"
+        crossorigin="anonymous"></script>
 
 <script type="text/babel">
 // ── CONFIG ──────────────────────────────────────────────────────
@@ -323,13 +336,21 @@ const enrichParseListWithPrices = async (list) =>
 // SEC ticker DB cache — SearchTab tarafından lazy yüklenir, edge function
 // `fetch-fundamentals` mode:"ticker-list" üzerinden proxy ile gelir.
 const TICKER_DB_TTL_MS = 86400000;  // 24 saat
+// Memory-only fallback — 10k+ ticker LS quota'yı zorlayabilir; LS write fail olsa bile
+// sayfa session'ı boyunca cache çalışsın diye memory'de de tut.
+let _tickerDbMem = null;
 const tickerDbCacheGet = () => {
+  if (_tickerDbMem) return _tickerDbMem;
   const c = LS.get("sec_ticker_db_v2", null);
   if (!c || !c.t) return null;
   if (Date.now() - c.t > TICKER_DB_TTL_MS) return null;
+  _tickerDbMem = c.list;
   return c.list;
 };
-const tickerDbCacheSet = (list) => LS.set("sec_ticker_db_v2", { list, t: Date.now() });
+const tickerDbCacheSet = (list) => {
+  _tickerDbMem = list;  // her durumda memory'de tut
+  LS.set("sec_ticker_db_v2", { list, t: Date.now() });  // LS try-catch içinde, fail sessiz
+};
 
 const edgeCall = (fn, body) => fetch(`${SUPA_URL}/functions/v1/${fn}`, {
   method: "POST",
@@ -659,7 +680,18 @@ const metaCacheGet = (ticker) => {
   if (Date.now() - c.t > META_TTL_MS) return null;
   return c.d;
 };
-const metaCacheSet = (ticker, data) => LS.set(`meta_${ticker}`, { d: data, t: Date.now() });
+// Provider compromise koruması: description multi-MB string olabilir → LS quota'yı şişirir.
+// 5KB cap (içerik anlamlı kalır, render'da `cursor:help` ile zaten clamp'liyor).
+const META_DESC_CAP = 5000;
+const sanitizeMeta = (data) => {
+  if (!data || typeof data !== "object") return data;
+  const clean = {...data};
+  if (typeof clean.description === "string" && clean.description.length > META_DESC_CAP) {
+    clean.description = clean.description.slice(0, META_DESC_CAP) + "…";
+  }
+  return clean;
+};
+const metaCacheSet = (ticker, data) => LS.set(`meta_${ticker}`, { d: sanitizeMeta(data), t: Date.now() });
 
 // Fundamental cache (FMP TTM + 5Y) — 7 gün TTL
 const FUND_TTL_MS = 7 * 86400000;
@@ -839,6 +871,12 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
   const [fundErrCode,setFundErrCode]=useState("");  // edge function code, ör. "OUT_OF_PLAN"
   const [showFullDesc,setShowFullDesc]=useState(false);
   const [showAdd,setShowAdd]=useState(false);
+  // FAB context-aware (App'taki +) bu detail tab'ı açtığı için, custom event ile setShowAdd tetikle
+  useEffect(()=>{
+    const onFab=()=>setShowAdd(true);
+    window.addEventListener("il-detail-add",onFab);
+    return()=>window.removeEventListener("il-detail-add",onFab);
+  },[]);
   const [expandedTx,setExpandedTx]=useState(null);   // tıklanan tx.id
   const [editTxId,setEditTxId]=useState(null);
   const [editForm,setEditForm]=useState({});
@@ -911,8 +949,9 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       const r=await edgeCall("fetch-prices",{ticker,mode:"meta",asset_type:effectiveType});
       const d=await r.json();
       if(d.result&&!d.result.error){
-        setMeta(d.result);
-        metaCacheSet(ticker,d.result);
+        const safe=sanitizeMeta(d.result);
+        setMeta(safe);
+        metaCacheSet(ticker,safe);
       } else {
         setMetaErr(d.result?.error||d.error||"Bilinmeyen hata");
       }
@@ -1605,11 +1644,12 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,init
                           <option>USD</option><option>TRY</option><option>EUR</option>
                         </select>
                       </div>
-                      <div><div className="kk" style={{marginBottom:3}}>Adet</div><input className="finp sm" type="number" value={editForm.shares} onChange={e=>setEditForm(f=>({...f,shares:e.target.value}))}/></div>
-                      <div><div className="kk" style={{marginBottom:3}}>Fiyat</div><input className="finp sm" type="number" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Adet</div><input className="finp sm" type="number" step="any" value={editForm.shares} onChange={e=>setEditForm(f=>({...f,shares:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Fiyat</div><input className="finp sm" type="number" step="any" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))}/></div>
                       <div><div className="kk" style={{marginBottom:3}}>Broker</div><input className="finp sm" value={editForm.broker} onChange={e=>setEditForm(f=>({...f,broker:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Komisyon</div><input className="finp sm" type="number" step="any" value={editForm.commission||""} onChange={e=>setEditForm(f=>({...f,commission:e.target.value}))}/></div>
                     </div>
-                    <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: {editForm.currency==="TRY"?"₺":"$"}{fmt((+editForm.shares)*(+editForm.price))}</div>
+                    <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: {editForm.currency==="TRY"?"₺":editForm.currency==="EUR"?"€":"$"}{fmt((+editForm.shares)*(+editForm.price))}</div>
                     <div className="brow">
                       <button className="pri btn-md" onClick={()=>saveEdit(t)} disabled={saving}>{saving?"Kaydediliyor...":"Kaydet"}</button>
                       <button className="btn-md" onClick={()=>setEditId(null)}>İptal</button>
@@ -1931,7 +1971,7 @@ function SearchTab({pos,txs,openDetail,flash_}){
     <div>
       <input type="text" autoFocus value={q} onChange={e=>setQ(e.target.value)}
         placeholder="🔍 Ticker (AAPL) veya şirket adı (Apple)…"
-        maxLength={64}
+        maxLength={64} data-test="search-input"
         style={{marginBottom:14}}/>
 
       {loading&&<div className="dim" style={{fontSize:13,padding:"20px 0",textAlign:"center"}}>
@@ -2163,20 +2203,11 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
           <div style={{fontSize:11,color:"var(--text2)",marginBottom:14}}>Devam etmek için varlık türünü seç. Sonradan değiştirebilirsin.</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
             {ADD_TYPES.map(({type,icon,label,desc})=>(
-              <button key={type} data-test={`pick-${type}`}
-                onClick={()=>setPickedType(type)}
-                style={{
-                  display:"flex",flexDirection:"column",alignItems:"flex-start",gap:6,
-                  padding:"14px 14px",
-                  background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,
-                  cursor:"pointer",textAlign:"left",color:"var(--text)",
-                  transition:"all .15s"
-                }}
-                onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--info)";e.currentTarget.style.background="var(--bg4)";}}
-                onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.background="var(--bg3)";}}>
+              <button key={type} data-test={`pick-${type}`} className="pick-card"
+                onClick={()=>setPickedType(type)}>
                 <span style={{fontSize:24}}>{icon}</span>
                 <span style={{fontSize:14,fontWeight:600}}>{label}</span>
-                <span style={{fontSize:10,color:"var(--text3)"}}>{desc}</span>
+                <span style={{fontSize:11,color:"var(--text2)"}}>{desc}</span>
               </button>
             ))}
           </div>
@@ -2265,8 +2296,8 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
             <div>
               <div className="stitle">{csvRows.length} işlem bulundu — ilk 5:</div>
               <div className="tbl-wrap">
-                <table>
-                  <thead><tr>{["Tarih","Ticker","İşlem","Adet","Fiyat","Broker"].map(h=><th key={h} className="l">{h}</th>)}</tr></thead>
+                <table aria-label="CSV önizleme — ilk 5 işlem">
+                  <thead><tr>{["Tarih","Ticker","İşlem","Adet","Fiyat","Broker"].map(h=><th key={h} scope="col" className="l">{h}</th>)}</tr></thead>
                   <tbody>
                     {csvRows.slice(0,5).map((r,i)=>(
                       <tr key={i}>
@@ -2684,9 +2715,22 @@ function App({session}){
   const [navTicker,setNavTicker]=useState("");
   const [selectedTicker,setSelectedTicker]=useState(null); // detay sayfası için
   const [selectedAssetType,setSelectedAssetType]=useState(null); // search'ten gelen non-held için (BIST vs US)
+  const [selectedFromTab,setSelectedFromTab]=useState("dashboard"); // detay'dan "← Geri" hangi sekmeye dönsün
   const openHistory=tk=>{setNavTicker(tk);setTab("history");};
-  const openDetail=(tk,assetType)=>{setSelectedTicker(tk);setSelectedAssetType(assetType||null);setTab("detail");};
-  const closeDetail=()=>{setSelectedTicker(null);setSelectedAssetType(null);setTab("dashboard");};
+  // openDetail: 3. parametre fromTab — closeDetail kullanıcıyı geldiği sekmeye geri götürür.
+  // Default "dashboard" (geri-uyumluluk). Search/History/Analiz'den çağıran taraf kendi tab'ını geçer.
+  const openDetail=(tk,assetType,fromTab)=>{
+    setSelectedTicker(tk);
+    setSelectedAssetType(assetType||null);
+    setSelectedFromTab(fromTab||tab||"dashboard");
+    setTab("detail");
+  };
+  const closeDetail=()=>{
+    const back=selectedFromTab||"dashboard";
+    setSelectedTicker(null);
+    setSelectedAssetType(null);
+    setTab(back);
+  };
   const [period,setPeriod]=useState("max"); // selected period on dashboard
   const [pos,setPos]=useState([]);
   const [txs,setTxs]=useState([]);
@@ -2963,7 +3007,8 @@ function App({session}){
         </div>
         <nav className="topbar-nav">
           {TABS.filter(([id])=>id!=="add").map(([id,lbl])=>(
-            <button key={id} className={"tab"+(tab===id?" on":"")} onClick={()=>setTab(id)}>
+            // Detay sayfasındayken kullanıcı geldiği sekmeyi vurgulu görür
+            <button key={id} className={"tab"+((tab===id||(tab==="detail"&&selectedFromTab===id))?" on":"")} onClick={()=>setTab(id)}>
               {NAV_ICONS[id]&&NAV_ICONS[id](14)}{lbl}
             </button>
           ))}
@@ -3259,17 +3304,17 @@ function App({session}){
                 <div className="tbl-wrap">
                   <table>
                     <thead><tr>
-                      <th className="l" onClick={()=>tsort("ticker")}>Ticker{sa("ticker")}</th>
-                      {!hide&&<th className="r" onClick={()=>tsort("shares")}>Adet{sa("shares")}</th>}
-                      {!hide&&<th className="r" onClick={()=>tsort("avgCost")}>Maliyet{sa("avgCost")}</th>}
-                      {!hide&&<th className="r" onClick={()=>tsort("price")}>Fiyat{sa("price")}</th>}
-                      {!hide&&<th className="r" onClick={()=>tsort("mv")}>Değer{sa("mv")}</th>}
-                      {!hide&&<th className="r" onClick={()=>tsort("pl")} data-tip="Pozisyon başlangıcından bugüne unrealized kâr/zarar (Değer − Maliyet)">P&L${sa("pl")}</th>}
-                      <th className="r" onClick={()=>tsort("plPct")} data-tip="(Değer − Maliyet) / Maliyet × 100 — pozisyonun toplam unrealized getirisi">P&L%{sa("plPct")}</th>
-                      {hasH&&<th className="r" onClick={()=>tsort("d1")} data-tip="Ticker fiyatının son 1 gündeki yüzde değişimi (senin alım tarihinden bağımsız)">1G{sa("d1")}</th>}
-                      {hasH&&<th className="r" onClick={()=>tsort("w1")} data-tip="Ticker fiyatının son 1 haftadaki değişimi">1H{sa("w1")}</th>}
-                      {hasH&&<th className="r" onClick={()=>tsort("m1")} data-tip="Ticker fiyatının son 1 aydaki değişimi">1A{sa("m1")}</th>}
-                      {hasH&&<th className="r" onClick={()=>tsort("y1")} data-tip="Ticker fiyatının son 1 yıldaki değişimi">1Y{sa("y1")}</th>}
+                      <th scope="col" className="l" onClick={()=>tsort("ticker")}>Ticker{sa("ticker")}</th>
+                      {!hide&&<th scope="col" className="r" onClick={()=>tsort("shares")}>Adet{sa("shares")}</th>}
+                      {!hide&&<th scope="col" className="r" onClick={()=>tsort("avgCost")}>Maliyet{sa("avgCost")}</th>}
+                      {!hide&&<th scope="col" className="r" onClick={()=>tsort("price")}>Fiyat{sa("price")}</th>}
+                      {!hide&&<th scope="col" className="r" onClick={()=>tsort("mv")}>Değer{sa("mv")}</th>}
+                      {!hide&&<th scope="col" className="r" onClick={()=>tsort("pl")} data-tip="Pozisyon başlangıcından bugüne unrealized kâr/zarar (Değer − Maliyet)">P&L${sa("pl")}</th>}
+                      <th scope="col" className="r" onClick={()=>tsort("plPct")} data-tip="(Değer − Maliyet) / Maliyet × 100 — pozisyonun toplam unrealized getirisi">P&L%{sa("plPct")}</th>
+                      {hasH&&<th scope="col" className="r" onClick={()=>tsort("d1")} data-tip="Ticker fiyatının son 1 gündeki yüzde değişimi (senin alım tarihinden bağımsız)">1G{sa("d1")}</th>}
+                      {hasH&&<th scope="col" className="r" onClick={()=>tsort("w1")} data-tip="Ticker fiyatının son 1 haftadaki değişimi">1H{sa("w1")}</th>}
+                      {hasH&&<th scope="col" className="r" onClick={()=>tsort("m1")} data-tip="Ticker fiyatının son 1 aydaki değişimi">1A{sa("m1")}</th>}
+                      {hasH&&<th scope="col" className="r" onClick={()=>tsort("y1")} data-tip="Ticker fiyatının son 1 yıldaki değişimi">1Y{sa("y1")}</th>}
                     </tr></thead>
                     <tbody>
                       {sorted.map(p=>(
@@ -3279,7 +3324,7 @@ function App({session}){
                           {!hide&&<td className="r">{mask("$"+fmt(p.avgCost))}</td>}
                           {!hide&&<td className="r">{p.price?mask("$"+fmt(p.price)):"—"}</td>}
                           {!hide&&<td className="r">{p.mv?mask("$"+fmt(p.mv,0)):"—"}</td>}
-                          {!hide&&<td className={"r"+pc(p.pl)}>{fmtD(p.pl)}</td>}
+                          {!hide&&<td className={"r"+pc(p.pl)}>{fmtSign(p.pl,"$")}</td>}
                           <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
                           {hasH&&<td className={"r"+pc(p.d1)}>{fmtP(p.d1)}</td>}
                           {hasH&&<td className={"r"+pc(p.w1)}>{fmtP(p.w1)}</td>}
@@ -3307,17 +3352,17 @@ function App({session}){
                 <div className="tbl-wrap">
                   <table>
                     <thead><tr>
-                      <th className="l" onClick={()=>tsortTry("ticker")}>Ticker{saTry("ticker")}</th>
-                      {!hide&&<th className="r" onClick={()=>tsortTry("shares")}>Adet{saTry("shares")}</th>}
-                      {!hide&&<th className="r" onClick={()=>tsortTry("avgCost")}>Maliyet{saTry("avgCost")}</th>}
-                      {!hide&&<th className="r" onClick={()=>tsortTry("price")}>Fiyat{saTry("price")}</th>}
-                      {!hide&&<th className="r" onClick={()=>tsortTry("mv")}>Değer{saTry("mv")}</th>}
-                      {!hide&&<th className="r" onClick={()=>tsortTry("pl")} data-tip="Pozisyon başlangıcından bugüne unrealized kâr/zarar (Değer − Maliyet)">P&L₺{saTry("pl")}</th>}
-                      <th className="r" onClick={()=>tsortTry("plPct")} data-tip="(Değer − Maliyet) / Maliyet × 100">P&L%{saTry("plPct")}</th>
-                      {hasH&&<th className="r" onClick={()=>tsortTry("d1")} data-tip="Son 1 gündeki yüzde değişim">1G{saTry("d1")}</th>}
-                      {hasH&&<th className="r" onClick={()=>tsortTry("w1")} data-tip="Son 1 haftadaki değişim">1H{saTry("w1")}</th>}
-                      {hasH&&<th className="r" onClick={()=>tsortTry("m1")} data-tip="Son 1 aydaki değişim">1A{saTry("m1")}</th>}
-                      {hasH&&<th className="r" onClick={()=>tsortTry("y1")} data-tip="Son 1 yıldaki değişim">1Y{saTry("y1")}</th>}
+                      <th scope="col" className="l" onClick={()=>tsortTry("ticker")}>Ticker{saTry("ticker")}</th>
+                      {!hide&&<th scope="col" className="r" onClick={()=>tsortTry("shares")}>Adet{saTry("shares")}</th>}
+                      {!hide&&<th scope="col" className="r" onClick={()=>tsortTry("avgCost")}>Maliyet{saTry("avgCost")}</th>}
+                      {!hide&&<th scope="col" className="r" onClick={()=>tsortTry("price")}>Fiyat{saTry("price")}</th>}
+                      {!hide&&<th scope="col" className="r" onClick={()=>tsortTry("mv")}>Değer{saTry("mv")}</th>}
+                      {!hide&&<th scope="col" className="r" onClick={()=>tsortTry("pl")} data-tip="Pozisyon başlangıcından bugüne unrealized kâr/zarar (Değer − Maliyet)">P&L₺{saTry("pl")}</th>}
+                      <th scope="col" className="r" onClick={()=>tsortTry("plPct")} data-tip="(Değer − Maliyet) / Maliyet × 100">P&L%{saTry("plPct")}</th>
+                      {hasH&&<th scope="col" className="r" onClick={()=>tsortTry("d1")} data-tip="Son 1 gündeki yüzde değişim">1G{saTry("d1")}</th>}
+                      {hasH&&<th scope="col" className="r" onClick={()=>tsortTry("w1")} data-tip="Son 1 haftadaki değişim">1H{saTry("w1")}</th>}
+                      {hasH&&<th scope="col" className="r" onClick={()=>tsortTry("m1")} data-tip="Son 1 aydaki değişim">1A{saTry("m1")}</th>}
+                      {hasH&&<th scope="col" className="r" onClick={()=>tsortTry("y1")} data-tip="Son 1 yıldaki değişim">1Y{saTry("y1")}</th>}
                     </tr></thead>
                     <tbody>
                       {sortedTry.map(p=>(
@@ -3359,11 +3404,11 @@ function App({session}){
                   <div className="tbl-wrap">
                     <table>
                       <thead><tr>
-                        <th className="l">Ticker</th>
-                        {!hide&&<th className="r">Adet</th>}
-                        {!hide&&<th className="r">Ort. Maliyet</th>}
-                        {!hide&&<th className="r">Toplam</th>}
-                        <th className="l">Broker</th>
+                        <th scope="col" className="l">Ticker</th>
+                        {!hide&&<th scope="col" className="r">Adet</th>}
+                        {!hide&&<th scope="col" className="r">Ort. Maliyet</th>}
+                        {!hide&&<th scope="col" className="r">Toplam</th>}
+                        <th scope="col" className="l">Broker</th>
                       </tr></thead>
                       <tbody>
                         {[...eur].sort((a,b)=>a.ticker.localeCompare(b.ticker)).map(p=>(
@@ -3505,12 +3550,19 @@ function App({session}){
 
       <nav id="bottom-tabs">
         {TABS.filter(([id])=>id!=="add").map(([id,lbl])=>(
-          <button key={id} className={"btab"+(tab===id?" on":"")} onClick={()=>setTab(id)}>
+          <button key={id} className={"btab"+((tab===id||(tab==="detail"&&selectedFromTab===id))?" on":"")} onClick={()=>setTab(id)}>
             {NAV_ICONS[id]&&NAV_ICONS[id](20)}<span>{lbl}</span>
           </button>
         ))}
       </nav>
-      <button id="fab" onClick={()=>setTab("add")} aria-label="İşlem Ekle"><IconPlus/></button>
+      {/* FAB context-aware: Detail'da AddTxInline aç, Search'te input focus, diğerlerinde + Ekle */}
+      <button id="fab" aria-label={tab==="detail"?`+ Ekle (${selectedTicker})`:tab==="search"?"Ara":"İşlem Ekle"}
+        onClick={()=>{
+          if(tab==="detail"){window.dispatchEvent(new CustomEvent("il-detail-add"));}
+          else if(tab==="search"){const el=document.querySelector('[data-test="search-input"]')||document.querySelector('input[type="text"]');if(el){el.focus();el.scrollIntoView({behavior:"smooth",block:"center"});}}
+          else{setTab("add");}
+        }}
+        style={tab==="settings"?{display:"none"}:{}}><IconPlus/></button>
 
       {/* Confirm modal */}
       {confirmSt&&(
