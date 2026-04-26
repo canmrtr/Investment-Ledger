@@ -112,6 +112,12 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 - [x] ~~**Web row null guard**~~ (2026-04-25) — Web row değeri sadece `extractDomain` parse edebildiğinde geçer; null URL'de satır filtrelenir.
 - [x] ~~**TickerDetailTab `effectiveType` useEffect deps**~~ (2026-04-25) — Live-price + meta fetch + fund fetch useEffect'lerinin deps'lerine `effectiveType` eklendi; stale closure provider mismatch'i kapatıldı.
 
+## Fiyat Akışı UX Notları (2026-04-26)
+
+- [x] ~~**ManuelPosForm fetchPrice — tarih için veri yoksa persistent inline uyarı**~~ (2026-04-26) — Önceki flash 3.5sn sonra kayboluyordu; avgCost sessizce fallback fiyatla doluyordu. Yeni: `priceNote` state ile inline kart (sarı warn-card) "⚠ {tarih} için veri yok — {fallback tarih} kapanışı kullanıldı" + tarih kontrol uyarısı. ok/warn/err 3 stil.
+- [ ] **AI parse autofill (enrichParseWithPrice) için aynı pattern** — Multi-line text/image parse'ında her tx için fiyat fallback olduysa ConfirmBox satırında küçük pill ("⚠ tarih fallback") göster. Şu an sessizce fallback'liyor.
+- [ ] **Dashboard ↻ Güncelle — başarısız ticker'lar için ayrıntılı sebep** — Şu an "başarısız: AAPL, MSFT" toast; her ticker'ın hatası (HTTP 403, ticker bulunamadı vb.) Settings → Sistem Durumu'nda görünsün veya toast içinde detay.
+
 ## UX/UI Gaps (kod-okumalı, ROADMAP dışı gözlem; 2026-04-25)
 
 - [ ] **Touch device'larda tooltip**: `data-tip` hover-only; mobil/tablet'te hiç görünmez. Tap-to-show + outside-tap-close pattern (~30 yer etkilenir).

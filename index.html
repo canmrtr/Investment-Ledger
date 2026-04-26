@@ -1727,6 +1727,9 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
   const E={ticker:"",name:"",type:initType,shares:"",avgCost:"",currency:initCurrency,broker:"",commission:"",date:today()};
   const [form,setForm]=useState(E);
   const [curPrice,setCurPrice]=useState(null);
+  // Fiyat fetch sonucu hakkında inline uyarı/bilgi: {type:"ok"|"warn", text}.
+  // warn: tarihin fiyatı yok, fallback kullanıldı → kullanıcı bilinçli kontrol etsin.
+  const [priceNote,setPriceNote]=useState(null);
   const [fetchP,setFetchP]=useState(false);
   const [saving,setSaving]=useState(false);
   const [editTk,setEditTk]=useState(null);
@@ -1741,32 +1744,47 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
     const at=typeOverride||form.type;
     if(!upper)return;
     if(NAMES[upper])set({name:NAMES[upper]});
-    setFetchP(true);setCurPrice(null);
+    setFetchP(true);setCurPrice(null);setPriceNote(null);
+    // Sembol: form.currency'den (kullanıcı override edebildiği için type yerine currency referans).
+    const sym = displaySym(form.currency);
     try{
-      // Önce date-spesifik dene; hafta sonu / tatil 403 verirse latest close'a düş.
+      // Önce date-spesifik dene; hafta sonu / tatil 403 verirse latest close'a fallback.
       const r=await edgeCall("fetch-prices",{ticker:upper,mode:"price",date:useDate,asset_type:at});
       const d=await r.json();
       let price=d.result?.price;
+      let fallback=false;
+      let fallbackDate=null;
       if(!price){
         DEBUG && console.warn(`[fetchPrice ${upper}] date fail`,d.result?.error||d.error);
         const r2=await edgeCall("fetch-prices",{ticker:upper,mode:"price",asset_type:at});
         const d2=await r2.json();
         if(d2.result?.price){
           price=d2.result.price;
-          flash_(`${upper}: ${fmtDateTR(useDate)} verisi yok, en son kapanış kullanıldı`,"ok");
+          fallback=true;
+          fallbackDate=d2.date||null;
         } else {
           const msg=d2.result?.error||d.result?.error||d.error||"fiyat alınamadı";
           DEBUG && console.warn(`[fetchPrice ${upper}] no fallback`,msg);
-          flash_(`${upper}: ${msg}`,"err");
+          setPriceNote({type:"err", text:`${upper}: ${msg}`});
         }
       }
       if(price){
         setCurPrice(price);
         set({avgCost:price.toFixed(2)});
+        if(fallback){
+          // avgCost yine de doldurulur ama uyarı persistent: kullanıcı tarihi
+          // kontrol edip gerekirse manuel düzeltsin.
+          setPriceNote({
+            type:"warn",
+            text:`⚠ ${fmtDateTR(useDate)} için veri yok${fallbackDate?` — ${fmtDateTR(fallbackDate)} kapanışı kullanıldı`:" — en son kapanış kullanıldı"} (${sym}${fmt(price)}). Tarih hafta sonu/tatil olabilir; düzeltebilir veya devam edebilirsin.`,
+          });
+        } else {
+          setPriceNote({type:"ok", text:`${fmtDateTR(useDate)} fiyatı: ${sym}${fmt(price)}`});
+        }
       }
     }catch(e){
       DEBUG && console.warn(`[fetchPrice ${upper}]`,e);
-      flash_(`${upper} fiyatı alınamadı: ${e.message}`,"err");
+      setPriceNote({type:"err", text:`${upper} fiyatı alınamadı: ${e.message}`});
     }
     setFetchP(false);
   };
@@ -1845,7 +1863,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
             <div className="kk" style={{marginBottom:4}}>Ticker *</div>
             <div style={{display:"flex",gap:6}}>
               <input className="finp" style={{textTransform:"uppercase"}} value={form.ticker}
-                onChange={e=>{set({ticker:e.target.value.toUpperCase(),name:"",avgCost:""});setCurPrice(null);}}
+                onChange={e=>{set({ticker:e.target.value.toUpperCase(),name:"",avgCost:""});setCurPrice(null);setPriceNote(null);}}
                 onBlur={e=>e.target.value&&fetchPrice(e.target.value)}
                 placeholder="AAPL" disabled={!!editTk}/>
               <button style={{whiteSpace:"nowrap",fontSize:12,padding:"7px 10px"}}
@@ -1865,7 +1883,18 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
                 </div>
               </div>
             )}
-            {curPrice&&<div style={{fontSize:11,color:"var(--ok)",marginTop:4}}>{fmtDateTR(form.date)} fiyatı: {form.currency==="TRY"?"₺":form.currency==="EUR"?"€":"$"}{fmt(curPrice)}</div>}
+            {priceNote&&(
+              <div style={{
+                fontSize:11,
+                marginTop:6,
+                padding:priceNote.type==="ok"?"0":"6px 10px",
+                borderRadius:priceNote.type==="ok"?0:6,
+                background:priceNote.type==="warn"?"rgba(255,184,0,0.08)":priceNote.type==="err"?"rgba(255,51,102,0.08)":"transparent",
+                border:priceNote.type==="warn"?"1px solid rgba(255,184,0,0.25)":priceNote.type==="err"?"1px solid rgba(255,51,102,0.25)":"none",
+                color:priceNote.type==="ok"?"var(--ok)":priceNote.type==="warn"?"var(--warn)":"var(--err)",
+                lineHeight:1.4,
+              }}>{priceNote.text}</div>
+            )}
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Şirket Adı</div>
