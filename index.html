@@ -1566,7 +1566,7 @@ function ConfirmBox({data,onSave,onCancel}){
 }
 
 // ── HistoryTab ───────────────────────────────────────────────────
-function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,initialSearch,onConsume,splits}){
+function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,openDetail,initialSearch,onConsume,splits}){
   const [open,setOpen]=useState(()=>initialSearch?{[initialSearch.toUpperCase()]:true}:{});
   const [editId,setEditId]=useState(null);
   const [editForm,setEditForm]=useState({});
@@ -1671,7 +1671,11 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,init
           <div key={tk} style={{marginBottom:8,border:"0.5px solid var(--border)",borderRadius:12,overflow:"hidden"}}>
             <div onClick={()=>setOpen(o=>({...o,[tk]:!o[tk]}))} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:"var(--bg2)",cursor:"pointer"}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:13,fontWeight:700,fontFamily:"monospace"}}>{tk}</span>
+                <span style={{fontSize:13,fontWeight:700,fontFamily:"DM Mono,monospace",color:"var(--info)",cursor:"pointer",textDecoration:"underline",textDecorationColor:"transparent"}}
+                  onMouseEnter={e=>e.currentTarget.style.textDecorationColor="var(--info)"}
+                  onMouseLeave={e=>e.currentTarget.style.textDecorationColor="transparent"}
+                  onClick={e=>{e.stopPropagation();openDetail&&openDetail(tk,undefined,"history");}}
+                  data-tip="Detay sayfasını aç">{tk}</span>
                 <span className="dim" style={{fontSize:11}}>{items.length} işlem</span>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -2459,8 +2463,8 @@ const REGION_OF = {
   FX:"fx",
 };
 const REGION_META = {
-  us:     {label:"US 🇺🇸",          color:"#30d158"},
-  tr:     {label:"Türkiye 🇹🇷",      color:"#bf5af2"},
+  us:     {label:"US",              color:"#30d158"},
+  tr:     {label:"Türkiye",         color:"#bf5af2"},
   crypto: {label:"Global · Kripto",  color:"#ff9f0a"},
   emtia:  {label:"Global · Emtia",   color:"#ffd60a"},
   fx:     {label:"Döviz",            color:"#8e8e93"},
@@ -2491,6 +2495,7 @@ const buildSlicesPath = (sliceArr, CX, CY, R) => {
 
 function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,openDetail}){
   const [filter,setFilter]=useState("all");
+  const [assetDistMode,setAssetDistMode]=useState("mv"); // "cost" | "mv"
   // Kart collapse state'leri — default kapalı (özet üstte, detay isteğe bağlı).
   const [healthOpen,setHealthOpen]=useState(false);
   const [commOpen,setCommOpen]=useState(false);
@@ -2575,6 +2580,12 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
     if (raw <= 0) return 0;
     return cnv(raw, p.currency || "USD") || 0;
   };
+  // Pozisyon maliyet (avg_cost × shares, orijinal currency'de) → display cur'a çevir
+  const costDisp = (p) => {
+    const raw = (p.avg_cost || 0) * p.shares;
+    if (raw <= 0) return 0;
+    return cnv(raw, p.currency || "USD") || 0;
+  };
 
   // Split factor lookup — buy/sell tarihinden sonra split olmuşsa fiyatı düzelt.
   // factorAt(ticker,date) = ratio'ların tarihten sonraki çarpımı.
@@ -2595,13 +2606,14 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
   const filterChips = ["all", ...heldTypes];
 
   // Slice hesabı: filter==="all" → type breakdown; filter spesifik → o tipteki ticker breakdown
-  // Tüm değerler display cur'a convert edilir (mixed currency → tek sembol).
+  // assetDistMode: "mv" → piyasa değeri, "cost" → maliyet. Tüm değerler display cur'a convert.
   const slices = (() => {
+    const valFn = assetDistMode === "cost" ? costDisp : mvDisp;
     if (filter === "all") {
       const byType = {};
       pos.forEach(p => {
-        const mv = mvDisp(p);
-        if (mv > 0) byType[p.type] = (byType[p.type] || 0) + mv;
+        const v = valFn(p);
+        if (v > 0) byType[p.type] = (byType[p.type] || 0) + v;
       });
       const total = Object.values(byType).reduce((a,v)=>a+v,0);
       const arr = Object.entries(byType)
@@ -2612,7 +2624,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
     } else {
       const filtered = pos.filter(p => p.type === filter);
       const arr = filtered.map((p,i) => ({
-        key:p.ticker, label:p.ticker, value:mvDisp(p), color:TICKER_PIE_COLORS[i % TICKER_PIE_COLORS.length]
+        key:p.ticker, label:p.ticker, value:valFn(p), color:TICKER_PIE_COLORS[i % TICKER_PIE_COLORS.length]
       })).filter(s => s.value > 0).sort((a,b)=>b.value-a.value);
       const total = arr.reduce((a,s)=>a+s.value,0);
       arr.forEach(s => s.frac = total > 0 ? s.value/total : 0);
@@ -2706,19 +2718,25 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
 
   return(
     <div>
-      {/* Filter chips */}
-      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}} data-test="analysis-filter">
-        {filterChips.map(t => (
-          <button key={t} className={"mtab"+(filter===t?" on":"")}
-            onClick={()=>setFilter(t)} data-test={`filter-${t}`}>
-            {TYPE_LABEL_SHORT[t]||t}
-          </button>
-        ))}
-      </div>
-
       {/* Varlık dağılımı pie */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
-        <div className="stitle">Varlık Dağılımı{filter!=="all"?` · ${TYPE_LABEL_SHORT[filter]}`:""}</div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:filterChips.length>2?8:12}}>
+          <div className="stitle" style={{marginBottom:0}}>Varlık Dağılımı</div>
+          <div className="seg">
+            <button className={assetDistMode==="cost"?"on":""} onClick={()=>setAssetDistMode("cost")}>Maliyet</button>
+            <button className={assetDistMode==="mv"?"on":""} onClick={()=>setAssetDistMode("mv")}>Piyasa</button>
+          </div>
+        </div>
+        {filterChips.length > 2 && (
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}} data-test="analysis-filter">
+            {filterChips.map(t => (
+              <button key={t} className={"mtab sm"+(filter===t?" on":"")}
+                onClick={()=>setFilter(t)} data-test={`filter-${t}`}>
+                {TYPE_LABEL_SHORT[t]||t}
+              </button>
+            ))}
+          </div>
+        )}
         {slices.arr.length === 0 ? (
           <div className="empty" style={{padding:"40px 0"}}>Bu varlık türünde değerli pozisyon yok</div>
         ) : (
@@ -2812,8 +2830,8 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
             </div>
           </div>
 
-          {/* Filter chips — kapalı modda da rozetleri etkiler */}
-          {(() => {
+          {/* Filter chips + Eksikleri Çek CTA — sadece detay açıkken */}
+          {healthOpen && (() => {
             const types=["all"];
             if(healthEligible.some(p=>p.type==="US_STOCK"))types.push("US_STOCK");
             if(healthEligible.some(p=>p.type==="BIST"))types.push("BIST");
@@ -2830,8 +2848,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
             );
           })()}
 
-          {/* Eksik fetch CTA + progress — kapalı modda da görünür */}
-          {healthMissing.length>0 && (
+          {healthOpen && healthMissing.length>0 && (
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"8px 10px",background:"var(--bg3)",borderRadius:8,marginTop:10,flexWrap:"wrap"}}>
               <span style={{fontSize:11,color:"var(--text2)"}}>
                 {fundBusy
@@ -3544,65 +3561,6 @@ function App({session}){
               );
             })()}
 
-            {/* Varlık dağılımı — pie + legend */}
-            {(()=>{
-              const entries=Object.entries(byT).sort((a,b)=>b[1]-a[1]);
-              const total=entries.reduce((a,[,v])=>a+v,0);
-              if(total<=0)return null;
-              const CX=60,CY=60,R=50;
-              const polar=(a)=>({x:CX+R*Math.cos(a-Math.PI/2),y:CY+R*Math.sin(a-Math.PI/2)});
-              let ang=0;
-              const slices=entries.map(([type,value])=>{
-                const frac=value/total;
-                const start=ang, end=ang+frac*2*Math.PI;
-                ang=end;
-                let path;
-                if(frac>=0.9999){
-                  // tek tür = tam çember, arc yerine iki yarım path
-                  path=`M ${CX} ${CY-R} A ${R} ${R} 0 1 1 ${CX} ${CY+R} A ${R} ${R} 0 1 1 ${CX} ${CY-R} Z`;
-                } else {
-                  const s=polar(end),e=polar(start);
-                  const large=(end-start)<=Math.PI?"0":"1";
-                  path=`M ${CX} ${CY} L ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${R} ${R} 0 ${large} 0 ${e.x.toFixed(2)} ${e.y.toFixed(2)} Z`;
-                }
-                return{type,value,frac,path};
-              });
-              return(
-                <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                    <span className="stitle" style={{marginBottom:0}}>Varlık Dağılımı</span>
-                    <div className="seg">
-                      <button className={distMode==="cost"?"on":""} onClick={()=>setDistMode("cost")}>Maliyet</button>
-                      <button className={distMode==="mv"?"on":""} onClick={()=>setDistMode("mv")}>Piyasa</button>
-                    </div>
-                  </div>
-                  <div style={{display:"flex",gap:14,alignItems:"center"}}>
-                    <svg viewBox="0 0 120 120" style={{width:110,height:110,flex:"0 0 auto"}}>
-                      {slices.map(s=>(
-                        <path key={s.type} d={s.path} fill={TYPE_COLORS[s.type]||"#666"} stroke="var(--bg2)" strokeWidth="1"/>
-                      ))}
-                    </svg>
-                    <div style={{flex:1,minWidth:0}}>
-                      {slices.map(s=>(
-                        <div key={s.type} className="pie-row">
-                          <span className="pie-sw" style={{background:TYPE_COLORS[s.type]||"#666"}}></span>
-                          <span style={{flex:1,minWidth:0}}>{TL[s.type]||s.type}</span>
-                          <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(s.value,0))}</span>
-                          <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
-                        </div>
-                      ))}
-                      {/* Toplam — yukarıdaki 4-kolonlu satıra hizalı: spacer + etiket + $ + 100% */}
-                      <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
-                        <span className="pie-sw" style={{visibility:"hidden"}}></span>
-                        <span style={{flex:1,minWidth:0}}>Toplam</span>
-                        <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(total,0))}</span>
-                        <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
             </div>
 
             {/* Pozisyon tabloları — varlık türüne göre 6 ayrı blok (US Hisse / ETF / BIST /
@@ -3706,7 +3664,7 @@ function App({session}){
 
       {/* HISTORY */}
       {tab==="history"&&(
-        <HistoryTab txs={txs} user={user} loadData={loadData} flash_={flash_} confirm_={confirm_} mask={mask} hideAmts={hide} setTab={setTab} initialSearch={navTicker} onConsume={()=>setNavTicker("")} splits={splits}/>
+        <HistoryTab txs={txs} user={user} loadData={loadData} flash_={flash_} confirm_={confirm_} mask={mask} hideAmts={hide} setTab={setTab} openDetail={openDetail} initialSearch={navTicker} onConsume={()=>setNavTicker("")} splits={splits}/>
       )}
 
 
@@ -3779,6 +3737,7 @@ function App({session}){
             <label>Pozisyon Bakımı</label>
             <div className="brow">
               <button onClick={async()=>{
+                if(!(await confirm_("Tüm pozisyonlar sıfırlanıp işlemlerden yeniden hesaplanacak. Devam edilsin mi?",{okLbl:"Yeniden Hesapla",danger:true})))return;
                 const n=await rebuildPositions(user.id);
                 await loadData();
                 flash_(`Pozisyonlar yeniden hesaplandı · ${n} pozisyon`);
