@@ -25,6 +25,7 @@
       --border:rgba(0,0,0,0.08);--border2:rgba(82,72,212,0.28);
       --text:#1a1a1a;--text2:#4a4a4a;--text3:#808080;
       --info:#5248d4;
+      --ok:#00a65a;--err:#e0003c;--warn:#c47d00;
       --topbar-bg:rgba(255,255,255,0.90);
     }
     *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
@@ -360,12 +361,12 @@ const enrichParseListWithPrices = async (list) =>
 // Her blok kendi natural currency'sinde ham değerlerle render olur. Üst KPI'lar tüm
 // pozisyonları display cur'a convert ediyor (ayrı sistem).
 const BLOCK_TYPES = [
-  {type:"US_STOCK", label:"US Hisse",  cur:"USD", sym:"$", badge:null},
-  {type:"FUND",     label:"ETF / Fon", cur:"USD", sym:"$", badge:"etf"},
-  {type:"BIST",     label:"BIST",      cur:"TRY", sym:"₺", badge:null},
-  {type:"CRYPTO",   label:"Kripto",    cur:"USD", sym:"$", badge:"cry"},
-  {type:"GOLD",     label:"Altın",     cur:"USD", sym:"$", badge:null},
-  {type:"FX",       label:"Döviz",     cur:"USD", sym:"$", badge:null},
+  {type:"US_STOCK", label:"US Hisse",  cur:"USD", sym:"$", badge:null,  icon:(s=14)=>ASSET_ICONS.US_STOCK(s)},
+  {type:"FUND",     label:"ETF / Fon", cur:"USD", sym:"$", badge:"etf", icon:(s=14)=>ASSET_ICONS.FUND(s)},
+  {type:"BIST",     label:"BIST",      cur:"TRY", sym:"₺", badge:null,  icon:(s=14)=>ASSET_ICONS.BIST(s)},
+  {type:"CRYPTO",   label:"Kripto",    cur:"USD", sym:"$", badge:"cry", icon:(s=14)=>ASSET_ICONS.CRYPTO(s)},
+  {type:"GOLD",     label:"Altın",     cur:"USD", sym:"$", badge:null,  icon:(s=14)=>ASSET_ICONS.GOLD(s)},
+  {type:"FX",       label:"Döviz",     cur:"USD", sym:"$", badge:null,  icon:(s=14)=>ASSET_ICONS.FX(s)},
 ];
 
 // Massive desteği olan emtialar — picker chip listesi.
@@ -3634,7 +3635,10 @@ function App({session}){
               return(
                 <div key={cfg.type} style={{marginTop:idx===0?0:22,marginBottom:8}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                    <div className="stitle" style={{marginBottom:0}}>{cfg.label} · {mask(cfg.sym+fmt(totMv,0))}</div>
+                    <div className="stitle" style={{marginBottom:0,display:"flex",alignItems:"center",gap:6}}>
+                      <span style={{color:"var(--text3)",display:"flex",opacity:.7}}>{cfg.icon&&cfg.icon(14)}</span>
+                      {cfg.label} · {mask(cfg.sym+fmt(totMv,0))}
+                    </div>
                     <div className="brow">
                       <button className="pri btn-xs" onClick={()=>setTab("add")}>+ Ekle</button>
                       {idx===0&&<button className="btn-xs" onClick={loadData} disabled={busy.d}>{busy.d?"...":"Yenile"}</button>}
