@@ -82,8 +82,8 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
 ## Analiz Tab Açık Alt Görevler
 
-- [ ] **Sağlık Tablosu: filter chip + "Eksikleri Çek" CTA kapalı modda gizlensin** `[S]` `[P0]` — Şu an kapalıyken de görünüyor; sadece `healthOpen===true` iken render edilsin. Kapalı modda: başlık + 3 rozet + "Detay ▾".
-- [ ] **Varlık Dağılımı kartına Maliyet/Piyasa toggle** `[S]` `[P1]` — Dashboard pie'daki `distMode` toggle Analiz'de yok; aynısını ekle. Dashboard pie kalkınca tek dağılım grafiği bu olur.
+- [x] ~~**Sağlık Tablosu: filter chip + "Eksikleri Çek" CTA kapalı modda gizlensin**~~ (2026-04-26) — healthOpen && wrap ile gizlendi.
+- [x] ~~**Varlık Dağılımı kartına Maliyet/Piyasa toggle**~~ (2026-04-26) — assetDistMode state + segment buton.
 - [ ] **AnalysisTab FX yok warn-card** `[S]` `[P1]` — Dashboard'da var; Analiz'de sessizce 0 ekleniyor. FX rates null ise Analiz'de de turuncu uyarı göster.
 - [ ] **Win/Loss time horizon seçimi** `[S]` `[P2]` — şu an bugünkü fiyat; 1A/3A/6A/1Y window chip seçimi.
 - [ ] **Win/Loss sold-out ticker live price** `[S]` `[P2]` — cache'te yoksa "noPrice" sayım dışı; live fetch seçeneği ekle.
@@ -120,7 +120,7 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
 ## Bug & UX Backlog
 
-- [ ] **AI parse autofill pill (ConfirmBox)** `[S]` `[P1]` — multi-line parse'ta fiyat fallback olduysa ConfirmBox satırında "⚠ tarih fallback" pill göster; şu an sessizce fallback'liyor.
+- [x] ~~**AI parse autofill pill (ConfirmBox)**~~ (2026-04-26) — _priceFallback / _priceAutoFilled flag + ⚠/↻ pill.
 - [x] ~~**ConfirmBox inline edit**~~ (2026-04-26) — Tek: Tarih/Adet/Fiyat/Broker/Komisyon inline input; Toplam reaktif. Çoklu: ✎ per-row → expand edit panel + ✓ Tamam.
 - [ ] **Dashboard ↻ Güncelle başarısız ticker ayrıntısı** `[S]` `[P2]` — şu an "başarısız: AAPL" toast; Settings → Sistem Durumu'nda per-ticker hata sebebi (HTTP 403, bulunamadı vb.).
 
@@ -139,8 +139,8 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ### Grup 1 — UX Kalite (P0/P1, kolaydan zora)
 
-- [ ] **Pozisyonları Yeniden Hesapla confirm guard** `[S]` `[P0]` — destructive (DELETE+INSERT cascade); `confirm_(...)` ile guard. (Sprint C kalıntısı)
-- [ ] **HistoryTab tx satırından openDetail** `[S]` `[P0]` — şu an detaya gitme yolu sadece pozisyon tablosundan; HistoryTab satır click → TickerDetailTab.
+- [x] ~~**Pozisyonları Yeniden Hesapla confirm guard**~~ (2026-04-26) — confirm_() danger modal eklendi.
+- [x] ~~**HistoryTab tx satırından openDetail**~~ (2026-04-26) — ticker span tıklanabilir, openDetail prop geçildi.
 - [x] ~~**Touch device tooltip (data-tip tap-to-show)**~~ (2026-04-26) — global touchstart listener; data-tip-visible CSS class; 2500ms auto-dismiss; button/a skip.
 - [x] ~~**Loading state standardı (SkeletonRow/SkeletonCard)**~~ (2026-04-26) — SkeletonLine/SkeletonCard/SkeletonRows shimmer components. Dashboard ilk yük → 3 skeleton kart + 5 satır; meta/fund → SkeletonRows.
 - [ ] **Form input error inline** `[S]` `[P1]` — invalid date/negative shares submit'e kadar feedback yok; `aria-invalid` + 11px error text.

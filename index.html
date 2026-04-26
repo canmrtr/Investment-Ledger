@@ -67,6 +67,7 @@
     #fab{display:none;position:fixed;bottom:76px;right:20px;width:54px;height:54px;border-radius:50%;background:var(--info);border:none;color:#fff;box-shadow:0 6px 20px rgba(102,88,255,0.45);z-index:101;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s,box-shadow .12s;}
     #fab:hover{transform:scale(1.05);box-shadow:0 8px 28px rgba(102,88,255,0.55);}
     #fab:active{transform:scale(0.96);}
+    .mprog{display:none;}
     @media (max-width:640px){
       .topbar-nav{display:none;}
       .logo-text{display:none;}
@@ -79,6 +80,8 @@
          otomatik zoom-in eder ve kalıcı zoom hissi verir. Mobile'da input
          font'unu 16px'e çıkarmak bu davranışı engeller. */
       input,textarea,select,.finp,.finp.sm{font-size:16px;}
+      .cur-seg button{min-height:44px;padding:4px 12px;}
+      .mprog{display:flex;position:fixed;top:52px;left:0;right:0;z-index:140;background:var(--bg2);border-bottom:1px solid var(--border);padding:5px 14px;font-size:12px;color:var(--text2);align-items:center;gap:8px;}
     }
     /* Base — ghost stil (default). Özel class'lı butonlar (.tab, .btab, .eye-btn, #fab vb.) cascade ile bunu override eder. */
     button{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;padding:7px 14px;transition:opacity .12s,background .12s;}
@@ -100,7 +103,7 @@
     .lbl{font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
     .mono{font-family:'DM Mono','Fira Code',monospace;}
     .ok{color:var(--ok);}.err{color:var(--err);}.dim{color:var(--text2);}
-    .flash{border-radius:var(--r);padding:9px 13px;font-size:13px;margin-bottom:14px;}
+    .flash{position:fixed;top:53px;left:12px;right:12px;z-index:150;border-radius:var(--r);padding:9px 13px;font-size:13px;}
     .flash.ok{background:rgba(48,209,88,.12);color:var(--ok);border:0.5px solid rgba(48,209,88,.3);}
     .flash.err{background:rgba(255,69,58,.12);color:var(--err);border:0.5px solid rgba(255,69,58,.3);}
     .g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:16px;}
@@ -686,7 +689,7 @@ function Login(){
 // 7 nokta: 1Y / 6A / 3A / 1A / 1H / 1G / Bugün. "Bugünkü pozisyonların
 // geçmiş fiyatla değeri" — gerçek tarihi portföy değeri değildir.
 function SparkChart({data}){
-  if(!data||data.length<2)return<div className="dim" style={{fontSize:11,padding:"14px 0",textAlign:"center"}}>Grafik için yeterli veri yok</div>;
+  if(!data||data.length<2)return<div className="dim" style={{fontSize:11,padding:"14px 0",textAlign:"center",minHeight:80,display:"flex",alignItems:"center",justifyContent:"center"}}>Grafik için yeterli veri yok</div>;
   const W=400,H=70,pad=6;
   const vals=data.map(d=>d.value);
   const min=Math.min(...vals),max=Math.max(...vals),rng=(max-min)||1;
@@ -2344,6 +2347,7 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
   const [imgFile,setImgFile]=useState(null);
   const [csvText,setCsvText]=useState("");
   const [csvRows,setCsvRows]=useState([]);
+  const [csvSkipped,setCsvSkipped]=useState(0);
   const [csvBusy,setCsvBusy]=useState(false);
   const [progStep,setProgStep]=useState("");
   const [progPct,setProgPct]=useState(0);
@@ -2440,12 +2444,15 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
       return;
     }
     if(lines.length<2){setCsvRows([]);flash_("Header var ama veri satırı yok","err");return;}
-    const rows=lines.slice(1).map(line=>{
+    const allDataRows=lines.slice(1).map(line=>{
       const vals=splitCSVLine(line);
       const obj={};
       hdrs.forEach((h,i)=>obj[h]=(vals[i]||""));
       return obj;
-    }).filter(r=>r.ticker&&["BUY","SELL"].includes((r.way||"").toUpperCase()));
+    });
+    const rows=allDataRows.filter(r=>r.ticker&&["BUY","SELL"].includes((r.way||"").toUpperCase()));
+    const skipped=allDataRows.length-rows.length;
+    setCsvSkipped(skipped);
     if(rows.length===0){flash_("Geçerli BUY/SELL satırı bulunamadı","err");}
     setCsvRows(rows);
   };
@@ -2593,7 +2600,7 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
           )}
           {csvRows.length>0&&!csvBusy&&(
             <div>
-              <div className="stitle">{csvRows.length} işlem bulundu — ilk 5:</div>
+              <div className="stitle">{csvRows.length} işlem bulundu{csvSkipped>0?` · ${csvSkipped} satır atlandı`:""} — ilk 5:</div>
               <div className="tbl-wrap">
                 <table aria-label="CSV önizleme — ilk 5 işlem">
                   <thead><tr>{["Tarih","Ticker","İşlem","Adet","Fiyat","Broker"].map(h=><th key={h} scope="col" className="l">{h}</th>)}</tr></thead>
@@ -2898,6 +2905,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
 
   return(
     <div>
+      {!fxRates&&<div className="warn-card" style={{marginBottom:14}}>⚠ FX kuru yüklenemedi — TRY/EUR pozisyonlar doğru toplamayabilir. Topbardaki ↻ butonuyla güncelle.</div>}
       {/* Varlık dağılımı pie */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:filterChips.length>2?8:12}}>
@@ -3625,8 +3633,10 @@ function App({session}){
         </div>
       </header>
 
+      {flash&&<div className={"flash "+flash.t}>{flash.msg}</div>}
+      {(busy.p||busy.h)&&pprog&&<div className="mprog"><span className="spin" style={{width:11,height:11}}/><span>{pprog}</span></div>}
+
       <main id="app-main">
-        {flash&&<div className={"flash "+flash.t}>{flash.msg}</div>}
 
         {/* DASHBOARD */}
       {tab==="dashboard"&&pos.length===0&&(
