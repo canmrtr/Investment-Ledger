@@ -25,7 +25,7 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 
 | Tablo | Scope | İçerik |
 |-------|-------|--------|
-| `positions` | user-specific (RLS) | ticker, name, type, shares, avg_cost, currency, broker |
+| `positions` | user-specific (RLS) | ticker, name, type, shares, avg_cost, currency, broker, unit (TEXT DEFAULT NULL — altın birimi: oz/g/quarter/half/full/republic) |
 | `transactions` | user-specific (RLS) | BUY/SELL kayıtları (shares/price orijinal değerlerde) |
 | `splits` | user-specific (RLS) | ticker, split_date, ratio (stock split bilgisi) |
 | `profiles` | user-specific (RLS, public read) | user_id PK, username (unique), display_name |
@@ -44,7 +44,9 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 Root → Login (IL mark) | App
   App (#shell)
     ├─ #topbar (sticky)       — [IL] logo + nav (Dashboard/İşlemler/Analiz/Ara/Ayarlar)
-    │                            + sağ aksiyonlar (.cur-seg $/₺ toggle, ↻ Güncelle, 👁 hide, + İşlem Ekle)
+    │                            + sağ aksiyonlar (.cur-seg $/₺ toggle, 🕐 son güncelleme yaşı (readonly
+    │                            span + busy spinner — otomatik 30dk interval + visibilitychange),
+    │                            👁 hide, + İşlem Ekle); manuel "↻ Şimdi Güncelle" Settings'te
     ├─ <main #app-main>
     │   ├─ Dashboard          — KPI kartlar (TR + XIRR, display cur'da convert),
     │   │                       [Sparkline + Pie] yan yana, pozisyon blokları VARLIK
@@ -69,8 +71,8 @@ Root → Login (IL mark) | App
     │   ├─ TickerDetailTab    — held mode (pozisyon kartları) + discovery mode
     │   │                       (non-held; YOK badge, warn-card, meta+fund only);
     │   │                       FAB context-aware "il-detail-add" event listener
-    │   └─ Settings           — Fiyat & Veri (test result inline), Bakım, Export (CSV),
-    │                           Account, Durum (FX Kuru satırı dahil)
+    │   └─ Settings           — Fiyat & Veri (test result inline + "↻ Şimdi Güncelle · X dk önce"
+    │                           manuel buton), Bakım, Export (CSV), Account, Durum (FX Kuru dahil)
     ├─ #bottom-tabs (mobile)  — 5 nav (Dashboard/İşlemler/Analiz/Ara/Ayarlar; detail'de
     │                           fromTab vurgusu); +Ekle filtreli, FAB ayrı
     └─ #fab (mobile)          — Context-aware: Detail'de + Ekle (custom event),
@@ -93,6 +95,8 @@ Root → Login (IL mark) | App
 - `BLOCK_TYPES` — Dashboard pozisyon blokları için 6 entry (US Hisse/ETF/BIST/Kripto/Altın/Döviz) — currency-yerine asset_type bazlı gruplama
 - `CRYPTO_SYMBOLS` — ManuelPosForm CRYPTO chip picker için 12 popüler kripto (BTC/ETH/SOL/...)
 - `COMMODITY_SYMBOLS` — ManuelPosForm GOLD chip picker için 4 emtia (XAU/XAG/XPT/XPD + ikon)
+- `GOLD_UNITS` — ManuelPosForm GOLD birim picker için 6 birim (oz/g/quarter/half/full/republic) + `grams` ağırlık + `purity` saflık faktörü
+- `goldOzPerUnit(unit)` — birim → troy oz çevirimi (`shares * ozFactor` oz-eq storage; `avg_cost / ozFactor` per-oz price). unit=null → factor=1 (legacy oz geriye uyumlu)
 - `REGION_OF` / `REGION_META` — AnalysisTab bölge dağılımı heuristik (asset_type → region key + label/color)
 - `sym_(cur)` — currency code → ₺/€/$ sembol map (AnalysisTab içi)
 - `displaySym(cur)` — top-level currency → sembol map (FX conversion için merkez yardımcı)
@@ -342,6 +346,9 @@ Sticky pos.3 nav sekmesi (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar). 
 - **SearchTab → TickerDetailTab non-held flow**: detail page `pos.find(...)` boş dönerse "discovery mode" — pozisyon kartları gizli, YOK badge + warn-card aktif. Yeni eklenen `+ Ekle` flow rebuildPositions sonrası held mode'a otomatik geçer.
 - **`.pie-row` kolon hizalama**: `display:flex` ile çocuk span'lara `flex:"0 0 70px"` ($) ve `flex:"0 0 56px"` (%) sabit basis ver — `minWidth` koymak yetmez, content > minWidth olunca o satırın % col'u genişler ve $ col'u o satırda kayar (Toplam $3,446 vs legend $1,310 8-15px spread olur). Label `flex:1, minWidth:0` (truncate KULLANMA — `overflow:hidden + ellipsis` "Hi…/ET…" regression yapar). Bu çözüm Dashboard pie + Analiz Varlık + Analiz Bölge pie'larında uygulanmalı.
 - **Test-runner agent yetkisi**: `Write` toollu olduğu için kod yazabilir; **read-only mode'u explicit talimatla zorla** ("DO NOT modify any source files. If you find issues, REPORT them — do not fix yourself"). Aksi halde bug fix'leri kendi yapıp regression yaratabilir (ör. label truncation eklemesi 2026-04-25).
+- **`rebuildPositions` unit snapshot**: `rebuildPositions` tüm pozisyonları DELETE edip yeniden insert eder. Önce `SELECT ticker, unit FROM positions WHERE user_id=...` ile `unitMap` snapshot'ı al; np map içinde `unit: unitMap[p.ticker] ?? null` ile restore et. Aksi halde rebuild sonrası tüm altın pozisyonları unit kaybeder ve oz olarak yanlış görünür.
+- **Edge function CORS**: Tüm 4 edge fn `"Access-Control-Allow-Origin": "https://canmrtr.github.io"` ile kilitli (eski `"*"` değil). Yeni edge fn eklenince aynı şekilde lock yapılmalı. Supabase Dashboard CORS ayarı değil, response header'dan kontrol edilir.
+- **Supabase CLI**: `npx supabase link --project-ref jfetubcilmuthpddkodg` ile bağlı. Edge fn deploy: `supabase/functions/<fn-name>/index.ts` yapısı gerekli (`.js` + rename). `npx supabase functions deploy <fn-name> --no-verify-jwt`. `db query --linked --query "SELECT..."` ile schema sorgusu.
 
 ## Hooks (otomatik validasyon)
 
@@ -397,17 +404,20 @@ Detaylı liste için **`ROADMAP.md`** dosyasına bakın. Tamamlananlar:
 - ✅ **AnalysisTab Komisyon kartı collapsible** (2026-04-26) — KPI üstte sabit + Detay ▾; Broker/Yıl breakdown sadece commOpen iken render.
 - ✅ **Dashboard varlık türü gruplaması** (2026-04-26) — Currency-bazlı USD/TRY/EUR blok yerine `BLOCK_TYPES` config ile 6 type-bazlı blok (US Hisse · ETF · BIST · Kripto · Altın · Döviz) + EUR cost-only ayrı blok. Her blok kendi natural currency sembolü, sort state ortak.
 - ✅ **`fetchPrice` weekend & inline uyarı** (2026-04-26) — ManuelPosForm fetchPrice'a `priceNote` state ile persistent inline kart (ok/warn/err). Tarih için veri yoksa otomatik latest close fallback + sarı warn-card "⚠ X tarihi için veri yok — Y kapanışı kullanıldı".
+- ✅ **Sprint 3: Veri girişi güvenilirliği + TR Altın birimleri MVP** (2026-04-27) — `step="any"` ondalık adet; form inline validation (`aria-invalid` + error text); backdrop click guard; TR altın birimleri MVP (`positions.unit` + `GOLD_UNITS` + birim picker 6 unit + Dashboard back-conversion); Piyasa Değeri mobil full-width; ↻ Güncelle otomatik (30dk + visibilitychange) + Settings manuel; CORS lockdown 4 edge fn; EDGAR UA email fix; `rebuildPositions` unit snapshot fix.
+- ✅ **Dark/Light tema desteği** (2026-04-26) — `[data-theme="light"]` CSS tokens; `applyTheme()` + `matchMedia`; Settings "Görünüm" 3-button segmented; LS `il_theme` persist.
+- ✅ **Touch tooltip** (2026-04-26) — `data-tip` mobil tap-to-show: global `touchstart` listener, `data-tip-visible` CSS class, 2500ms auto-dismiss, button/a skip.
+- ✅ **Tarihsel fundamental trend** (2026-04-26) — 5Y gelir/net kâr SVG bar chart (`TrendMiniChart`); edge fn FMP + BIST annual array.
 
 Açık başlıklar (detay için `ROADMAP.md`):
-- **TR altın birimleri** (gram + çeyrek + yarım + tam + Cumhuriyet + Reşat + Ata) — schema migration + birim picker + işçilik premium göstergesi
+- **TR altın işçilik premium göstergesi** — Reşat/Ata birimi + Dashboard "Spot saf · Premium %" render
 - **TEFAS entegrasyonu** ⚠ BLOCKER (borsa-mcp + TEFAS resmi endpoint 404; provider keşfi gerek)
 - **FX/GOLD ham ticker normalize** — edge function future-proofing
-- **Dark/Light tema desteği** — `data-theme` attribute + light tokens + Settings 3-button segmented
 - **Sektör-aware fundamental eşikler** — tech P/E ≤30, utility ≤15 vs.
 - **EDGAR + market price** — P/E ve P/S için CommonStockSharesOutstanding × current price
-- **Tarihsel fundamental trend** — 5 yıl gelir/marj/ROE mini chart
-- **AI parse autofill UX** — fallback gösterimi ConfirmBox satırlarında pill ile
-- **Touch tooltip** — `data-tip` mobil tap-to-show pattern (~35+ yer)
-- **Periyodik agent denetim turu** — her 2-3 sprint sonrası 5 specialized agent paralel health check (ilk tur TEFAS sprint sonrası)
+- **massiveHistorical silent {}** — edge fn hata durumunda explicit throw/flag gerekli
+- **refresh-price-cache cron secret** — pg_cron anon Bearer açık; CRON_SECRET ile koruma
+- **Input validation guards** — AddTxInline NaN, CSV negative/Infinity, price_cache sanity
+- **Periyodik agent denetim turu** — her 2-3 sprint; bir sonraki Sprint 5 sonu
 - **Sosyal**: risk profili, anonim feed (privacy gerektirir)
 - **Eğitim**: Investment Basics modülü

@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-04-26**
+İlk toplama: **2026-04-24** | Son grooming: **2026-04-27**
 
 ---
 
@@ -29,6 +29,8 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 - [x] ~~**Dashboard varlık türü gruplaması**~~ (2026-04-26) — BLOCK_TYPES config 6 type-bazlı blok (US Hisse/ETF/BIST/Kripto/Altın/Döviz); natural currency sembolü; EUR cost-only ayrı.
 - [x] ~~**ManuelPosForm priceNote inline uyarı**~~ (2026-04-26) — tarih için veri yoksa persistent sarı warn-card; ok/warn/err 3 stil.
 - [x] ~~**signOut LS temizliği + DEBUG gating + safeUrl**~~ (2026-04-25/26) — privacy/cache LS temizliği; console.warn/log DEBUG ile gated; external link rel.
+- [x] ~~**Sprint 3: Veri girişi güvenilirliği + TR Altın birimleri MVP**~~ (2026-04-27) — `step="any"` ondalık adet bug fix (0.5 BTC, 3.75 gram); form inline validation (`aria-invalid` + 11px error text); backdrop click guard (`danger:true` modal'da explicit iptal zorunlu); TR altın birimleri MVP (`positions.unit` migration + `GOLD_UNITS` oz-eq tablo + birim picker 6 unit + Dashboard back-conversion); Piyasa Değeri mobil full-width (`.g3 > *:first-child { grid-column:1/-1 }`); ↻ Güncelle otomatik (30dk `setInterval` + `visibilitychange`) + Settings'e manuel "↻ Şimdi Güncelle" taşıması; CORS lockdown tüm 4 edge fn → `https://canmrtr.github.io`; EDGAR UA email fix (prod email); `rebuildPositions` unit snapshot fix.
+- [x] ~~**Periyodik agent denetim turu — ilk tur**~~ (2026-04-27) — client-security-auditor + edge-reviewer paralel; 15 bulgu; kritik 10 item Sprint 4 backlog'a eklendi.
 
 ---
 
@@ -44,14 +46,8 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
 ## Asset Type Genişletme
 
-- [ ] **TR altın birimleri** `[M]` `[P1]` — gram / çeyrek / yarım / tam / Cumhuriyet / Reşat / Ata birimleri. Mevcut MVP sadece ons/USD; TR yatırımcısı için yetersiz.
-  - `positions.unit` schema migration (sql-writer agent)
-  - `GOLD_UNITS` sabit: birim × gram ağırlık × saflık tablosu (8 birim)
-  - ManuelPosForm GOLD → Birim picker (8 chip); `avgCost` = TRY/adet (işçilik dahil)
-  - Spot saf değer hesabı: USD/ons → USD/gram → TRY/gram (fx) → TRY/adet (×ağırlık×saflık)
-  - Dashboard render: "5 çeyrek · ₺12,000/ad · Spot saf ₺55,000 · Premium %9"
-  - Premium işçilik göstergesi (ödenen fiyat − spot saf fark)
-  - USD/ons MVP geriye uyumlu kalır
+- [x] ~~**TR altın birimleri MVP**~~ (2026-04-27) — `positions.unit` migration + `GOLD_UNITS` oz-eq tablo (oz/g/quarter/half/full/republic; gram ağırlık + saflık) + birim picker 6 chip + oz-eq `savePos` + Dashboard back-conversion display. USD/ons geriye uyumlu (unit=null → factor=1).
+- [ ] **TR altın işçilik premium göstergesi** `[M]` `[P2]` — Reşat/Ata birimi ekleme; Dashboard "5 çeyrek · ₺12,000/ad · Spot saf ₺55,000 · Premium %9" render; ödenen fiyat − spot saf fark hesabı.
 - [ ] **BIST P/S metriği** `[S]` `[P2]` — borsa-mcp `meta.market_cap` / `latestRevenue` ile derive; frontend veya edge function 2. call.
 - [ ] **BIST bankalar fundamentals** `[L]` `[P2]` — UFRS grubu Roman numeral itemCode mapping; `ISY_KNOWN_BANKS` set'i kaldır. (Bankalar şu an early-exit ile bloklu.)
 - [ ] **Sektör-aware fundamental eşikler** `[M]` `[P1]` — tech P/E ≤30, utility ≤15 vs.; `sic_description` veya FMP `sector` ile profile seç. TR enflasyonu CAGR eşiklerini de etkiliyor — nominal vs reel.
@@ -123,10 +119,21 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 - [x] ~~**AI parse autofill pill (ConfirmBox)**~~ (2026-04-26) — _priceFallback / _priceAutoFilled flag + ⚠/↻ pill.
 - [x] ~~**ConfirmBox inline edit**~~ (2026-04-26) — Tek: Tarih/Adet/Fiyat/Broker/Komisyon inline input; Toplam reaktif. Çoklu: ✎ per-row → expand edit panel + ✓ Tamam.
 - [ ] **Dashboard ↻ Güncelle başarısız ticker ayrıntısı** `[S]` `[P2]` — şu an "başarısız: AAPL" toast; Settings → Sistem Durumu'nda per-ticker hata sebebi (HTTP 403, bulunamadı vb.).
+- [ ] **AddTxInline NaN guard** `[S]` `[P1]` — parse sonucu `shares/price` NaN/undefined olursa form temiz error state göstermeli; şu an sessiz gönderim.
+- [ ] **CSV negatif/Infinity guard** `[S]` `[P1]` — `shares ≤ 0` veya `price = Infinity` olan CSV satırları import edilmemeli; skip count'a eklenmeli.
+- [ ] **price_cache sanity check** `[S]` `[P2]` — `price = 0 || price = null` olan satırlar "bayat" sayılıp yeniden fetch tetiklemeli.
+- [ ] **maxLength ticker/name/broker** `[S]` `[P2]` — ManuelPosForm + AddTxInline ticker (16), name (80), broker (40) inputlarına `maxLength` prop.
+- [ ] **il_recent_search signOut temizliği** `[S]` `[P2]` — `signOut` handler son aramaları LS'ten temizlemeli (`il_recent_search` kullanıcıya özel hissedebilir).
+- [ ] **Form tutarı gizli-mod preview** `[S]` `[P2]` — `hide=true` iken form amount alanlarında girilen değerler `mask()` ile maskelenmeli.
+- [ ] **massiveHistorical silent {}** `[S]` `[P1]` — `fetch-prices` edge function `massiveHistorical()` hata durumunda `{}` dönüyor; caller farkında değil. Explicit `throw` veya `{error:…}` flag gerekli.
+- [ ] **refresh-price-cache cron secret** `[S]` `[P1]` — pg_cron job anon Bearer kullanıyor; `SERVICE_ROLE_KEY` veya ayrı `CRON_SECRET` env ile koruma. Şu an herkes bildik URL ile tetikleyebilir.
+- [ ] **BIST/CRYPTO/GOLD cron refresh** `[S]` `[P2]` — `refresh-price-cache` sadece US_STOCK çekiyor; BIST/CRYPTO/GOLD sütunları stale kalıyor. Cron job'ı asset_type dönüşümlü yapılmalı.
+- [ ] **İş Yatırım fetch timeout** `[S]` `[P2]` — `fetch-fundamentals` isyatirim call'larında `AbortSignal.timeout(8000)` yok; ağ hatalarında edge fn asılı kalabiliyor.
 
 ## Güvenlik & Süreç
 
-- [ ] **Periyodik agent denetim turu (her 2-3 sprint)** `[S]` `[P1]` — 5 agent paralel health check: client-security-auditor, edge-reviewer, rls-auditor, ui-builder, product-owner. Her agent ≤200 kelime + en kritik 2-3 bulgu. İlk tur: 5+ sprint birikmişken.
+- [x] ~~**Periyodik agent denetim turu — ilk tur**~~ (2026-04-27) — client-security-auditor + edge-reviewer; 15 bulgu; Sprint 4 backlog'a eklendi.
+- [ ] **Periyodik agent denetim turu (her 2-3 sprint)** `[S]` `[P1]` — Bir sonraki tur: Sprint 5 sonu. 5 agent paralel: client-security-auditor, edge-reviewer, rls-auditor, test-runner, product-owner.
 
 ## Ölçeklenme
 
@@ -143,8 +150,8 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 - [x] ~~**HistoryTab tx satırından openDetail**~~ (2026-04-26) — ticker span tıklanabilir, openDetail prop geçildi.
 - [x] ~~**Touch device tooltip (data-tip tap-to-show)**~~ (2026-04-26) — global touchstart listener; data-tip-visible CSS class; 2500ms auto-dismiss; button/a skip.
 - [x] ~~**Loading state standardı (SkeletonRow/SkeletonCard)**~~ (2026-04-26) — SkeletonLine/SkeletonCard/SkeletonRows shimmer components. Dashboard ilk yük → 3 skeleton kart + 5 satır; meta/fund → SkeletonRows.
-- [ ] **Form input error inline** `[S]` `[P1]` — invalid date/negative shares submit'e kadar feedback yok; `aria-invalid` + 11px error text.
-- [ ] **Confirm modal backdrop click guard (danger)** `[S]` `[P1]` — `danger:true`'da backdrop click iptal saymasın; explicit "İptal" zorunlu.
+- [x] ~~**Form input error inline**~~ (2026-04-27) — invalid date/negatif adet; `aria-invalid` + 11px error text; kırmızı border + inline mesaj.
+- [x] ~~**Confirm modal backdrop click guard (danger)**~~ (2026-04-27) — `danger:true` modal'da backdrop click iptal sayılmaz; explicit "İptal" zorunlu.
 - [ ] **EUR tablosu sort** `[S]` `[P1]` — USD/TRY tablolarında sort var, EUR statik; en azından Ticker alfabetik.
 
 ### Grup 2 — Bildirim/Feedback (P1)
@@ -165,7 +172,7 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 - [ ] **TickerDetailTab metaErr warn-card** `[S]` `[P2]` — küçük `.err` span yerine `.warn-card` tutarlılık.
 - [ ] **Settings label semantik** `[S]` `[P2]` — `<label>` → `<div className="stitle">` standalone heading için.
 - [ ] **Login autocomplete attributes** `[S]` `[P2]` — `email` + `current-password`.
-- [ ] **input type="number" step="any"** `[S]` `[P1]` — ondalık adet (kripto/altın) için; 0.5 BTC gibi girişler şu an form tarafından reddediliyor (aktif bug).
+- [x] ~~**input type="number" step="any"**~~ (2026-04-27) — ondalık adet (kripto/altın); 0.5 BTC / 3.75 gram girişleri artık kabul ediliyor.
 - [ ] **HistoryTab "tot" negatif format** `[S]` `[P2]` — `$-1,234` → `-$1,234`.
 - [ ] **Spinner boyut standardı** `[S]` `[P2]` — 12/14/11px karışık; tek standart.
 - [ ] **Tip picker desc font/contrast** `[S]` `[P2]` — 10px var(--text3) AA sınırda.
@@ -182,11 +189,11 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 3 hedefi: veri girişi güvenilirliği + TR altın desteği. Gerçek sırayla:
+Sprint 4 hedefi: güvenlik hardening (audit bulguları) + UX küçük bitmişler. Gerçek sırayla:
 
-1. **TR altın birimleri (gram/çeyrek/tam/Cumhuriyet/Reşat/Ata)** `[M][P1]` — USD/ons MVP yetersiz; her TR altın işleminde sürtünme. Schema migration + birim picker + spot hesabı. Sprint 3 ana item.
-2. **input step="any" — ondalık adet (kripto/altın) bug fix** `[S][P1]` — 0.5 BTC / 3.75 gram girişi şu an form reject; aktif bug. Tek satır fix, Sprint 3 başı.
-3. **Form input error inline** `[S]` `[P1]` — invalid date/negatif adet submit'e kadar görünmüyor; `aria-invalid` + 11px hata metni. Manuel ekleme kalitesini ciddi artırır.
-4. **Confirm modal backdrop click guard (danger)** `[S]` `[P1]` — `danger:true` modal'da yanlışlıkla backdrop click = işlem gerçekleşiyor; güvenlik. Tek akşam.
-5. **Period buton wrap dar ekran** `[S]` `[P1]` — 320px'de eziliyor; `flex:1 + minWidth:40px`. Mobil daily-driver kırık.
-6. **Periyodik agent denetim turu** `[S]` `[P1]` — 5 agent paralel health check; Sprint 3 sonu için uygun zaman (30+ item birikti).
+1. **refresh-price-cache cron secret** `[S][P1]` — pg_cron anon Bearer açık; `CRON_SECRET` env ile koruma. Güvenlik, yarım gün.
+2. **massiveHistorical silent {}** `[S][P1]` — edge fn hata durumunda sessiz `{}` dönüyor; explicit throw/flag. Aktif hata ayıklama zorluğu.
+3. **AddTxInline NaN guard + CSV negatif guard** `[S][P1]` — parse NaN/undefined girişi + CSV `shares≤0 || Infinity`; ikisi birlikte bir sprint item.
+4. **maxLength ticker/name/broker** `[S][P2]` — ManuelPosForm + AddTxInline input length guard; XSS/overflow önlemi.
+5. **Period buton wrap dar ekran** `[S][P1]` — 320px'de eziliyor; `flex:1 + minWidth:40px`. Mobil daily-driver kırık.
+6. **TR altın işçilik premium göstergesi** `[M][P2]` — Dashboard "Spot saf · Premium %" render; Reşat/Ata birimi ekleme.
