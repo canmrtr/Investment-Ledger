@@ -118,6 +118,7 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
 - [x] ~~**AI parse autofill pill (ConfirmBox)**~~ (2026-04-26) — _priceFallback / _priceAutoFilled flag + ⚠/↻ pill.
 - [x] ~~**ConfirmBox inline edit**~~ (2026-04-26) — Tek: Tarih/Adet/Fiyat/Broker/Komisyon inline input; Toplam reaktif. Çoklu: ✎ per-row → expand edit panel + ✓ Tamam.
+- [ ] **Dashboard pozisyon listesi varsayılan sıralama: kazanım** `[S]` `[P1]` — her blokta (US Hisse / BIST / vb.) varsayılan sıra P&L% azalan olsun; en çok kazandıran hisse en üste gelsin. Şu an sıralama yok (insert sırası).
 - [ ] **Dashboard ↻ Güncelle başarısız ticker ayrıntısı** `[S]` `[P2]` — şu an "başarısız: AAPL" toast; Settings → Sistem Durumu'nda per-ticker hata sebebi (HTTP 403, bulunamadı vb.).
 - [ ] **AddTxInline NaN guard** `[S]` `[P1]` — parse sonucu `shares/price` NaN/undefined olursa form temiz error state göstermeli; şu an sessiz gönderim.
 - [ ] **CSV negatif/Infinity guard** `[S]` `[P1]` — `shares ≤ 0` veya `price = Infinity` olan CSV satırları import edilmemeli; skip count'a eklenmeli.
