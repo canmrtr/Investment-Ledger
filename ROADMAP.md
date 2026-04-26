@@ -61,9 +61,9 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
 ## Görselleştirme
 
-- [ ] **Dashboard KPI 4→3 kart kompakt hibrit** `[S]` `[P1]` — Kart 1: Piyasa Değeri (büyük) + Maliyet (küçük alt); Kart 2: Total Return % (büyük) + tutar (küçük); Kart 3: XIRR mevcut. Bilgi hiyerarşisi düzelir.
-- [ ] **Dashboard'dan Varlık Dağılımı pie'ı kaldır** `[S]` `[P1]` — Analiz Tab'da daha güçlü versiyon var (filter chip, drill-down); Dashboard'da redundant. Sparkline tam genişliğe açılır.
-- [ ] **Bölge Dağılımı emoji bayrakları kaldır** `[S]` `[P2]` — 🇺🇸/🇹🇷 yerine plain text "US" / "Türkiye"; renk pill zaten ayrımı sağlıyor.
+- [x] ~~**Dashboard KPI 4→3 kart kompakt hibrit**~~ (2026-04-26) — Piyasa Değeri (büyük) + Maliyet (ikincil alt satır); Total Return % (büyük) + tutar; XIRR. `.g3` grid, mobile 2+1.
+- [x] ~~**Dashboard'dan Varlık Dağılımı pie'ı kaldır**~~ (2026-04-26) — Analiz Tab daha güçlü versiyon. Sparkline tam genişliğe açıldı.
+- [x] ~~**Bölge Dağılımı emoji bayrakları kaldır**~~ (2026-04-26) — Plain text "US"/"Türkiye".
 - [ ] **Sparkline interactivity** `[S]` `[P2]` — hover'da değer/tarih tooltip; SVG `<circle>` cursor + dikey kılavuz çizgi.
 - [ ] **Pie chart segment selection** `[M]` `[P2]` — slice hover/select; legend tıklanabilir; seçili slice dış kenarda 2px outline + ortada toplam label.
 

@@ -96,8 +96,9 @@
     .flash.ok{background:rgba(48,209,88,.12);color:var(--ok);border:0.5px solid rgba(48,209,88,.3);}
     .flash.err{background:rgba(255,69,58,.12);color:var(--err);border:0.5px solid rgba(255,69,58,.3);}
     .g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:16px;}
+    .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:16px;}
     .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
-    @media(max-width:500px){.g4{grid-template-columns:repeat(2,1fr);}}
+    @media(max-width:500px){.g4{grid-template-columns:repeat(2,1fr);}.g3{grid-template-columns:1fr 1fr;}}
     .dashboard-charts{display:grid;grid-template-columns:1fr 340px;gap:12px;margin-bottom:16px;align-items:start;}
     .dashboard-charts > .card{margin-bottom:0!important;}
     .dashboard-charts:has(> .card:only-child){grid-template-columns:1fr;}
@@ -3475,32 +3476,37 @@ function App({session}){
                 Tüm değerler displayCur ($ veya ₺) — TRY/EUR pozisyonlar fxRates ile convert. */}
             {(()=>{
               const longPeriod=sel.key==="max"||sel.key==="y1";
-              const cards=[
-                {l:"Maliyet",main:mask(dSym+fmt(tC)),
-                 tip:"Mevcut pozisyonların ortalama maliyet bazlı toplamı (Σ shares × avg_cost). Tüm currency'ler displayCur'a convert edilir. Period'dan bağımsız."},
-                {l:"Piyasa Değeri",main:mask(dSym+fmt(tM)),
-                 tip:"Bugünkü güncel fiyatlarla portföy değeri. Tüm currency'ler displayCur'a convert. Period'dan bağımsız."},
-                {l:"Total Return ("+sel.lbl+")",
-                 main:pInfo&&pInfo.trPct!=null?mask((pInfo.tr>=0?"+":"-")+dSym+fmt(Math.abs(pInfo.tr),2)):"—",
-                 sub:pInfo&&pInfo.trPct!=null?fmtP(pInfo.trPct):null,
-                 mainClass:pInfo?pc(pInfo.tr):"",subClass:pInfo?pc(pInfo.trPct):"",
-                 tip:"Period boyunca toplam getiri: (Bugün MV + Period Satışları) − (Period Başı MV + Period Alımları). Tüm currency'ler displayCur'a convert. Realize + unrealize, komisyonlar dahil."},
-                {l:"Yıllık (XIRR)",
-                 main:longPeriod&&pInfo&&pInfo.xirrRate!=null?fmtP(pInfo.xirrRate*100):"—",
-                 mainClass:longPeriod&&pInfo&&pInfo.xirrRate!=null?pc(pInfo.xirrRate):"",
-                 hint:longPeriod?null:"≥1Y için gösterilir",
-                 tip:"Cash flow tabanlı yıllıklandırılmış iç verim oranı (Excel XIRR). Para zamanlamasını dikkate alır. Kısa periyotlarda matematiksel olarak hesaplanabilir ama yanıltıcı olduğu için ≥1Y'de gösterilir."}
-              ];
               return(
-                <div className="g4">
-                  {cards.map(x=>(
-                    <div key={x.l} className="card" data-tip={x.tip} style={{cursor:"help"}}>
-                      <div className="lbl">{x.l}</div>
-                      <div className={"mono"+(x.mainClass||"")} style={{fontSize:16,fontWeight:600}}>{x.main}</div>
-                      {x.sub&&<div className={"mono"+(x.subClass||"")} style={{fontSize:11,marginTop:2}}>{x.sub}</div>}
-                      {x.hint&&<div className="dim" style={{fontSize:10,marginTop:2}}>{x.hint}</div>}
+                <div className="g3">
+                  {/* Kart 1: Piyasa Değeri (büyük) + Maliyet (ikincil) */}
+                  <div className="card" data-tip="Bugünkü güncel fiyatlarla portföy değeri. Tüm currency'ler displayCur'a convert. Period'dan bağımsız." style={{cursor:"help"}}>
+                    <div className="lbl">Piyasa Değeri</div>
+                    <div className="mono" style={{fontSize:16,fontWeight:600}}>{mask(dSym+fmt(tM))}</div>
+                    <div style={{marginTop:8,paddingTop:7,borderTop:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
+                      <span className="lbl" style={{marginBottom:0}}>Maliyet</span>
+                      <span className="mono dim" style={{fontSize:12}}>{mask(dSym+fmt(tC))}</span>
                     </div>
-                  ))}
+                  </div>
+                  {/* Kart 2: Total Return % (büyük) + tutar (ikincil) */}
+                  <div className="card" data-tip={"Period boyunca toplam getiri: (Bugün MV + Period Satışları) − (Period Başı MV + Period Alımları). Tüm currency'ler displayCur'a convert. Realize + unrealize, komisyonlar dahil."} style={{cursor:"help"}}>
+                    <div className="lbl">Total Return ({sel.lbl})</div>
+                    <div className={"mono"+(pInfo&&pInfo.trPct!=null?pc(pInfo.trPct):"")} style={{fontSize:16,fontWeight:600}}>
+                      {pInfo&&pInfo.trPct!=null?mask(fmtP(pInfo.trPct)):"—"}
+                    </div>
+                    {pInfo&&pInfo.tr!=null&&(
+                      <div className={"mono"+(pc(pInfo.tr))} style={{fontSize:11,marginTop:2}}>
+                        {mask((pInfo.tr>=0?"+":"-")+dSym+fmt(Math.abs(pInfo.tr),2))}
+                      </div>
+                    )}
+                  </div>
+                  {/* Kart 3: XIRR */}
+                  <div className="card" data-tip="Cash flow tabanlı yıllıklandırılmış iç verim oranı (Excel XIRR). Para zamanlamasını dikkate alır. Kısa periyotlarda matematiksel olarak hesaplanabilir ama yanıltıcı olduğu için ≥1Y'de gösterilir." style={{cursor:"help"}}>
+                    <div className="lbl">Yıllık (XIRR)</div>
+                    <div className={"mono"+(longPeriod&&pInfo&&pInfo.xirrRate!=null?pc(pInfo.xirrRate):"")} style={{fontSize:16,fontWeight:600}}>
+                      {longPeriod&&pInfo&&pInfo.xirrRate!=null?mask(fmtP(pInfo.xirrRate*100)):"—"}
+                    </div>
+                    {!longPeriod&&<div className="dim" style={{fontSize:10,marginTop:2}}>≥1Y için gösterilir</div>}
+                  </div>
                 </div>
               );
             })()}
