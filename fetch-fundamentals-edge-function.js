@@ -14,12 +14,12 @@
 // Body: { "ticker": "AAPL" }  veya  { "ticker": "THYAO", "asset_type": "BIST" }
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://canmrtr.github.io",
   "Access-Control-Allow-Headers": "authorization, content-type",
 };
 
 // SEC ToS: tüm istekler User-Agent header gerektirir, contact info zorunlu.
-const SEC_UA = "Investment-Ledger app contact@investment-ledger.local";
+const SEC_UA = "Investment-Ledger app canmerter85@gmail.com";
 
 // CAGR helper — start/end + years
 const cagr = (start, end, years) => {

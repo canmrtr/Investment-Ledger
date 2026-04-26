@@ -609,11 +609,16 @@ const rebuildPositions = async (userId) => {
       p.shares -= qty;
     }
   }
+  // unit kolonu transaction'da yok; delete öncesi mevcut pozisyonlardan snapshot al.
+  const snapRes = await sb.from("positions").select("ticker,unit").eq("user_id",userId);
+  const unitMap = Object.fromEntries((snapRes.data||[]).map(p=>[p.ticker,p.unit||null]));
   await sb.from("positions").delete().eq("user_id",userId);
   const np = Object.values(pm).filter(p => p.shares > CFG.DUST_THRESHOLD).map(p => ({
     user_id: userId, ticker: p.ticker, name: p.name, type: p.type,
     shares: +p.shares.toFixed(6), avg_cost: +(p.cost/p.shares).toFixed(6),
-    currency: p.currency, broker: p.broker, updated_at: new Date().toISOString()
+    currency: p.currency, broker: p.broker,
+    unit: unitMap[p.ticker] ?? null,
+    updated_at: new Date().toISOString()
   }));
   if (np.length) await sb.from("positions").insert(np);
   return np.length;

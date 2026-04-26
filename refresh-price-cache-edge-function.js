@@ -13,7 +13,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://canmrtr.github.io",
   "Access-Control-Allow-Headers": "authorization, content-type",
 };
 

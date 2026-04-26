@@ -1,7 +1,7 @@
 import Anthropic from "npm:@anthropic-ai/sdk";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://canmrtr.github.io",
   "Access-Control-Allow-Headers": "authorization, content-type",
 };
 
