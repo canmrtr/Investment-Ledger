@@ -1,14 +1,17 @@
 // Financial Modeling Prep "stable" API'sinden + SEC EDGAR fallback ile
-// fundamental veri çeker. 21 metrik value-investing checklist için derive eder.
+// (US için) ve İş Yatırım MaliTablo'dan (BIST için) fundamental veri çeker.
+// 21 metrik value-investing checklist için derive eder.
 //
-// Akış:
-//   1. FMP dener (popüler S&P 500 → en zengin metrikler dahil PE/PS)
-//   2. FMP "Special Endpoint" 402 ile fail olursa, SEC EDGAR'a düşer
-//      (ücretsiz, sınırsız, NOW/MNSO/NNOX gibi tüm SEC dosyalayıcılarını kapsar)
-//   3. EDGAR mode'da PE/PS şu an null (price + shares gerektirir, ileride)
+// Akış (asset_type'a göre):
+//   - BIST → İş Yatırım MaliTablo (XI_29 industrial; bankalar henüz desteklenmiyor)
+//   - default/US_STOCK/FUND →
+//       1. FMP dener (popüler S&P 500 → en zengin metrikler dahil PE/PS)
+//       2. FMP "Special Endpoint" 402 ile fail olursa, SEC EDGAR'a düşer
+//          (ücretsiz, sınırsız, NOW/MNSO/NNOX gibi tüm SEC dosyalayıcılarını kapsar)
+//       3. EDGAR mode'da PE/PS şu an null (price + shares gerektirir, ileride)
 //
-// Gerekli secret: FMP_KEY
-// Body: { "ticker": "AAPL" }
+// Gerekli secret: FMP_KEY (US için), TWELVEDATA_KEY (ticker-list BIST için)
+// Body: { "ticker": "AAPL" }  veya  { "ticker": "THYAO", "asset_type": "BIST" }
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -239,6 +242,231 @@ async function fetchEdgar(ticker) {
   };
 }
 
+// ── İş Yatırım (BIST) helpers ─────────────────────────────────────────
+
+// XI_29 (sektörel konsolide olmayan) MaliTablo formatında itemCode → kavram.
+// itemDescTr/itemDescEng yerine itemCode kullanılıyor: text whitespace/casing
+// varyasyonlarına karşı sağlam. Bankalar (UFRS group) farklı kod yapısı (Roman
+// numerals) kullanır → ayrı çalışma alanı.
+const BIST_CONCEPTS = {
+  // Income statement (3xxx)
+  revenue:        "3C",     // Net Sales
+  grossProfit:    "3D",     // GROSS PROFIT (LOSS)
+  operatingIncome:"3DF",    // OPERATING PROFITS (EBIT)
+  netIncome:      "3L",     // NET PROFIT AFTER TAXES
+  marketing:      "3DA",    // Marketing Selling & Distrib. Expenses (-)
+  generalAdmin:   "3DB",    // General Administrative Expenses (-)
+  interestExp:    "3HC",    // Financial Expenses (from Other Operations) (-)
+  // Balance sheet (1xxx, 2xxx)
+  totalAssets:    "1BL",    // TOTAL ASSETS
+  cash:           "1AA",    // Cash and Cash Equivalents
+  shortTermLiab:  "2A",     // SHORT TERM LIABILITIES
+  longTermLiab:   "2B",     // LONG TERM LIABILITIES
+  shortTermDebt:  "2AA",    // Short-Term Financial Loans
+  longTermDebt:   "2BA",    // Long-Term Financial Loans
+  totalEquity:    "2N",     // SHAREHOLDERS EQUITY
+  retained:       "2OCE",   // Retained Earnings /(Acc. Losses)
+  // Cash flow (4xxx)
+  da:             "4B",     // Depreciation & Amortization
+  ocf:            "4C",     // Net Cash from Operations
+  capex:          "4CAI",   // Capital Expenditures (CapEx) — negative
+  fcf:            "4CB",    // Free Cash Flow
+};
+
+const ISY_BASE = "https://www.isyatirim.com.tr/_layouts/15/IsYatirim.Website/Common/Data.aspx/MaliTablo";
+const ISY_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+  "Accept": "*/*",
+  "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7",
+  "X-Requested-With": "XMLHttpRequest",
+};
+
+// Bankalar UFRS grubu (Roman numeral itemCode'lar) kullanır; XI_29 mapping'imiz
+// boşa istek üretmesin. Bilinen ana bankalar — UFRS support eklenince kaldırılır.
+const ISY_KNOWN_BANKS = new Set([
+  "GARAN","AKBNK","YKBNK","ISCTR","HALKB","VAKBN","ALBRK","QNBFB","TSKB","ICBCT","SKBNK"
+]);
+
+// fetchBist sonuçları için instance-lifetime cache (6 saat TTL).
+// Edge function instance ömrü boyunca tutulur; cold start'ta sıfırlanır.
+const bistFundCache = new Map();  // code → { data, at }
+const BIST_FUND_TTL_MS = 6 * 60 * 60 * 1000;
+
+// İş Yatırım MaliTablo: 4 yıl kolonu / çağrı. URL+params builder.
+function isyBuildUrl(code, group, years) {
+  const p = new URLSearchParams({ companyCode: code, exchange: "TRY", financialGroup: group });
+  for (let i = 0; i < 4; i++) {
+    p.set(`year${i + 1}`, String(years[i]));
+    p.set(`period${i + 1}`, "12");  // 12 = full year (annual)
+  }
+  p.set("_", String(Date.now()));
+  return `${ISY_BASE}?${p.toString()}`;
+}
+
+async function isyFetch(code, group, years) {
+  try {
+    const r = await fetch(isyBuildUrl(code, group, years), { headers: ISY_HEADERS });
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (!d.ok || !Array.isArray(d.value) || d.value.length === 0) return null;
+    return d.value;
+  } catch (_) { return null; }
+}
+
+async function fetchBist(rawTicker) {
+  const code = String(rawTicker).toUpperCase().replace(/\.IS$/i, "");
+
+  // Defense in depth: BIST tickers 3-6 büyük harf; URLSearchParams encode etse de
+  // explicit whitelist beklenmedik path/host injection riskini sıfırlar.
+  if (!/^[A-Z0-9]{2,8}$/.test(code)) {
+    return { error: `Geçersiz BIST ticker formatı: ${rawTicker}` };
+  }
+
+  // Bilinen banka → erken çıkış (XI_29 yok, gereksiz outbound istek olmasın)
+  if (ISY_KNOWN_BANKS.has(code)) {
+    return { error: `${code} bir banka tickerı; XI_29 finansal tablosu yok. UFRS desteği henüz eklenmedi.` };
+  }
+
+  // Module-level cache (6h TTL) — multi-user senaryoda isyatirim.com.tr'a tekrar
+  // outbound istek atılmasın. Frontend ayrıca 7 gün LS cache yapar.
+  const cached = bistFundCache.get(code);
+  if (cached && Date.now() - cached.at < BIST_FUND_TTL_MS) return cached.data;
+
+  const thisYear = new Date().getUTCFullYear();
+  const probeYears = [thisYear - 1, thisYear - 2];  // FY-1 önce; henüz dosyalanmadıysa FY-2
+
+  // Anchor year tespiti — XI_29 grubunda "3C" (Net Sales) value1 dolu olan ilk yıl
+  let anchorYear = null;
+  let primary = null;
+  for (const py of probeYears) {
+    const years = [py, py - 1, py - 2, py - 3];
+    const result = await isyFetch(code, "XI_29", years);
+    if (!result) continue;
+    const rev = result.find(r => r.itemCode === BIST_CONCEPTS.revenue);
+    if (rev && rev.value1 != null && +rev.value1 > 0) {
+      primary = result;
+      anchorYear = py;
+      break;
+    }
+  }
+
+  if (!primary || !anchorYear) {
+    return { error: `İş Yatırım'da ${code} için XI_29 yıllık veri bulunamadı (banka/sigorta veya henüz desteklenmiyor olabilir)` };
+  }
+
+  // 5Y CAGR için ek 4 yıl (Y-4..Y-7) — başarısızsa graceful (fewer-years CAGR).
+  const olderYears = [anchorYear - 4, anchorYear - 5, anchorYear - 6, anchorYear - 7];
+  const older = await isyFetch(code, "XI_29", olderYears);
+
+  // byCode[itemCode][year] = numeric value
+  const byCode = {};
+  const ingest = (rows, years) => {
+    for (const r of rows) {
+      const c = r.itemCode;
+      if (!byCode[c]) byCode[c] = {};
+      for (let i = 0; i < 4; i++) {
+        const v = r[`value${i + 1}`];
+        if (v != null && v !== "") byCode[c][years[i]] = +v;
+      }
+    }
+  };
+  ingest(primary, [anchorYear, anchorYear - 1, anchorYear - 2, anchorYear - 3]);
+  if (older) ingest(older, olderYears);
+
+  const get = (concept, year) => {
+    const c = BIST_CONCEPTS[concept];
+    if (!c) return null;
+    const v = byCode[c]?.[year];
+    return (v == null || !isFinite(v)) ? null : v;
+  };
+
+  const Y = anchorYear;
+  const revenue         = get("revenue", Y);
+  const grossProfit     = get("grossProfit", Y);
+  const operatingIncome = get("operatingIncome", Y);
+  const netIncome       = get("netIncome", Y);
+  const marketing       = get("marketing", Y);
+  const generalAdmin    = get("generalAdmin", Y);
+  const interestExpRaw  = get("interestExp", Y);
+  const totalAssets     = get("totalAssets", Y);
+  const cash            = get("cash", Y);
+  const shortTermLiab   = get("shortTermLiab", Y);
+  const longTermLiab    = get("longTermLiab", Y);
+  const shortTermDebt   = get("shortTermDebt", Y);
+  const longTermDebt    = get("longTermDebt", Y);
+  const totalEquity     = get("totalEquity", Y);
+  const retained        = get("retained", Y);
+  const da              = get("da", Y);
+  const ocf             = get("ocf", Y);
+  const capexRaw        = get("capex", Y);
+  const fcf             = get("fcf", Y);
+
+  // SG&A = Marketing + G&A (mutlak değer; raw negatif gelir)
+  const sga = (() => {
+    const m = marketing != null ? Math.abs(marketing) : 0;
+    const g = generalAdmin != null ? Math.abs(generalAdmin) : 0;
+    return (m + g) || null;
+  })();
+  const interestAbs = interestExpRaw != null ? Math.abs(interestExpRaw) : null;
+  const capexAbs    = capexRaw != null ? Math.abs(capexRaw) : null;
+  // totalLiab: kısa+uzun vadeli; eksikse Assets - Equity ile yedek
+  const totalLiab = (shortTermLiab != null && longTermLiab != null)
+    ? shortTermLiab + longTermLiab
+    : (totalAssets != null && totalEquity != null ? totalAssets - totalEquity : null);
+  const totalDebt = (shortTermDebt || 0) + (longTermDebt || 0);
+
+  // CAGR — Y-4 → Y-1'e kadar fallback (FMP/EDGAR ile aynı semantik)
+  const cagrFor = (concept) => {
+    const newest = get(concept, Y);
+    if (newest == null) return { val: null, years: 0 };
+    for (let years = 4; years >= 1; years--) {
+      const oldest = get(concept, Y - years);
+      if (oldest != null) return { val: cagr(oldest, newest, years), years };
+    }
+    return { val: null, years: 0 };
+  };
+  const revC  = cagrFor("revenue");
+  const earnC = cagrFor("netIncome");
+  const yearsBackUsed = Math.max(revC.years, earnC.years);
+
+  const metrics = {
+    revenueGrowth5Y:    revC.val,
+    earningsGrowth5Y:   earnC.val,
+    grossMargin:        div(grossProfit, revenue),
+    operatingMargin:    div(operatingIncome, revenue),
+    netMargin:          div(netIncome, revenue),
+    fcfMargin:          div(fcf, revenue),
+    sgaToGrossProfit:   div(sga, grossProfit),
+    depToGrossProfit:   div(da, grossProfit),
+    interestToOpIncome: div(interestAbs, operatingIncome),
+    liabToEquity:       div(totalLiab, totalEquity),
+    retainedToEquity:   div(retained, totalEquity),
+    roe:                div(netIncome, totalEquity),
+    roa:                div(netIncome, totalAssets),
+    roic:               div(netIncome, (totalEquity || 0) + totalDebt - (cash || 0)),
+    pe:                 null,  // BIST: meta.pe_ratio'dan FE inject (ileride: market_cap × shares)
+    ps:                 null,
+    capexToNetIncome:   div(capexAbs, netIncome),
+    capexToSales:       div(capexAbs, revenue),
+    capexToOcf:         div(capexAbs, ocf),
+    ebitToInterest:     div(operatingIncome, interestAbs),
+    netDebtToFcf:       div(totalDebt - (cash || 0), fcf),
+  };
+
+  const result = {
+    metrics,
+    raw: {
+      latestFiscalYear: anchorYear,
+      yearsBackUsed,
+      financialGroup: "XI_29",
+      currency: "TRY",
+    }
+  };
+
+  bistFundCache.set(code, { data: result, at: Date.now() });
+  return result;
+}
+
 // ── FMP helpers ──────────────────────────────────────────────────────
 
 async function fetchFmp(ticker, fmpKey) {
@@ -367,9 +595,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { ticker } = body;
-    const fmpKey = Deno.env.get("FMP_KEY");
+    const { ticker, asset_type } = body;
     if (!ticker) return json({ error: "ticker required" }, 400);
+
+    // BIST → İş Yatırım MaliTablo (FMP/EDGAR US-only). Bankalar şimdilik kapsam dışı.
+    if (asset_type === "BIST") {
+      const bist = await fetchBist(ticker);
+      if (bist.error) return json({ error: bist.error }, 422);
+      return json({
+        ticker,
+        fetched_at: new Date().toISOString(),
+        source: "isyatirim",
+        metrics: bist.metrics,
+        raw: bist.raw,
+      });
+    }
+
+    const fmpKey = Deno.env.get("FMP_KEY");
     if (!fmpKey) return json({ error: "FMP_KEY secret eksik" }, 500);
 
     // 1) FMP dene
@@ -396,8 +638,9 @@ Deno.serve(async (req) => {
           raw: edgar.raw,
         });
       }
-      // EDGAR de fail oldu — error mesajıyla dön
+      // EDGAR de fail oldu — out-of-plan code'u FE warn-card için stable işaret
       return json({
+        code: "OUT_OF_PLAN",
         error: `FMP plan kapsam dışı; EDGAR fallback de başarısız: ${edgar.error}`,
         fmpRaw: fmp.raw,
       }, 422);

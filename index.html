@@ -16,7 +16,7 @@
     :root{
       --bg:#000000;--bg2:#0c0c0c;--bg3:#141414;--bg4:#1c1c1c;
       --border:rgba(255,255,255,0.06);--border2:rgba(102,88,255,0.28);
-      --text:#f0ede8;--text2:#666666;--text3:#333333;
+      --text:#f0ede8;--text2:#b8b8b8;--text3:#888888;
       --ok:#00d97e;--err:#ff3366;--info:#6658ff;--warn:#ffb800;
       --r:10px;--rl:16px;
     }
@@ -70,7 +70,7 @@
     td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;font-family:'DM Mono','Fira Code',monospace;font-variant-numeric:tabular-nums;}
     td.l{text-align:left;font-family:inherit;}td.r{text-align:right;}
     .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px;}
-    .lbl{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
+    .lbl{font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
     .mono{font-family:'DM Mono','Fira Code',monospace;}
     .ok{color:var(--ok);}.err{color:var(--err);}.dim{color:var(--text2);}
     .flash{border-radius:var(--r);padding:9px 13px;font-size:13px;margin-bottom:14px;}
@@ -86,14 +86,14 @@
     .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);}
     .row:last-child{border-bottom:none;}
     .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
-    .stitle{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+    .stitle{font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
     .badge{display:inline-flex;align-items:center;font-family:'DM Mono',monospace;font-size:9px;font-weight:500;padding:3px 7px;border-radius:6px;letter-spacing:.05em;border:1px solid transparent;margin-left:3px;}
     .badge.etf{background:rgba(102,88,255,0.12);color:var(--info);border-color:rgba(102,88,255,0.28);}
     .badge.cry{background:rgba(255,184,0,0.10);color:var(--warn);border-color:rgba(255,184,0,0.20);}
     .badge.split{background:rgba(255,184,0,0.10);color:var(--warn);border-color:rgba(255,184,0,0.20);cursor:help;}
     .cbox{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--rl);padding:15px;margin-bottom:14px;}
     .kv{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:14px;}
-    .kk{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;}
+    .kk{font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;}
     .kv_{font-size:13px;font-weight:500;font-family:'DM Mono','Fira Code',monospace;}
     .sg{margin-bottom:20px;}
     .sg label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px;}
@@ -287,12 +287,12 @@ const enrichParseListWithPrices = async (list) =>
 // `fetch-fundamentals` mode:"ticker-list" üzerinden proxy ile gelir.
 const TICKER_DB_TTL_MS = 86400000;  // 24 saat
 const tickerDbCacheGet = () => {
-  const c = LS.get("sec_ticker_db", null);
+  const c = LS.get("sec_ticker_db_v2", null);
   if (!c || !c.t) return null;
   if (Date.now() - c.t > TICKER_DB_TTL_MS) return null;
   return c.list;
 };
-const tickerDbCacheSet = (list) => LS.set("sec_ticker_db", { list, t: Date.now() });
+const tickerDbCacheSet = (list) => LS.set("sec_ticker_db_v2", { list, t: Date.now() });
 
 const edgeCall = (fn, body) => fetch(`${SUPA_URL}/functions/v1/${fn}`, {
   method: "POST",
@@ -402,6 +402,7 @@ const NAV_ICONS = {
   dashboard: (s)=><svg width={s} height={s} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>,
   history:   (s)=><svg width={s} height={s} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="3" y1="4" x2="13" y2="4"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="3" y1="12" x2="13" y2="12"/></svg>,
   search:    (s)=><svg width={s} height={s} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="7" cy="7" r="5"/><line x1="11" y1="11" x2="14" y2="14"/></svg>,
+  analysis:  (s)=><svg width={s} height={s} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 2 V8 H14"/></svg>,
   settings:  (s)=><svg width={s} height={s} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="2"/><path d="M8 1.5v1.5 M8 13v1.5 M14.5 8h-1.5 M3 8H1.5 M12.6 3.4l-1.1 1.1 M4.5 11.5l-1.1 1.1 M12.6 12.6l-1.1-1.1 M4.5 4.5L3.4 3.4"/></svg>,
 };
 const IconPlus = ()=><svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="11" y1="4" x2="11" y2="18"/><line x1="4" y1="11" x2="18" y2="11"/></svg>;
@@ -794,6 +795,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
   const [fund,setFund]=useState(()=>fundCacheGet(ticker));
   const [fundLoading,setFundLoading]=useState(false);
   const [fundErr,setFundErr]=useState("");
+  const [fundErrCode,setFundErrCode]=useState("");  // edge function code, ör. "OUT_OF_PLAN"
   const [showFullDesc,setShowFullDesc]=useState(false);
   const [showAdd,setShowAdd]=useState(false);
   const [expandedTx,setExpandedTx]=useState(null);   // tıklanan tx.id
@@ -842,7 +844,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       .then(r=>r.json())
       .then(d=>{if(d?.result?.price)setLivePrice(d.result.price);})
       .catch(()=>{});
-  },[ticker,p]);
+  },[ticker,p,effectiveType]);
   const price = p ? prc[ticker] : livePrice;
   const currentCost=p?p.shares*p.avgCost:0;
   const mv=p&&price!=null?p.shares*price:null;
@@ -876,33 +878,35 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
     }catch(e){setMetaErr(e.message);}
     setMetaLoading(false);
   };
-  useEffect(()=>{if(!meta)fetchMeta(false);},[ticker]);
+  useEffect(()=>{if(!meta)fetchMeta(false);},[ticker,effectiveType]);
 
-  // Fundamental fetch — sadece US_STOCK için anlamlı (FMP US-only).
+  // Fundamental fetch — US_STOCK (FMP/EDGAR) veya BIST (İş Yatırım MaliTablo).
+  const supportsFund = effectiveType==="US_STOCK"||effectiveType==="BIST";
   const fetchFund=async(force)=>{
     if(!force){
       const cached=fundCacheGet(ticker);
       if(cached){setFund(cached);return;}
     }
-    setFundLoading(true);setFundErr("");
+    setFundLoading(true);setFundErr("");setFundErrCode("");
     try{
-      const r=await edgeCall("fetch-fundamentals",{ticker});
+      const r=await edgeCall("fetch-fundamentals",{ticker,asset_type:effectiveType});
       let d=null;
       try{d=await r.json();}catch(_){/* non-JSON */}
       if(r.ok&&d&&d.metrics){
         setFund(d);
         fundCacheSet(ticker,d);
       } else {
-        const msg=d?.error||d?.message||d?.code||`HTTP ${r.status}`;
+        const msg=d?.error||d?.message||`HTTP ${r.status}`;
         setFundErr(msg);
+        if(d?.code)setFundErrCode(d.code);
       }
     }catch(e){setFundErr(e.message);}
     setFundLoading(false);
   };
   useEffect(()=>{
-    // Sadece US_STOCK için fetch (FMP/EDGAR US-only). BIST'te skip.
-    if(effectiveType==="US_STOCK"&&!fund)fetchFund(false);
-  },[ticker]);
+    // Desteklenen tipler için fetch (BIST'te İş Yatırım, US'te FMP/EDGAR).
+    if(supportsFund&&!fund)fetchFund(false);
+  },[ticker,effectiveType]);
 
   const exchangeShort={XNAS:"NASDAQ",XNYS:"NYSE",ARCX:"NYSE Arca",BATS:"CBOE",IEXG:"IEX"}[meta?.primary_exchange]||meta?.primary_exchange;
 
@@ -1017,7 +1021,9 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
               ["Temettü Verimi",meta.dividend_yield!=null?meta.dividend_yield.toFixed(2)+"%":null],
               ["52H Yüksek",meta.week_52_high?sym+fmt(meta.week_52_high,2):null],
               ["52H Düşük",meta.week_52_low?sym+fmt(meta.week_52_low,2):null],
-              ["Web",meta.homepage_url],
+              // extractDomain malformed URL'de null döner; "null ↗" basmamak için
+              // homepage_url ham değil parse-edilebilir doğrulamayla geçer
+              ["Web",meta.homepage_url&&extractDomain(meta.homepage_url)?meta.homepage_url:null],
             ].filter(([,v])=>v);
             return(
               <div>
@@ -1046,26 +1052,41 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
         );
       })()}
 
-      {/* Fundamental — değer yatırımı checklist (US_STOCK only) */}
-      {effectiveType==="US_STOCK"&&(
+      {/* Fundamental — değer yatırımı checklist (US_STOCK + BIST) */}
+      {supportsFund&&(
         <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
             <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
               <div className="stitle" style={{marginBottom:0}}>Fundamental · Değer Yatırımı Checklist</div>
               {fund?.source==="edgar"&&<span className="badge etf" data-tip="FMP free planında yok; SEC EDGAR'dan çekildi. PE/PS bu modda boş kalır." style={{cursor:"help"}}>EDGAR</span>}
               {fund?.source==="fmp"&&<span className="badge etf" style={{opacity:.5}}>FMP</span>}
+              {fund?.source==="isyatirim"&&<span className="badge etf" data-tip="İş Yatırım MaliTablo (XI_29). PE/PS henüz yok; eşikler US tarafıyla aynı (sektör-aware ileride)." style={{cursor:"help"}}>İş Yatırım</span>}
             </div>
             <button className="btn-sm" onClick={()=>fetchFund(true)} disabled={fundLoading}>{fundLoading?"...":(fund?"↻":"Çek")}</button>
           </div>
           {fundLoading&&<div className="dim" style={{fontSize:12}}><span className="spin" style={{width:12,height:12,marginRight:8,verticalAlign:"middle"}}></span>Yükleniyor...</div>}
-          {fundErr&&!fundLoading&&<div className="err" style={{fontSize:12}}>{fundErr}</div>}
+          {fundErr&&!fundLoading&&fundErrCode==="OUT_OF_PLAN"&&(
+            <div className="warn-card">
+              <div>
+                <div className="wc-ttl">Ticker FMP free planında yok</div>
+                <div className="wc-sub">{ticker} için FMP "Special Endpoint" gerekiyor; SEC EDGAR fallback de başarısız oldu (genelde XBRL dosyalanmamış küçük/orta şirketler). Alternatif provider gerek.</div>
+              </div>
+            </div>
+          )}
+          {fundErr&&!fundLoading&&fundErrCode!=="OUT_OF_PLAN"&&<div className="err" style={{fontSize:12}}>{fundErr}</div>}
           {!fund&&!fundLoading&&!fundErr&&<div className="dim" style={{fontSize:12}}>Henüz çekilmedi.</div>}
           {fund?.metrics&&!fundLoading&&(()=>{
-            const allScores=Object.entries(fund.metrics).map(([k,v])=>fundScore(k,v)).filter(Boolean);
+            // BIST'te PE edge function'da null kalır (market price + shares gerekir).
+            // borsa-mcp profile meta.pe_ratio zaten ekranda; fund.metrics'e inject edip
+            // checklist'te skor üret. Cache mutate etmemek için lokal kopya.
+            const metrics = (fund.source==="isyatirim"&&fund.metrics.pe==null&&meta?.pe_ratio!=null)
+              ? {...fund.metrics, pe: meta.pe_ratio}
+              : fund.metrics;
+            const allScores=Object.entries(metrics).map(([k,v])=>fundScore(k,v)).filter(Boolean);
             const goodN=allScores.filter(s=>s==="good").length;
             // Toplam her zaman tam checklist boyutu (21) — null metrikler de kriter sayılır,
             // sadece "iyi" işareti almazlar
-            const totalN=Object.keys(fund.metrics).length;
+            const totalN=Object.keys(metrics).length;
             const fy=fund.raw?.latestFiscalYear;
             const yb=fund.raw?.yearsBackUsed;
             return(
@@ -1083,7 +1104,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                     <div className="stitle" style={{marginBottom:6,fontSize:9}}>{groupName}</div>
                     <div style={{background:"var(--bg3)",borderRadius:8,overflow:"hidden"}}>
                       {items.map(([key,label,type],i)=>{
-                        const val=fund.metrics[key];
+                        const val=metrics[key];
                         const score=fundScore(key,val);
                         const color=score?SCORE_COLOR[score]:"var(--text2)";
                         const dotColor=score?SCORE_COLOR[score]:"var(--text3)";
@@ -1110,7 +1131,11 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                   </div>
                 ))}
                 <div style={{fontSize:10,color:"var(--text3)",marginTop:6,lineHeight:1.5}}>
-                  Kaynak: {fund?.source==="edgar"?"SEC EDGAR (annual 10-K, son 5 yıl). PE/PS bu modda boş — market price gerek.":"Financial Modeling Prep (TTM + son 5 yıl)"}. Eşikler genel value-investing kılavuzudur; sektör kıyaslaması her metriğe doğrudan uygulanmaz.
+                  Kaynak: {
+                    fund?.source==="edgar"?"SEC EDGAR (annual 10-K, son 5 yıl). PE/PS bu modda boş — market price gerek." :
+                    fund?.source==="isyatirim"?"İş Yatırım MaliTablo (XI_29 yıllık, son 5 yıl). PE meta'dan; PS henüz yok. Tutarlar TRY; eşikler nominal — TR enflasyonu büyüme metriklerini şişirebilir." :
+                    "Financial Modeling Prep (TTM + son 5 yıl)"
+                  }. Eşikler genel value-investing kılavuzudur; sektör kıyaslaması her metriğe doğrudan uygulanmaz.
                 </div>
               </div>
             );
@@ -1285,7 +1310,7 @@ function AccountSection({user,profile,flash_,confirm_,onSaved}){
       {editing==="uname"&&(
         <div style={{background:"var(--bg3)",borderRadius:8,padding:"10px 12px",marginTop:8}}>
           <div className="kk" style={{marginBottom:4}}>Kullanıcı adı</div>
-          <input className="finp sm" value={uname} onChange={e=>setUname(e.target.value.toLowerCase())} placeholder="ornek_user" style={{marginBottom:4}}/>
+          <input className="finp sm" value={uname} onChange={e=>setUname(e.target.value.toLowerCase())} placeholder="ornek_user" maxLength={20} style={{marginBottom:4}}/>
           <div style={{fontSize:10,color:"var(--text3)",marginBottom:8}}>3-20 karakter · küçük harf, rakam, alt tire</div>
           <div className="brow">
             <button className="pri btn-md" onClick={saveUname} disabled={busy||!uname}>{busy?"Kaydediliyor...":"Kaydet"}</button>
@@ -1583,8 +1608,14 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,init
 }
 
 // ── ManuelPosForm ────────────────────────────────────────────────
-function ManuelPosForm({session,user,pos,loadData,flash_,confirm_}){
-  const E={ticker:"",name:"",type:"US_STOCK",shares:"",avgCost:"",currency:"USD",broker:"",commission:"",date:today()};
+function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
+  // prefillType: AddTab type-picker'dan gelen başlangıç tipi (US_STOCK/BIST/...).
+  // BIST için currency varsayılanı TRY; diğerleri USD. Kullanıcı dropdown'larla
+  // istediği zaman değiştirebilir; type değişimi `onChange`'de currency'i de
+  // BIST'e göre günceller (mevcut davranış korunuyor).
+  const initType = prefillType || "US_STOCK";
+  const initCurrency = initType==="BIST" ? "TRY" : "USD";
+  const E={ticker:"",name:"",type:initType,shares:"",avgCost:"",currency:initCurrency,broker:"",commission:"",date:today()};
   const [form,setForm]=useState(E);
   const [curPrice,setCurPrice]=useState(null);
   const [fetchP,setFetchP]=useState(false);
@@ -1859,6 +1890,7 @@ function SearchTab({pos,txs,openDetail,flash_}){
     <div>
       <input type="text" autoFocus value={q} onChange={e=>setQ(e.target.value)}
         placeholder="🔍 Ticker (AAPL) veya şirket adı (Apple)…"
+        maxLength={64}
         style={{marginBottom:14}}/>
 
       {loading&&<div className="dim" style={{fontSize:13,padding:"20px 0",textAlign:"center"}}>
@@ -1910,7 +1942,20 @@ function SearchTab({pos,txs,openDetail,flash_}){
 }
 
 // ── AddTab ───────────────────────────────────────────────────────
+// AddTab giriş noktası: context-free butonlardan açılınca önce varlık türü
+// seçtirir. Detay sayfasından gelen "+ Ekle" akışı AddTxInline kullandığı
+// için bu adım sadece AddTab'a özel.
+const ADD_TYPES = [
+  {type:"US_STOCK", icon:"🇺🇸", label:"US Hisse",   desc:"NYSE / NASDAQ — AAPL, TSLA"},
+  {type:"BIST",     icon:"🇹🇷", label:"BIST",       desc:"Borsa İstanbul — THYAO, ASELS"},
+  {type:"FUND",     icon:"📊", label:"ETF / Fon",  desc:"SPY, QQQ, VT"},
+  {type:"CRYPTO",   icon:"₿",  label:"Kripto",     desc:"BTC, ETH"},
+  {type:"GOLD",     icon:"🪙", label:"Altın",      desc:"Spot ons (XAUUSD)"},
+  {type:"FX",       icon:"💱", label:"Döviz",      desc:"USDTRY, EURUSD"},
+];
+
 function AddTab({session,user,pos,loadData,flash_,confirm_}){
+  const [pickedType,setPickedType]=useState(null);  // null = picker; set → mode tabs
   const [mode,setMode]=useState("text");
   const [parsed,setParsed]=useState(null);
   const [parsing,setParsing]=useState(false);
@@ -1926,6 +1971,15 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
   const fileRef=useRef(null);
 
   const switchMode=m=>{setMode(m);setParsed(null);setParseErr("");};
+
+  // Tipi değiştir → buffer temizle, mode'u text'e resetle, picker'a dön
+  const resetType=()=>{
+    setPickedType(null);
+    setMode("text");
+    setParsed(null);setParseErr("");
+    setTextInput("");setImgFile(null);
+    setCsvText("");setCsvRows([]);
+  };
 
   const callParse=async(body)=>{
     setParsing(true);setParseErr("");setParsed(null);
@@ -2059,8 +2113,49 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
 
   const MODES=[["text","📝 Metin"],["image","📷 Görüntü"],["csv","📋 CSV"],["manuel","📌 Manuel"]];
 
+  // Picker — kullanıcı henüz tip seçmediyse sadece bunu göster
+  if(!pickedType){
+    return(
+      <div>
+        <div className="cbox" style={{padding:18}}>
+          <div className="lbl" style={{marginBottom:6,fontSize:13}}>Hangi tür işlem ekliyorsun?</div>
+          <div style={{fontSize:11,color:"var(--text2)",marginBottom:14}}>Devam etmek için varlık türünü seç. Sonradan değiştirebilirsin.</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
+            {ADD_TYPES.map(({type,icon,label,desc})=>(
+              <button key={type} data-test={`pick-${type}`}
+                onClick={()=>setPickedType(type)}
+                style={{
+                  display:"flex",flexDirection:"column",alignItems:"flex-start",gap:6,
+                  padding:"14px 14px",
+                  background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:10,
+                  cursor:"pointer",textAlign:"left",color:"var(--text)",
+                  transition:"all .15s"
+                }}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor="var(--info)";e.currentTarget.style.background="var(--bg4)";}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor="var(--border)";e.currentTarget.style.background="var(--bg3)";}}>
+                <span style={{fontSize:24}}>{icon}</span>
+                <span style={{fontSize:14,fontWeight:600}}>{label}</span>
+                <span style={{fontSize:10,color:"var(--text3)"}}>{desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const pickedMeta = ADD_TYPES.find(t=>t.type===pickedType);
+
   return(
     <div>
+      {/* Tip context header */}
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 12px",background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:8,marginBottom:14,fontSize:12}}>
+        <span style={{fontSize:18}}>{pickedMeta.icon}</span>
+        <span><span className="dim">Tip:</span> <strong>{pickedMeta.label}</strong></span>
+        <div style={{flex:1}}></div>
+        <button className="btn-xs" onClick={resetType} data-test="change-type">Tipi değiştir</button>
+      </div>
+
       <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
         {MODES.map(([m,l])=>(
           <button key={m} className={"mtab"+(mode===m?" on":"")} onClick={()=>switchMode(m)}>{l}</button>
@@ -2152,8 +2247,390 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
       )}
 
       {mode==="manuel"&&(
-        <ManuelPosForm session={session} user={user} pos={pos} loadData={loadData} flash_={flash_} confirm_={confirm_}/>
+        <ManuelPosForm key={pickedType} session={session} user={user} pos={pos} loadData={loadData} flash_={flash_} confirm_={confirm_} prefillType={pickedType}/>
       )}
+    </div>
+  );
+}
+
+// ── AnalysisTab — Portföy analiz sekmesi (Sprint 1) ────────────
+// Şu an: filtreli varlık dağılımı pie. Sprint 2: bölge / komisyon / win-loss.
+// Filter chip "Genel" → asset type breakdown; spesifik tip → o tipteki ticker breakdown.
+const TYPE_LABEL_SHORT = {
+  all:"Genel", US_STOCK:"US Hisse", BIST:"BIST", FUND:"ETF/Fon",
+  CRYPTO:"Kripto", GOLD:"Altın", FX:"Döviz"
+};
+// Ticker-level pie için palet — TYPE_COLORS sadece 6 entry; bir tip'in altında 6+ ticker olunca distinct renk gerek
+const TICKER_PIE_COLORS = ["#30d158","#0a84ff","#ff9f0a","#bf5af2","#ffd60a","#ff453a","#5e5ce6","#64d2ff","#ac8e68","#7dd3fc","#a78bfa","#f472b6"];
+
+// Region heuristic — type → region key. ETF underlying holdings (MCHI=Çin gibi)
+// için ileride per-ticker override gerekebilir; şu an asset_type → region.
+const REGION_OF = {
+  US_STOCK:"us", FUND:"us",
+  BIST:"tr",
+  CRYPTO:"crypto", GOLD:"emtia",
+  FX:"fx",
+};
+const REGION_META = {
+  us:     {label:"US 🇺🇸",          color:"#30d158"},
+  tr:     {label:"Türkiye 🇹🇷",      color:"#bf5af2"},
+  crypto: {label:"Global · Kripto",  color:"#ff9f0a"},
+  emtia:  {label:"Global · Emtia",   color:"#ffd60a"},
+  fx:     {label:"Döviz",            color:"#8e8e93"},
+};
+
+// Currency symbol helper
+const sym_ = (cur) => cur==="TRY" ? "₺" : cur==="EUR" ? "€" : "$";
+
+// SVG pie path generator — tek-slice ile multi-slice ayrı handle
+const buildSlicesPath = (sliceArr, CX, CY, R) => {
+  let acc = 0;
+  return sliceArr.map(s => {
+    const startA = acc * Math.PI * 2;
+    acc += s.frac;
+    const endA = acc * Math.PI * 2;
+    const x1 = CX + R * Math.sin(startA), y1 = CY - R * Math.cos(startA);
+    const x2 = CX + R * Math.sin(endA),   y2 = CY - R * Math.cos(endA);
+    const large = (endA - startA) > Math.PI ? 1 : 0;
+    let path;
+    if (sliceArr.length === 1) {
+      path = `M ${CX-R} ${CY} A ${R} ${R} 0 1 1 ${CX+R} ${CY} A ${R} ${R} 0 1 1 ${CX-R} ${CY} Z`;
+    } else {
+      path = `M ${CX} ${CY} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${R} ${R} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
+    }
+    return {...s, path};
+  });
+};
+
+function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab}){
+  const [filter,setFilter]=useState("all");
+
+  // Split factor lookup — buy/sell tarihinden sonra split olmuşsa fiyatı düzelt.
+  // factorAt(ticker,date) = ratio'ların tarihten sonraki çarpımı.
+  // adjusted_price = original_price / factor (split sonrası eşdeğer fiyat).
+  const splitsByT = {};
+  (splits||[]).forEach(s => { (splitsByT[s.ticker]=splitsByT[s.ticker]||[]).push(s); });
+  const factorAt = (ticker, date) => {
+    const arr = splitsByT[ticker] || [];
+    return arr.filter(s => s.split_date > date).reduce((a,s)=>a*+s.ratio,1);
+  };
+
+  // Sadece pozisyonu olan tipleri göster — boş tipler chip'te yer kaplamasın
+  const heldTypes = (() => {
+    const set = new Set();
+    pos.forEach(p => set.add(p.type));
+    return ["US_STOCK","BIST","FUND","CRYPTO","GOLD","FX"].filter(t => set.has(t));
+  })();
+  const filterChips = ["all", ...heldTypes];
+
+  // Slice hesabı: filter==="all" → type breakdown; filter spesifik → o tipteki ticker breakdown
+  const slices = (() => {
+    if (filter === "all") {
+      const byType = {};
+      pos.forEach(p => {
+        const mv = (prc[p.ticker] || 0) * p.shares;
+        if (mv > 0) byType[p.type] = (byType[p.type] || 0) + mv;
+      });
+      const total = Object.values(byType).reduce((a,v)=>a+v,0);
+      const arr = Object.entries(byType)
+        .map(([type,value]) => ({key:type, label:TL[type]||type, value, color:TYPE_COLORS[type]||"#666"}))
+        .sort((a,b)=>b.value-a.value);
+      arr.forEach(s => s.frac = total > 0 ? s.value/total : 0);
+      return {arr, total};
+    } else {
+      const filtered = pos.filter(p => p.type === filter);
+      const arr = filtered.map((p,i) => {
+        const mv = (prc[p.ticker] || 0) * p.shares;
+        return {key:p.ticker, label:p.ticker, value:mv, color:TICKER_PIE_COLORS[i % TICKER_PIE_COLORS.length]};
+      }).filter(s => s.value > 0).sort((a,b)=>b.value-a.value);
+      const total = arr.reduce((a,s)=>a+s.value,0);
+      arr.forEach(s => s.frac = total > 0 ? s.value/total : 0);
+      return {arr, total};
+    }
+  })();
+
+  // Currency symbol — type-spesifik filter'da o tipin doğal currency'si.
+  // Genel mode mixed (USD/TRY/EUR) → $ (Dashboard pie ile tutarlı, ROADMAP'te fx conversion açık).
+  const sym = filter === "BIST" ? "₺" : "$";
+
+  // SVG path generation
+  const slicesPath = buildSlicesPath(slices.arr, 60, 60, 50);
+
+  // Region slices — type→region mapping ile tüm pos'u grupla. Currency mixed.
+  const regionSlices = (() => {
+    const byRegion = {};
+    pos.forEach(p => {
+      const region = REGION_OF[p.type] || "fx";
+      const mv = (prc[p.ticker] || 0) * p.shares;
+      if (mv > 0) byRegion[region] = (byRegion[region] || 0) + mv;
+    });
+    const total = Object.values(byRegion).reduce((a,v)=>a+v,0);
+    const arr = Object.entries(byRegion).map(([key,value]) => ({
+      key, label: REGION_META[key]?.label || key, value, color: REGION_META[key]?.color || "#666"
+    })).sort((a,b)=>b.value-a.value);
+    arr.forEach(s => s.frac = total > 0 ? s.value/total : 0);
+    return {arr, total};
+  })();
+  const regionPath = buildSlicesPath(regionSlices.arr, 60, 60, 50);
+
+  // Komisyon — currency başına toplam, broker × currency, year × currency
+  const commData = (() => {
+    const byCurrency = {};
+    const byBroker = {};   // {broker: {cur: amount}}
+    const byYear = {};     // {year: {cur: amount}}
+    txs.forEach(t => {
+      const c = +t.commission || 0;
+      if (c <= 0) return;
+      const cur = t.currency || "USD";
+      const broker = (t.broker||"Bilinmiyor").trim() || "Bilinmiyor";
+      const year = (t.date||"").slice(0,4);
+      byCurrency[cur] = (byCurrency[cur]||0) + c;
+      (byBroker[broker] = byBroker[broker]||{})[cur] = (byBroker[broker][cur]||0) + c;
+      if (year) (byYear[year] = byYear[year]||{})[cur] = (byYear[year][cur]||0) + c;
+    });
+    // Broker list sorted by USD-equivalent total (basit yaklaşım: tüm currency'leri toplayıp sırala)
+    const brokerList = Object.entries(byBroker).map(([broker,curs]) => ({
+      broker, byCur: curs, sum: Object.values(curs).reduce((a,v)=>a+v,0)
+    })).sort((a,b)=>b.sum-a.sum);
+    // Year list sorted ascending
+    const yearList = Object.entries(byYear).map(([year,curs]) => ({
+      year, byCur: curs, sum: Object.values(curs).reduce((a,v)=>a+v,0)
+    })).sort((a,b)=>a.year.localeCompare(b.year));
+    return {byCurrency, brokerList, yearList};
+  })();
+
+  // Win/Loss — BUY ve SELL bağımsız, split-adjusted (NVDA gibi pre-split fiyatlar)
+  const winLoss = (() => {
+    let buyW=0, buyL=0, buyN=0, sellW=0, sellL=0, sellN=0;
+    txs.forEach(t => {
+      const cur = prc[t.ticker];
+      if (cur == null || cur <= 0) {
+        if (t.way === "BUY") buyN++;
+        else if (t.way === "SELL") sellN++;
+        return;
+      }
+      const adj = (+t.price) / factorAt(t.ticker, t.date);
+      if (t.way === "BUY") {
+        if (cur > adj) buyW++;
+        else if (cur < adj) buyL++;
+      } else if (t.way === "SELL") {
+        if (cur < adj) sellW++;
+        else if (cur > adj) sellL++;
+      }
+    });
+    return {
+      buy:  {win: buyW,  loss: buyL,  noPrice: buyN},
+      sell: {win: sellW, loss: sellL, noPrice: sellN},
+    };
+  })();
+
+  // Tab-level empty state
+  if (pos.length === 0) {
+    return (
+      <div className="empty-card">
+        <div className="ic">📊</div>
+        <div className="ttl">Analiz için pozisyon yok</div>
+        <div className="sub">Önce pozisyon ekle, sonra dağılım/komisyon/win-loss analizleri burada görünecek.</div>
+        <button className="pri" onClick={()=>setTab("add")}>+ İlk işlemi ekle</button>
+      </div>
+    );
+  }
+
+  return(
+    <div>
+      {/* Filter chips */}
+      <div style={{display:"flex",gap:6,marginBottom:14,flexWrap:"wrap"}} data-test="analysis-filter">
+        {filterChips.map(t => (
+          <button key={t} className={"mtab"+(filter===t?" on":"")}
+            onClick={()=>setFilter(t)} data-test={`filter-${t}`}>
+            {TYPE_LABEL_SHORT[t]||t}
+          </button>
+        ))}
+      </div>
+
+      {/* Varlık dağılımı pie */}
+      <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+        <div className="stitle">Varlık Dağılımı{filter!=="all"?` · ${TYPE_LABEL_SHORT[filter]}`:""}</div>
+        {slices.arr.length === 0 ? (
+          <div className="empty" style={{padding:"40px 0"}}>Bu varlık türünde değerli pozisyon yok</div>
+        ) : (
+          <div style={{display:"flex",gap:14,alignItems:"center"}}>
+            <svg viewBox="0 0 120 120" style={{width:110,height:110,flex:"0 0 auto"}}>
+              {slicesPath.map(s => (
+                <path key={s.key} d={s.path} fill={s.color} stroke="var(--bg2)" strokeWidth="1"/>
+              ))}
+            </svg>
+            <div style={{flex:1,minWidth:0}}>
+              {slicesPath.map(s => (
+                <div key={s.key} className="pie-row">
+                  <span className="pie-sw" style={{background:s.color}}></span>
+                  <span style={{flex:1,minWidth:0}}>{s.label}</span>
+                  <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(sym+fmt(s.value,0))}</span>
+                  <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
+                </div>
+              ))}
+              <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
+                <span className="pie-sw" style={{visibility:"hidden"}}></span>
+                <span style={{flex:1,minWidth:0}}>Toplam</span>
+                <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(sym+fmt(slices.total,0))}</span>
+                <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bölge Dağılımı — type→region heuristik (filter chip etkilemez) */}
+      <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+        <div className="stitle">Bölge Dağılımı</div>
+        {regionSlices.arr.length === 0 ? (
+          <div className="empty" style={{padding:"40px 0"}}>Pozisyon yok</div>
+        ) : (
+          <div style={{display:"flex",gap:14,alignItems:"center"}}>
+            <svg viewBox="0 0 120 120" style={{width:110,height:110,flex:"0 0 auto"}}>
+              {regionPath.map(s => (
+                <path key={s.key} d={s.path} fill={s.color} stroke="var(--bg2)" strokeWidth="1"/>
+              ))}
+            </svg>
+            <div style={{flex:1,minWidth:0}}>
+              {regionPath.map(s => (
+                <div key={s.key} className="pie-row">
+                  <span className="pie-sw" style={{background:s.color}}></span>
+                  <span style={{flex:1,minWidth:0}}>{s.label}</span>
+                  <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask("$"+fmt(s.value,0))}</span>
+                  <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
+                </div>
+              ))}
+              <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
+                <span className="pie-sw" style={{visibility:"hidden"}}></span>
+                <span style={{flex:1,minWidth:0}}>Toplam</span>
+                <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask("$"+fmt(regionSlices.total,0))}</span>
+                <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
+              </div>
+            </div>
+          </div>
+        )}
+        <div style={{fontSize:10,color:"var(--text3)",marginTop:8,lineHeight:1.5}}>
+          Heuristik: US_STOCK/FUND→US, BIST→Türkiye, CRYPTO→Global·Kripto, GOLD→Global·Emtia, FX→Döviz. ETF içerikleri (MCHI=Çin gibi) ileride.
+        </div>
+      </div>
+
+      {/* Toplam Komisyon — currency başına KPI + broker + year breakdown */}
+      <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+        <div className="stitle">Toplam Komisyon</div>
+        {Object.keys(commData.byCurrency).length === 0 ? (
+          <div className="empty" style={{padding:"40px 0"}}>Henüz komisyon kaydı yok</div>
+        ) : (
+          <div>
+            {/* KPI: currency başına büyük sayı */}
+            <div style={{display:"flex",flexWrap:"wrap",gap:18,marginBottom:18}}>
+              {Object.entries(commData.byCurrency).map(([cur,total]) => (
+                <div key={cur}>
+                  <div className="lbl" style={{marginBottom:2}}>{cur}</div>
+                  <div className="mono" style={{fontSize:20,fontWeight:600}}>{mask(sym_(cur)+fmt(total,2))}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Broker breakdown */}
+            <div className="stitle" style={{marginBottom:8}}>Broker Bazında</div>
+            <div style={{marginBottom:18}}>
+              {commData.brokerList.map(({broker,byCur,sum}) => {
+                const pct = (sum / commData.brokerList[0].sum) * 100;
+                return (
+                  <div key={broker} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0"}}>
+                    <span style={{flex:"0 0 110px",fontSize:12,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{broker}</span>
+                    <div style={{flex:1,height:6,background:"var(--bg3)",borderRadius:3,overflow:"hidden"}}>
+                      <div style={{width:pct+"%",height:"100%",background:"var(--info)"}}/>
+                    </div>
+                    <span className="mono" style={{flex:"0 0 auto",textAlign:"right",fontSize:11,color:"var(--text2)"}}>
+                      {Object.entries(byCur).map(([cur,v]) => mask(sym_(cur)+fmt(v,2))).join(" + ")}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Year breakdown */}
+            <div className="stitle" style={{marginBottom:8}}>Yıl Bazında</div>
+            <div>
+              {(() => {
+                const maxYearSum = Math.max(...commData.yearList.map(y=>y.sum));
+                return commData.yearList.map(({year,byCur,sum}) => {
+                  const pct = (sum / maxYearSum) * 100;
+                  return (
+                    <div key={year} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0"}}>
+                      <span style={{flex:"0 0 50px",fontFamily:"'DM Mono',monospace",fontSize:12}}>{year}</span>
+                      <div style={{flex:1,height:6,background:"var(--bg3)",borderRadius:3,overflow:"hidden"}}>
+                        <div style={{width:pct+"%",height:"100%",background:"var(--info)",opacity:.6}}/>
+                      </div>
+                      <span className="mono" style={{flex:"0 0 auto",textAlign:"right",fontSize:11,color:"var(--text2)"}}>
+                        {Object.entries(byCur).map(([cur,v]) => mask(sym_(cur)+fmt(v,2))).join(" + ")}
+                      </span>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Kazanan/Kaybeden Trade — BUY ve SELL bağımsız, split-adjusted */}
+      <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:14}}>
+          <div className="stitle" style={{marginBottom:0}}>Kazanan / Kaybeden Trade</div>
+          <span style={{fontSize:10,color:"var(--text3)"}}>güncel fiyatla kıyas · split-adjusted</span>
+        </div>
+        {(() => {
+          const renderBar = (label, data, helpText) => {
+            const total = data.win + data.loss;
+            if (total === 0 && data.noPrice === 0) {
+              return (
+                <div style={{marginBottom:14}}>
+                  <div style={{fontSize:12,marginBottom:6}}>{label}</div>
+                  <div className="empty" style={{padding:"12px 0",fontSize:11}}>İşlem yok</div>
+                </div>
+              );
+            }
+            if (total === 0) {
+              return (
+                <div style={{marginBottom:14}}>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:6}}>
+                    <span>{label}</span>
+                    <span className="dim">{data.noPrice} işlem fiyat eksik</span>
+                  </div>
+                  <div className="empty" style={{padding:"8px 0",fontSize:11}}>Tüm işlemlerin güncel fiyatı eksik (ticker artık takipte değil)</div>
+                </div>
+              );
+            }
+            const winPct = (data.win / total) * 100;
+            return (
+              <div style={{marginBottom:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:6}}>
+                  <span>{label}</span>
+                  <span className="mono"><span style={{color:"var(--ok)"}}>{data.win}</span> / <span style={{color:"var(--err)"}}>{data.loss}</span> · <strong>%{winPct.toFixed(0)}</strong></span>
+                </div>
+                <div style={{height:10,background:"var(--bg3)",borderRadius:5,overflow:"hidden",display:"flex"}} data-tip={helpText}>
+                  <div style={{width:winPct+"%",background:"var(--ok)",transition:"width .2s"}}/>
+                  <div style={{flex:1,background:"var(--err)"}}/>
+                </div>
+                {data.noPrice > 0 && (
+                  <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>
+                    {data.noPrice} işlem fiyat eksik (sayım dışı — ticker fiyat cache'inde yok)
+                  </div>
+                )}
+              </div>
+            );
+          };
+          return (
+            <div>
+              {renderBar("Alış kararları", winLoss.buy, "Aldıktan sonra fiyat yükseldi mi? Win = current > buy.")}
+              {renderBar("Satış kararları", winLoss.sell, "Sattıktan sonra fiyat düştü mü? Win = current < sell (iyi exit).")}
+            </div>
+          );
+        })()}
+      </div>
     </div>
   );
 }
@@ -2364,7 +2841,7 @@ function App({session}){
   const expTx=()=>dlCSV(txs.map(t=>csvRow([t.date,t.ticker,t.name||"",t.asset_type||"",t.way,t.shares,t.price,t.currency||"USD",t.total||"",t.broker||"",t.commission||0])),"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Total,Broker,Commission",`txs_${today()}.csv`);
   const expPos=()=>dlCSV(pos.map(p=>csvRow([p.ticker,p.name,p.type,p.shares,p.avgCost,p.currency,p.broker])),"Ticker,Name,Type,Shares,AvgCost,Currency,Broker",`pos_${today()}.csv`);
 
-  const TABS=[["dashboard","Dashboard"],["history","İşlemler"],["search","Ara"],["add","+ Ekle"],["settings","Ayarlar"]];
+  const TABS=[["dashboard","Dashboard"],["history","İşlemler"],["analysis","Analiz"],["search","Ara"],["add","+ Ekle"],["settings","Ayarlar"]];
 
   if(busy.d&&pos.length===0)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",gap:10,color:"#888",fontSize:13}}><div className="spin"></div>Yükleniyor...</div>;
 
@@ -2611,14 +3088,17 @@ function App({session}){
                       {slices.map(s=>(
                         <div key={s.type} className="pie-row">
                           <span className="pie-sw" style={{background:TYPE_COLORS[s.type]||"#666"}}></span>
-                          <span style={{flex:1}}>{TL[s.type]||s.type}</span>
-                          <span className="mono" style={{minWidth:64,textAlign:"right"}}>{mask("$"+fmt(s.value,0))}</span>
-                          <span className="dim" style={{minWidth:46,textAlign:"right",fontSize:11}}>{(s.frac*100).toFixed(1)}%</span>
+                          <span style={{flex:1,minWidth:0}}>{TL[s.type]||s.type}</span>
+                          <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask("$"+fmt(s.value,0))}</span>
+                          <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
                         </div>
                       ))}
-                      <div style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,display:"flex",justifyContent:"space-between",fontSize:12,fontWeight:600}}>
-                        <span>Toplam</span>
-                        <span className="mono">{mask("$"+fmt(total,0))}</span>
+                      {/* Toplam — yukarıdaki 4-kolonlu satıra hizalı: spacer + etiket + $ + 100% */}
+                      <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
+                        <span className="pie-sw" style={{visibility:"hidden"}}></span>
+                        <span style={{flex:1,minWidth:0}}>Toplam</span>
+                        <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask("$"+fmt(total,0))}</span>
+                        <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
                       </div>
                     </div>
                   </div>
@@ -2718,6 +3198,15 @@ function App({session}){
       {/* HISTORY */}
       {tab==="history"&&(
         <HistoryTab txs={txs} user={user} loadData={loadData} flash_={flash_} confirm_={confirm_} mask={mask} hideAmts={hide} setTab={setTab} initialSearch={navTicker} onConsume={()=>setNavTicker("")} splits={splits}/>
+      )}
+
+
+
+
+
+      {/* ANALYSIS */}
+      {tab==="analysis"&&(
+        <AnalysisTab pos={pos} txs={txs} splits={splits} prc={prc} hide={hide} mask={mask} setTab={setTab}/>
       )}
 
       {/* SEARCH */}
