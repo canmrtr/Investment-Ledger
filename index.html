@@ -2478,6 +2478,9 @@ const buildSlicesPath = (sliceArr, CX, CY, R) => {
 
 function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,openDetail}){
   const [filter,setFilter]=useState("all");
+  // Kart collapse state'leri — default kapalı (özet üstte, detay isteğe bağlı).
+  const [healthOpen,setHealthOpen]=useState(false);
+  const [commOpen,setCommOpen]=useState(false);
   const dSym = displaySym(displayCur);
   const cnv = (amt, from) => convert(amt, from, displayCur, fxRates);
   // Sağlık tablosu state — ticker bazlı fund cache, mount'ta LS'ten topla.
@@ -2767,22 +2770,43 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
         </div>
       </div>
 
-      {/* Portföy Sağlık Tablosu — tüm US/BIST pozisyonların 8 metrikte özet renk pill tablosu */}
-      {healthEligible.length>0 && (
+      {/* Portföy Sağlık Tablosu — kapalı özet (3 rozet) + collapsible detay tablosu */}
+      {healthEligible.length>0 && (() => {
+        // Aggregate sayım: tüm healthFiltered ticker'ların 8 metrikinde good/neutral/bad toplam.
+        let aggGood=0, aggWarn=0, aggBad=0;
+        healthFiltered.forEach(p => {
+          const m = fundCache[p.ticker]?.metrics;
+          if(!m) return;
+          HEALTH_METRICS.forEach(([key]) => {
+            const s = fundScore(key, m[key]);
+            if(s==="good") aggGood++;
+            else if(s==="neutral") aggWarn++;
+            else if(s==="bad") aggBad++;
+          });
+        });
+        return(
         <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:10,gap:10,flexWrap:"wrap"}}>
+          {/* Üst bar: başlık + 3 rozet + Detay toggle */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
             <div className="stitle" style={{marginBottom:0}}>Portföy Sağlık Tablosu</div>
-            <span style={{fontSize:10,color:"var(--text3)"}}>renk = metrik eşik (yeşil iyi · sarı orta · kırmızı zayıf)</span>
+            <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+              <span className="hp hp-ok" data-tip="Eşiği geçen (iyi) metrik sayısı">🟢 {aggGood}</span>
+              <span className="hp hp-warn" data-tip="Orta seviye metrik sayısı">🟡 {aggWarn}</span>
+              <span className="hp hp-err" data-tip="Eşiğin altında kalan (zayıf) metrik sayısı">🔴 {aggBad}</span>
+              <button className="btn-xs" onClick={()=>setHealthOpen(o=>!o)} style={{fontSize:11}}>
+                {healthOpen?"Detay ▴":"Detay ▾"}
+              </button>
+            </div>
           </div>
 
-          {/* Filter chips: Hepsi / US / BIST */}
+          {/* Filter chips — kapalı modda da rozetleri etkiler */}
           {(() => {
             const types=["all"];
             if(healthEligible.some(p=>p.type==="US_STOCK"))types.push("US_STOCK");
             if(healthEligible.some(p=>p.type==="BIST"))types.push("BIST");
             if(types.length<=2)return null;
             return(
-              <div style={{display:"flex",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+              <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
                 {types.map(t=>(
                   <button key={t} className={"mtab"+(healthFilter===t?" on":"")}
                     onClick={()=>setHealthFilter(t)}>
@@ -2793,9 +2817,9 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
             );
           })()}
 
-          {/* Eksik fetch CTA + progress */}
+          {/* Eksik fetch CTA + progress — kapalı modda da görünür */}
           {healthMissing.length>0 && (
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"8px 10px",background:"var(--bg3)",borderRadius:8,marginBottom:10,flexWrap:"wrap"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"8px 10px",background:"var(--bg3)",borderRadius:8,marginTop:10,flexWrap:"wrap"}}>
               <span style={{fontSize:11,color:"var(--text2)"}}>
                 {fundBusy
                   ? <><span className="spin" style={{width:11,height:11,marginRight:6,verticalAlign:"middle"}}></span>Çekiliyor: {fundProg}</>
@@ -2805,8 +2829,8 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
             </div>
           )}
 
-          {/* Tablo: sticky ticker + 8 metrik + skor. Sıralama: önce score asc (en kötü üstte), null'lar sonda. */}
-          {(() => {
+          {/* Tablo: sticky ticker + 8 metrik + skor — sadece healthOpen iken */}
+          {healthOpen && (() => {
             const rows = healthFiltered.map(p => {
               const fund = fundCache[p.ticker];
               const m = fund?.metrics || null;
@@ -2859,25 +2883,33 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
             );
           })()}
 
-          <div style={{fontSize:10,color:"var(--text3)",marginTop:8,lineHeight:1.5}}>
-            Eşikler `FUND_THRESHOLDS`'tan; kolon başlığında hover ile detay. BIST için P/S henüz yok (—). TR enflasyon nominal CAGR'ı şişiriyor — BIST büyüme metriklerine ihtiyatla bak.
-          </div>
+          {healthOpen && (
+            <div style={{fontSize:10,color:"var(--text3)",marginTop:8,lineHeight:1.5}}>
+              Eşikler `FUND_THRESHOLDS`'tan; kolon başlığında hover ile detay. BIST için P/S henüz yok (—). TR enflasyon nominal CAGR'ı şişiriyor — BIST büyüme metriklerine ihtiyatla bak.
+            </div>
+          )}
         </div>
-      )}
+      );})()}
 
       {/* Toplam Komisyon — display cur'a convert edilmiş tek tutar */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
-        <div className="stitle">Toplam Komisyon</div>
-        {commData.total === 0 ? (
-          <div className="empty" style={{padding:"40px 0"}}>Henüz komisyon kaydı yok</div>
-        ) : (
-          <div>
-            {/* KPI: tek büyük sayı */}
-            <div style={{marginBottom:18}}>
-              <div className="lbl" style={{marginBottom:2}}>{displayCur}</div>
-              <div className="mono" style={{fontSize:20,fontWeight:600}}>{mask(dSym+fmt(commData.total,2))}</div>
+        {/* Üst bar: başlık + KPI sağda + Detay toggle (commData.total>0 ise) */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+          <div className="stitle" style={{marginBottom:0}}>Toplam Komisyon</div>
+          {commData.total>0 && (
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span className="mono" style={{fontSize:18,fontWeight:600}}>{mask(dSym+fmt(commData.total,2))}</span>
+              <button className="btn-xs" onClick={()=>setCommOpen(o=>!o)} style={{fontSize:11}}>
+                {commOpen?"Detay ▴":"Detay ▾"}
+              </button>
             </div>
-
+          )}
+        </div>
+        {commData.total === 0 && (
+          <div className="empty" style={{padding:"40px 0"}}>Henüz komisyon kaydı yok</div>
+        )}
+        {commData.total > 0 && commOpen && (
+          <div style={{marginTop:14}}>
             {/* Broker breakdown */}
             <div className="stitle" style={{marginBottom:8}}>Broker Bazında</div>
             <div style={{marginBottom:18}}>

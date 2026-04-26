@@ -54,8 +54,8 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
   - [ ] ETF underlying region (MCHI=Çin gibi) — şu an FUND→US default
   - [ ] Win/Loss time horizon seçimi (current price yerine 1A/3A/6A/1Y window)
   - [ ] Win/Loss: sold-out ticker'lar için live price fetch (şu an cache'te yoksa "noPrice" sayım dışı)
-  - [ ] **Toplam Komisyon kartı: KPI üstte sabit, breakdown collapsible** — Mevcut yapı KPI + Broker breakdown + Yıl breakdown hep açık (uzun kart). Hedef: KPI rakamı her zaman görünür; altında "Detay ▾" toggle (default kapalı). HistoryTab accordion pattern'iyle tutarlı. Effort: ~10-15 dk.
-  - [ ] **Portföy Sağlık Tablosu: kapalı özet + collapsible detay** — Mevcut yapı tüm satırlar açılır açılmaz görünüyor. Hedef: Default kapalı; üstte 3 büyük rozet (🟢 Yeşil: N · 🟡 Sarı: N · 🔴 Kırmızı: N — portföy genelinde fundScore aggregate sayımları). Yanında "Detay ▾" toggle, tıklanınca firma listesi açılır. Filter chip (Hepsi/US/BIST) kapalı modda da rozet sayılarını günceller. "Eksikleri Çek" CTA kapalı modda da görünür. Effort: ~15-20 dk.
+  - [x] ~~**Toplam Komisyon kartı: KPI üstte sabit, breakdown collapsible**~~ (2026-04-26) — KPI rakamı sağda + "Detay ▾" toggle; Broker/Yıl breakdown sadece açıkken render edilir. `commOpen` state, default kapalı.
+  - [x] ~~**Portföy Sağlık Tablosu: kapalı özet + collapsible detay**~~ (2026-04-26) — Üst bar: başlık + 3 rozet (🟢/🟡/🔴 aggregate sayım) + "Detay ▾". Filter chip + "Eksikleri Çek" CTA her zaman görünür. Tablo + footnote `healthOpen` ile koşullu, default kapalı.
 
 ## Fundamental & Analiz
 
