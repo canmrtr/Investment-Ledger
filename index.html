@@ -470,6 +470,22 @@ const COMMODITY_SYMBOLS = [
   {sym:"XPD", name:"Paladyum"},
 ];
 
+// Altın birimleri → troy oz dönüşüm tablosu.
+// oz_equivalent = grams * purity / 31.1034
+// Piyasa fiyatı XAU/USD ($/oz) × goldOzPerUnit(unit) = $/birim
+const GOLD_UNITS = [
+  {key:"oz",       label:"Ons (Troy oz)",     grams:31.1034, purity:1},
+  {key:"g",        label:"Gram",              grams:1,       purity:1},
+  {key:"quarter",  label:"Çeyrek Altın",      grams:1.75,    purity:0.9167},
+  {key:"half",     label:"Yarım Altın",       grams:3.5,     purity:0.9167},
+  {key:"full",     label:"Tam Altın",         grams:7.0,     purity:0.9167},
+  {key:"republic", label:"Cumhuriyet Altını", grams:7.216,   purity:0.9167},
+];
+const goldOzPerUnit = unit => {
+  const u = GOLD_UNITS.find(g => g.key === (unit||'oz')) || GOLD_UNITS[0];
+  return (u.grams * u.purity) / 31.1034;
+};
+
 // Massive desteği olan popüler kriptolar — picker chip listesi.
 // Edge function `asset_type:"CRYPTO"` ile bu sembolleri `X:{SYM}USD` formatına çevirir.
 const CRYPTO_SYMBOLS = [
@@ -809,11 +825,11 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType}){
             <div><div className="kk" style={{marginBottom:3}}>Broker</div>
               <input className="finp sm" value={form.broker} onChange={e=>setForm(f=>({...f,broker:e.target.value}))} placeholder="Akbank..."/></div>
             <div><div className="kk" style={{marginBottom:3}}>Adet *</div>
-              <input className="finp sm" type="number" value={form.shares} onChange={e=>setForm(f=>({...f,shares:e.target.value}))} placeholder="0"/></div>
+              <input className="finp sm" type="number" step="any" value={form.shares} onChange={e=>setForm(f=>({...f,shares:e.target.value}))} placeholder="0"/></div>
             <div><div className="kk" style={{marginBottom:3}}>Fiyat *</div>
-              <input className="finp sm" type="number" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} placeholder="0.00"/></div>
+              <input className="finp sm" type="number" step="any" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} placeholder="0.00"/></div>
             <div><div className="kk" style={{marginBottom:3}}>Komisyon</div>
-              <input className="finp sm" type="number" value={form.commission} onChange={e=>setForm(f=>({...f,commission:e.target.value}))} placeholder="0"/></div>
+              <input className="finp sm" type="number" step="any" value={form.commission} onChange={e=>setForm(f=>({...f,commission:e.target.value}))} placeholder="0"/></div>
           </div>
           {form.shares&&form.price&&(
             <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: ${fmt((+form.shares)*(+form.price),2)}</div>
@@ -1473,9 +1489,9 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                         <select className="finp sm" value={editForm.currency} onChange={e=>setEditForm(f=>({...f,currency:e.target.value}))}>
                           <option>USD</option><option>TRY</option><option>EUR</option>
                         </select></div>
-                      <div><div className="kk" style={{marginBottom:3}}>Adet</div><input className="finp sm" type="number" value={editForm.shares} onChange={e=>setEditForm(f=>({...f,shares:e.target.value}))}/></div>
-                      <div><div className="kk" style={{marginBottom:3}}>Fiyat</div><input className="finp sm" type="number" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))}/></div>
-                      <div><div className="kk" style={{marginBottom:3}}>Komisyon</div><input className="finp sm" type="number" value={editForm.commission} onChange={e=>setEditForm(f=>({...f,commission:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Adet</div><input className="finp sm" type="number" step="any" value={editForm.shares} onChange={e=>setEditForm(f=>({...f,shares:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Fiyat</div><input className="finp sm" type="number" step="any" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Komisyon</div><input className="finp sm" type="number" step="any" value={editForm.commission} onChange={e=>setEditForm(f=>({...f,commission:e.target.value}))}/></div>
                       <div style={{gridColumn:"span 3"}}><div className="kk" style={{marginBottom:3}}>Broker</div><input className="finp sm" value={editForm.broker} onChange={e=>setEditForm(f=>({...f,broker:e.target.value}))}/></div>
                     </div>
                     <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: {editForm.currency==="TRY"?"₺":"$"}{fmt((+editForm.shares)*(+editForm.price),2)}</div>
@@ -1697,10 +1713,10 @@ function ConfirmBox({data,onSave,onCancel}){
               {isEdit&&(
                 <div style={{padding:"8px 12px 10px",borderTop:"1px solid var(--border)",display:"flex",flexWrap:"wrap",gap:8,alignItems:"flex-end"}}>
                   <div><div className="kk" style={{marginBottom:3}}>Tarih</div><input className="finp sm" type="date" value={tx.date||""} onChange={e=>upd(idx,{date:e.target.value})} style={{height:28,padding:"3px 8px"}}/></div>
-                  <div><div className="kk" style={{marginBottom:3}}>Adet</div><input className="finp sm" type="number" value={tx.shares||""} onChange={e=>upd(idx,{shares:e.target.value})} style={{height:28,padding:"3px 8px",width:80}}/></div>
-                  <div><div className="kk" style={{marginBottom:3}}>Fiyat ({c})</div><input className="finp sm" type="number" value={tx.price||""} onChange={e=>upd(idx,{price:e.target.value})} style={{height:28,padding:"3px 8px",width:90}}/></div>
+                  <div><div className="kk" style={{marginBottom:3}}>Adet</div><input className="finp sm" type="number" step="any" value={tx.shares||""} onChange={e=>upd(idx,{shares:e.target.value})} style={{height:28,padding:"3px 8px",width:80}}/></div>
+                  <div><div className="kk" style={{marginBottom:3}}>Fiyat ({c})</div><input className="finp sm" type="number" step="any" value={tx.price||""} onChange={e=>upd(idx,{price:e.target.value})} style={{height:28,padding:"3px 8px",width:90}}/></div>
                   <div><div className="kk" style={{marginBottom:3}}>Broker</div><input className="finp sm" type="text" value={tx.broker||""} onChange={e=>upd(idx,{broker:e.target.value})} style={{height:28,padding:"3px 8px",width:90}}/></div>
-                  <div><div className="kk" style={{marginBottom:3}}>Komisyon</div><input className="finp sm" type="number" value={tx.commission||""} onChange={e=>upd(idx,{commission:e.target.value})} style={{height:28,padding:"3px 8px",width:80}}/></div>
+                  <div><div className="kk" style={{marginBottom:3}}>Komisyon</div><input className="finp sm" type="number" step="any" value={tx.commission||""} onChange={e=>upd(idx,{commission:e.target.value})} style={{height:28,padding:"3px 8px",width:80}}/></div>
                   <button className="btn-xs" style={{color:"var(--info)",borderColor:"var(--info)"}} onClick={()=>setEditIdx(null)}>✓ Tamam</button>
                 </div>
               )}
@@ -1902,7 +1918,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
   // BIST'e göre günceller (mevcut davranış korunuyor).
   const initType = prefillType || "US_STOCK";
   const initCurrency = initType==="BIST" ? "TRY" : "USD";
-  const E={ticker:"",name:"",type:initType,shares:"",avgCost:"",currency:initCurrency,broker:"",commission:"",date:today()};
+  const E={ticker:"",name:"",type:initType,shares:"",avgCost:"",currency:initCurrency,broker:"",commission:"",date:today(),unit:"oz"};
   const [form,setForm]=useState(E);
   const [curPrice,setCurPrice]=useState(null);
   // Fiyat fetch sonucu hakkında inline uyarı/bilgi: {type:"ok"|"warn", text}.
@@ -1911,7 +1927,15 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
   const [fetchP,setFetchP]=useState(false);
   const [saving,setSaving]=useState(false);
   const [editTk,setEditTk]=useState(null);
+  const [errs,setErrs]=useState({});
   const set=f=>setForm(p=>({...p,...f}));
+  const validate=()=>{
+    const e={};
+    if(+form.shares<=0||isNaN(+form.shares))e.shares="Adet 0'dan büyük olmalı";
+    if(+form.avgCost<=0||isNaN(+form.avgCost))e.avgCost="Fiyat 0'dan büyük olmalı";
+    setErrs(e);
+    return Object.keys(e).length===0;
+  };
 
   const NAMES={SCHD:"Schwab US Dividend ETF",SPY:"SPDR S&P 500 ETF",QQQ:"Invesco QQQ Trust",MCHI:"iShares MSCI China ETF",VT:"Vanguard Total World ETF",NVDA:"NVIDIA Corp",SOFI:"SoFi Technologies",GOOGL:"Alphabet Inc",META:"Meta Platforms",KO:"Coca-Cola Co",UBER:"Uber Technologies",MNSO:"MINISO Group",AEVA:"Aeva Technologies",PYPL:"PayPal Holdings",SKLZ:"Skillz Inc",NNOX:"Nano-X Imaging",TSLA:"Tesla Inc",AAPL:"Apple Inc",MSFT:"Microsoft Corp",AMZN:"Amazon.com",BTC:"Bitcoin"};
 
@@ -1975,13 +1999,19 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
 
   const savePos=async()=>{
     if(!form.ticker||!form.shares||!form.avgCost)return;
+    if(!validate())return;
     setSaving(true);
     const tk=form.ticker.toUpperCase();
     const nm=form.name||tk;
-    const sh=+form.shares;
-    const pr=+form.avgCost;
+    // GOLD: kullanıcı seçili birimde giriyor → oz-eşdeğerine çevir.
+    // oz dışındaki birimler: shares × ozFactor = oz, avgCost / ozFactor = $/oz.
+    // factor=1 (oz veya diğer tipler) → math unchanged.
+    const ozFactor = form.type==="GOLD" ? goldOzPerUnit(form.unit||'oz') : 1;
+    const sh = +form.shares * ozFactor;   // shares artık oz-eşdeğeri
+    const pr = +form.avgCost / ozFactor;  // avg_cost artık $/oz (veya currency/oz)
 
     // Transaction'a yaz
+    const goldUnitNote = form.type==="GOLD"&&form.unit&&form.unit!=="oz" ? `Manuel giriş (${form.unit})` : "Manuel giriş";
     const tx={
       user_id:user.id,
       date:form.date||today(),
@@ -1992,7 +2022,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
       currency:form.currency,
       total:+(sh*pr).toFixed(4),
       broker:form.broker||"",
-      commission:+(form.commission||0),exchange:"",notes:"Manuel giriş"
+      commission:+(form.commission||0),exchange:"",notes:goldUnitNote
     };
     const{error:te}=await sb.from("transactions").insert(tx);
     if(te){flash_(te.message,"err");setSaving(false);return;}
@@ -2005,6 +2035,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
       user_id:user.id,ticker:tk,name:nm,type:form.type,
       shares:+ns.toFixed(6),avg_cost:+na.toFixed(6),
       currency:form.currency,broker:form.broker||"",
+      unit:form.type==="GOLD"?(form.unit||'oz'):null,
       updated_at:new Date().toISOString()
     },{onConflict:"user_id,ticker"});
 
@@ -2075,6 +2106,21 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
                 </div>
               </div>
             )}
+            {form.type==="GOLD"&&(
+              <div style={{marginTop:8}}>
+                <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Birim:</div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                  {GOLD_UNITS.map(({key,label})=>(
+                    <button key={key} type="button"
+                      className={"btn-xs"+(form.unit===key?" on":"")}
+                      onClick={()=>set({unit:key})}
+                      style={{fontSize:10,padding:"3px 8px"}}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {priceNote&&(
               <div style={{
                 fontSize:11,
@@ -2120,12 +2166,24 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
             </select>
           </div>
           <div>
-            <div className="kk" style={{marginBottom:4}}>Adet *</div>
-            <input className="finp" type="number" value={form.shares} onChange={e=>set({shares:e.target.value})} placeholder="0"/>
+            <div className="kk" style={{marginBottom:4}}>{form.type==="GOLD"?`Adet * (${GOLD_UNITS.find(g=>g.key===form.unit)?.label||'oz'})`:"Adet *"}</div>
+            <input className="finp" type="number" step="any" value={form.shares}
+              aria-invalid={!!errs.shares}
+              style={errs.shares?{borderColor:"var(--err)"}:{}}
+              onChange={e=>{set({shares:e.target.value});if(errs.shares)setErrs(p=>({...p,shares:undefined}));}}
+              onBlur={()=>{if(form.shares&&+form.shares<=0)setErrs(p=>({...p,shares:"Adet 0'dan büyük olmalı"}));}}
+              placeholder="0"/>
+            {errs.shares&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.shares}</div>}
           </div>
           <div>
-            <div className="kk" style={{marginBottom:4}}>Ort. Maliyet *</div>
-            <input className="finp" type="number" value={form.avgCost} onChange={e=>set({avgCost:e.target.value})} placeholder="0.00"/>
+            <div className="kk" style={{marginBottom:4}}>{form.type==="GOLD"?`Ort. Maliyet * (${form.currency}/${GOLD_UNITS.find(g=>g.key===form.unit)?.label||'oz'})`:"Ort. Maliyet *"}</div>
+            <input className="finp" type="number" step="any" value={form.avgCost}
+              aria-invalid={!!errs.avgCost}
+              style={errs.avgCost?{borderColor:"var(--err)"}:{}}
+              onChange={e=>{set({avgCost:e.target.value});if(errs.avgCost)setErrs(p=>({...p,avgCost:undefined}));}}
+              onBlur={()=>{if(form.avgCost&&+form.avgCost<=0)setErrs(p=>({...p,avgCost:"Fiyat 0'dan büyük olmalı"}));}}
+              placeholder="0.00"/>
+            {errs.avgCost&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.avgCost}</div>}
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Broker</div>
@@ -2133,7 +2191,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Komisyon</div>
-            <input className="finp" type="number" value={form.commission} onChange={e=>set({commission:e.target.value})} placeholder="0.00"/>
+            <input className="finp" type="number" step="any" value={form.commission} onChange={e=>set({commission:e.target.value})} placeholder="0.00"/>
           </div>
           <div style={{display:"flex",alignItems:"flex-end"}}>
             {form.shares&&form.avgCost?(
@@ -3373,7 +3431,7 @@ function App({session}){
       sb.from("price_cache").select("*"),
       sb.from("profiles").select("*").eq("user_id",user.id).maybeSingle()
     ]);
-    if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker})));
+    if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker,unit:p.unit||null})));
     if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission})));
     if(sr.data)setSplits(sr.data);
     setProfile(pf?.data||null);
@@ -3883,10 +3941,17 @@ function App({session}){
                         {hasH&&<th scope="col" className="r" onClick={()=>tsort("y1")} data-tip="Son 1 yıldaki değişim">1Y{sa("y1")}</th>}
                       </tr></thead>
                       <tbody>
-                        {sortedItems.map(p=>(
+                        {sortedItems.map(p=>{
+                          // GOLD: pozisyon oz cinsinden storage'da, ancak unit!=null&&!="oz" ise
+                          // kullanıcıya orijinal birime geri çevrilmiş adet göster.
+                          const goldUnit = p.type==="GOLD" ? (GOLD_UNITS.find(g=>g.key===(p.unit||'oz'))||GOLD_UNITS[0]) : null;
+                          const displayShares = (p.type==="GOLD"&&p.unit&&p.unit!=="oz")
+                            ? fmtShares(p.shares / goldOzPerUnit(p.unit))
+                            : fmtShares(p.shares);
+                          return(
                           <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
                             <td className="l"><div className="tcell"><span className="tsym">{p.ticker}{cfg.badge==="etf"&&<span className="badge etf">ETF</span>}{cfg.badge==="cry"&&<span className="badge cry">₿</span>}</span><span className="tname">{p.name}</span></div></td>
-                            {!hide&&<td className="r">{fmtShares(p.shares)}</td>}
+                            {!hide&&<td className="r">{displayShares}{goldUnit&&goldUnit.key!=="oz"&&<span className="dim" style={{fontSize:10,marginLeft:3}}>{goldUnit.label}</span>}</td>}
                             {!hide&&<td className="r">{mask(cfg.sym+fmt(p.avgCost))}</td>}
                             {!hide&&<td className="r">{p.price?mask(cfg.sym+fmt(p.price)):"—"}</td>}
                             {!hide&&<td className="r">{p.mv?mask(cfg.sym+fmt(p.mv,0)):"—"}</td>}
@@ -3897,7 +3962,8 @@ function App({session}){
                             {hasH&&<td className={"r"+pc(p.m1)}>{fmtP(p.m1)}</td>}
                             {hasH&&<td className={"r"+pc(p.y1)}>{fmtP(p.y1)}</td>}
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -4095,7 +4161,7 @@ function App({session}){
 
       {/* Confirm modal */}
       {confirmSt&&(
-        <div className="mdl-bd" onClick={()=>closeConfirm(false)}>
+        <div className="mdl-bd" onClick={()=>!confirmSt.danger&&closeConfirm(false)}>
           <div className="mdl-bx" onClick={e=>e.stopPropagation()}>
             <div className="mdl-msg">{confirmSt.msg}</div>
             <div className="brow">

@@ -84,7 +84,7 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
 - [x] ~~**Sağlık Tablosu: filter chip + "Eksikleri Çek" CTA kapalı modda gizlensin**~~ (2026-04-26) — healthOpen && wrap ile gizlendi.
 - [x] ~~**Varlık Dağılımı kartına Maliyet/Piyasa toggle**~~ (2026-04-26) — assetDistMode state + segment buton.
-- [ ] **AnalysisTab FX yok warn-card** `[S]` `[P1]` — Dashboard'da var; Analiz'de sessizce 0 ekleniyor. FX rates null ise Analiz'de de turuncu uyarı göster.
+- [x] ~~**AnalysisTab FX yok warn-card**~~ (2026-04-26) — Analiz sekmesinde FX rates null ise turuncu warn-card gösteriliyor.
 - [ ] **Win/Loss time horizon seçimi** `[S]` `[P2]` — şu an bugünkü fiyat; 1A/3A/6A/1Y window chip seçimi.
 - [ ] **Win/Loss sold-out ticker live price** `[S]` `[P2]` — cache'te yoksa "noPrice" sayım dışı; live fetch seçeneği ekle.
 - [ ] **Analiz bölge ETF underlying** `[M]` `[P2]` — MCHI=Çin gibi; şu an FUND→US default.
@@ -149,12 +149,12 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ### Grup 2 — Bildirim/Feedback (P1)
 
-- [ ] **AddTab CSV import skip count** `[S]` `[P1]` — geçersiz satırlar sessizce atlanıyor; `flash_("X işlem alındı, Y satır atlandı")`.
-- [ ] **cur-seg dokunma hedefi mobile** `[S]` `[P1]` — ~30px; mobile media query 44px AA.
+- [x] ~~**AddTab CSV import skip count**~~ (2026-04-26) — geçersiz satırlar için `flash_("X işlem alındı, Y satır atlandı")` gösterimi eklendi.
+- [x] ~~**cur-seg dokunma hedefi mobile**~~ (2026-04-26) — mobile media query 44px AA dokunma hedefi.
 - [ ] **Period buton wrap dar ekran** `[S]` `[P1]` — `flex:1 + minWidth:40` 320px'de eziliyor.
-- [ ] **↻ Güncelle progress mobile** `[S]` `[P1]` — `data-tip={pprog}` mobil'de hover yok; progress flash veya inline bar.
-- [ ] **Flash position:fixed** `[S]` `[P1]` — scroll'da flash kaçırılıyor; `position:fixed; top:60px` sticky banner.
-- [ ] **Sparkline empty state min-height** `[S]` `[P1]` — data <2 ise kart küçülüyor; min-height belirle.
+- [x] ~~**↻ Güncelle progress mobile**~~ (2026-04-26) — otomatik güncelleme (30dk interval + visibility API) + Settings'e taşındı; `.mprog` mobil progress strip eklendi.
+- [x] ~~**Flash position:fixed**~~ (2026-04-26) — `position:fixed; top:60px` sticky banner; scroll'da kaybolma giderildi.
+- [x] ~~**Sparkline empty state min-height**~~ (2026-04-26) — data <2 ise kart min-height korunuyor.
 
 ### Grup 3 — a11y / Microcopy (P2)
 
@@ -165,7 +165,7 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 - [ ] **TickerDetailTab metaErr warn-card** `[S]` `[P2]` — küçük `.err` span yerine `.warn-card` tutarlılık.
 - [ ] **Settings label semantik** `[S]` `[P2]` — `<label>` → `<div className="stitle">` standalone heading için.
 - [ ] **Login autocomplete attributes** `[S]` `[P2]` — `email` + `current-password`.
-- [ ] **input type="number" step="any"** `[S]` `[P2]` — ondalık adet (kripto) için.
+- [ ] **input type="number" step="any"** `[S]` `[P1]` — ondalık adet (kripto/altın) için; 0.5 BTC gibi girişler şu an form tarafından reddediliyor (aktif bug).
 - [ ] **HistoryTab "tot" negatif format** `[S]` `[P2]` — `$-1,234` → `-$1,234`.
 - [ ] **Spinner boyut standardı** `[S]` `[P2]` — 12/14/11px karışık; tek standart.
 - [ ] **Tip picker desc font/contrast** `[S]` `[P2]` — 10px var(--text3) AA sınırda.
@@ -182,13 +182,11 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-P0 item'lar + en yüksek günlük kullanım etkisi, gerçek sırayla:
+Sprint 3 hedefi: veri girişi güvenilirliği + TR altın desteği. Gerçek sırayla:
 
-1. **Sağlık Tablosu kapalı modda filter/CTA gizle** `[S][P0]` — Şu an kapalıyken de filter chip + "Eksikleri Çek" görünüyor; kapalı modda sadece üst bar (başlık + rozetler + Detay ▾). Tek akşam.
-2. **Pozisyonları Yeniden Hesapla confirm guard** `[S][P0]` — destructive işlem confirm'siz; kaza riski. Tek akşam.
-3. **HistoryTab satırından openDetail** `[S][P0]` — En doğal navigasyon yolu eksik; tarihçe bakıyorken detaya gidemiyorsun.
-4. **AI parse autofill ConfirmBox pill** `[S][P1]` — Çoklu parse'ta fiyat fallback olduysa kullanıcı bilgisiz; güven açığı. Tek akşam.
-5. **Dashboard KPI 4→3 kart kompakt** `[S][P1]` — Maliyet ve Piyasa Değeri ayrı kart hiyerarşiyi zayıflatıyor; görsel odak için kompakt hibrit.
-6. **Dashboard'dan Varlık Dağılımı pie kaldır + SVG ikonlar** `[M][P1]` — Analiz'de daha güçlü versiyon var; Dashboard Sparkline açılır + emoji→SVG sprint ile birleştirilebilir.
-7. **Dark/Light tema + asset SVG ikonlar** `[M][P1]` — Can onayladı; light tema + emoji kaldırma aynı sprint. UI kalitesi ciddi atlayış.
-8. **Touch tooltip (data-tip tap-to-show)** `[M][P1]` — Mobil kullanımda ~35 yer etkileniyor; KPI + fundamental satırları okunaksız.
+1. **TR altın birimleri (gram/çeyrek/tam/Cumhuriyet/Reşat/Ata)** `[M][P1]` — USD/ons MVP yetersiz; her TR altın işleminde sürtünme. Schema migration + birim picker + spot hesabı. Sprint 3 ana item.
+2. **input step="any" — ondalık adet (kripto/altın) bug fix** `[S][P1]` — 0.5 BTC / 3.75 gram girişi şu an form reject; aktif bug. Tek satır fix, Sprint 3 başı.
+3. **Form input error inline** `[S]` `[P1]` — invalid date/negatif adet submit'e kadar görünmüyor; `aria-invalid` + 11px hata metni. Manuel ekleme kalitesini ciddi artırır.
+4. **Confirm modal backdrop click guard (danger)** `[S]` `[P1]` — `danger:true` modal'da yanlışlıkla backdrop click = işlem gerçekleşiyor; güvenlik. Tek akşam.
+5. **Period buton wrap dar ekran** `[S]` `[P1]` — 320px'de eziliyor; `flex:1 + minWidth:40px`. Mobil daily-driver kırık.
+6. **Periyodik agent denetim turu** `[S]` `[P1]` — 5 agent paralel health check; Sprint 3 sonu için uygun zaman (30+ item birikti).
