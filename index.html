@@ -1743,16 +1743,26 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
     if(NAMES[upper])set({name:NAMES[upper]});
     setFetchP(true);setCurPrice(null);
     try{
+      // Önce date-spesifik dene; hafta sonu / tatil 403 verirse latest close'a düş.
       const r=await edgeCall("fetch-prices",{ticker:upper,mode:"price",date:useDate,asset_type:at});
       const d=await r.json();
-      if(d.result?.price){
-        const p=d.result.price;
-        setCurPrice(p);
-        // Tarihin fiyatını otomatik maliyet olarak doldur
-        set({avgCost:p.toFixed(2)});
-      } else if(d.result?.error||d.error){
-        DEBUG && console.warn(`[fetchPrice ${upper}]`,d.result?.error||d.error);
-        flash_(`${upper}: ${d.result?.error||d.error}`,"err");
+      let price=d.result?.price;
+      if(!price){
+        DEBUG && console.warn(`[fetchPrice ${upper}] date fail`,d.result?.error||d.error);
+        const r2=await edgeCall("fetch-prices",{ticker:upper,mode:"price",asset_type:at});
+        const d2=await r2.json();
+        if(d2.result?.price){
+          price=d2.result.price;
+          flash_(`${upper}: ${fmtDateTR(useDate)} verisi yok, en son kapanış kullanıldı`,"ok");
+        } else {
+          const msg=d2.result?.error||d.result?.error||d.error||"fiyat alınamadı";
+          DEBUG && console.warn(`[fetchPrice ${upper}] no fallback`,msg);
+          flash_(`${upper}: ${msg}`,"err");
+        }
+      }
+      if(price){
+        setCurPrice(price);
+        set({avgCost:price.toFixed(2)});
       }
     }catch(e){
       DEBUG && console.warn(`[fetchPrice ${upper}]`,e);
