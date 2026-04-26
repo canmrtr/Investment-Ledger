@@ -3679,10 +3679,6 @@ function App({session}){
           ))}
         </nav>
         <div className="topbar-right">
-          <div className="cur-seg" data-tip={fxRates?.USDTRY?`1 $ ≈ ₺${fmt(fxRates.USDTRY,2)}`:"FX kuru henüz çekilmedi"}>
-            <button className={displayCur==="USD"?"on":""} onClick={()=>setDisplayCur("USD")} aria-label="USD göster">$</button>
-            <button className={displayCur==="TRY"?"on":""} onClick={()=>setDisplayCur("TRY")} aria-label="TRY göster">₺</button>
-          </div>
           {(busy.p||busy.h)&&(
             <button disabled style={{minWidth:90}}>
               <span className="spin" style={{width:11,height:11,marginRight:5,verticalAlign:"middle"}}/>
@@ -3814,7 +3810,13 @@ function App({session}){
                 <div className="g3">
                   {/* Kart 1: Piyasa Değeri (büyük) + Maliyet (ikincil) */}
                   <div className="card" data-tip="Bugünkü güncel fiyatlarla portföy değeri. Tüm currency'ler displayCur'a convert. Period'dan bağımsız." style={{cursor:"help"}}>
-                    <div className="lbl">Piyasa Değeri</div>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                      <div className="lbl" style={{marginBottom:0}}>Piyasa Değeri</div>
+                      <div className="cur-seg" style={{background:"var(--bg3)"}} data-tip={fxRates?.USDTRY?`1 $ ≈ ₺${fmt(fxRates.USDTRY,2)}`:"FX kuru henüz çekilmedi"}>
+                        <button className={displayCur==="USD"?"on":""} onClick={()=>setDisplayCur("USD")} aria-label="USD göster">$</button>
+                        <button className={displayCur==="TRY"?"on":""} onClick={()=>setDisplayCur("TRY")} aria-label="TRY göster">₺</button>
+                      </div>
+                    </div>
                     <div className="mono" style={{fontSize:16,fontWeight:600}}>{mask(dSym+fmt(tM))}</div>
                     <div style={{marginTop:8,paddingTop:7,borderTop:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
                       <span className="lbl" style={{marginBottom:0}}>Maliyet</span>
@@ -3921,14 +3923,9 @@ function App({session}){
               const totMv = items.reduce((a,p)=>a+(p.mv ?? p.cost),0);
               return(
                 <div key={cfg.type} style={{marginTop:idx===0?0:22,marginBottom:8}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                    <div className="stitle" style={{marginBottom:0,display:"flex",alignItems:"center",gap:6}}>
-                      <span style={{color:"var(--text3)",display:"flex",opacity:.7}}>{cfg.icon&&cfg.icon(14)}</span>
-                      {cfg.label} · {mask(cfg.sym+fmt(totMv,0))}
-                    </div>
-                    <div className="brow">
-                      <button className="pri btn-xs" onClick={()=>setTab("add")}>+ Ekle</button>
-                    </div>
+                  <div className="stitle" style={{marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
+                    <span style={{color:"var(--text3)",display:"flex",opacity:.7}}>{cfg.icon&&cfg.icon(14)}</span>
+                    {cfg.label} · {mask(cfg.sym+fmt(totMv,0))}
                   </div>
                   <div className="tbl-wrap">
                     <table>
