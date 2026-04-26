@@ -117,12 +117,66 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 - [ ] **Loading state tutarlılığı**: bazı yerlerde spinner, bazılarında `"..."`, bazılarında hiçbir şey. `<SkeletonRow>` / `<SkeletonCard>` standart component.
 - [ ] **Confirm modal danger styling**: `confirm_(...)` modal'ında destructive vs non-destructive arasında görsel ayrım minimal. `danger:true` flag → kırmızı bg + ikon önerilir.
 - [ ] **Recent searches**: Search tab her açılışta sıfırdan; LS'de son N (örn. 8) arama hatırlansın, focus'ta öneri olarak çıksın.
-- [ ] **Currency blend (multi-currency net worth)**: Dashboard'da TR + USD + EUR pozisyonların toplamı tek sayıda yok; iki ayrı blok. `fetch-prices` C:USDTRY/EURUSD ile blend edilebilir; "Net Worth (USD)" kartı.
+- [x] ~~**Currency blend (multi-currency net worth)**~~ (2026-04-26) — Topbar `$ ₺` toggle; Frankfurter API; tüm KPI/pie/Analiz convert.
 - [ ] **Border contrast**: `--border rgba(255,255,255,0.06)` dark BG'de bazı kartların kenarı kayboluyor; %10'a bumped olabilir veya inner shadow.
 - [ ] **Sparkline interactivity**: hover'da değer/tarih tooltip'i yok. SVG `<circle>` cursor + dikey kılavuz çizgi ekle.
 - [ ] **FAB context-awareness**: mobil FAB her sekmede aynı (`+ İşlem Ekle`); HistoryTab'tayken aynen, Search'teyken "+ Ticker ara" / Detail'da "+ Ekle (THYAO)" gibi context hint.
 - [ ] **Pie chart segment selection**: legend tıklanabilir değil, slice hover'da yok. Selected slice → dış kenarda 2px outline + ortada toplam label.
 - [ ] **Form input error inline**: invalid date/negative shares submit'e kadar feedback vermiyor; `<input>` `aria-invalid` + altında 11px error text (form validation library gerekmez).
+
+## UI Audit Backlog (2026-04-26 ui-builder full audit, kalan başlıklar)
+
+Quick wins paketinde (commit `04e7870`) 8 fix uygulandı: title→data-tip migration (14 yer), confirm modal autoFocus/Enter koruması, TRY tablosu + Ekle butonu, manuel form yanlış uyarı, list_date fmtDateTR, AddTxInline assetType prop, Settings inline test response + FX kuru durumu satırı, eye aria-pressed + logo aria-label.
+
+Kalan bulgular (severity: HIGH/MED/LOW), sprintlere gruplu:
+
+### Sprint A — Navigation polish (½–1 gün, HIGH öncelik)
+- [ ] **TickerDetailTab "← Geri" → fromTab**: Detay'a Search/HistoryTab'dan gelen kullanıcı dashboard'a düşüyor. `openDetail(ticker, assetType, fromTab)` + `closeDetail` parametreli. (HIGH)
+- [ ] **Detail tab'ında bottom-tabs/topbar nav aktif değil**: Mobile'da hangi sekmedeyim belirsiz; desktop'ta da aktif tab vurgusu yok. Detail'de önceki tab aktif gösterilsin veya bottom-tabs gizlensin. (HIGH)
+- [ ] **FAB context-awareness**: mevcut "+ İşlem Ekle"; Search'te "+ Ticker ara" / Detail'da "+ Ekle (THYAO)" gibi tab-bilinçli. (MED — UX/UI Gaps'ten devralındı)
+
+### Sprint B — Table a11y + currency consistency (½ gün, MED)
+- [ ] **`<th scope="col">`** tüm tablolarda eksik (USD/TRY/EUR + CSV önizleme + History accordion). Screen reader'lar kolon ilişkisini kuramıyor. (MED)
+- [ ] **CSV önizleme `<table aria-label>`** + th scope. (HIGH)
+- [ ] **USD tablosunda `fmtD` hardcoded $**: Tutarlılık için `fmtSign(p.pl,"$")` ile normalize, `fmtD`'yi tek noktadan kullan. (HIGH — tip karışıklığı)
+- [ ] **EUR tablosu sort yok**: USD/TRY tablolarında sort var, EUR statik; en azından Ticker alfabetik. (MED)
+- [ ] **HistoryTab tx satırlarında `openDetail` yok**: Detay'a gitme yolu sadece pozisyon tablosundan. (MED)
+- [ ] **HistoryTab accordion ticker `fontFamily:"monospace"`**: Diğer ticker'lar DM Mono; sistem mono ile farklı render. (MED)
+
+### Sprint C — Form UX bundle (½ gün, MED)
+- [ ] **HistoryTab edit formunda komisyon input yok**: `editForm.commission` state + `saveEdit` field var ama UI yok. Komisyon görünmez güncelleniyor olabilir. (HIGH)
+- [ ] **Pozisyonları Yeniden Hesapla — confirm yok**: Destructive (DELETE+INSERT cascade), `confirm_(...)` ile guard. (MED)
+- [ ] **Confirm modal backdrop click destructive guard**: `danger=true`'da backdrop click iptal sayma; explicit "İptal" butonu zorunlu. (MED)
+- [ ] **AddTab CSV import: skip count bildirim**: Geçersiz satırlar sessizce atlanıyor; `flash_("X işlem alındı, Y satır atlandı")`. (MED)
+- [ ] **AddTab tip picker hover anti-pattern**: `onMouseEnter/Leave` ile inline DOM mutasyon (React anti-pattern). `:hover` CSS veya `useState` ile control. (HIGH)
+- [ ] **AnalysisTab FX yok warn-card eksik**: Dashboard'da var; Analiz'de sessizce 0 ekleniyor. (MED)
+- [ ] **AnalysisTab Komisyon KPI label**: `{displayCur}` yerine `Toplam ({displayCur})` veya `Tüm Komisyon` ile bağlam ver. (MED)
+- [ ] **TickerDetailTab metaErr**: küçük `.err` span yerine `.warn-card` (tutarlılık). (LOW)
+- [ ] **fundLoading "..."**: spin icon ile değiştir. (MED)
+- [ ] **Login error/success → `.flash err/ok`**: Inline style yerine class. (MED)
+
+### Sprint D — Mobile + touch (1 gün, MED)
+- [ ] **Touch device tooltip pattern**: `data-tip` hover-only (~35+ yer); tap-to-show + outside-tap-close. KPI kartları + fundamental satırları + cur-seg en kritik. (MED — UX/UI Gaps'ten devralındı)
+- [ ] **`cur-seg` dokunma hedefi mobile**: ~30px; mobile media query'de padding artır (44px AA). (MED)
+- [ ] **SearchTab autoFocus mobile**: Sekme geçişinde anında klavye açıyor; desktop-only focus + 150ms delay. (MED)
+- [ ] **Period buton wrap dar ekran**: `flex:1 + minWidth:40` 320px'de eziliyor. (MED)
+- [ ] **↻ Güncelle progress mobile**: `data-tip={pprog}` mobil'de hover yok; progress'i flash veya inline bar ile göster. (MED)
+- [ ] **Flash position fixed**: Sayfa scroll'unda flash kaçırılıyor; `position:fixed; top:60px` ile sticky banner. (LOW)
+- [ ] **Sparkline empty state min-height**: data <2 ise kart küçülüyor; min-height belirle. (MED)
+- [ ] **Sparkline interactivity**: hover değer/tarih tooltip'i yok. (LOW — UX/UI Gaps'ten devralındı)
+
+### Sprint E — Microcopy + a11y small (½ gün, LOW–MED)
+- [ ] **Türkçe/İngilizce term sözlüğü**: `period` → `dönem`, mixed `ticker/split/cache/provider` kullanımı; CLAUDE.md'ye glossary ekle ve uygula. (MED)
+- [ ] **Settings `<label>` → `<div className="stitle">`**: Standalone heading için label semantically yanlış. CSS rule güncellemesi gerekir. (MED)
+- [ ] **Login `autocomplete` attributes**: `email` + `current-password` ekle. (LOW)
+- [ ] **`input type="number" step="any"`**: Ondalık adet (kripto) için. (MED)
+- [ ] **HistoryTab "tot" negatif format**: `$-1,234` → `-$1,234` normalize. (LOW)
+- [ ] **Spinner boyut tutarlılığı**: 12/14/11px karışık; tek standart. (LOW)
+- [ ] **Tip picker desc font/contrast**: 10px `var(--text3)` AA sınırda. (LOW)
+- [ ] **AddTab tip değiştir butonu dokunma hedefi**: 24-26px → 44px. (MED)
+- [ ] **SearchTab "50+" sonuç hint**: "Aramayı daraltın" ipucu. (MED)
+- [ ] **SearchTab portföy match=0 empty state**: "Portföyünde eşleşme yok" mini note. (MED)
+- [ ] **Pozisyon tablosu sort/filter** (UX/UI Gaps'ten devralındı): zaten USD+TRY tablolarına eklendi; EUR pending (Sprint B'de listeli).
 
 ## Açık Sorular
 
