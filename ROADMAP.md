@@ -43,6 +43,15 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 ## Görselleştirme
 
 - [x] ~~Pie chart: varlık türlerine göre dağılım~~ (2026-04-24, cost/market toggle'lı)
+- [ ] **Dashboard KPI yeniden tasarım — kompakt 2-kart hibrit** (sonraki sprint)
+  - Şu an 4 ayrı KPI kartı yan yana (Maliyet · Piyasa Değeri · Total Return · XIRR). Bilgi yoğunluğu yüksek, Maliyet ve Piyasa Değeri ayrı kart aldığı için görsel hiyerarşi zayıf.
+  - Hedef: 2 kart hibrit:
+    - **Kart 1 — Portföy Değeri:** ÜSTTE büyük Piyasa Değeri (primary, fontSize 20-22, mono); ALTTA küçük Maliyet (secondary, fontSize 11, "Maliyet: ..." prefix). Tek kart tek bakışta "ne kadar ettim, ne kadar yatırdım" netliği.
+    - **Kart 2 — Total Return (period):** ÜSTTE büyük yüzde (% primary, ok/err renk); ALTTA küçük tutar (`+₺X` veya `+$X`).
+    - **Kart 3 — XIRR:** Mevcut yapı (yıllık % primary).
+  - Toplam 3 kart (4'ten 3'e iniş), KPI kartlarının ağırlığı doğru bilgi hiyerarşisini yansıtır.
+- [ ] **Dashboard'dan Varlık Dağılımı pie chart'ını kaldır** — Şu an Sparkline + Pie yan yana grid'de; Analiz Tab'da daha güçlü versiyon (filter chip type→ticker drill-down) zaten var. Dashboard'da redundant. Sparkline tam genişlikte kalır.
+- [ ] **Bölge Dağılımı bayraklarını kaldır** — Mevcut `REGION_META` label'larında 🇺🇸/🇹🇷 emoji bayraklar var; "US" / "Türkiye" plain text yeterli (renk kodlu pill zaten ayrımı sağlıyor).
 
 ## Navigasyon & Sayfalar
 
@@ -56,6 +65,8 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
   - [ ] Win/Loss: sold-out ticker'lar için live price fetch (şu an cache'te yoksa "noPrice" sayım dışı)
   - [x] ~~**Toplam Komisyon kartı: KPI üstte sabit, breakdown collapsible**~~ (2026-04-26) — KPI rakamı sağda + "Detay ▾" toggle; Broker/Yıl breakdown sadece açıkken render edilir. `commOpen` state, default kapalı.
   - [x] ~~**Portföy Sağlık Tablosu: kapalı özet + collapsible detay**~~ (2026-04-26) — Üst bar: başlık + 3 rozet (🟢/🟡/🔴 aggregate sayım) + "Detay ▾". Filter chip + "Eksikleri Çek" CTA her zaman görünür. Tablo + footnote `healthOpen` ile koşullu, default kapalı.
+  - [ ] **Sağlık Tablosu — filter chip ve "Eksikleri Çek" CTA Detay açılınca gelsin** — Şu an kapalı modda da görünüyorlar; sadece `healthOpen===true` iken render edilsin (kapalı modda sade üst bar: başlık + 3 rozet + Detay ▾).
+  - [ ] **Varlık Dağılımı kartına Maliyet/Piyasa toggle eklensin** — Şu an Dashboard pie chart'ında `distMode` (Maliyet/Piyasa) toggle var; Analiz Varlık Dağılımı'nda yok. AnalysisTab'a aynı toggle'ı ekle (ileri vade Dashboard pie kalkınca tek kalan dağılım grafiği bu olur).
 
 ## Fundamental & Analiz
 
@@ -114,6 +125,13 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 - [x] ~~**Adet kolonu trailing-zero temizliği**~~ — `fmtShares()` helper'a alındı, 7 site güncellendi (2026-04-25)
 - [x] ~~**Fundamental "ticker kapsam dışı" mesajı**~~ (2026-04-25) — Edge function `code:"OUT_OF_PLAN"` döner (FMP 402 + EDGAR fallback de fail olunca); FE turuncu `warn-card` "Ticker FMP free planında yok" + alternatif provider notu ile gösterir.
 - [x] ~~**Asset type seçimi → ekleme akışı**~~ (2026-04-25) — AddTab açılınca 6 kart picker (US/BIST/FUND/CRYPTO/GOLD/FX); seçimden sonra context header "Tip: X · [Tipi değiştir]" + mevcut 4 mode tab. ManuelPosForm `prefillType` prop ile type+currency (BIST→TRY) pre-fill; `key={pickedType}` ile tip değişiminde clean remount. AddTxInline (Detay'dan "+ Ekle") değişmedi — context zaten var. Test: 29/29 PASS (Playwright + Chromium).
+- [ ] **Asset type ikonları: emoji → custom SVG** (gerçek görüntüden) — Şu an `ADD_TYPES` ve `COMMODITY_SYMBOLS`'da emoji kullanılıyor (🥇 altın, 🥈 gümüş, ⚪ platin, 🪙 paladyum, 💛/💸/📊/...). Sorun: emoji platform-bağımlı (iOS/Android/Win renderlar farklı), altın madalya 🥇 gerçek altın gibi durmuyor; gümüş madalya 🥈 gümüş külçe değil; paladyum 🪙 yetersiz. Hedef:
+  - Her asset type için custom inline SVG ikon (gerçek varlık görseline uygun: altın külçe, gümüş bar, platin, kripto sikkesi, hisse senedi grafik vb.)
+  - `ASSET_ICONS` top-level map: `{US_STOCK: <svg>, FUND: <svg>, BIST: <svg>, CRYPTO: <svg>, GOLD: <svg>, FX: <svg>}` — currentColor ile render (dark/light tema uyumu)
+  - `COMMODITY_ICONS` ayrı map: `{XAU: <gold-bar>, XAG: <silver-bar>, XPT: <platinum>, XPD: <palladium>}`
+  - AddTab type picker (`.pick-card`), ManuelPosForm chip listesi, Dashboard `BLOCK_TYPES` (badge yerine), TickerDetailTab header, Bölge dağılımı (eğer eklenirse) hepsi yeni ikon kullansın
+  - Mevcut `IconEye/IconEyeOff/IconPlus/NAV_ICONS` SVG pattern'iyle tutarlı (size prop, viewBox)
+  - Effort: ~1 gün (8 asset type + 4 emtia × tasarım/SVG yazımı; mevcut SVG infra hazır)
 - [ ] **Dark/Light tema desteği** — Şu an tek dark tema (`prefers-color-scheme:light` redesign'da kaldırılmıştı). Yapılacaklar:
   - `:root` color tokenleri light variant (bg/bg2/bg3/bg4, text/text2/text3, border, info/ok/err/warn light kontrast)
   - `data-theme` attribute (`<html data-theme="light|dark|system">`) + CSS scope (`[data-theme="light"] { ... }`)
