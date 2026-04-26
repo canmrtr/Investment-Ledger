@@ -14,7 +14,8 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
   - [ ] BIST için price-cache TRY-aware olsun (şu an `prc[ticker]` raw değer; pos.currency="TRY" ile FE doğru sembolleri seçiyor — sağlam ama TRY/USD fx conversion için hazırlık gerek)
 - [ ] Altın / emtia (gram, ons; TL & USD fiyat)
 - [ ] **Türkiye fonları (TEFAS entegrasyonu)** — borsa-mcp `get_fund_data` aracı destekliyor, hazır kaynak. Sıradaki sprint'te (Portföy Sağlık Tablosu sonrası) ele alınacak.
-- [ ] **Kripto fiyat akışı sağlamlaştırma** — Mevcut fetch-prices `BTC` formatlı ham ticker'da Massive bulamıyor; `X:BTCUSD` zorunlu. Edge function tarafında ticker normalize (CRYPTO asset_type ise `X:${ticker}USD` autoprefix) + frontend manuel girişte symbol picker. Sıradaki sprint.
+- [x] ~~**Kripto fiyat akışı sağlamlaştırma**~~ (2026-04-26) — Edge function `fetch-prices`'a CRYPTO ticker normalize bloğu (BTC/eth/BTC-USD/BTC/USDT → `X:{BASE}USD`); empty/over-length guard (`base.length>10` reject, `split(/[-_/]/)[0]` ile USDT/USDC quote strip). Frontend ManuelPosForm CRYPTO modunda 12 popüler kripto chip picker (BTC/ETH/SOL/BNB/XRP/ADA/DOGE/AVAX/DOT/MATIC/LINK/UNI). Tip değişiminde currency USD default. **Edge function deploy gerekli** — fetch-prices-edge-function.js Supabase Dashboard'da güncellensin.
+- [ ] **FX/GOLD ham ticker normalize** (post-CRYPTO sprint not) — Edge function şu an `asset_type:"FX"`'le `USDTRY` (C: prefix'siz) gelirse 404 dönüyor sessizce. CRYPTO normalize gibi C: autoprefix + length/format guard ekle. Frontend `C:USDTRY` explicit gönderdiği için aktif bug değil ama future-proofing.
 - [ ] Vadeli mevduat (faiz oranı, vade, getiri hesabı)
 
 ## Görselleştirme

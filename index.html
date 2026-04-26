@@ -346,6 +346,23 @@ const enrichParseListWithPrices = async (list) =>
 
 // SEC ticker DB cache — SearchTab tarafından lazy yüklenir, edge function
 // `fetch-fundamentals` mode:"ticker-list" üzerinden proxy ile gelir.
+// Massive desteği olan popüler kriptolar — picker chip listesi.
+// Edge function `asset_type:"CRYPTO"` ile bu sembolleri `X:{SYM}USD` formatına çevirir.
+const CRYPTO_SYMBOLS = [
+  {sym:"BTC",  name:"Bitcoin"},
+  {sym:"ETH",  name:"Ethereum"},
+  {sym:"SOL",  name:"Solana"},
+  {sym:"BNB",  name:"BNB"},
+  {sym:"XRP",  name:"XRP"},
+  {sym:"ADA",  name:"Cardano"},
+  {sym:"DOGE", name:"Dogecoin"},
+  {sym:"AVAX", name:"Avalanche"},
+  {sym:"DOT",  name:"Polkadot"},
+  {sym:"MATIC",name:"Polygon"},
+  {sym:"LINK", name:"Chainlink"},
+  {sym:"UNI",  name:"Uniswap"},
+];
+
 const TICKER_DB_TTL_MS = 86400000;  // 24 saat
 // Memory-only fallback — 10k+ ticker LS quota'yı zorlayabilir; LS write fail olsa bile
 // sayfa session'ı boyunca cache çalışsın diye memory'de de tut.
@@ -1826,6 +1843,18 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
                 {fetchP?<div className="spin" style={{width:12,height:12}}></div>:"↻"}
               </button>
             </div>
+            {form.type==="CRYPTO"&&!editTk&&(
+              <div style={{marginTop:6}}>
+                <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Popüler:</div>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+                  {CRYPTO_SYMBOLS.map(({sym,name})=>(
+                    <button key={sym} type="button" className="btn-xs"
+                      onClick={()=>{set({ticker:sym,name});setCurPrice(null);fetchPrice(sym);}}
+                      style={{fontSize:10,padding:"3px 8px"}}>{sym}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             {curPrice&&<div style={{fontSize:11,color:"var(--ok)",marginTop:4}}>{fmtDateTR(form.date)} fiyatı: {form.currency==="TRY"?"₺":form.currency==="EUR"?"€":"$"}{fmt(curPrice)}</div>}
           </div>
           <div>
@@ -1837,8 +1866,9 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
             <select className="finp" value={form.type} onChange={e=>{
               const newType=e.target.value;
               const upd={type:newType};
-              // BIST → TRY varsayılanı; kullanıcı manuel override edebilir
+              // Currency varsayılanları — kullanıcı manuel override edebilir
               if(newType==="BIST")upd.currency="TRY";
+              else if(newType==="CRYPTO"||newType==="US_STOCK"||newType==="FUND"||newType==="GOLD")upd.currency="USD";
               set(upd);
               // Type değişince eski fiyat geçersiz; ticker varsa yeniden çek
               setCurPrice(null);

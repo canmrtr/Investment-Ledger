@@ -258,6 +258,23 @@ Deno.serve(async (req) => {
     // Routing: BIST için asset_type veya .IS suffix
     const isBist = asset_type === "BIST" || /\.IS$/i.test(ticker);
     const cleanTicker = ticker.replace(/\.IS$/i, "");
+    // CRYPTO normalize: BTC/eth/eth-usd/BTC/USDT → X:{BASE}USD (Massive formatı).
+    // X:/C:/I: ile başlıyorsa sadece uppercase. Quote currency (USDT/USDC/USD) strip:
+    // split(/[-_/]/)[0] base'i alır, geri kalan sembolleri sanitize eder.
+    const isCrypto = asset_type === "CRYPTO";
+    let cryptoTicker = ticker;
+    if (isCrypto) {
+      if (/^[XCI]:/i.test(ticker)) {
+        cryptoTicker = ticker.toUpperCase();
+      } else {
+        const base = ticker.toUpperCase().split(/[-_/]/)[0].replace(/[^A-Z0-9]/g, "");
+        if (!base || base.length > 10) {
+          return json({ ticker, result: { error: "Geçersiz kripto ticker formatı (örn: BTC, ETH)" }, date: "" });
+        }
+        cryptoTicker = `X:${base}USD`;
+      }
+    }
+    const massiveTicker = isCrypto ? cryptoTicker : ticker;
 
     // Provider key check
     if (!isBist && !massiveKey) {
@@ -277,7 +294,7 @@ Deno.serve(async (req) => {
     if (mode === "historical") {
       result = isBist
         ? await yfHistorical(cleanTicker)
-        : await massiveHistorical(ticker, fromDate, toDate, massiveKey);
+        : await massiveHistorical(massiveTicker, fromDate, toDate, massiveKey);
     } else if (mode === "meta") {
       // BIST: Twelve Data /stocks (name) + borsa-mcp get_profile (sektör, market cap, PE...)
       // paralel çek + merge.
@@ -309,12 +326,12 @@ Deno.serve(async (req) => {
         };
         source = prof ? "twelvedata+borsa-mcp" : "twelvedata";
       }
-      else result = await massiveMeta(ticker, massiveKey);
+      else result = await massiveMeta(massiveTicker, massiveKey);
     } else {
       // Default: price mode — BIST için Yahoo
       result = isBist
         ? await yfPrice(cleanTicker, date)
-        : await massivePrice(ticker, priceDate, massiveKey);
+        : await massivePrice(massiveTicker, priceDate, massiveKey);
     }
 
     return json({ ticker, result, date: priceDate, source });
