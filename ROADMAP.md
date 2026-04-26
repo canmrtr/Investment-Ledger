@@ -140,6 +140,7 @@ Fikir havuzu — öncelik henüz belirlenmedi, planlama için biriktiriliyor.
 - ✅ Mikro UX bundle (input maxLength, web row null guard, OUT_OF_PLAN warn-card, useEffect deps)
 - ✅ Kontrast + pie alignment polish
 - ✅ **Analiz Tab** (Sprint 1+2: Varlık filtreli + Bölge + Komisyon + Win/Loss bağımsız)
+- ✅ **FX conversion + global currency toggle** (2026-04-26) — topbar `$ ₺` segmented (`displayCur` LS persist `il_disp_cur`); Frankfurter API (`api.frankfurter.dev/v1/latest`, ECB rates, auth-free, CORS, browser doğrudan); `convert(amt,from,to,fx)` USD↔TRY↔EUR helper; Dashboard KPI'lar (Maliyet/MV/Total Return/XIRR) + Sparkline + Allocation pie + Analiz 3 kartı (Varlık + **Bölge bug fix** + Komisyon tek tutar) tüm pozisyonları display cur'a convert eder; TRY pozisyon tablosu price-aware (eski "fiyat desteği yok" notu kaldırıldı), EUR cost-only kalır; FX yok fallback warn-card.
 
 **Sıradaki milestone önerileri** (impact × effort dengesi):
 
@@ -158,6 +159,4 @@ C — **Yeni asset type** (2-3 gün)
 - Altın (`C:XAUUSD` ile mevcut Massive provider — kolay)
 - TEFAS fonları (borsa-mcp `get_fund_data` mevcut)
 
-D — **FX conversion** (1 gün) — Analiz tab Genel mode'undaki mixed-currency sum'ı düzeltir; Dashboard "Net Worth (USD)" KPI eklenir
-
-E — **Audit backlog** (yarım gün) — CDN SRI pin, meta.description length cap, tickerDb LS quota fallback (bkz. Post-BIST audit)
+D — **Audit backlog** (yarım gün) — CDN SRI pin, meta.description length cap, tickerDb LS quota fallback (bkz. Post-BIST audit)

@@ -33,6 +33,10 @@
     .topbar-nav .tab:hover{color:var(--text);}
     .topbar-nav .tab.on{background:rgba(102,88,255,0.12);color:var(--text);font-weight:500;}
     .topbar-right{display:flex;align-items:center;gap:8px;margin-left:auto;}
+    .cur-seg{display:inline-flex;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:2px;gap:2px;}
+    .cur-seg button{background:transparent;border:none;color:var(--text2);padding:4px 9px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;cursor:pointer;border-radius:6px;line-height:1;transition:background .12s,color .12s;min-width:26px;}
+    .cur-seg button:hover{color:var(--text);}
+    .cur-seg button.on{background:rgba(102,88,255,0.18);color:var(--text);}
     #app-main{flex:1;max-width:920px;margin:0 auto;padding:24px 20px 60px;width:100%;}
     #bottom-tabs{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--bg2);border-top:1px solid var(--border);z-index:100;}
     #bottom-tabs .btab{flex:1;height:100%;background:transparent;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;transition:color .12s;}
@@ -227,6 +231,8 @@ const LS = {
 };
 const fmt  = (n,d=2)=>n==null?"—":n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
 const fmtD = n=>n==null?"—":(n>=0?"+$":"-$")+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+// Currency-aware signed format — fmtD'nin parametrik versiyonu (TRY/EUR tabloları için).
+const fmtSign = (n, sym="$") => n==null?"—":(n>=0?"+":"-")+sym+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtP = n=>n==null?"—":(n>=0?"+":"")+n.toFixed(1)+"%";
 const pc   = n=>n==null?"":n>=0?" ok":" err";
 const today= ()=>new Date().toISOString().split("T")[0];
@@ -244,6 +250,37 @@ const fmtShares = (n, maxDec=4)=>{
   const num=+n;
   if(num%1===0)return String(num);
   return String(+num.toFixed(maxDec));
+};
+// Currency / FX — display currency toggle (USD/TRY) için merkez yardımcılar.
+// fxRates: {USDTRY: 32.5, EURUSD: 1.08} formatında. EUR↔TRY için EUR→USD→TRY chain.
+const FX_TTL_MS = 86400000;  // 24 saat
+const fxCacheGet = () => {
+  const c = LS.get("il_fx", null);
+  if(!c || !c.t) return null;
+  if(Date.now() - c.t > FX_TTL_MS) return c;  // stale ama yine döndür (fallback)
+  return c;
+};
+const fxCacheSet = (rates) => LS.set("il_fx", { rates, t: Date.now() });
+const displaySym = (cur) => cur==="TRY" ? "₺" : cur==="EUR" ? "€" : "$";
+// from/to currency arasında çeviri. Aynıysa as-is. fxRates eksikse null döner (caller fallback).
+const convert = (amount, from, to, fxRates) => {
+  if(amount==null||isNaN(+amount)) return null;
+  const a = +amount;
+  if(from===to) return a;
+  if(!fxRates) return null;
+  const usdtry = +fxRates.USDTRY;
+  const eurusd = +fxRates.EURUSD || 1;  // fallback: EUR ≈ USD (sadece EUR pozisyon yoksa devreye girmez)
+  if(!usdtry || usdtry<=0) return null;
+  // Önce USD'ye normalize, sonra hedefe çevir
+  let usd;
+  if(from==="USD") usd = a;
+  else if(from==="TRY") usd = a / usdtry;
+  else if(from==="EUR") usd = a * eurusd;
+  else return null;
+  if(to==="USD") return usd;
+  if(to==="TRY") return usd * usdtry;
+  if(to==="EUR") return usd / eurusd;
+  return null;
 };
 // "DD/MM/YYYY" → "YYYY-MM-DD"; geçersizse null
 const parseTRDate = (s)=>{
@@ -2302,8 +2339,16 @@ const buildSlicesPath = (sliceArr, CX, CY, R) => {
   });
 };
 
-function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab}){
+function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates}){
   const [filter,setFilter]=useState("all");
+  const dSym = displaySym(displayCur);
+  const cnv = (amt, from) => convert(amt, from, displayCur, fxRates);
+  // Pozisyon ham MV (orijinal currency'de) → display cur'a çevir
+  const mvDisp = (p) => {
+    const raw = (prc[p.ticker] || 0) * p.shares;
+    if (raw <= 0) return 0;
+    return cnv(raw, p.currency || "USD") || 0;
+  };
 
   // Split factor lookup — buy/sell tarihinden sonra split olmuşsa fiyatı düzelt.
   // factorAt(ticker,date) = ratio'ların tarihten sonraki çarpımı.
@@ -2324,11 +2369,12 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab}){
   const filterChips = ["all", ...heldTypes];
 
   // Slice hesabı: filter==="all" → type breakdown; filter spesifik → o tipteki ticker breakdown
+  // Tüm değerler display cur'a convert edilir (mixed currency → tek sembol).
   const slices = (() => {
     if (filter === "all") {
       const byType = {};
       pos.forEach(p => {
-        const mv = (prc[p.ticker] || 0) * p.shares;
+        const mv = mvDisp(p);
         if (mv > 0) byType[p.type] = (byType[p.type] || 0) + mv;
       });
       const total = Object.values(byType).reduce((a,v)=>a+v,0);
@@ -2339,29 +2385,27 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab}){
       return {arr, total};
     } else {
       const filtered = pos.filter(p => p.type === filter);
-      const arr = filtered.map((p,i) => {
-        const mv = (prc[p.ticker] || 0) * p.shares;
-        return {key:p.ticker, label:p.ticker, value:mv, color:TICKER_PIE_COLORS[i % TICKER_PIE_COLORS.length]};
-      }).filter(s => s.value > 0).sort((a,b)=>b.value-a.value);
+      const arr = filtered.map((p,i) => ({
+        key:p.ticker, label:p.ticker, value:mvDisp(p), color:TICKER_PIE_COLORS[i % TICKER_PIE_COLORS.length]
+      })).filter(s => s.value > 0).sort((a,b)=>b.value-a.value);
       const total = arr.reduce((a,s)=>a+s.value,0);
       arr.forEach(s => s.frac = total > 0 ? s.value/total : 0);
       return {arr, total};
     }
   })();
 
-  // Currency symbol — type-spesifik filter'da o tipin doğal currency'si.
-  // Genel mode mixed (USD/TRY/EUR) → $ (Dashboard pie ile tutarlı, ROADMAP'te fx conversion açık).
-  const sym = filter === "BIST" ? "₺" : "$";
+  // Tüm dağılım kartları display currency sembolünde gösterir
+  const sym = dSym;
 
   // SVG path generation
   const slicesPath = buildSlicesPath(slices.arr, 60, 60, 50);
 
-  // Region slices — type→region mapping ile tüm pos'u grupla. Currency mixed.
+  // Region slices — type→region mapping. Tüm currency'ler display cur'a convert.
   const regionSlices = (() => {
     const byRegion = {};
     pos.forEach(p => {
       const region = REGION_OF[p.type] || "fx";
-      const mv = (prc[p.ticker] || 0) * p.shares;
+      const mv = mvDisp(p);
       if (mv > 0) byRegion[region] = (byRegion[region] || 0) + mv;
     });
     const total = Object.values(byRegion).reduce((a,v)=>a+v,0);
@@ -2373,30 +2417,28 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab}){
   })();
   const regionPath = buildSlicesPath(regionSlices.arr, 60, 60, 50);
 
-  // Komisyon — currency başına toplam, broker × currency, year × currency
+  // Komisyon — tüm currency'ler display cur'a convert; KPI/broker/year tek tutar.
   const commData = (() => {
-    const byCurrency = {};
-    const byBroker = {};   // {broker: {cur: amount}}
-    const byYear = {};     // {year: {cur: amount}}
+    let total = 0;
+    const byBroker = {};   // {broker: amount}
+    const byYear = {};     // {year: amount}
     txs.forEach(t => {
-      const c = +t.commission || 0;
-      if (c <= 0) return;
+      const raw = +t.commission || 0;
+      if (raw <= 0) return;
       const cur = t.currency || "USD";
+      const c = cnv(raw, cur);
+      if (c == null) return;  // FX yok → atla
       const broker = (t.broker||"Bilinmiyor").trim() || "Bilinmiyor";
       const year = (t.date||"").slice(0,4);
-      byCurrency[cur] = (byCurrency[cur]||0) + c;
-      (byBroker[broker] = byBroker[broker]||{})[cur] = (byBroker[broker][cur]||0) + c;
-      if (year) (byYear[year] = byYear[year]||{})[cur] = (byYear[year][cur]||0) + c;
+      total += c;
+      byBroker[broker] = (byBroker[broker]||0) + c;
+      if (year) byYear[year] = (byYear[year]||0) + c;
     });
-    // Broker list sorted by USD-equivalent total (basit yaklaşım: tüm currency'leri toplayıp sırala)
-    const brokerList = Object.entries(byBroker).map(([broker,curs]) => ({
-      broker, byCur: curs, sum: Object.values(curs).reduce((a,v)=>a+v,0)
-    })).sort((a,b)=>b.sum-a.sum);
-    // Year list sorted ascending
-    const yearList = Object.entries(byYear).map(([year,curs]) => ({
-      year, byCur: curs, sum: Object.values(curs).reduce((a,v)=>a+v,0)
-    })).sort((a,b)=>a.year.localeCompare(b.year));
-    return {byCurrency, brokerList, yearList};
+    const brokerList = Object.entries(byBroker).map(([broker,sum]) => ({broker, sum}))
+      .sort((a,b)=>b.sum-a.sum);
+    const yearList = Object.entries(byYear).map(([year,sum]) => ({year, sum}))
+      .sort((a,b)=>a.year.localeCompare(b.year));
+    return {total, brokerList, yearList};
   })();
 
   // Win/Loss — BUY ve SELL bağımsız, split-adjusted (NVDA gibi pre-split fiyatlar)
@@ -2497,14 +2539,14 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab}){
                 <div key={s.key} className="pie-row">
                   <span className="pie-sw" style={{background:s.color}}></span>
                   <span style={{flex:1,minWidth:0}}>{s.label}</span>
-                  <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask("$"+fmt(s.value,0))}</span>
+                  <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(s.value,0))}</span>
                   <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
                 </div>
               ))}
               <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
                 <span className="pie-sw" style={{visibility:"hidden"}}></span>
                 <span style={{flex:1,minWidth:0}}>Toplam</span>
-                <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask("$"+fmt(regionSlices.total,0))}</span>
+                <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(regionSlices.total,0))}</span>
                 <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
               </div>
             </div>
@@ -2515,27 +2557,23 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab}){
         </div>
       </div>
 
-      {/* Toplam Komisyon — currency başına KPI + broker + year breakdown */}
+      {/* Toplam Komisyon — display cur'a convert edilmiş tek tutar */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
         <div className="stitle">Toplam Komisyon</div>
-        {Object.keys(commData.byCurrency).length === 0 ? (
+        {commData.total === 0 ? (
           <div className="empty" style={{padding:"40px 0"}}>Henüz komisyon kaydı yok</div>
         ) : (
           <div>
-            {/* KPI: currency başına büyük sayı */}
-            <div style={{display:"flex",flexWrap:"wrap",gap:18,marginBottom:18}}>
-              {Object.entries(commData.byCurrency).map(([cur,total]) => (
-                <div key={cur}>
-                  <div className="lbl" style={{marginBottom:2}}>{cur}</div>
-                  <div className="mono" style={{fontSize:20,fontWeight:600}}>{mask(sym_(cur)+fmt(total,2))}</div>
-                </div>
-              ))}
+            {/* KPI: tek büyük sayı */}
+            <div style={{marginBottom:18}}>
+              <div className="lbl" style={{marginBottom:2}}>{displayCur}</div>
+              <div className="mono" style={{fontSize:20,fontWeight:600}}>{mask(dSym+fmt(commData.total,2))}</div>
             </div>
 
             {/* Broker breakdown */}
             <div className="stitle" style={{marginBottom:8}}>Broker Bazında</div>
             <div style={{marginBottom:18}}>
-              {commData.brokerList.map(({broker,byCur,sum}) => {
+              {commData.brokerList.map(({broker,sum}) => {
                 const pct = (sum / commData.brokerList[0].sum) * 100;
                 return (
                   <div key={broker} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0"}}>
@@ -2544,7 +2582,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab}){
                       <div style={{width:pct+"%",height:"100%",background:"var(--info)"}}/>
                     </div>
                     <span className="mono" style={{flex:"0 0 auto",textAlign:"right",fontSize:11,color:"var(--text2)"}}>
-                      {Object.entries(byCur).map(([cur,v]) => mask(sym_(cur)+fmt(v,2))).join(" + ")}
+                      {mask(dSym+fmt(sum,2))}
                     </span>
                   </div>
                 );
@@ -2556,7 +2594,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab}){
             <div>
               {(() => {
                 const maxYearSum = Math.max(...commData.yearList.map(y=>y.sum));
-                return commData.yearList.map(({year,byCur,sum}) => {
+                return commData.yearList.map(({year,sum}) => {
                   const pct = (sum / maxYearSum) * 100;
                   return (
                     <div key={year} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0"}}>
@@ -2565,7 +2603,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab}){
                         <div style={{width:pct+"%",height:"100%",background:"var(--info)",opacity:.6}}/>
                       </div>
                       <span className="mono" style={{flex:"0 0 auto",textAlign:"right",fontSize:11,color:"var(--text2)"}}>
-                        {Object.entries(byCur).map(([cur,v]) => mask(sym_(cur)+fmt(v,2))).join(" + ")}
+                        {mask(dSym+fmt(sum,2))}
                       </span>
                     </div>
                   );
@@ -2654,7 +2692,11 @@ function App({session}){
   const [pdate,setPdate]=useState(()=>{const p=LS.get("il_prc",null);return p?p.d:"—";});
   const [hist,setHist_]=useState(()=>LS.get("il_hist",{}));
   const [hide,setHide_]=useState(()=>LS.get("il_hide",false));
+  const [displayCur,setDisplayCur_]=useState(()=>LS.get("il_disp_cur","USD"));
+  const [fxRates,setFxRates]=useState(()=>{const c=fxCacheGet();return c?c.rates:null;});
+  const [fxAt,setFxAt]=useState(()=>{const c=fxCacheGet();return c?c.t:null;});
   const [sort,setSort]=useState({by:"mv",dir:"desc"});
+  const [sortTry,setSortTry]=useState({by:"mv",dir:"desc"});
   const [distMode,setDistMode]=useState("mv"); // "cost" | "mv" — pie chart mode
   const [busy,setBusy]=useState({p:false,h:false,d:false});
   const [pprog,setPprog]=useState("");
@@ -2663,6 +2705,29 @@ function App({session}){
   const savePrc=(p,d)=>{setPrc_(p);setPdate(d);LS.set("il_prc",{p,d});};
   const saveHist=h=>{setHist_(h);LS.set("il_hist",h);};
   const saveHide=v=>{setHide_(v);LS.set("il_hide",v);};
+  const setDisplayCur=v=>{setDisplayCur_(v);LS.set("il_disp_cur",v);};
+  // FX rate fetch — Frankfurter API (ECB resmi rates, auth-free, CORS-friendly).
+  // Browser'dan doğrudan çağrılır; edge function gerekmez. Hafta içi günlük güncellenir.
+  // Mount'ta + ↻ Güncelle ile tetiklenir; LS cache 24h TTL, fail'de last-known kalır.
+  const fetchFxRates=async()=>{
+    const needEur = pos.some(p=>p.currency==="EUR") || txs.some(t=>t.currency==="EUR");
+    const symbols = needEur ? "TRY,EUR" : "TRY";
+    try{
+      const r = await fetch(`https://api.frankfurter.dev/v1/latest?from=USD&to=${symbols}`);
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      const d = await r.json();
+      if(!d?.rates) throw new Error("rates field yok");
+      const next = {...(fxRates||{})};
+      if(d.rates.TRY) next.USDTRY = +d.rates.TRY;
+      if(d.rates.EUR) next.EURUSD = 1 / +d.rates.EUR;  // Frankfurter USD→EUR döner; convert helper EUR→USD bekler
+      setFxRates(next);
+      const t = Date.now();
+      setFxAt(t);
+      fxCacheSet(next);
+    }catch(e){
+      DEBUG && console.warn("[fetchFx]",e);
+    }
+  };
   const flash_=(msg,t="ok")=>{setFlash({msg,t});setTimeout(()=>setFlash(null),CFG.FLASH_MS);};
   const mask=v=>hide?<span className="mask">••••</span>:v;
 
@@ -2722,6 +2787,13 @@ function App({session}){
     setBusy(b=>({...b,d:false}));
   };
   useEffect(()=>{loadData();},[]);
+  // FX: mount + pos/txs değişince EUR ihtiyacı oluşursa tetikle. Cache 24h fresh ise atla.
+  useEffect(()=>{
+    const fresh = fxAt && (Date.now() - fxAt) < FX_TTL_MS;
+    const needEur = pos.some(p=>p.currency==="EUR") || txs.some(t=>t.currency==="EUR");
+    const missingEur = needEur && !(fxRates && fxRates.EURUSD);
+    if(!fresh || missingEur) fetchFxRates();
+  },[pos.length, txs.length]);
 
   // pos yüklendikten sonra cache'te olmayan ticker'lar için arka planda otomatik fetchHist.
   // USD (Massive) + BIST (Twelve Data) — provider erişimi olan her tür dahil.
@@ -2736,37 +2808,62 @@ function App({session}){
   },[pos]);
 
   // Derived
-  const usd=pos.filter(p=>p.currency==="USD").map(p=>{
+  // Per-position raw mantık (her currency kendi sembolüyle render edilen tablolar için)
+  const wrapPos=(p)=>{
     const price=prc[p.ticker],cost=p.shares*p.avgCost;
     const mv=price!=null?p.shares*price:null,pl=mv!=null?mv-cost:null;
     const h=hist[p.ticker]||null;
     return{...p,price,cost,mv,pl,plPct:(pl!=null&&cost>0)?(pl/cost)*100:null,d1:h?.d1??null,w1:h?.w1??null,m1:h?.m1??null,y1:h?.y1??null};
+  };
+  const usd=pos.filter(p=>p.currency==="USD").map(wrapPos);
+  const try_=pos.filter(p=>p.currency==="TRY").map(wrapPos);
+  const eur=pos.filter(p=>p.currency==="EUR").map(p=>({...p,cost:p.shares*p.avgCost}));
+  const dSym=displaySym(displayCur);
+  // FX missing: convert null dönerse pozisyon hesap dışı kalır (sayım için tut)
+  const fxOk=!!(fxRates && fxRates.USDTRY);
+  const cnv=(amt,from)=>convert(amt,from,displayCur,fxRates);
+  // Tüm pozisyonların display cur'a normalize edilmiş hali — KPI/pie/sparkline için
+  const allDisp=pos.map(p=>{
+    const cur=p.currency||"USD";
+    const price=prc[p.ticker];
+    const rawCost=p.shares*p.avgCost;
+    const rawMv=price!=null?p.shares*price:null;
+    const cost=cnv(rawCost,cur);
+    const mv=rawMv!=null?cnv(rawMv,cur):null;
+    const pl=(mv!=null&&cost!=null)?mv-cost:null;
+    return{...p,cost,mv,pl,plPct:(pl!=null&&cost>0)?(pl/cost)*100:null};
   });
-  const tC=usd.reduce((a,p)=>a+p.cost,0);
-  const tM=usd.reduce((a,p)=>a+(p.mv??p.cost),0);
+  const skipped=allDisp.filter(p=>p.cost==null).length;  // FX yok → kaç pozisyon dışlandı
+  const tC=allDisp.reduce((a,p)=>a+(p.cost||0),0);
+  const tM=allDisp.reduce((a,p)=>a+(p.mv ?? p.cost ?? 0),0);
   const tP=tM-tC,tPct=tC>0?(tP/tC)*100:null;
-  // Total Return: realize + unrealize + komisyonlar dahil, cash-flow tabanlı.
-  // Yatırım = BUY total + commission; Geri dönüş = SELL total - commission.
-  // Sonuç = MV + toplam SELL geliri - toplam BUY gideri.
-  const usdTxs=txs.filter(t=>(t.currency||"USD")==="USD");
-  const totalInvested=usdTxs.filter(t=>t.way==="BUY").reduce((a,t)=>a+(+t.total+(+t.commission||0)),0);
-  const totalReceived=usdTxs.filter(t=>t.way==="SELL").reduce((a,t)=>a+(+t.total-(+t.commission||0)),0);
+  // Total Return: tüm tx'ler display cur'a convert edilip hesaplanır.
+  const txsDisp=txs.map(t=>{
+    const cur=t.currency||"USD";
+    return{...t,total:cnv(+t.total||0,cur)??0,commission:cnv(+t.commission||0,cur)??0};
+  });
+  const totalInvested=txsDisp.filter(t=>t.way==="BUY").reduce((a,t)=>a+(+t.total+(+t.commission||0)),0);
+  const totalReceived=txsDisp.filter(t=>t.way==="SELL").reduce((a,t)=>a+(+t.total-(+t.commission||0)),0);
   const totalReturn=tM+totalReceived-totalInvested;
   const totalReturnPct=totalInvested>0?(totalReturn/totalInvested)*100:null;
   // XIRR — yıllık % (ondalık olarak döner: 0.23 → %23)
-  const annualRate=xirr(buildCashflows(usdTxs,tM));
+  const annualRate=xirr(buildCashflows(txsDisp,tM));
   // Varlık türü başına iki dağılım: cost ve market value (pie chart toggle için)
   const byTCost={},byTMV={};
-  usd.forEach(p=>{
-    byTCost[p.type]=(byTCost[p.type]||0)+p.cost;
-    byTMV[p.type]=(byTMV[p.type]||0)+(p.mv??p.cost);
+  allDisp.forEach(p=>{
+    byTCost[p.type]=(byTCost[p.type]||0)+(p.cost||0);
+    byTMV[p.type]=(byTMV[p.type]||0)+(p.mv ?? p.cost ?? 0);
   });
   const byT=distMode==="cost"?byTCost:byTMV;
   const pPerf=k=>{const v=usd.filter(p=>p[k]!=null&&p.mv!=null);if(!v.length)return null;const s=v.reduce((a,p)=>a+p.mv,0);return v.reduce((a,p)=>a+p[k]*(p.mv/s),0);};
   const hasH=Object.keys(hist).length>0;
-  const sorted=[...usd].sort((a,b)=>{const va=a[sort.by]??0,vb=b[sort.by]??0;return sort.dir==="asc"?va-vb:vb-va;});
+  const sortPos=(arr,st)=>[...arr].sort((a,b)=>{const va=a[st.by]??0,vb=b[st.by]??0;return st.dir==="asc"?va-vb:vb-va;});
+  const sorted=sortPos(usd,sort);
+  const sortedTry=sortPos(try_,sortTry);
   const tsort=k=>setSort(s=>({by:k,dir:s.by===k&&s.dir==="asc"?"desc":"asc"}));
+  const tsortTry=k=>setSortTry(s=>({by:k,dir:s.by===k&&s.dir==="asc"?"desc":"asc"}));
   const sa=k=>sort.by===k?(sort.dir==="asc"?" ↑":" ↓"):"";
+  const saTry=k=>sortTry.by===k?(sortTry.dir==="asc"?" ↑":" ↓"):"";
   const top4=fn=>[...usd].filter(p=>p.plPct!=null).sort(fn).slice(0,4);
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -2788,6 +2885,8 @@ function App({session}){
       if(i<fetchable.length-1)await sleep(CFG.RATE_LIMIT_MS);
     }
     savePrc(np,new Date(Date.now()-86400000).toISOString().split("T")[0]);
+    // FX rate refresh — display currency conversion için güncel kur
+    fetchFxRates();
     setBusy(b=>({...b,p:false}));setPprog("");
     flash_(`${cnt}/${fetchable.length} fiyat güncellendi`+(failed.length?` · başarısız: ${failed.join(", ")}`:""),failed.length?"err":"ok");
   };
@@ -2860,6 +2959,10 @@ function App({session}){
           ))}
         </nav>
         <div className="topbar-right">
+          <div className="cur-seg" data-tip={fxRates?.USDTRY?`1 $ ≈ ₺${fmt(fxRates.USDTRY,2)}`:"FX kuru henüz çekilmedi"}>
+            <button className={displayCur==="USD"?"on":""} onClick={()=>setDisplayCur("USD")} aria-label="USD göster">$</button>
+            <button className={displayCur==="TRY"?"on":""} onClick={()=>setDisplayCur("TRY")} aria-label="TRY göster">₺</button>
+          </div>
           <button onClick={fetchPrices} disabled={busy.p||busy.h} data-tip={busy.p||busy.h?pprog:"Güncel fiyatları çek"}>{busy.p||busy.h?<span className="spin" style={{width:11,height:11,marginRight:5,verticalAlign:"middle"}}></span>:"↻ "}Güncelle</button>
           <button className={"eye-btn"+(hide?" on":"")} onClick={()=>saveHide(!hide)}>{hide?<IconEyeOff/>:<IconEye/>}</button>
           <button className="pri btn-add-primary" onClick={()=>setTab("add")}>+ İşlem Ekle</button>
@@ -2900,7 +3003,7 @@ function App({session}){
         };
         const sharesAt=(ticker,dateStr)=>{
           let s=0;
-          for(const t of usdTxs){
+          for(const t of txs){
             if(t.ticker!==ticker||t.date>dateStr)continue;
             const f=factorAt(t.ticker,t.date);
             if(t.way==="BUY")s+=+t.shares*f;
@@ -2910,23 +3013,27 @@ function App({session}){
         };
 
         // Period-specific Total Return + XIRR. MAX kullanıldığında App-level değerlere düşer.
+        // Tüm currency'ler display cur'a convert edilerek birleştirilir.
         const computePeriod=()=>{
           if(sel.key==="max"){
             return{tr:totalReturn,trPct:totalReturnPct,xirrRate:annualRate,startMV:null};
           }
           if(!hasH||sel.priceKey==null)return null;
           const startDate=new Date(Date.now()-sel.days*86400000).toISOString().split("T")[0];
-          // Period başı portföy değeri — yaklaşık: bugün aktif tickerlar üzerinden.
+          // Period başı portföy değeri — bugün aktif tickerlar üzerinden, display cur.
           let startMV=0;
-          for(const p of usd){
+          for(const p of allDisp){
             const sh=sharesAt(p.ticker,startDate);
             if(sh<=0)continue;
             const pr=hist[p.ticker]?.[sel.priceKey];
             if(pr==null)continue;
-            startMV+=sh*pr;
+            const raw=sh*pr;
+            const conv=cnv(raw,p.currency||"USD");
+            if(conv==null)continue;
+            startMV+=conv;
           }
           if(startMV<=0)return null;
-          const periodTxs=usdTxs.filter(t=>t.date>startDate);
+          const periodTxs=txsDisp.filter(t=>t.date>startDate);
           const buys=periodTxs.filter(t=>t.way==="BUY").reduce((a,t)=>a+(+t.total+(+t.commission||0)),0);
           const sells=periodTxs.filter(t=>t.way==="SELL").reduce((a,t)=>a+(+t.total-(+t.commission||0)),0);
           const tr=(tM+sells)-(startMV+buys);
@@ -2946,7 +3053,7 @@ function App({session}){
         return(
           <div>
             {/* Fiyat yok uyarısı */}
-            {usd.length>0 && Object.keys(prc).length===0 && !busy.p && (
+            {pos.length>0 && Object.keys(prc).length===0 && !busy.p && (
               <div className="warn-card">
                 <div>
                   <div className="wc-ttl">Fiyatlar çekilmedi</div>
@@ -2955,20 +3062,31 @@ function App({session}){
                 <button className="pri" onClick={fetchPrices}>Şimdi çek</button>
               </div>
             )}
+            {/* FX kuru yoksa uyarı — TRY/EUR pozisyonları display cur'a convert edilemiyor */}
+            {!fxOk && (try_.length>0||eur.length>0) && (
+              <div className="warn-card">
+                <div>
+                  <div className="wc-ttl">FX kuru yok</div>
+                  <div className="wc-sub">{skipped} pozisyon ({displayCur==="USD"?"₺/€":"$/€"}) toplama dahil edilemiyor. ↻ Güncelle ile çek.</div>
+                </div>
+                <button className="pri" onClick={fetchFxRates}>Şimdi çek</button>
+              </div>
+            )}
             {/* Summary cards. Maliyet/MV period-bağımsız; TR period'a göre.
-                XIRR sadece ≥1Y periyotlarda anlamlı — kısa periyotta "—" + hint. */}
+                XIRR sadece ≥1Y periyotlarda anlamlı — kısa periyotta "—" + hint.
+                Tüm değerler displayCur ($ veya ₺) — TRY/EUR pozisyonlar fxRates ile convert. */}
             {(()=>{
               const longPeriod=sel.key==="max"||sel.key==="y1";
               const cards=[
-                {l:"Maliyet",main:mask("$"+fmt(tC)),
-                 tip:"Mevcut pozisyonların ortalama maliyet bazlı toplamı (Σ shares × avg_cost). Period'dan bağımsız."},
-                {l:"Piyasa Değeri",main:mask("$"+fmt(tM)),
-                 tip:"Bugünkü güncel fiyatlarla portföy değeri (Σ shares × current_price). Period'dan bağımsız."},
+                {l:"Maliyet",main:mask(dSym+fmt(tC)),
+                 tip:"Mevcut pozisyonların ortalama maliyet bazlı toplamı (Σ shares × avg_cost). Tüm currency'ler displayCur'a convert edilir. Period'dan bağımsız."},
+                {l:"Piyasa Değeri",main:mask(dSym+fmt(tM)),
+                 tip:"Bugünkü güncel fiyatlarla portföy değeri. Tüm currency'ler displayCur'a convert. Period'dan bağımsız."},
                 {l:"Total Return ("+sel.lbl+")",
-                 main:pInfo&&pInfo.trPct!=null?mask(fmtD(pInfo.tr)):"—",
+                 main:pInfo&&pInfo.trPct!=null?mask((pInfo.tr>=0?"+":"-")+dSym+fmt(Math.abs(pInfo.tr),2)):"—",
                  sub:pInfo&&pInfo.trPct!=null?fmtP(pInfo.trPct):null,
                  mainClass:pInfo?pc(pInfo.tr):"",subClass:pInfo?pc(pInfo.trPct):"",
-                 tip:"Period boyunca toplam getiri: (Bugün MV + Period Satışları) − (Period Başı MV + Period Alımları). Realize + unrealize, komisyonlar dahil."},
+                 tip:"Period boyunca toplam getiri: (Bugün MV + Period Satışları) − (Period Başı MV + Period Alımları). Tüm currency'ler displayCur'a convert. Realize + unrealize, komisyonlar dahil."},
                 {l:"Yıllık (XIRR)",
                  main:longPeriod&&pInfo&&pInfo.xirrRate!=null?fmtP(pInfo.xirrRate*100):"—",
                  mainClass:longPeriod&&pInfo&&pInfo.xirrRate!=null?pc(pInfo.xirrRate):"",
@@ -2992,7 +3110,8 @@ function App({session}){
             {/* Period selector */}
             <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
               {PERIODS.map(p=>{
-                const available=p.key==="max"||(hasH&&hist[usd[0]?.ticker]?.[p.priceKey]!=null);
+                const refTk=(usd[0]||try_[0])?.ticker;
+                const available=p.key==="max"||(hasH&&refTk&&hist[refTk]?.[p.priceKey]!=null);
                 return(
                   <button key={p.key}
                     onClick={()=>setPeriod(p.key)}
@@ -3032,9 +3151,15 @@ function App({session}){
               ];
               const data=CHART.map(({lbl,priceKey})=>{
                 if(priceKey===null)return{lbl,value:tM};
-                const valid=usd.filter(p=>p.mv!=null&&hist[p.ticker]?.[priceKey]!=null);
+                // Tüm pozisyonlar — geçmiş fiyat * shares, currency'sine göre display cur'a convert
+                const valid=allDisp.filter(p=>p.mv!=null&&hist[p.ticker]?.[priceKey]!=null);
                 if(!valid.length)return null;
-                return{lbl,value:valid.reduce((a,p)=>a+p.shares*hist[p.ticker][priceKey],0)};
+                const value=valid.reduce((a,p)=>{
+                  const raw=p.shares*hist[p.ticker][priceKey];
+                  const conv=cnv(raw,p.currency||"USD");
+                  return a+(conv||0);
+                },0);
+                return{lbl,value};
               }).filter(Boolean);
               if(data.length<2)return null;
               return(
@@ -3089,7 +3214,7 @@ function App({session}){
                         <div key={s.type} className="pie-row">
                           <span className="pie-sw" style={{background:TYPE_COLORS[s.type]||"#666"}}></span>
                           <span style={{flex:1,minWidth:0}}>{TL[s.type]||s.type}</span>
-                          <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask("$"+fmt(s.value,0))}</span>
+                          <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(s.value,0))}</span>
                           <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
                         </div>
                       ))}
@@ -3097,7 +3222,7 @@ function App({session}){
                       <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
                         <span className="pie-sw" style={{visibility:"hidden"}}></span>
                         <span style={{flex:1,minWidth:0}}>Toplam</span>
-                        <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask("$"+fmt(total,0))}</span>
+                        <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(total,0))}</span>
                         <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
                       </div>
                     </div>
@@ -3107,64 +3232,117 @@ function App({session}){
             })()}
             </div>
 
-            {/* Pozisyonlar listesi */}
-            <div style={{marginBottom:8}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <div className="stitle">Pozisyonlar</div>
-                <div className="brow">
-                  <button className="pri btn-xs" onClick={()=>setTab("add")}>+ Ekle</button>
-                  <button className="btn-xs" onClick={loadData} disabled={busy.d}>{busy.d?"...":"Yenile"}</button>
+            {/* Pozisyon tabloları — currency başına ayrı blok.
+                Her tablo kendi currency'sinde ham değerlerle render olur.
+                Üst KPI'lar tüm pozisyonları display cur'a convert ederek toplar. */}
+            {usd.length>0 && (()=>{
+              const totMv=usd.reduce((a,p)=>a+(p.mv ?? p.cost),0);
+              return(
+              <div style={{marginBottom:8}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <div className="stitle">USD Pozisyonları · {mask("$"+fmt(totMv,0))}</div>
+                  <div className="brow">
+                    <button className="pri btn-xs" onClick={()=>setTab("add")}>+ Ekle</button>
+                    <button className="btn-xs" onClick={loadData} disabled={busy.d}>{busy.d?"...":"Yenile"}</button>
+                  </div>
+                </div>
+                <div className="tbl-wrap">
+                  <table>
+                    <thead><tr>
+                      <th className="l" onClick={()=>tsort("ticker")}>Ticker{sa("ticker")}</th>
+                      {!hide&&<th className="r" onClick={()=>tsort("shares")}>Adet{sa("shares")}</th>}
+                      {!hide&&<th className="r" onClick={()=>tsort("avgCost")}>Maliyet{sa("avgCost")}</th>}
+                      {!hide&&<th className="r" onClick={()=>tsort("price")}>Fiyat{sa("price")}</th>}
+                      {!hide&&<th className="r" onClick={()=>tsort("mv")}>Değer{sa("mv")}</th>}
+                      {!hide&&<th className="r" onClick={()=>tsort("pl")} title="Pozisyon başlangıcından bugüne unrealized kâr/zarar (Değer − Maliyet)">P&L${sa("pl")}</th>}
+                      <th className="r" onClick={()=>tsort("plPct")} title="(Değer − Maliyet) / Maliyet × 100 — pozisyonun toplam unrealized getirisi">P&L%{sa("plPct")}</th>
+                      {hasH&&<th className="r" onClick={()=>tsort("d1")} title="Ticker fiyatının son 1 gündeki yüzde değişimi (senin alım tarihinden bağımsız)">1G{sa("d1")}</th>}
+                      {hasH&&<th className="r" onClick={()=>tsort("w1")} title="Ticker fiyatının son 1 haftadaki değişimi">1H{sa("w1")}</th>}
+                      {hasH&&<th className="r" onClick={()=>tsort("m1")} title="Ticker fiyatının son 1 aydaki değişimi">1A{sa("m1")}</th>}
+                      {hasH&&<th className="r" onClick={()=>tsort("y1")} title="Ticker fiyatının son 1 yıldaki değişimi">1Y{sa("y1")}</th>}
+                    </tr></thead>
+                    <tbody>
+                      {sorted.map(p=>(
+                        <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)} title={`${p.ticker} detayına git`}>
+                          <td className="l"><div className="tcell"><span className="tsym">{p.ticker}{p.type==="FUND"&&<span className="badge etf">ETF</span>}{p.type==="CRYPTO"&&<span className="badge cry">₿</span>}</span><span className="tname">{p.name}</span></div></td>
+                          {!hide&&<td className="r">{fmtShares(p.shares)}</td>}
+                          {!hide&&<td className="r">{mask("$"+fmt(p.avgCost))}</td>}
+                          {!hide&&<td className="r">{p.price?mask("$"+fmt(p.price)):"—"}</td>}
+                          {!hide&&<td className="r">{p.mv?mask("$"+fmt(p.mv,0)):"—"}</td>}
+                          {!hide&&<td className={"r"+pc(p.pl)}>{fmtD(p.pl)}</td>}
+                          <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
+                          {hasH&&<td className={"r"+pc(p.d1)}>{fmtP(p.d1)}</td>}
+                          {hasH&&<td className={"r"+pc(p.w1)}>{fmtP(p.w1)}</td>}
+                          {hasH&&<td className={"r"+pc(p.m1)}>{fmtP(p.m1)}</td>}
+                          {hasH&&<td className={"r"+pc(p.y1)}>{fmtP(p.y1)}</td>}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              <div className="tbl-wrap">
-                <table>
-                  <thead><tr>
-                    <th className="l" onClick={()=>tsort("ticker")}>Ticker{sa("ticker")}</th>
-                    {!hide&&<th className="r" onClick={()=>tsort("shares")}>Adet{sa("shares")}</th>}
-                    {!hide&&<th className="r" onClick={()=>tsort("avgCost")}>Maliyet{sa("avgCost")}</th>}
-                    {!hide&&<th className="r" onClick={()=>tsort("price")}>Fiyat{sa("price")}</th>}
-                    {!hide&&<th className="r" onClick={()=>tsort("mv")}>Değer{sa("mv")}</th>}
-                    {!hide&&<th className="r" onClick={()=>tsort("pl")} title="Pozisyon başlangıcından bugüne unrealized kâr/zarar (Değer − Maliyet)">P&L${sa("pl")}</th>}
-                    <th className="r" onClick={()=>tsort("plPct")} title="(Değer − Maliyet) / Maliyet × 100 — pozisyonun toplam unrealized getirisi">P&L%{sa("plPct")}</th>
-                    {hasH&&<th className="r" onClick={()=>tsort("d1")} title="Ticker fiyatının son 1 gündeki yüzde değişimi (senin alım tarihinden bağımsız)">1G{sa("d1")}</th>}
-                    {hasH&&<th className="r" onClick={()=>tsort("w1")} title="Ticker fiyatının son 1 haftadaki değişimi">1H{sa("w1")}</th>}
-                    {hasH&&<th className="r" onClick={()=>tsort("m1")} title="Ticker fiyatının son 1 aydaki değişimi">1A{sa("m1")}</th>}
-                    {hasH&&<th className="r" onClick={()=>tsort("y1")} title="Ticker fiyatının son 1 yıldaki değişimi">1Y{sa("y1")}</th>}
-                  </tr></thead>
-                  <tbody>
-                    {sorted.map(p=>(
-                      <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)} title={`${p.ticker} detayına git`}>
-                        <td className="l"><div className="tcell"><span className="tsym">{p.ticker}{p.type==="FUND"&&<span className="badge etf">ETF</span>}{p.type==="CRYPTO"&&<span className="badge cry">₿</span>}</span><span className="tname">{p.name}</span></div></td>
-                        {!hide&&<td className="r">{fmtShares(p.shares)}</td>}
-                        {!hide&&<td className="r">{mask("$"+fmt(p.avgCost))}</td>}
-                        {!hide&&<td className="r">{p.price?mask("$"+fmt(p.price)):"—"}</td>}
-                        {!hide&&<td className="r">{p.mv?mask("$"+fmt(p.mv,0)):"—"}</td>}
-                        {!hide&&<td className={"r"+pc(p.pl)}>{fmtD(p.pl)}</td>}
-                        <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
-                        {hasH&&<td className={"r"+pc(p.d1)}>{fmtP(p.d1)}</td>}
-                        {hasH&&<td className={"r"+pc(p.w1)}>{fmtP(p.w1)}</td>}
-                        {hasH&&<td className={"r"+pc(p.m1)}>{fmtP(p.m1)}</td>}
-                        {hasH&&<td className={"r"+pc(p.y1)}>{fmtP(p.y1)}</td>}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              );
+            })()}
+
+            {/* TRY pozisyonları — BIST için Yahoo Finance fiyat desteği aktif (Faz 1, 2026-04-25).
+                Mantık USD tablosuyla aynı; sembol ₺. */}
+            {try_.length>0 && (()=>{
+              const totMv=try_.reduce((a,p)=>a+(p.mv ?? p.cost),0);
+              return(
+              <div style={{marginTop:22,marginBottom:8}}>
+                <div className="stitle">TRY Pozisyonları · {mask("₺"+fmt(totMv,0))}</div>
+                <div className="tbl-wrap">
+                  <table>
+                    <thead><tr>
+                      <th className="l" onClick={()=>tsortTry("ticker")}>Ticker{saTry("ticker")}</th>
+                      {!hide&&<th className="r" onClick={()=>tsortTry("shares")}>Adet{saTry("shares")}</th>}
+                      {!hide&&<th className="r" onClick={()=>tsortTry("avgCost")}>Maliyet{saTry("avgCost")}</th>}
+                      {!hide&&<th className="r" onClick={()=>tsortTry("price")}>Fiyat{saTry("price")}</th>}
+                      {!hide&&<th className="r" onClick={()=>tsortTry("mv")}>Değer{saTry("mv")}</th>}
+                      {!hide&&<th className="r" onClick={()=>tsortTry("pl")} title="Pozisyon başlangıcından bugüne unrealized kâr/zarar (Değer − Maliyet)">P&L₺{saTry("pl")}</th>}
+                      <th className="r" onClick={()=>tsortTry("plPct")} title="(Değer − Maliyet) / Maliyet × 100">P&L%{saTry("plPct")}</th>
+                      {hasH&&<th className="r" onClick={()=>tsortTry("d1")} title="Son 1 gündeki yüzde değişim">1G{saTry("d1")}</th>}
+                      {hasH&&<th className="r" onClick={()=>tsortTry("w1")} title="Son 1 haftadaki değişim">1H{saTry("w1")}</th>}
+                      {hasH&&<th className="r" onClick={()=>tsortTry("m1")} title="Son 1 aydaki değişim">1A{saTry("m1")}</th>}
+                      {hasH&&<th className="r" onClick={()=>tsortTry("y1")} title="Son 1 yıldaki değişim">1Y{saTry("y1")}</th>}
+                    </tr></thead>
+                    <tbody>
+                      {sortedTry.map(p=>(
+                        <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)} title={`${p.ticker} detayına git`}>
+                          <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span></div></td>
+                          {!hide&&<td className="r">{fmtShares(p.shares)}</td>}
+                          {!hide&&<td className="r">{mask("₺"+fmt(p.avgCost))}</td>}
+                          {!hide&&<td className="r">{p.price?mask("₺"+fmt(p.price)):"—"}</td>}
+                          {!hide&&<td className="r">{p.mv?mask("₺"+fmt(p.mv,0)):"—"}</td>}
+                          {!hide&&<td className={"r"+pc(p.pl)}>{fmtSign(p.pl,"₺")}</td>}
+                          <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
+                          {hasH&&<td className={"r"+pc(p.d1)}>{fmtP(p.d1)}</td>}
+                          {hasH&&<td className={"r"+pc(p.w1)}>{fmtP(p.w1)}</td>}
+                          {hasH&&<td className={"r"+pc(p.m1)}>{fmtP(p.m1)}</td>}
+                          {hasH&&<td className={"r"+pc(p.y1)}>{fmtP(p.y1)}</td>}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+              );
+            })()}
+
+            <div style={{fontSize:11,color:"var(--text2)",marginTop:8}}>
+              {txs.length} işlem · {usd.length} USD{try_.length>0?` · ${try_.length} TRY`:""}{eur.length>0?` · ${eur.length} EUR`:""}
+              {!hasH&&<span style={{marginLeft:8}}>· Tarihi veri için Ayarlar → "Tarihi Veri" butonu</span>}
             </div>
-            <div style={{fontSize:11,color:"var(--text2)",marginTop:8}}>{txs.length} işlem · {usd.length} USD pozisyon{!hasH&&<span style={{marginLeft:8}}>· Tarihi veri için Ayarlar → "Tarihi Veri" butonu</span>}</div>
             <div style={{fontSize:10,color:"var(--text3)",marginTop:6,lineHeight:1.5}}>
               <strong style={{color:"var(--text2)"}}>P&L $/%</strong>: senin alış maliyetinden bugüne unrealized · <strong style={{color:"var(--text2)"}}>1G/1H/1A/1Y</strong>: ticker fiyatının son N gündeki değişimi (alım tarihinden bağımsız)
             </div>
 
-            {/* TRY / EUR pozisyonları — fiyat desteği olmadığından yalnızca maliyet */}
-            {["TRY","EUR"].map(cur=>{
-              const items=pos.filter(p=>p.currency===cur);
-              if(!items.length)return null;
-              const cSym=cur==="TRY"?"₺":"€";
-              const totCost=items.reduce((a,p)=>a+p.shares*p.avgCost,0);
+            {/* EUR pozisyonları — provider yok, cost-only kalır */}
+            {eur.length>0 && (()=>{
+              const totCost=eur.reduce((a,p)=>a+p.cost,0);
               return(
-                <div key={cur} style={{marginTop:22}}>
-                  <div className="stitle">{cur} Pozisyonları · {mask(cSym+fmt(totCost,0))} maliyet</div>
+                <div style={{marginTop:22}}>
+                  <div className="stitle">EUR Pozisyonları · {mask("€"+fmt(totCost,0))} maliyet</div>
                   <div className="tbl-wrap">
                     <table>
                       <thead><tr>
@@ -3175,22 +3353,22 @@ function App({session}){
                         <th className="l">Broker</th>
                       </tr></thead>
                       <tbody>
-                        {[...items].sort((a,b)=>a.ticker.localeCompare(b.ticker)).map(p=>(
+                        {[...eur].sort((a,b)=>a.ticker.localeCompare(b.ticker)).map(p=>(
                           <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)} title={`${p.ticker} detayına git`}>
                             <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span></div></td>
                             {!hide&&<td className="r">{fmtShares(p.shares)}</td>}
-                            {!hide&&<td className="r">{mask(cSym+fmt(p.avgCost))}</td>}
-                            {!hide&&<td className="r">{mask(cSym+fmt(p.shares*p.avgCost,0))}</td>}
+                            {!hide&&<td className="r">{mask("€"+fmt(p.avgCost))}</td>}
+                            {!hide&&<td className="r">{mask("€"+fmt(p.cost,0))}</td>}
                             <td className="l" style={{fontSize:11,color:"var(--text2)"}}>{p.broker||"—"}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                  <div className="dim" style={{fontSize:10,marginTop:4}}>ℹ {cur} için güncel fiyat desteği yok — yalnızca maliyet gösteriliyor.</div>
+                  <div className="dim" style={{fontSize:10,marginTop:4}}>ℹ EUR için güncel fiyat desteği yok — yalnızca maliyet gösteriliyor.</div>
                 </div>
               );
-            })}
+            })()}
           </div>
         );
       })()}
@@ -3206,7 +3384,7 @@ function App({session}){
 
       {/* ANALYSIS */}
       {tab==="analysis"&&(
-        <AnalysisTab pos={pos} txs={txs} splits={splits} prc={prc} hide={hide} mask={mask} setTab={setTab}/>
+        <AnalysisTab pos={pos} txs={txs} splits={splits} prc={prc} hide={hide} mask={mask} setTab={setTab} displayCur={displayCur} fxRates={fxRates}/>
       )}
 
       {/* SEARCH */}
