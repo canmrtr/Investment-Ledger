@@ -132,6 +132,8 @@
     .empty{color:var(--text2);font-size:13px;padding:3rem 0;text-align:center;}
     .spin{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--info);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;}
     @keyframes spin{to{transform:rotate(360deg);}}
+    @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+    .skel{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:4px;}
     .mask{color:var(--text3);letter-spacing:2px;}
     .tcell{display:flex;flex-direction:column;gap:1px;}
     .tsym{font-weight:700;font-size:12px;font-family:'DM Mono','Fira Code',monospace;}
@@ -312,6 +314,65 @@ const fmtAge = (ts)=>{
   if(hr<24)return `${hr} sa önce`;
   return `${Math.floor(hr/24)} gün önce`;
 };
+// ── Skeleton loading components ──────────────────────────────────
+const SkeletonLine=({w="100%",h=12,mb=0,style={}})=>(
+  <div className="skel" style={{width:w,height:h,borderRadius:4,marginBottom:mb,...style}}/>
+);
+const SkeletonCard=()=>(
+  <div className="card" style={{gap:6}}>
+    <SkeletonLine w={70} h={10} mb={8}/>
+    <SkeletonLine w="60%" h={18} mb={4}/>
+    <SkeletonLine w={90} h={10}/>
+  </div>
+);
+const SkeletonRows=({n=4,gap=10})=>(
+  <div style={{display:"flex",flexDirection:"column",gap}}>
+    {Array.from({length:n},(_,i)=>(
+      <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8}}>
+        <SkeletonLine w={`${55+i*15}%`} h={11}/>
+        <SkeletonLine w={44} h={20}/>
+      </div>
+    ))}
+  </div>
+);
+// ── TrendMiniChart ───────────────────────────────────────────────
+// annual = [{year,revenue,netIncome,operatingIncome}] (oldest→newest)
+// Gelir = dim bar (full), Net Kâr = renkli ince overlay içinde
+function TrendMiniChart({annual,currency="$"}){
+  if(!annual||annual.length<2)return null;
+  const fmtB=v=>{if(v==null)return"—";const a=Math.abs(v);if(a>=1e12)return(v/1e12).toFixed(1)+"T";if(a>=1e9)return(v/1e9).toFixed(1)+"B";if(a>=1e6)return(v/1e6).toFixed(0)+"M";return(v/1e3).toFixed(0)+"K";};
+  const W=280,H=80,PL=4,PR=4,PT=6,PB=18;
+  const cW=W-PL-PR,cH=H-PT-PB;
+  const maxV=Math.max(...annual.map(y=>Math.abs(y.revenue||0)||0));
+  if(!maxV)return null;
+  const n=annual.length;
+  const bW=cW/n,gap=bW*0.18,bw=bW-gap;
+  const barH=v=>v==null?0:(Math.abs(v)/maxV)*cH;
+  return(
+    <div style={{marginTop:10}}>
+      <div className="stitle" style={{marginBottom:6,fontSize:9}}>Yıllık Trend (Gelir / Net Kâr)</div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto",display:"block",overflow:"visible"}}>
+        {annual.map((y,i)=>{
+          const x=PL+i*bW+gap/2;
+          const rh=barH(y.revenue);
+          const nh=barH(y.netIncome);
+          const profit=(y.netIncome??0)>=0;
+          return(
+            <g key={y.year} data-tip={`${y.year} Gelir: ${currency}${fmtB(y.revenue)} · Net: ${currency}${fmtB(y.netIncome)}`}>
+              {y.revenue!=null&&<rect x={x} y={PT+cH-rh} width={bw} height={rh} fill="var(--bg4)" rx={2}/>}
+              {y.netIncome!=null&&<rect x={x+bw*.2} y={PT+cH-nh} width={bw*.6} height={Math.max(nh,2)} fill={profit?"var(--ok)":"var(--err)"} opacity={.85} rx={1}/>}
+              <text x={x+bw/2} y={H-4} textAnchor="middle" fontSize={8} fill="var(--text3)">{String(y.year).slice(-2)}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <div style={{display:"flex",gap:12,marginTop:2,fontSize:10,color:"var(--text3)"}}>
+        <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:8,height:8,background:"var(--bg4)",borderRadius:2,display:"inline-block"}}/> Gelir</span>
+        <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:8,height:8,background:"var(--ok)",borderRadius:2,display:"inline-block"}}/> Net Kâr</span>
+      </div>
+    </div>
+  );
+}
 // Currency / FX — display currency toggle (USD/TRY) için merkez yardımcılar.
 // fxRates: {USDTRY: 32.5, EURUSD: 1.08} formatında. EUR↔TRY için EUR→USD→TRY chain.
 const FX_TTL_MS = 86400000;  // 24 saat
@@ -1193,7 +1254,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
         return (
         <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
           <div className="stitle" style={{marginBottom:10}}>Şirket Bilgisi</div>
-          {metaLoading&&<div className="dim" style={{fontSize:12}}><span className="spin" style={{width:12,height:12,marginRight:8,verticalAlign:"middle"}}></span>Yükleniyor...</div>}
+          {metaLoading&&<SkeletonRows n={3} gap={8}/>}
           {metaErr&&<div className="err" style={{fontSize:12}}>{metaErr}</div>}
           {meta&&!metaLoading&&(()=>{
             const titleCase=(s)=>s?s.replace(/_/g," ").toLowerCase().replace(/\b\w/g,c=>c.toUpperCase()):s;
@@ -1251,7 +1312,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
             </div>
             <button className="btn-sm" onClick={()=>fetchFund(true)} disabled={fundLoading}>{fundLoading?"...":(fund?"↻":"Çek")}</button>
           </div>
-          {fundLoading&&<div className="dim" style={{fontSize:12}}><span className="spin" style={{width:12,height:12,marginRight:8,verticalAlign:"middle"}}></span>Yükleniyor...</div>}
+          {fundLoading&&<SkeletonRows n={5} gap={10}/>}
           {fundErr&&!fundLoading&&fundErrCode==="OUT_OF_PLAN"&&(
             <div className="warn-card">
               <div>
@@ -1317,7 +1378,8 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                     </div>
                   </div>
                 ))}
-                <div style={{fontSize:10,color:"var(--text3)",marginTop:6,lineHeight:1.5}}>
+                <TrendMiniChart annual={fund?.annual} currency={fund?.raw?.currency==="TRY"?"₺":"$"}/>
+                <div style={{fontSize:10,color:"var(--text3)",marginTop:8,lineHeight:1.5}}>
                   Kaynak: {
                     fund?.source==="edgar"?"SEC EDGAR (annual 10-K, son 5 yıl). PE/PS bu modda boş — market price gerek." :
                     fund?.source==="isyatirim"?"İş Yatırım MaliTablo (XI_29 yıllık, son 5 yıl). PE meta'dan; PS henüz yok. Tutarlar TRY; eşikler nominal — TR enflasyonu büyüme metriklerini şişirebilir." :
@@ -3505,7 +3567,20 @@ function App({session}){
 
   const TABS=[["dashboard","Dashboard"],["history","İşlemler"],["analysis","Analiz"],["search","Ara"],["add","+ Ekle"],["settings","Ayarlar"]];
 
-  if(busy.d&&pos.length===0)return<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60vh",gap:10,color:"#888",fontSize:13}}><div className="spin"></div>Yükleniyor...</div>;
+  if(busy.d&&pos.length===0)return(
+    <div style={{padding:"16px 16px 0"}}>
+      <div className="g3" style={{marginBottom:16}}><SkeletonCard/><SkeletonCard/><SkeletonCard/></div>
+      {Array.from({length:5},(_,i)=>(
+        <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"13px 0",borderBottom:"1px solid var(--border)"}}>
+          <SkeletonLine w={60} h={13}/>
+          <SkeletonLine w={130} h={11}/>
+          <div style={{marginLeft:"auto",display:"flex",gap:10}}>
+            <SkeletonLine w={60} h={13}/><SkeletonLine w={50} h={13}/>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return(
     <div id="shell">

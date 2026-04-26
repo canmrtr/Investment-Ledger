@@ -73,7 +73,7 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
 ## Fundamental & Analiz
 
-- [ ] **Tarihsel fundamental trend** `[M]` `[P1]` — son 5 yıl gelir/marj/ROE mini chart (FY'leri y/y göster); TickerDetailTab'ta mevcut checklist altına.
+- [x] ~~**Tarihsel fundamental trend**~~ (2026-04-26) — 5Y gelir/net kâr SVG bar chart (TrendMiniChart). Edge fn: FMP + BIST annual array. Frontend: checklist altında.
 - [ ] **EDGAR P/E + P/S** `[M]` `[P2]` — `CommonStockSharesOutstanding` × current price = market cap; P/E + P/S EDGAR modunda da dolu gelir.
 - [ ] **Fundamental data Supabase cache** `[M]` `[P2]` — şu an LS yeterli; kullanıcı sayısı arttıkça merkezi cache gerekebilir.
 - [ ] **Kullanıcı kendi eşiklerini tanımlasın** `[M]` `[P2]` — PE < X, ROE > Y gibi; şu an top-level `FUND_THRESHOLDS` sabit.
@@ -109,7 +109,7 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
 ## Search
 
-- [ ] **Recent searches** `[S]` `[P1]` — LS'de son 8 arama; focus'ta öneri olarak çık.
+- [x] ~~**Recent searches**~~ (2026-04-26) — LS il_recent_search; son 8 arama chip row; handleOpen ile kayıt; nameFor/typeFor lookup.
 - [ ] **SearchTab "50+" sonuç hint** `[S]` `[P2]` — "Aramayı daraltın" ipucu göster.
 - [ ] **SearchTab portföy match=0 empty state** `[S]` `[P2]` — "Portföyünde eşleşme yok" mini note.
 
@@ -121,7 +121,7 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 ## Bug & UX Backlog
 
 - [ ] **AI parse autofill pill (ConfirmBox)** `[S]` `[P1]` — multi-line parse'ta fiyat fallback olduysa ConfirmBox satırında "⚠ tarih fallback" pill göster; şu an sessizce fallback'liyor.
-- [ ] **ConfirmBox inline edit** `[M]` `[P1]` — AI parse sonrası doğrulama kutusunda alanlar düzenlenebilir olsun. Tek işlem: kv-grid'deki değerler tıklanabilir input'a dönüşsün (Tarih, Fiyat, Adet, Broker, Komisyon). Çoklu işlem: her satırda küçük ✎ ikonu → satır inline edit moduna geçsin. Kaydet'e basmadan önce kullanıcı AI hatasını düzeltebilsin.
+- [x] ~~**ConfirmBox inline edit**~~ (2026-04-26) — Tek: Tarih/Adet/Fiyat/Broker/Komisyon inline input; Toplam reaktif. Çoklu: ✎ per-row → expand edit panel + ✓ Tamam.
 - [ ] **Dashboard ↻ Güncelle başarısız ticker ayrıntısı** `[S]` `[P2]` — şu an "başarısız: AAPL" toast; Settings → Sistem Durumu'nda per-ticker hata sebebi (HTTP 403, bulunamadı vb.).
 
 ## Güvenlik & Süreç
@@ -141,8 +141,8 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 - [ ] **Pozisyonları Yeniden Hesapla confirm guard** `[S]` `[P0]` — destructive (DELETE+INSERT cascade); `confirm_(...)` ile guard. (Sprint C kalıntısı)
 - [ ] **HistoryTab tx satırından openDetail** `[S]` `[P0]` — şu an detaya gitme yolu sadece pozisyon tablosundan; HistoryTab satır click → TickerDetailTab.
-- [ ] **Touch device tooltip (data-tip tap-to-show)** `[M]` `[P1]` — hover-only ~35 yer; tap-to-show + outside-tap-close. KPI kartları + fundamental satırları + cur-seg en kritik.
-- [ ] **Loading state standardı (SkeletonRow/SkeletonCard)** `[M]` `[P1]` — bazı yerlerde spinner, bazılarında "...", bazılarında hiçbir şey. Standart skeleton component.
+- [x] ~~**Touch device tooltip (data-tip tap-to-show)**~~ (2026-04-26) — global touchstart listener; data-tip-visible CSS class; 2500ms auto-dismiss; button/a skip.
+- [x] ~~**Loading state standardı (SkeletonRow/SkeletonCard)**~~ (2026-04-26) — SkeletonLine/SkeletonCard/SkeletonRows shimmer components. Dashboard ilk yük → 3 skeleton kart + 5 satır; meta/fund → SkeletonRows.
 - [ ] **Form input error inline** `[S]` `[P1]` — invalid date/negative shares submit'e kadar feedback yok; `aria-invalid` + 11px error text.
 - [ ] **Confirm modal backdrop click guard (danger)** `[S]` `[P1]` — `danger:true`'da backdrop click iptal saymasın; explicit "İptal" zorunlu.
 - [ ] **EUR tablosu sort** `[S]` `[P1]` — USD/TRY tablolarında sort var, EUR statik; en azından Ticker alfabetik.

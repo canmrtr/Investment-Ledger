@@ -455,6 +455,14 @@ async function fetchBist(rawTicker) {
 
   const result = {
     metrics,
+    annual: Array.from({length:5},(_,i)=>Y-4+i)
+      .map(yr=>({
+        year: String(yr),
+        revenue: get("revenue",yr),
+        netIncome: get("netIncome",yr),
+        operatingIncome: get("operatingIncome",yr),
+      }))
+      .filter(y=>y.revenue!=null),
     raw: {
       latestFiscalYear: anchorYear,
       yearsBackUsed,
@@ -559,6 +567,12 @@ async function fetchFmp(ticker, fmpKey) {
   return {
     ok: true,
     metrics,
+    annual: inc.slice(0,5).reverse().map(y=>({
+      year: y.calendarYear||y.fiscalYear||y.date?.slice(0,4),
+      revenue: y.revenue??null,
+      netIncome: y.netIncome??null,
+      operatingIncome: y.operatingIncome??null,
+    })).filter(y=>y.year),
     raw: {
       latestFiscalYear: incLatest?.fiscalYear || incLatest?.calendarYear || incLatest?.date?.slice(0,4),
       yearsBackUsed: yearsBack,
