@@ -67,6 +67,8 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 ## Görselleştirme
 
+- [ ] **Dashboard + Analiz global varlık türü filtresi (multi-select)** `[M]` `[P0]` — Dashboard ve AnalysisTab'da tüm hesaplamaları (KPI, sparkline, pie, position blokları, komisyon, win/loss, sağlık, konsantrasyon, sektör) etkileyen global çok seçimli asset-type filtresi. Chip bar: US Hisse / ETF / BIST / Kripto / Altın / Döviz + "Tümü"; pozisyonu olan tipler dinamik; en az 1 seçim zorunlu. Dashboard için `App` state, AnalysisTab için component-içi state. `txs` filtrelemesi: seçili tiplerin ticker'larına göre.
+
 - [x] ~~**Dashboard KPI 4→3 kart kompakt hibrit**~~ (2026-04-26) — Piyasa Değeri (büyük) + Maliyet (ikincil alt satır); Total Return % (büyük) + tutar; XIRR. `.g3` grid, mobile 2+1.
 - [x] ~~**Dashboard'dan Varlık Dağılımı pie'ı kaldır**~~ (2026-04-26) — Analiz Tab daha güçlü versiyon. Sparkline tam genişliğe açıldı.
 - [x] ~~**Bölge Dağılımı emoji bayrakları kaldır**~~ (2026-04-26) — Plain text "US"/"Türkiye".

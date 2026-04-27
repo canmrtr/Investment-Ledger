@@ -111,6 +111,7 @@ Tek seferde 3'ten fazla fikir önerme — çok seçenek karar yorgunluğu yapar.
 - **Risk → erken**: bilinmezlik içeren item'ları sprint başında dene (ör. yeni provider entegrasyonu); polish'i sona bırak.
 - **Strict budget**: 6 saatten fazla effort'lu tek item'ı bir sprint goal'a koyma — slice et.
 - **Done > perfect**: bitmiş ufak item bitmemiş büyük item'dan değerli; "Sonraki Adım"a koymak için %80 hazır olması yeter.
+- **⛔ Kullanıcı öncelikleri dokunulmaz**: Can'ın açıkça verdiği `[P0]`/`[P1]`/`[P2]`/`[P3]` etiketlerini asla değiştirme. Sadece etiketsiz yeni item'lar veya Can'ın "önceliğini değiştir" demesi durumunda düzenle. Roadmap grooming sırasında mevcut etiketlere dokunma.
 
 ## Yapma / Yapma Listen
 

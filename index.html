@@ -2783,11 +2783,27 @@ const buildSlicesPath = (sliceArr, CX, CY, R) => {
 function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,openDetail}){
   const [filter,setFilter]=useState("all");
   const [assetDistMode,setAssetDistMode]=useState("mv"); // "cost" | "mv"
+  const [activeTypes,setActiveTypes]=useState(()=>BLOCK_TYPES.filter(cfg=>pos.some(p=>p.type===cfg.type)).map(cfg=>cfg.type));
+  useEffect(()=>{
+    const all=BLOCK_TYPES.filter(cfg=>pos.some(p=>p.type===cfg.type)).map(cfg=>cfg.type);
+    setActiveTypes(prev=>{
+      const valid=prev.filter(t=>all.includes(t));
+      return valid.length>0?valid:all;
+    });
+  },[pos.length]);
   // Kart collapse state'leri — default kapalı (özet üstte, detay isteğe bağlı).
   const [healthOpen,setHealthOpen]=useState(false);
   const [commOpen,setCommOpen]=useState(false);
   const [sectorMetaBusy,setSectorMetaBusy]=useState(false);
   const [sectorMetaTick,setSectorMetaTick]=useState(0); // inc to force re-render after meta fetch
+  // Aktif tip filtresi — global chip bar
+  const atAll = BLOCK_TYPES.filter(cfg=>pos.some(p=>p.type===cfg.type)).map(cfg=>cfg.type);
+  const filteredPos = activeTypes.length >= atAll.length ? pos : pos.filter(p=>activeTypes.includes(p.type));
+  const filteredTxs = (() => {
+    if (filteredPos === pos) return txs;
+    const tickers = new Set(filteredPos.map(p=>p.ticker));
+    return txs.filter(t=>tickers.has(t.ticker));
+  })();
   const dSym = displaySym(displayCur);
   const cnv = (amt, from) => convert(amt, from, displayCur, fxRates);
   // Sağlık tablosu state — ticker bazlı fund cache, mount'ta LS'ten topla.
@@ -2827,7 +2843,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
     ["liabToEquity",      "Borç/Özk",     "x"],
     ["netDebtToFcf",      "NetBorç/FCF",  "x"],
   ];
-  const healthEligible = pos.filter(p=>p.type==="US_STOCK"||p.type==="BIST");
+  const healthEligible = filteredPos.filter(p=>p.type==="US_STOCK"||p.type==="BIST");
   const healthFiltered = healthFilter==="all" ? healthEligible : healthEligible.filter(p=>p.type===healthFilter);
   const healthMissing = healthFiltered.filter(p=>!fundCache[p.ticker]);
   // Bir pozisyonun skoru: kaç metrik "good" (yeşil) / toplam değerli (null hariç)
@@ -2900,7 +2916,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
     const valFn = assetDistMode === "cost" ? costDisp : mvDisp;
     if (filter === "all") {
       const byType = {};
-      pos.forEach(p => {
+      filteredPos.forEach(p => {
         const v = valFn(p);
         if (v > 0) byType[p.type] = (byType[p.type] || 0) + v;
       });
@@ -2911,7 +2927,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
       arr.forEach(s => s.frac = total > 0 ? s.value/total : 0);
       return {arr, total};
     } else {
-      const filtered = pos.filter(p => p.type === filter);
+      const filtered = filteredPos.filter(p => p.type === filter);
       const arr = filtered.map((p,i) => ({
         key:p.ticker, label:p.ticker, value:valFn(p), color:TICKER_PIE_COLORS[i % TICKER_PIE_COLORS.length]
       })).filter(s => s.value > 0).sort((a,b)=>b.value-a.value);
@@ -2930,7 +2946,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
   // Region slices — type→region mapping. Tüm currency'ler display cur'a convert.
   const regionSlices = (() => {
     const byRegion = {};
-    pos.forEach(p => {
+    filteredPos.forEach(p => {
       const region = REGION_OF[p.type] || "fx";
       const mv = mvDisp(p);
       if (mv > 0) byRegion[region] = (byRegion[region] || 0) + mv;
@@ -2944,12 +2960,12 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
   })();
   const regionPath = buildSlicesPath(regionSlices.arr, 60, 60, 50);
 
-  // Komisyon — tüm currency'ler display cur'a convert; KPI/broker/year tek tutar.
+  // Komisyon — filtreli tx'ler display cur'a convert; KPI/broker/year tek tutar.
   const commData = (() => {
     let total = 0;
     const byBroker = {};   // {broker: amount}
     const byYear = {};     // {year: amount}
-    txs.forEach(t => {
+    filteredTxs.forEach(t => {
       const raw = +t.commission || 0;
       if (raw <= 0) return;
       const cur = t.currency || "USD";
@@ -2971,7 +2987,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
   // Win/Loss — BUY ve SELL bağımsız, split-adjusted (NVDA gibi pre-split fiyatlar)
   const winLoss = (() => {
     let buyW=0, buyL=0, buyN=0, sellW=0, sellL=0, sellN=0;
-    txs.forEach(t => {
+    filteredTxs.forEach(t => {
       const cur = prc[t.ticker];
       if (cur == null || cur <= 0) {
         if (t.way === "BUY") buyN++;
@@ -3008,6 +3024,33 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
   return(
     <div>
       {!fxRates&&<div className="warn-card" style={{marginBottom:14}}>⚠ FX kuru yüklenemedi — TRY/EUR pozisyonlar doğru toplamayabilir. Topbardaki ↻ butonuyla güncelle.</div>}
+      {/* Global varlık türü filtre chip bar */}
+      {(()=>{
+        const presentTypes = BLOCK_TYPES.filter(cfg => pos.some(p=>p.type===cfg.type));
+        if (presentTypes.length <= 1) return null;
+        const allSelected = activeTypes.length >= presentTypes.length;
+        const toggleType = (type) => {
+          setActiveTypes(prev => {
+            if (prev.includes(type)) {
+              const next = prev.filter(t=>t!==type);
+              return next.length > 0 ? next : prev;
+            }
+            return [...prev, type];
+          });
+        };
+        return (
+          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+            <button className={"mtab"+(allSelected?" on":"")} onClick={()=>setActiveTypes(atAll)}>Tümü</button>
+            {presentTypes.map(cfg=>(
+              <button key={cfg.type} className={"mtab"+(activeTypes.includes(cfg.type)?" on":"")}
+                onClick={()=>toggleType(cfg.type)}
+                style={{display:"flex",alignItems:"center",gap:4}}>
+                <span style={{opacity:.7,display:"flex"}}>{cfg.icon(12)}</span>{cfg.label}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
       {/* Varlık dağılımı pie */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:filterChips.length>2?8:12}}>
@@ -3334,7 +3377,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
         <div className="stitle" style={{marginBottom:12}}>Konsantrasyon Riski</div>
         {(()=>{
-          const posWithMv=pos.map(p=>({...p,dispMv:mvDisp(p)})).filter(p=>p.dispMv>0);
+          const posWithMv=filteredPos.map(p=>({...p,dispMv:mvDisp(p)})).filter(p=>p.dispMv>0);
           const total=posWithMv.reduce((a,p)=>a+p.dispMv,0);
           if(total<=0||posWithMv.length===0)return <div className="empty" style={{padding:"12px 0",fontSize:11}}>Yeterli pozisyon yok</div>;
           const sorted=[...posWithMv].sort((a,b)=>b.dispMv-a.dispMv);
@@ -3382,7 +3425,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
         // sectorMetaTick'e bağımlı olduğu için her meta fetch sonrası yeniden hesaplar
         void sectorMetaTick;
         // Her pozisyon için sektör etiketi: US → sic_description, BIST → industry, fallback Bilinmiyor
-        const posWithSector = pos.map(p => {
+        const posWithSector = filteredPos.map(p => {
           const m = metaCacheGet(p.ticker);
           const sector = (m && (m.sic_description || m.industry)) ? (m.sic_description || m.industry) : "Bilinmiyor";
           return {...p, sector, dispMv: mvDisp(p)};
@@ -3422,7 +3465,7 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
         const sectorPath = buildSlicesPath(sliceArr, 60, 60, 50);
 
         // Pozisyonlar arasından meta eksik olanları bul (US_STOCK + BIST için anlamlı)
-        const metaMissingPos = pos.filter(p => {
+        const metaMissingPos = filteredPos.filter(p => {
           if (p.type !== "US_STOCK" && p.type !== "BIST" && p.type !== "FUND") return false;
           const m = metaCacheGet(p.ticker);
           return !(m && (m.sic_description || m.industry));
@@ -3547,6 +3590,7 @@ function App({session}){
   const [fxAt,setFxAt]=useState(()=>{const c=fxCacheGet();return c?c.t:null;});
   const [sort,setSort]=useState({by:"plPct",dir:"desc"});
   const [sortTry,setSortTry]=useState({by:"plPct",dir:"desc"});
+  const [dashTypeFilter,setDashTypeFilter]=useState(()=>BLOCK_TYPES.map(b=>b.type));
   const [distMode,setDistMode]=useState("mv"); // "cost" | "mv" — pie chart mode
   const [busy,setBusy]=useState({p:false,h:false,d:false});
   const [pprog,setPprog]=useState("");
@@ -3724,15 +3768,21 @@ function App({session}){
     const h=hist[p.ticker]||null;
     return{...p,price,cost,mv,pl,plPct:(pl!=null&&cost>0)?(pl/cost)*100:null,d1:h?.d1??null,w1:h?.w1??null,m1:h?.m1??null,y1:h?.y1??null};
   };
-  const usd=pos.filter(p=>p.currency==="USD").map(wrapPos);
-  const try_=pos.filter(p=>p.currency==="TRY").map(wrapPos);
-  const eur=pos.filter(p=>p.currency==="EUR").map(p=>({...p,cost:p.shares*p.avgCost}));
+  // dashTypeFilter: seçili varlık türlerine göre filtrelenmiş pos/txs
+  const filteredPos = dashTypeFilter.length === BLOCK_TYPES.length
+    ? pos
+    : pos.filter(p => dashTypeFilter.includes(p.type));
+  const filteredTickers = new Set(filteredPos.map(p=>p.ticker));
+  const txsForFilter = txs.filter(t => filteredTickers.has(t.ticker));
+  const usd=filteredPos.filter(p=>p.currency==="USD").map(wrapPos);
+  const try_=filteredPos.filter(p=>p.currency==="TRY").map(wrapPos);
+  const eur=filteredPos.filter(p=>p.currency==="EUR").map(p=>({...p,cost:p.shares*p.avgCost}));
   const dSym=displaySym(displayCur);
   // FX missing: convert null dönerse pozisyon hesap dışı kalır (sayım için tut)
   const fxOk=!!(fxRates && fxRates.USDTRY);
   const cnv=(amt,from)=>convert(amt,from,displayCur,fxRates);
   // Tüm pozisyonların display cur'a normalize edilmiş hali — KPI/pie/sparkline için
-  const allDisp=pos.map(p=>{
+  const allDisp=filteredPos.map(p=>{
     const cur=p.currency||"USD";
     const price=prc[p.ticker];
     const rawCost=p.shares*p.avgCost;
@@ -3746,8 +3796,8 @@ function App({session}){
   const tC=allDisp.reduce((a,p)=>a+(p.cost||0),0);
   const tM=allDisp.reduce((a,p)=>a+(p.mv ?? p.cost ?? 0),0);
   const tP=tM-tC,tPct=tC>0?(tP/tC)*100:null;
-  // Total Return: tüm tx'ler display cur'a convert edilip hesaplanır.
-  const txsDisp=txs.map(t=>{
+  // Total Return: filtreli tx'ler display cur'a convert edilip hesaplanır.
+  const txsDisp=txsForFilter.map(t=>{
     const cur=t.currency||"USD";
     return{...t,total:cnv(+t.total||0,cur)??0,commission:cnv(+t.commission||0,cur)??0};
   });
@@ -4135,8 +4185,41 @@ function App({session}){
             {/* Pozisyon tabloları — varlık türüne göre 6 ayrı blok (US Hisse / ETF / BIST /
                 Kripto / Altın / Döviz). Her blok kendi natural currency'sinde ham değerlerle.
                 Üst KPI'lar tüm pozisyonları display cur'a convert ediyor (ayrı sistem). */}
+            {(()=>{
+              const presentTypes = BLOCK_TYPES.filter(cfg => pos.some(p=>p.type===cfg.type));
+              if (presentTypes.length <= 1) return null;
+              const allSelected = presentTypes.every(cfg => dashTypeFilter.includes(cfg.type));
+              const toggleType = (type) => {
+                setDashTypeFilter(prev => {
+                  if (prev.includes(type)) {
+                    const next = prev.filter(t=>t!==type);
+                    return next.length > 0 ? next : prev;
+                  }
+                  return [...prev, type];
+                });
+              };
+              return (
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14,marginTop:4}}>
+                  <button
+                    className={"mtab"+(allSelected?" on":"")}
+                    onClick={()=>setDashTypeFilter(BLOCK_TYPES.map(b=>b.type))}
+                  >Tümü</button>
+                  {presentTypes.map(cfg=>(
+                    <button
+                      key={cfg.type}
+                      className={"mtab"+(dashTypeFilter.includes(cfg.type)?" on":"")}
+                      onClick={()=>toggleType(cfg.type)}
+                      style={{display:"flex",alignItems:"center",gap:4}}
+                    >
+                      <span style={{opacity:.7,display:"flex"}}>{cfg.icon(12)}</span>
+                      {cfg.label}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
             {BLOCK_TYPES.map((cfg, idx) => {
-              const items = pos.filter(p => p.type===cfg.type && p.currency===cfg.cur).map(wrapPos);
+              const items = filteredPos.filter(p => p.type===cfg.type && p.currency===cfg.cur).map(wrapPos);
               if(items.length===0) return null;
               const sortedItems = sortPos(items, sort);
               const totMv = items.reduce((a,p)=>a+(p.mv ?? p.cost),0);
