@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-04-27** (Sprint 4+5 tamamlandı; Analiz Tab 8 yeni fikir eklendi; Sprint 6 önizlemesi güncellendi)
+İlk toplama: **2026-04-24** | Son grooming: **2026-04-27** (Global filtre + mobile chip bar + kripto currency bug fix tamamlandı; Sprint 6 önizlemesi güncellendi)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -44,6 +44,8 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [x] ~~**Sprint 4: Güvenlik hızlı kazanımlar + UX**~~ (2026-04-27) — refresh-price-cache CRON_SECRET (XOR constant-time, fail-closed); massiveHistorical + yfHistorical explicit `{error:…}` flag; AddTxInline/saveAI/saveTx NaN guard; CSV negative/Infinity skip; Dashboard varsayılan sıra P&L% azalan; Konsantrasyon Riski kartı (top-3 + HHI + renk pill).
 - [x] ~~**Sprint 5: price_cache write-lock + benchmark karşılaştırması**~~ (2026-04-27) — price_cache RLS write kaldırıldı (service_role only); `fetch-prices` service_role upsert; BENCHMARKS constant (SPY + XU100); Dashboard benchmark getiri bölümü.
 - [x] ~~**Sprint 5 devam: Parse rate limiting + Sektör Dağılımı**~~ (2026-04-27) — `edgeCallAuth` + `auth.getUser(token)` JWT-verified identity; `increment_parse_calls` PL/pgSQL RPC (TOCTOU-safe); 20 parse/gün/kullanıcı; 401 unauthenticated; image validation; AnalysisTab Sektör Dağılımı kartı (SIC/borsa-mcp; SECTOR_COLORS; "Meta Çek" CTA).
+- [x] ~~**Global varlık türü filtresi (multi-select)**~~ (2026-04-27) — Dashboard + AnalysisTab'da `dashTypeFilter`/`activeTypes` state; `.fbar` yatay kaydırmalı chip bar (mobile-friendly, no-wrap, hidden scrollbar); tüm hesaplamalar (KPI, pie, komisyon, win/loss, sağlık, konsantrasyon, sektör) filtreye göre `filteredPos`/`filteredTxs` üzerinden. Varlık Dağılımı kartındaki per-card filter kaldırıldı.
+- [x] ~~**Kripto/non-BIST market value konversiyon bug**~~ (2026-04-27) — `mvDisp` (AnalysisTab) ve `allDisp` (Dashboard KPI) artık `priceCur = p.type==="BIST"?"TRY":"USD"` kullanıyor — `p.currency` stale kalırsa (AI-parse TRY hatası vb.) MV yanlış kur üstünden bölünüyordu (BTC=$18 görünüm). `rebuildPositions` currency normalizer eklendi (BIST→TRY, diğer→USD, EUR korunur). Dashboard BLOCK_TYPES filtresi currency check kaldırıldı (type-only). HistoryTab `$` hardcode → `displaySym(currency)`.
 
 ---
 
@@ -67,7 +69,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 ## Görselleştirme
 
-- [ ] **Dashboard + Analiz global varlık türü filtresi (multi-select)** `[M]` `[P0]` — Dashboard ve AnalysisTab'da tüm hesaplamaları (KPI, sparkline, pie, position blokları, komisyon, win/loss, sağlık, konsantrasyon, sektör) etkileyen global çok seçimli asset-type filtresi. Chip bar: US Hisse / ETF / BIST / Kripto / Altın / Döviz + "Tümü"; pozisyonu olan tipler dinamik; en az 1 seçim zorunlu. Dashboard için `App` state, AnalysisTab için component-içi state. `txs` filtrelemesi: seçili tiplerin ticker'larına göre.
+- [x] ~~**Dashboard + Analiz global varlık türü filtresi (multi-select)**~~ (2026-04-27) — `dashTypeFilter`/`activeTypes` chip bar; `.fbar` yatay scroll (mobile). Tüm hesaplamalar `filteredPos`/`filteredTxs` üzerinden.
 
 - [x] ~~**Dashboard KPI 4→3 kart kompakt hibrit**~~ (2026-04-26) — Piyasa Değeri (büyük) + Maliyet (ikincil alt satır); Total Return % (büyük) + tutar; XIRR. `.g3` grid, mobile 2+1.
 - [x] ~~**Dashboard'dan Varlık Dağılımı pie'ı kaldır**~~ (2026-04-26) — Analiz Tab daha güçlü versiyon. Sparkline tam genişliğe açıldı.
@@ -317,14 +319,14 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 4 ✅ tamamlandı (2026-04-27) | Sprint 5 ✅ tamamlandı (2026-04-27)
+Sprint 4 ✅ tamamlandı (2026-04-27) | Sprint 5 ✅ tamamlandı (2026-04-27) | Sprint 6 hazırlık (2026-04-27) — global filtre + kripto bug fix ✅
 
 Sprint 6 adayları (öncelik sırasına göre):
 
-1. **Dividend (temettü) tracking** `[M][P1]` — `transactions.way:"DIV"` + Dashboard total return; value-investing temel taşı.
-2. **Period buton wrap dar ekran** `[S][P1]` — 320px iPhone SE'de butonlar eziliyor; Sprint 3-4-5'ten taşındı; küçük CSS fix.
-3. **EUR tablosu sort** `[S][P1]` — EUR blok sort yok; kolaydan zora.
-4. **Potansiyel Kayıp (Max Pain) Simülasyonu** `[S][P1]` — %10/%20/%30 düşüş senaryosu; tamamen frontend. Yüksek günlük değer, sıfır fetch.
-5. **Pozisyon Yıllık Getiri (CAGR) Tablosu** `[S][P2]` — ilk BUY'dan bugüne yıllıklandırılmış getiri; tamamen frontend + price_cache.
-6. **TEFAS WAF testi** `[S][P2]` — Supabase edge function üstünden test; çalışırsa Sprint 7'ye entegrasyon.
-7. **Periyodik agent denetim turu** `[S][P1]` — Sprint 6 sonu; client-security-auditor + edge-reviewer + rls-auditor + test-runner paralel.
+1. **Sektör Dağılımı bug fix** `[S][P1]` — tüm pozisyonlar "Bilinmiyor" gösteriyor; ETF SIC kodu yok; otomatik meta trigger gerekiyor.
+2. **Dividend (temettü) tracking** `[M][P1]` — `transactions.way:"DIV"` + Dashboard total return; value-investing temel taşı.
+3. **Period buton wrap dar ekran** `[S][P1]` — 320px iPhone SE'de butonlar eziliyor; küçük CSS fix.
+4. **EUR tablosu sort** `[S][P1]` — EUR blok sort yok; kolaydan zora.
+5. **Potansiyel Kayıp (Max Pain) Simülasyonu** `[S][P1]` — %10/%20/%30 düşüş senaryosu; tamamen frontend.
+6. **Pozisyon Yıllık Getiri (CAGR) Tablosu** `[S][P2]` — ilk BUY'dan bugüne yıllıklandırılmış getiri; tamamen frontend + price_cache.
+7. **Periyodik agent denetim turu** `[S][P1]` — Sprint 6 sonu; 5 agent paralel.
