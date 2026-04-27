@@ -198,6 +198,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [x] ~~**refresh-price-cache cron secret**~~ (2026-04-27 Sprint 4) — CRON_SECRET env; XOR constant-time compare; fail-closed (secret yoksa 500, yanlışsa 401); pg_cron job güncellendi.
 - [ ] **BIST/CRYPTO/GOLD cron refresh** `[S]` `[P2]` — `refresh-price-cache` sadece US_STOCK çekiyor; BIST/CRYPTO/GOLD sütunları stale kalıyor. Cron job'ı asset_type dönüşümlü yapılmalı.
 - [ ] **İş Yatırım fetch timeout** `[S]` `[P2]` — `fetch-fundamentals` isyatirim call'larında `AbortSignal.timeout(8000)` yok; ağ hatalarında edge fn asılı kalabiliyor.
+- [ ] **Sektör Dağılımı — tümü "Bilinmiyor" görünüyor** `[S]` `[P1]` — Analiz Tab Sektör Dağılımı kartında tüm pozisyonlar "Bilinmiyor" sektörüne düşüyor. Olası sebepler: (1) ETF/FUND ticker'larında SIC kodu yok (`sic_description=null` — ETF'lerin ~%52 portföy ağırlığı); (2) meta henüz çekilmemiş (kart açıldığında "Meta Çek" CTA görünür ama sektör hâlâ boş kalıyor); (3) BIST için `sic_description = borsa-mcp sector` mapping doğru ama `metaCacheGet(ticker)` henüz çağrılmamış olabilir. Düzeltme yönü: kart render'ında `metaCacheGet` eksik ticker'ları otomatik tetikle (tek seferde 1 chunk); ETF için FMP `etf_classification` veya borsa-mcp `industry` fallback; null ise "Diğer" yerine "ETF / Fon" olarak göster.
 
 ## Güvenlik & Süreç
 

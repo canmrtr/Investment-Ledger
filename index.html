@@ -160,6 +160,10 @@
     .mtab{flex:1;min-width:70px;font-size:12px;}
     .mtab.sm{flex:0 0 auto;min-width:auto;padding:3px 9px;font-size:11px;}
     .mtab.on{background:var(--info);border-color:var(--info);color:#fff;}
+    /* Horizontally-scrollable filter chip row (Dashboard + AnalysisTab global filters) */
+    .fbar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
+    .fbar::-webkit-scrollbar{display:none;}
+    .fbar .mtab{flex:0 0 auto;min-width:auto;display:flex;align-items:center;gap:4px;white-space:nowrap;}
     /* Modal */
     .mdl-bd{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);animation:fadeIn .15s ease;}
     .mdl-bx{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:20px 22px;max-width:360px;width:100%;box-shadow:0 30px 80px rgba(0,0,0,0.6);animation:popIn .18s ease;}
@@ -611,7 +615,12 @@ const rebuildPositions = async (userId) => {
 
   const pm = {};
   for (const t of all) {
-    if (!pm[t.ticker]) pm[t.ticker] = {ticker:t.ticker,name:t.name,type:t.asset_type,shares:0,cost:0,currency:t.currency,broker:t.broker};
+    if (!pm[t.ticker]) {
+      // Normalize currency per asset type: BIST→TRY, all others→USD.
+      // Prevents AI-parse errors (e.g. BTC stored as TRY) from hiding positions.
+      const normCur = t.asset_type==="BIST" ? "TRY" : (t.currency==="EUR" ? "EUR" : "USD");
+      pm[t.ticker] = {ticker:t.ticker,name:t.name,type:t.asset_type,shares:0,cost:0,currency:normCur,broker:t.broker};
+    }
     const p = pm[t.ticker];
     const f = factorFor(t.ticker, t.date);
     const adjShares = +t.shares * f;
@@ -1860,6 +1869,7 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,open
         const items=grouped[tk];
         const isOpen=!!open[tk];
         const tot=items.reduce((a,t)=>a+(t.way==="BUY"?+t.total:-+t.total),0);
+        const groupSym=displaySym(items[0]?.currency||"USD");
         return(
           <div key={tk} style={{marginBottom:8,border:"0.5px solid var(--border)",borderRadius:12,overflow:"hidden"}}>
             <div onClick={()=>setOpen(o=>({...o,[tk]:!o[tk]}))} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:"var(--bg2)",cursor:"pointer"}}>
@@ -1872,7 +1882,7 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,open
                 <span className="dim" style={{fontSize:11}}>{items.length} işlem</span>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:12}}>
-                {!hideAmts&&<span className="dim mono" style={{fontSize:11}}>{mask("$"+fmt(tot,0))}</span>}
+                {!hideAmts&&<span className="dim mono" style={{fontSize:11}}>{mask(groupSym+fmt(tot,0))}</span>}
                 <span style={{color:"var(--text3)",fontSize:12}}>{isOpen?"▲":"▼"}</span>
               </div>
             </div>
@@ -1897,7 +1907,7 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,open
                       <div><div className="kk" style={{marginBottom:3}}>Broker</div><input className="finp sm" value={editForm.broker} onChange={e=>setEditForm(f=>({...f,broker:e.target.value}))}/></div>
                       <div><div className="kk" style={{marginBottom:3}}>Komisyon</div><input className="finp sm" type="number" step="any" value={editForm.commission||""} onChange={e=>setEditForm(f=>({...f,commission:e.target.value}))}/></div>
                     </div>
-                    <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: {editForm.currency==="TRY"?"₺":editForm.currency==="EUR"?"€":"$"}{fmt((+editForm.shares)*(+editForm.price))}</div>
+                    <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: {displaySym(editForm.currency)}{fmt((+editForm.shares)*(+editForm.price))}</div>
                     <div className="brow">
                       <button className="pri btn-md" onClick={()=>saveEdit(t)} disabled={saving}>{saving?"Kaydediliyor...":"Kaydet"}</button>
                       <button className="btn-md" onClick={()=>setEditId(null)}>İptal</button>
@@ -1909,10 +1919,10 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,open
                       <span style={{fontSize:11,color:"var(--text2)",fontFamily:"monospace",minWidth:80}}>{fmtDateTR(t.date)}</span>
                       <span className={t.way==="BUY"?"ok":"err"} style={{fontSize:11,minWidth:28}}>{t.way==="BUY"?"Alış":"Satış"}</span>
                       <span className="mono" style={{fontSize:12}}>{fmtShares(t.shares)} adet</span>
-                      {!hideAmts&&<span className="mono dim" style={{fontSize:12}}>{mask((t.currency==="TRY"?"₺":"$")+fmt(t.price))}</span>}
-                      {!hideAmts&&<span className="mono" style={{fontSize:12,fontWeight:600}}>{mask((t.currency==="TRY"?"₺":"$")+fmt(t.total,0))}</span>}
+                      {!hideAmts&&<span className="mono dim" style={{fontSize:12}}>{mask(displaySym(t.currency)+fmt(t.price))}</span>}
+                      {!hideAmts&&<span className="mono" style={{fontSize:12,fontWeight:600}}>{mask(displaySym(t.currency)+fmt(t.total,0))}</span>}
                       {t.broker&&<span className="dim" style={{fontSize:10}}>{t.broker}</span>}
-                      {!hideAmts&&+t.commission>0&&<span className="dim" style={{fontSize:10}}>Kom: {mask((t.currency==="TRY"?"₺":"$")+fmt(+t.commission,2))}</span>}
+                      {!hideAmts&&+t.commission>0&&<span className="dim" style={{fontSize:10}}>Kom: {mask(displaySym(t.currency)+fmt(+t.commission,2))}</span>}
                       {(()=>{
                         const af=(splits||[]).filter(s=>s.ticker===t.ticker&&s.split_date>t.date);
                         if(!af.length)return null;
@@ -3020,12 +3030,11 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
           });
         };
         return (
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:16}}>
+          <div className="fbar" style={{marginBottom:16}}>
             <button className={"mtab"+(allSelected?" on":"")} onClick={()=>setActiveTypes(atAll)}>Tümü</button>
             {presentTypes.map(cfg=>(
               <button key={cfg.type} className={"mtab"+(activeTypes.includes(cfg.type)?" on":"")}
-                onClick={()=>toggleType(cfg.type)}
-                style={{display:"flex",alignItems:"center",gap:4}}>
+                onClick={()=>toggleType(cfg.type)}>
                 <span style={{opacity:.7,display:"flex"}}>{cfg.icon(12)}</span>{cfg.label}
               </button>
             ))}
@@ -4170,7 +4179,7 @@ function App({session}){
                 });
               };
               return (
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14,marginTop:4}}>
+                <div className="fbar" style={{marginBottom:14,marginTop:4}}>
                   <button
                     className={"mtab"+(allSelected?" on":"")}
                     onClick={()=>setDashTypeFilter(BLOCK_TYPES.map(b=>b.type))}
@@ -4180,7 +4189,6 @@ function App({session}){
                       key={cfg.type}
                       className={"mtab"+(dashTypeFilter.includes(cfg.type)?" on":"")}
                       onClick={()=>toggleType(cfg.type)}
-                      style={{display:"flex",alignItems:"center",gap:4}}
                     >
                       <span style={{opacity:.7,display:"flex"}}>{cfg.icon(12)}</span>
                       {cfg.label}
@@ -4190,7 +4198,7 @@ function App({session}){
               );
             })()}
             {BLOCK_TYPES.map((cfg, idx) => {
-              const items = filteredPos.filter(p => p.type===cfg.type && p.currency===cfg.cur).map(wrapPos);
+              const items = filteredPos.filter(p => p.type===cfg.type).map(wrapPos);
               if(items.length===0) return null;
               const sortedItems = sortPos(items, sort);
               const totMv = items.reduce((a,p)=>a+(p.mv ?? p.cost),0);
