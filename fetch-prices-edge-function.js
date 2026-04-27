@@ -12,6 +12,8 @@
 // Body: { ticker, mode, date?, from?, to?, asset_type? }
 // Modes: "price" (default), "historical", "meta"
 
+import { createClient } from "npm:@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://canmrtr.github.io",
   "Access-Control-Allow-Headers": "authorization, content-type",
@@ -355,6 +357,24 @@ Deno.serve(async (req) => {
       result = isBist
         ? await yfPrice(cleanTicker, date)
         : await massivePrice(massiveTicker, priceDate, massiveKey);
+    }
+
+    // historical fetch başarılıysa price_cache'e yaz (service_role — frontend write-lock sonrası)
+    if (mode === "historical" && result?.price != null && !result?.error) {
+      const supaUrl = Deno.env.get("SUPABASE_URL");
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (supaUrl && serviceKey) {
+        try {
+          const supa = createClient(supaUrl, serviceKey, { auth: { persistSession: false } });
+          await supa.from("price_cache").upsert(
+            { ticker, price: result.price, d1: result.d1, w1: result.w1, m1: result.m1,
+              y1: result.y1, p_d1: result.p_d1, p_w1: result.p_w1, p_m1: result.p_m1,
+              p_m3: result.p_m3, p_m6: result.p_m6, p_y1: result.p_y1,
+              updated_at: new Date().toISOString() },
+            { onConflict: "ticker" }
+          );
+        } catch (_) { /* non-critical; frontend zaten veriyi aldı */ }
+      }
     }
 
     return json({ ticker, result, date: priceDate, source });

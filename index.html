@@ -488,6 +488,11 @@ const goldOzPerUnit = unit => {
 
 // Massive desteği olan popüler kriptolar — picker chip listesi.
 // Edge function `asset_type:"CRYPTO"` ile bu sembolleri `X:{SYM}USD` formatına çevirir.
+const BENCHMARKS = [
+  {ticker:"SPY",   label:"S&P 500",  type:"US_STOCK"},
+  {ticker:"XU100", label:"BIST 100", type:"BIST"},
+];
+
 const CRYPTO_SYMBOLS = [
   {sym:"BTC",  name:"Bitcoin"},
   {sym:"ETH",  name:"Ethereum"},
@@ -3516,19 +3521,6 @@ function App({session}){
       }
       saveHist(nh);savePrc(np,latestDate);
     }
-    // Backfill: LS'te olan ama cache'te olmayan ticker'ları cache'e yaz.
-    // Sadece tarihi veri tam olanlar (p_y1 != null), tek seferlik katkı.
-    const toBackfill=Object.keys(hist).filter(t=>!cachedSet.has(t)&&hist[t]?.p_y1!=null);
-    if(toBackfill.length){
-      const rows=toBackfill.map(t=>{
-        const h=hist[t];
-        return{ticker:t,price:h.last,d1:h.d1,w1:h.w1,m1:h.m1,y1:h.y1,p_d1:h.p_d1,p_w1:h.p_w1,p_m1:h.p_m1,p_m3:h.p_m3,p_m6:h.p_m6,p_y1:h.p_y1,updated_at:new Date().toISOString()};
-      });
-      sb.from("price_cache").upsert(rows,{onConflict:"ticker"}).then(({error})=>{
-        if(error)DEBUG && console.warn("[cache backfill]",error.message);
-        else DEBUG && console.log(`[cache backfill] ${rows.length} ticker paylaşımlı cache'e eklendi`);
-      });
-    }
     setBusy(b=>({...b,d:false}));
   };
   useEffect(()=>{loadData();},[]);
@@ -3567,9 +3559,11 @@ function App({session}){
   useEffect(()=>{
     if(!pos.length||busy.h||busy.p)return;
     const tickers=pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO").map(p=>p.ticker);
-    const missing=tickers.filter(t=>!hist[t]||hist[t].p_y1==null);
+    const missingPos=tickers.filter(t=>!hist[t]||hist[t].p_y1==null);
+    const missingBench=BENCHMARKS.map(b=>b.ticker).filter(t=>!hist[t]||hist[t].p_y1==null);
+    const missing=[...new Set([...missingPos,...missingBench])];
     if(missing.length){
-      flash_(`${missing.length} ticker için tarihi veri otomatik yükleniyor...`,"ok");
+      if(missingPos.length)flash_(`${missingPos.length} ticker için tarihi veri otomatik yükleniyor...`,"ok");
       fetchHist(missing);
     }
   },[pos]);
@@ -3662,8 +3656,9 @@ function App({session}){
   const fetchHist=async(tickersOverride)=>{
     setBusy(b=>({...b,h:true}));
     // tickersOverride array of strings ise, asset_type'ı pos'tan lookup et
+    const benchTypeMap=Object.fromEntries(BENCHMARKS.map(b=>[b.ticker,b.type]));
     const fetchable = tickersOverride
-      ? tickersOverride.map(t=>{const p=pos.find(x=>x.ticker===t);return{ticker:t,type:p?.type};})
+      ? tickersOverride.map(t=>{const p=pos.find(x=>x.ticker===t);return{ticker:t,type:p?.type||benchTypeMap[t]};})
       : pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO").map(p=>({ticker:p.ticker,type:p.type}));
     const nh={...hist};const np={...prc};let cnt=0;const failed=[];
     for(let i=0;i<fetchable.length;i++){
@@ -3681,14 +3676,6 @@ function App({session}){
             p_m3:v.p_m3,p_m6:v.p_m6,p_y1:v.p_y1
           };
           np[t]=v.price;cnt++;
-          // Paylaşımlı cache'e yaz — diğer user'lar da faydalansın.
-          sb.from("price_cache").upsert({
-            ticker:t,price:v.price,
-            d1:v.d1,w1:v.w1,m1:v.m1,y1:v.y1,
-            p_d1:v.p_d1,p_w1:v.p_w1,p_m1:v.p_m1,
-            p_m3:v.p_m3,p_m6:v.p_m6,p_y1:v.p_y1,
-            updated_at:new Date().toISOString()
-          },{onConflict:"ticker"}).then(({error})=>{if(error)DEBUG && console.warn(`[cache upsert ${t}]`,error.message);});
         } else {
           failed.push(t);console.warn(`[fetchHist ${t}]`,v?.error||d.error||"no data");
         }
@@ -3927,6 +3914,28 @@ function App({session}){
                 );
               })}
             </div>
+
+            {/* Benchmark karşılaştırması — SPY + XU100, seçili periyot */}
+            {sel.key!=="max"&&BENCHMARKS.some(b=>hist[b.ticker]?.last)&&(
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10,flexWrap:"wrap"}}>
+                <span style={{fontSize:10,color:"var(--text3)",fontWeight:500,textTransform:"uppercase",letterSpacing:.5}}>Benchmark</span>
+                {BENCHMARKS.map(b=>{
+                  const h=hist[b.ticker];
+                  if(!h?.last)return null;
+                  const ret=(["d1","w1","m1","y1"].includes(sel.key))
+                    ?h[sel.key]
+                    :(h[{m3:"p_m3",m6:"p_m6"}[sel.key]]?((h.last/h[{m3:"p_m3",m6:"p_m6"}[sel.key]])-1)*100:null);
+                  return(
+                    <span key={b.ticker} style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 9px",borderRadius:8,background:"var(--bg3)",fontSize:11}}>
+                      <span style={{color:"var(--text2)"}}>{b.label}</span>
+                      {ret!=null
+                        ?<span className={"mono"+(ret>=0?" ok":" err")} style={{fontWeight:600}}>{fmtP(ret)}</span>
+                        :<span style={{color:"var(--text3)"}}>—</span>}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Period başlangıç bilgisi — hist yoksa veya yetersizse uyarı */}
             {sel.key!=="max"&&!pInfo&&(
