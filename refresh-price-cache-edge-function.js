@@ -47,6 +47,27 @@ const fetchHistorical = async (ticker, massiveKey) => {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
+  // CRON_SECRET guard — fail-closed: secret yoksa 500, yanlışsa 401.
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  if (!cronSecret) {
+    return new Response(JSON.stringify({ error: "CRON_SECRET not configured" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+  const auth = req.headers.get("Authorization") || "";
+  const expected = `Bearer ${cronSecret}`;
+  // XOR tabanlı constant-time compare — erken çıkış yok.
+  const enc = new TextEncoder();
+  const ab = enc.encode(auth), eb = enc.encode(expected);
+  let mismatch = ab.length !== eb.length ? 1 : 0;
+  const len = Math.max(ab.length, eb.length);
+  for (let i = 0; i < len; i++) mismatch |= (ab[i] ?? 0) ^ (eb[i] ?? 0);
+  if (mismatch !== 0) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" }
+    });
+  }
+
   try {
     const massiveKey = Deno.env.get("MASSIVE_KEY");
     const supaUrl = Deno.env.get("SUPABASE_URL");

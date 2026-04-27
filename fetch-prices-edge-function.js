@@ -63,12 +63,12 @@ async function yfPrice(ticker, date) {
 
 async function yfHistorical(ticker) {
   const c = await yfChart(ticker, "1y");
-  if (c.error) return {};
+  if (c.error) return { error: `yfHistorical: ${c.error}` };
   const bars = [];
   for (let i = 0; i < c.ts.length; i++) {
     if (c.close[i] != null) bars.push({ t: c.ts[i] * 1000, c: c.close[i] });
   }
-  if (bars.length < 2) return {};
+  if (bars.length < 2) return { error: "yfHistorical: yetersiz veri" };
   bars.sort((a, b) => a.t - b.t);
   const n = bars.length, last = bars[n - 1].c;
   const get = (i) => (i >= 0 && i < n ? bars[i].c : null);
@@ -197,9 +197,9 @@ async function massivePrice(ticker, date, apiKey) {
 async function massiveHistorical(ticker, from, to, apiKey) {
   const url = `https://api.massive.com/v2/aggs/ticker/${ticker}/range/1/day/${from}/${to}?adjusted=true&limit=400&apiKey=${apiKey}`;
   const r = await fetch(url);
-  if (!r.ok) return {};
+  if (!r.ok) return { error: `massiveHistorical: HTTP ${r.status}` };
   const d = await r.json();
-  if (!d.results || d.results.length <= 1) return {};
+  if (!d.results || d.results.length <= 1) return { error: "massiveHistorical: yetersiz veri" };
   const bars = d.results.sort((a, b) => a.t - b.t);
   const n = bars.length, last = bars[n - 1].c;
   const get = (i) => (i >= 0 && i < n ? bars[i].c : null);

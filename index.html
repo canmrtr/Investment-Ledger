@@ -753,9 +753,10 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType}){
   const effCur  = tkPos?.currency || (effType==="BIST" ? "TRY" : "USD");
 
   const saveManual=async()=>{
-    if(!form.shares||!form.price){flash_("Adet ve fiyat zorunlu","err");return;}
-    setSaving(true);
     const sh=+form.shares,pr=+form.price;
+    if(!form.shares||isNaN(sh)||sh<=0){flash_("Geçersiz adet","err");return;}
+    if(!form.price||isNaN(pr)||pr<0){flash_("Geçersiz fiyat","err");return;}
+    setSaving(true);
     const{error}=await sb.from("transactions").insert({
       user_id:user.id,date:form.date,ticker,
       name:tkPos?.name||ticker,
@@ -794,7 +795,10 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType}){
   const saveAI=async(list)=>{
     const items = Array.isArray(list) ? list : (aiParsed||[]);
     if(!items||items.length===0)return;
-    const rows = items.map(p=>({
+    const valid=items.filter(p=>{const sh=+p.shares,pr=+p.price;return !isNaN(sh)&&sh>0&&!isNaN(pr)&&pr>=0;});
+    const invalidCnt=items.length-valid.length;
+    if(valid.length===0){flash_("Geçerli işlem bulunamadı","err");return;}
+    const rows = valid.map(p=>({
       user_id:user.id,date:p.date,ticker,
       name:p.name||tkPos?.name||ticker,
       asset_type:p.asset_type||effType,
@@ -807,7 +811,8 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType}){
     const{error}=await sb.from("transactions").insert(rows);
     if(error){flash_(error.message,"err");return;}
     await rebuildPositions(user.id);await loadData();
-    flash_(rows.length===1?"İşlem eklendi ✓":`${rows.length} işlem eklendi ✓`);
+    const msg=rows.length===1?"İşlem eklendi ✓":`${rows.length} işlem eklendi ✓`;
+    flash_(invalidCnt>0?msg+` · ${invalidCnt} geçersiz atlandı`:msg);
     onClose();
   };
 
@@ -2460,7 +2465,10 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
   const saveTx=async(list)=>{
     const items = Array.isArray(list) ? list : (parsed||[]);
     if(!items||items.length===0)return;
-    const rows = items.map(p=>({
+    const valid=items.filter(p=>{const sh=+p.shares,pr=+p.price;return !isNaN(sh)&&sh>0&&!isNaN(pr)&&pr>=0;});
+    const invalidCnt=items.length-valid.length;
+    if(valid.length===0){flash_("Geçerli işlem bulunamadı","err");return;}
+    const rows = valid.map(p=>({
       user_id:user.id,date:p.date,ticker:p.ticker,name:p.name||"",
       asset_type:p.asset_type,way:p.way,shares:+p.shares,price:+p.price,
       currency:p.currency||"USD",total:+((+p.shares)*(+p.price)).toFixed(4),
@@ -2471,7 +2479,8 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
     await rebuildPositions(user.id);
     await loadData();
     setParsed(null);setTextInput("");setImgFile(null);
-    flash_(rows.length===1?"Kaydedildi ✓":`${rows.length} işlem kaydedildi ✓`);
+    const msg=rows.length===1?"Kaydedildi ✓":`${rows.length} işlem kaydedildi ✓`;
+    flash_(invalidCnt>0?msg+` · ${invalidCnt} geçersiz atlandı`:msg);
   };
 
   const handleFile=f=>{
@@ -2524,15 +2533,15 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
     if(!csvRows.length)return;
     setCsvBusy(true);setProgStep("Başlıyor...");setProgPct(5);setProgDone(false);
 
-    const txInserts=csvRows.map(r=>({
+    const allCsvMapped=csvRows.map(r=>({
       user_id:user.id,
       date:r.date||today(),
       ticker:(r.ticker||"").toUpperCase(),
       name:r.name||r.ticker||"",
       asset_type:r.type||r.asset_type||"US_STOCK",
       way:(r.way||"BUY").toUpperCase(),
-      shares:parseFloat(r.shares)||0,
-      price:parseFloat(r.price)||0,
+      shares:parseFloat(r.shares),
+      price:parseFloat(r.price),
       currency:r.currency||"USD",
       total:+(parseFloat(r.shares)*parseFloat(r.price)).toFixed(4),
       broker:r.broker||"",
@@ -2540,6 +2549,12 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
       exchange:r.exchange||"",
       notes:r.notes||""
     }));
+    const txInserts=allCsvMapped.filter(r=>{
+      const ok=r.shares>0&&isFinite(r.shares)&&r.price>=0&&isFinite(r.price);
+      if(!ok)console.warn("[CSV skip]",r.ticker,"shares="+r.shares,"price="+r.price);
+      return ok;
+    });
+    const csvExtraSkip=allCsvMapped.length-txInserts.length;
 
     let ok=0;
     const bsz=CFG.CSV_BATCH_SIZE;
@@ -2556,7 +2571,7 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
     const posCount=await rebuildPositions(user.id);
     await loadData();
 
-    setProgStep(`✓ ${ok} işlem · ${posCount} pozisyon aktarıldı`);
+    setProgStep(`✓ ${ok} işlem · ${posCount} pozisyon aktarıldı`+(csvExtraSkip>0?` · ${csvExtraSkip} satır atlandı`:""));
     setProgPct(100);setProgDone(true);setCsvBusy(false);
     setTimeout(()=>{setCsvText("");setCsvRows([]);setProgStep("");setProgPct(0);setProgDone(false);},CFG.CSV_PROGRESS_MS);
   };
@@ -3290,6 +3305,53 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
           );
         })()}
       </div>
+
+      {/* Konsantrasyon Risk Göstergesi — top3 ağırlık + HHI */}
+      <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+        <div className="stitle" style={{marginBottom:12}}>Konsantrasyon Riski</div>
+        {(()=>{
+          const posWithMv=pos.map(p=>({...p,dispMv:mvDisp(p)})).filter(p=>p.dispMv>0);
+          const total=posWithMv.reduce((a,p)=>a+p.dispMv,0);
+          if(total<=0||posWithMv.length===0)return <div className="empty" style={{padding:"12px 0",fontSize:11}}>Yeterli pozisyon yok</div>;
+          const sorted=[...posWithMv].sort((a,b)=>b.dispMv-a.dispMv);
+          const weights=sorted.map(p=>({...p,w:p.dispMv/total}));
+          const top3w=weights.slice(0,3).reduce((a,p)=>a+p.w,0)*100;
+          const hhi=Math.round(weights.reduce((a,p)=>a+(p.w*100)*(p.w*100),0));
+          const level=top3w>60?"Yüksek":top3w>40?"Orta":"Düşük";
+          const color=top3w>60?"var(--err)":top3w>40?"var(--warn)":"var(--ok)";
+          return(
+            <div>
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
+                <div>
+                  <div className="mono" style={{fontSize:22,fontWeight:700,color}}>{mask(fmt(top3w,1)+"%")}</div>
+                  <div style={{fontSize:10,color:"var(--text3)",marginTop:1}}>İlk 3 pozisyon ağırlığı</div>
+                </div>
+                <span style={{fontSize:12,padding:"3px 10px",borderRadius:12,background:color+"22",color,fontWeight:600}}>{level}</span>
+                <div style={{marginLeft:"auto",textAlign:"right"}}>
+                  <div className="mono" style={{fontSize:13,fontWeight:600}}>{hhi}</div>
+                  <div style={{fontSize:10,color:"var(--text3)"}}>HHI skoru</div>
+                </div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {weights.slice(0,3).map((p,i)=>(
+                  <div key={p.ticker} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>openDetail(p.ticker,p.type,"analysis")}>
+                    <span style={{color:"var(--text3)",fontSize:11,minWidth:14}}>{i+1}.</span>
+                    <span className="mono" style={{fontSize:13,fontWeight:600,minWidth:60}}>{p.ticker}</span>
+                    <div style={{flex:1,height:6,background:"var(--bg3)",borderRadius:3,overflow:"hidden"}}>
+                      <div style={{width:(p.w*100)+"%",height:"100%",background:color,borderRadius:3}}/>
+                    </div>
+                    <span className="mono" style={{fontSize:12,color:"var(--text2)",minWidth:40,textAlign:"right"}}>{fmt(p.w*100,1)}%</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{marginTop:10,fontSize:10,color:"var(--text3)"}}>
+                HHI = Σ(ağırlık²) × 10000 · {posWithMv.length} pozisyon · {posWithMv.length>3?`geri kalan ${posWithMv.length-3} pozisyon dağılımı etkiliyor`:""}{" "}
+                <span data-tip="Herfindahl-Hirschman Endeksi: 0=tam çeşitlenmiş, 10000=tek pozisyon. >2500 konsantre sayılır.">HHI nedir?</span>
+              </div>
+            </div>
+          );
+        })()}
+      </div>
     </div>
   );
 }
@@ -3330,8 +3392,8 @@ function App({session}){
   const [themeMode,setThemeMode_]=useState(()=>LS.get("il_theme","system"));
   const [fxRates,setFxRates]=useState(()=>{const c=fxCacheGet();return c?c.rates:null;});
   const [fxAt,setFxAt]=useState(()=>{const c=fxCacheGet();return c?c.t:null;});
-  const [sort,setSort]=useState({by:"mv",dir:"desc"});
-  const [sortTry,setSortTry]=useState({by:"mv",dir:"desc"});
+  const [sort,setSort]=useState({by:"plPct",dir:"desc"});
+  const [sortTry,setSortTry]=useState({by:"plPct",dir:"desc"});
   const [distMode,setDistMode]=useState("mv"); // "cost" | "mv" — pie chart mode
   const [busy,setBusy]=useState({p:false,h:false,d:false});
   const [pprog,setPprog]=useState("");
@@ -3562,7 +3624,7 @@ function App({session}){
   const byT=distMode==="cost"?byTCost:byTMV;
   const pPerf=k=>{const v=usd.filter(p=>p[k]!=null&&p.mv!=null);if(!v.length)return null;const s=v.reduce((a,p)=>a+p.mv,0);return v.reduce((a,p)=>a+p[k]*(p.mv/s),0);};
   const hasH=Object.keys(hist).length>0;
-  const sortPos=(arr,st)=>[...arr].sort((a,b)=>{const va=a[st.by]??0,vb=b[st.by]??0;return st.dir==="asc"?va-vb:vb-va;});
+  const sortPos=(arr,st)=>[...arr].sort((a,b)=>{const def=st.dir==="desc"?-Infinity:Infinity;const va=a[st.by]??def,vb=b[st.by]??def;return st.dir==="asc"?va-vb:vb-va;});
   const sorted=sortPos(usd,sort);
   const sortedTry=sortPos(try_,sortTry);
   const tsort=k=>setSort(s=>({by:k,dir:s.by===k&&s.dir==="asc"?"desc":"asc"}));
@@ -3628,7 +3690,7 @@ function App({session}){
             updated_at:new Date().toISOString()
           },{onConflict:"ticker"}).then(({error})=>{if(error)DEBUG && console.warn(`[cache upsert ${t}]`,error.message);});
         } else {
-          failed.push(t);DEBUG && console.warn(`[fetchHist ${t}]`,v?.error||d.error||"no data");
+          failed.push(t);console.warn(`[fetchHist ${t}]`,v?.error||d.error||"no data");
         }
       }catch(e){failed.push(t);DEBUG && console.warn(`[fetchHist ${t}]`,e);}
       if(i<fetchable.length-1)await sleep(CFG.RATE_LIMIT_MS);
@@ -3848,7 +3910,7 @@ function App({session}){
             })()}
 
             {/* Period selector */}
-            <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
+            <div style={{display:"flex",gap:4,marginBottom:16,flexWrap:"wrap"}}>
               {PERIODS.map(p=>{
                 const refTk=(usd[0]||try_[0])?.ticker;
                 const available=p.key==="max"||(hasH&&refTk&&hist[refTk]?.[p.priceKey]!=null);
