@@ -2781,7 +2781,6 @@ const buildSlicesPath = (sliceArr, CX, CY, R) => {
 };
 
 function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,openDetail}){
-  const [filter,setFilter]=useState("all");
   const [assetDistMode,setAssetDistMode]=useState("mv"); // "cost" | "mv"
   const [activeTypes,setActiveTypes]=useState(()=>BLOCK_TYPES.filter(cfg=>pos.some(p=>p.type===cfg.type)).map(cfg=>cfg.type));
   useEffect(()=>{
@@ -2902,39 +2901,21 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
     return arr.filter(s => s.split_date > date).reduce((a,s)=>a*+s.ratio,1);
   };
 
-  // Sadece pozisyonu olan tipleri göster — boş tipler chip'te yer kaplamasın
-  const heldTypes = (() => {
-    const set = new Set();
-    pos.forEach(p => set.add(p.type));
-    return ["US_STOCK","BIST","FUND","CRYPTO","GOLD","FX"].filter(t => set.has(t));
-  })();
-  const filterChips = ["all", ...heldTypes];
-
-  // Slice hesabı: filter==="all" → type breakdown; filter spesifik → o tipteki ticker breakdown
+  // Slice hesabı: type breakdown — global filtre zaten aktif tip seçimini yönetiyor.
   // assetDistMode: "mv" → piyasa değeri, "cost" → maliyet. Tüm değerler display cur'a convert.
   const slices = (() => {
     const valFn = assetDistMode === "cost" ? costDisp : mvDisp;
-    if (filter === "all") {
-      const byType = {};
-      filteredPos.forEach(p => {
-        const v = valFn(p);
-        if (v > 0) byType[p.type] = (byType[p.type] || 0) + v;
-      });
-      const total = Object.values(byType).reduce((a,v)=>a+v,0);
-      const arr = Object.entries(byType)
-        .map(([type,value]) => ({key:type, label:TL[type]||type, value, color:TYPE_COLORS[type]||"#666"}))
-        .sort((a,b)=>b.value-a.value);
-      arr.forEach(s => s.frac = total > 0 ? s.value/total : 0);
-      return {arr, total};
-    } else {
-      const filtered = filteredPos.filter(p => p.type === filter);
-      const arr = filtered.map((p,i) => ({
-        key:p.ticker, label:p.ticker, value:valFn(p), color:TICKER_PIE_COLORS[i % TICKER_PIE_COLORS.length]
-      })).filter(s => s.value > 0).sort((a,b)=>b.value-a.value);
-      const total = arr.reduce((a,s)=>a+s.value,0);
-      arr.forEach(s => s.frac = total > 0 ? s.value/total : 0);
-      return {arr, total};
-    }
+    const byType = {};
+    filteredPos.forEach(p => {
+      const v = valFn(p);
+      if (v > 0) byType[p.type] = (byType[p.type] || 0) + v;
+    });
+    const total = Object.values(byType).reduce((a,v)=>a+v,0);
+    const arr = Object.entries(byType)
+      .map(([type,value]) => ({key:type, label:TL[type]||type, value, color:TYPE_COLORS[type]||"#666"}))
+      .sort((a,b)=>b.value-a.value);
+    arr.forEach(s => s.frac = total > 0 ? s.value/total : 0);
+    return {arr, total};
   })();
 
   // Tüm dağılım kartları display currency sembolünde gösterir
@@ -3053,23 +3034,13 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
       })()}
       {/* Varlık dağılımı pie */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:filterChips.length>2?8:12}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
           <div className="stitle" style={{marginBottom:0}}>Varlık Dağılımı</div>
           <div className="seg">
             <button className={assetDistMode==="cost"?"on":""} onClick={()=>setAssetDistMode("cost")}>Maliyet</button>
             <button className={assetDistMode==="mv"?"on":""} onClick={()=>setAssetDistMode("mv")}>Piyasa</button>
           </div>
         </div>
-        {filterChips.length > 2 && (
-          <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:12}} data-test="analysis-filter">
-            {filterChips.map(t => (
-              <button key={t} className={"mtab sm"+(filter===t?" on":"")}
-                onClick={()=>setFilter(t)} data-test={`filter-${t}`}>
-                {TYPE_LABEL_SHORT[t]||t}
-              </button>
-            ))}
-          </div>
-        )}
         {slices.arr.length === 0 ? (
           <div className="empty" style={{padding:"40px 0"}}>Bu varlık türünde değerli pozisyon yok</div>
         ) : (
