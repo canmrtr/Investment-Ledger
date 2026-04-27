@@ -2892,7 +2892,10 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
   const mvDisp = (p) => {
     const raw = (prc[p.ticker] || 0) * p.shares;
     if (raw <= 0) return 0;
-    return cnv(raw, p.currency || "USD") || 0;
+    // price_cache stores TRY for BIST (Yahoo), USD for everything else (Massive).
+    // Use asset-type-based currency, not p.currency which may be stale.
+    const priceCur = p.type === "BIST" ? "TRY" : "USD";
+    return cnv(raw, priceCur) || 0;
   };
   // Pozisyon maliyet (avg_cost × shares, orijinal currency'de) → display cur'a çevir
   const costDisp = (p) => {
@@ -3764,11 +3767,13 @@ function App({session}){
   // Tüm pozisyonların display cur'a normalize edilmiş hali — KPI/pie/sparkline için
   const allDisp=filteredPos.map(p=>{
     const cur=p.currency||"USD";
+    // price_cache stores TRY for BIST (Yahoo), USD for all other asset types (Massive).
+    const priceCur = p.type==="BIST" ? "TRY" : "USD";
     const price=prc[p.ticker];
     const rawCost=p.shares*p.avgCost;
     const rawMv=price!=null?p.shares*price:null;
     const cost=cnv(rawCost,cur);
-    const mv=rawMv!=null?cnv(rawMv,cur):null;
+    const mv=rawMv!=null?cnv(rawMv,priceCur):null;
     const pl=(mv!=null&&cost!=null)?mv-cost:null;
     return{...p,cost,mv,pl,plPct:(pl!=null&&cost>0)?(pl/cost)*100:null};
   });
