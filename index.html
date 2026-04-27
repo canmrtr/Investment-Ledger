@@ -534,6 +534,17 @@ const edgeCall = (fn, body) => fetch(`${SUPA_URL}/functions/v1/${fn}`, {
   body: JSON.stringify(body)
 });
 
+// parse-transaction için: gerçek kullanıcı JWT'si ile çağır (rate limit doğrulama için).
+const edgeCallAuth = async (fn, body) => {
+  const { data: { session: sess } } = await sb.auth.getSession();
+  const token = sess?.access_token || SUPA_ANON;
+  return fetch(`${SUPA_URL}/functions/v1/${fn}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    body: JSON.stringify(body),
+  });
+};
+
 // ── Return metrics: Total Return & XIRR ──────────────────────────
 // XIRR = düzensiz aralıklı cash flow'ların yıllık getirisi (Excel XIRR).
 // cashflows: [{date: Date, amount: number}] — negatif=yatırım, pozitif=geri dönüş.
@@ -785,7 +796,7 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType}){
     setAiParsing(true);setAiErr("");setAiParsed(null);
     try{
       // Ticker'ı prompt'a göm — AI doğru ticker bulsun
-      const r=await edgeCall("parse-transaction",{text:`Ticker: ${ticker}. ${aiText}`});
+      const r=await edgeCallAuth("parse-transaction",{text:`Ticker: ${ticker}. ${aiText}`});
       const d=await r.json();
       if(!r.ok||d.error)throw new Error(d.message||d.error||`HTTP ${r.status}`);
       const list = Array.isArray(d.transactions) ? d.transactions : (d.ticker && d.date ? [d] : []);
@@ -2441,7 +2452,7 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
   const callParse=async(body)=>{
     setParsing(true);setParseErr("");setParsed(null);
     try{
-      const r=await edgeCall("parse-transaction",body);
+      const r=await edgeCallAuth("parse-transaction",body);
       const d=await r.json();
       if(!r.ok||d.error||d.code)throw new Error(d.message||d.error||`HTTP ${r.status}`);
       // Yeni edge function `transactions` array döner; eski tek-obje formatına da fallback
@@ -2717,6 +2728,12 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
 // ── AnalysisTab — Portföy analiz sekmesi (Sprint 1) ────────────
 // Şu an: filtreli varlık dağılımı pie. Sprint 2: bölge / komisyon / win-loss.
 // Filter chip "Genel" → asset type breakdown; spesifik tip → o tipteki ticker breakdown.
+// Sektör dağılımı renk paleti — 10 distinct renk + fallback gri (bilinmiyor)
+const SECTOR_COLORS = [
+  "#30d158","#0a84ff","#ff9f0a","#bf5af2","#ffd60a",
+  "#ff453a","#5e5ce6","#64d2ff","#ac8e68","#ff6b6b",
+];
+const SECTOR_UNKNOWN_COLOR = "#8e8e93";
 const TYPE_LABEL_SHORT = {
   all:"Genel", US_STOCK:"US Hisse", BIST:"BIST", FUND:"ETF/Fon",
   CRYPTO:"Kripto", GOLD:"Altın", FX:"Döviz"
@@ -2769,6 +2786,8 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
   // Kart collapse state'leri — default kapalı (özet üstte, detay isteğe bağlı).
   const [healthOpen,setHealthOpen]=useState(false);
   const [commOpen,setCommOpen]=useState(false);
+  const [sectorMetaBusy,setSectorMetaBusy]=useState(false);
+  const [sectorMetaTick,setSectorMetaTick]=useState(0); // inc to force re-render after meta fetch
   const dSym = displaySym(displayCur);
   const cnv = (amt, from) => convert(amt, from, displayCur, fxRates);
   // Sağlık tablosu state — ticker bazlı fund cache, mount'ta LS'ten topla.
@@ -3357,6 +3376,135 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
           );
         })()}
       </div>
+
+      {/* Sektör Dağılımı — meta cache'ten sic_description (US) / industry (BIST) */}
+      {(()=>{
+        // sectorMetaTick'e bağımlı olduğu için her meta fetch sonrası yeniden hesaplar
+        void sectorMetaTick;
+        // Her pozisyon için sektör etiketi: US → sic_description, BIST → industry, fallback Bilinmiyor
+        const posWithSector = pos.map(p => {
+          const m = metaCacheGet(p.ticker);
+          const sector = (m && (m.sic_description || m.industry)) ? (m.sic_description || m.industry) : "Bilinmiyor";
+          return {...p, sector, dispMv: mvDisp(p)};
+        }).filter(p => p.dispMv > 0);
+
+        const total = posWithSector.reduce((a,p)=>a+p.dispMv, 0);
+
+        // Sektör bazında gruplama
+        const bySector = {};
+        posWithSector.forEach(p => {
+          bySector[p.sector] = (bySector[p.sector] || 0) + p.dispMv;
+        });
+
+        // "Bilinmiyor" slice en sona, geri kalanlar desc sıralı
+        const known = Object.entries(bySector)
+          .filter(([k])=>k!=="Bilinmiyor")
+          .sort((a,b)=>b[1]-a[1]);
+        const unknownVal = bySector["Bilinmiyor"] || 0;
+        const sortedEntries = unknownVal > 0 ? [...known, ["Bilinmiyor", unknownVal]] : known;
+
+        // Renk ata: bilinen sektörler → SECTOR_COLORS döngülü, Bilinmiyor → gri
+        const colorMap = {};
+        let colorIdx = 0;
+        sortedEntries.forEach(([k])=>{
+          if (k === "Bilinmiyor") colorMap[k] = SECTOR_UNKNOWN_COLOR;
+          else { colorMap[k] = SECTOR_COLORS[colorIdx % SECTOR_COLORS.length]; colorIdx++; }
+        });
+
+        const sliceArr = sortedEntries.map(([sector, value]) => ({
+          key: sector,
+          label: sector,
+          value,
+          color: colorMap[sector],
+          frac: total > 0 ? value / total : 0,
+        }));
+
+        const sectorPath = buildSlicesPath(sliceArr, 60, 60, 50);
+
+        // Pozisyonlar arasından meta eksik olanları bul (US_STOCK + BIST için anlamlı)
+        const metaMissingPos = pos.filter(p => {
+          if (p.type !== "US_STOCK" && p.type !== "BIST" && p.type !== "FUND") return false;
+          const m = metaCacheGet(p.ticker);
+          return !(m && (m.sic_description || m.industry));
+        });
+
+        const fetchMissingMeta = async () => {
+          if (metaMissingPos.length === 0 || sectorMetaBusy) return;
+          setSectorMetaBusy(true);
+          for (let i = 0; i < metaMissingPos.length; i++) {
+            const p = metaMissingPos[i];
+            try {
+              const r = await edgeCall("fetch-prices", {ticker: p.ticker, mode: "meta", asset_type: p.type});
+              const d = await r.json();
+              if (r.ok && d && typeof d === "object") {
+                metaCacheSet(p.ticker, d);
+              }
+            } catch(e) { DEBUG && console.warn("[sector meta]", p.ticker, e); }
+            if (i < metaMissingPos.length - 1) await new Promise(res=>setTimeout(res,600));
+          }
+          setSectorMetaBusy(false);
+          setSectorMetaTick(t=>t+1);
+        };
+
+        return (
+          <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,gap:8,flexWrap:"wrap"}}>
+              <div className="stitle" style={{marginBottom:0}}>Sektör Dağılımı</div>
+              {metaMissingPos.length > 0 && (
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  {sectorMetaBusy
+                    ? <span style={{fontSize:11,color:"var(--text2)",display:"flex",alignItems:"center",gap:5}}>
+                        <span className="spin" style={{width:11,height:11}}></span>
+                        Meta çekiliyor…
+                      </span>
+                    : <button className="pri btn-xs" onClick={fetchMissingMeta}
+                        data-tip={`${metaMissingPos.length} pozisyon için sektör verisi eksik`}>
+                        Meta Çek
+                      </button>
+                  }
+                </div>
+              )}
+            </div>
+
+            {sliceArr.length === 0 ? (
+              <div className="empty" style={{padding:"40px 0"}}>Pozisyon yok</div>
+            ) : (
+              <div style={{display:"flex",gap:14,alignItems:"center"}}>
+                <svg viewBox="0 0 120 120" style={{width:110,height:110,flex:"0 0 auto"}}>
+                  {sectorPath.map(s=>(
+                    <path key={s.key} d={s.path} fill={s.color} stroke="var(--bg2)" strokeWidth="1"/>
+                  ))}
+                </svg>
+                <div style={{flex:1,minWidth:0}}>
+                  {sectorPath.map(s=>(
+                    <div key={s.key} className="pie-row">
+                      <span className="pie-sw" style={{background:s.color}}></span>
+                      <span style={{flex:1,minWidth:0}}>{s.label}</span>
+                      <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(s.value,0))}</span>
+                      <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
+                    </div>
+                  ))}
+                  <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
+                    <span className="pie-sw" style={{visibility:"hidden"}}></span>
+                    <span style={{flex:1,minWidth:0}}>Toplam</span>
+                    <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(total,0))}</span>
+                    <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {metaMissingPos.length > 0 && !sectorMetaBusy && (
+              <div style={{fontSize:10,color:"var(--text3)",marginTop:8}}>
+                {metaMissingPos.length} pozisyon için sektör meta verisi eksik — "Meta Çek" ile çek.
+              </div>
+            )}
+            <div style={{fontSize:10,color:"var(--text3)",marginTop:6,lineHeight:1.5}}>
+              Kaynak: US hisseler → SIC açıklaması, BIST → sektör (borsa-mcp). Cache 7 gün.
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

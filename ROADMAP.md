@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-04-27** (Sprint 4 planı eklendi)
+İlk toplama: **2026-04-24** | Son grooming: **2026-04-27** (Sprint 4 planı eklendi; Analiz Tab 8 yeni fikir eklendi)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -110,17 +110,34 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 ### Karşılaştırma
 
 - [ ] **Peer Sektör Ortalamasıyla Karşılaştırma** `[L]` `[P3]` — FMP sektör ortalaması P/E, ROE, marjla hisse bazında karşılaştırma. FMP'de yeni endpoint (`/stable/sector-pe-snapshot`) gerekir.
+- [ ] **Ağırlıklı Ortalama Portföy P/E** `[S]` `[P2]` — Her pozisyonun piyasa değeri ağırlığıyla P/E ortalaması; tek satır "Portföyünüzün ortalama F/K'sı 18.4 — S&P 500 ortalamasının altında / üstünde" gibi bağlam cümlesi. Fundamentals cache (`fund_${ticker}`) zaten mevcut; sadece aggregation. Yeni fetch yok. Value-investing lens için doğal "ucuz mu pahalı mı?" özeti.
 
 ### Vergi & Muhasebe
 
 - [ ] **Vergi Yılı Özeti** `[L]` `[P2]` — Seçilen yılda realized kazanç/kayıp; US short-term (<1Y) / long-term (>=1Y) ayrımı; TR BIST 2 yıl muafiyet kuralı; tahmini vergi. Tarihi FX kuru için Frankfurter historical API.
 - [ ] **Ortalama Elde Tutma Süresi** `[S]` `[P2]` — Pozisyon ve portföy bazında "kaç aydır tutuyorum"; "Portföy ortalaması: 8.3 ay". `transactions` BUY tarihleri, tamamen frontend.
 
+### Risk (Ek)
+
+- [ ] **Potansiyel Kayıp (Max Pain) Simülasyonu** `[S]` `[P1]` — Portföy %10 / %20 / %30 düşerse toplam kayıp (display cur'da); kur etkisi ayrıca gösterilir ("₺ %10 değer kaybı ekleniyle toplam etki: -$X"). Üç senaryolu yatay bar; tamamen frontend, `convert()` + `fxRates` yeterli. Yeni fetch yok. Sabah "ne kadar riske giriyorum?" sorusuna anlık yanıt.
+- [ ] **Piyasa Düşüşü Dayanıklılık Skoru** `[M]` `[P2]` — Düşük borç (Borç/Özk < 0.5), yüksek FCF marjı (>10%), geniş op marjı (>15%) hisselerin portföydeki ağırlıklı payı → 1–10 dayanıklılık puanı; "Portföyünüzün %62'si resesyona dayanıklı şirketlerden oluşuyor" çıktısı. Fundamentals cache'ten; ek fetch yok. Banka/BIST bankalar hariç (early-exit seti).
+
+### Performans (Ek)
+
+- [ ] **Pozisyon Yıllık Getiri (CAGR) Tablosu** `[S]` `[P2]` — Her açık pozisyon için: ilk BUY tarihi → bugün arası zaman + toplam getiri → yıllık CAGR; "THYAO · 2.1 yıl · +%43 toplam · %18.7/yıl". Kazandırandakileri azalan sıra. `transactions` BUY kaydı + `price_cache` + frontend hesabı; yeni veri yok. Uzun vadeli yatırımcının "hangi hisse gerçekten çalıştı?" sorusu.
+- [ ] **Giriş Zamanlaması Örüntüsü (Ay Bazlı)** `[M]` `[P3]` — BUY işlemlerini ay gruplarına göre say + o giriş sonrası 3A/6A ortalama getiri hesabı; "Ocak alımlarınız Temmuz alımlarından ortalama %12 daha iyi performans gösterdi". `transactions` + `price_cache`; ek fetch az (bazı eski fiyatlar cache'te olmayabilir → sadece cache'te olan ticker'lar dahil edilir). Davranışsal öz-farkındalık; yıllık "yatırım takvimi" pattern'ı.
+
 ### Kişisel & Eğitim
 
 - [ ] **Kişisel Yatırım Notu** `[M]` `[P2]` — Ticker bazında "neden aldım / çıkış stratejim / öğrenilen ders" serbest metin; tarih sıralı liste. Yeni `notes` Supabase tablosu (user_id, ticker nullable, date, content).
 - [ ] **Portföy Zaman Çizelgesi (Timeline)** `[M]` `[P3]` — Tüm BUY/SELL kronolojik vertical timeline; isteğe bağlı piyasa olayı ekleme. `transactions` tablosu yeterli.
 - [ ] **Hedef Fiyat & Değerleme Notu** `[M]` `[P2]` — Kullanıcı tanımlı hedef fiyat + kısa not; "THYAO hedef ₺380 — %17 uzakta". Yeni `target_prices` Supabase tablosu.
+- [ ] **FIRE / Hedef Portföy Büyüklüğü Takibi** `[M]` `[P2]` — Kullanıcı hedef büyüklük (ör. $500.000) girer; mevcut portföy değeri + ortalama XIRR ile "hedefe X yıl kaldı" hesabı; progres bar. `profiles` tablosuna `goal_amount` + `goal_currency` kolonu gerekir. Günlük açılışta motivasyon metriki; dashboard widget olarak da ilerleyebilir.
+
+### Davranışsal Analiz
+
+- [ ] **Art Arda Kazanma/Kaybetme Serisi (Streak)** `[S]` `[P3]` — Kapatılmış tüm işlemler (SELL) tarih sırasına göre: kârlı/zararlı zincir; "En uzun kârlı serin 5 ardışık işlem (Mart–Nisan 2025)". Tamamen `transactions` BUY+SELL eşleştirmesi, frontend hesabı; yeni fetch yok. Davranışsal öz-farkındalık; aşırı güven / panik satış pattern'larını ortaya çıkarır.
+- [ ] **Portföy Beta Tahmini** `[M]` `[P2]` — `price_cache.p_w1/m1` hareketlerini benchmark (SPY veya XU100) ile karşılaştırarak pozisyon bazlı yaklaşık beta; ağırlıklı portföy betası "Piyasa %1 düşünce portföyünüz ortalama %X etkiler" cümlesi. Benchmark fiyat geçmişi `fetch-prices` ile çekilir (Massive: SPY; Yahoo: XU100.IS) — küçük ek fetch, sonuç cache'lenebilir. `[Benchmark karşılaştırması]` item tamamlandıktan sonra kolaylaşır.
 
 ## Analiz Tab Açık Alt Görevler
 
