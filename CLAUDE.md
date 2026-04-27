@@ -28,15 +28,15 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 | `positions` | user-specific (RLS) | ticker, name, type, shares, avg_cost, currency, broker, unit (TEXT DEFAULT NULL — altın birimi: oz/g/quarter/half/full/republic) |
 | `transactions` | user-specific (RLS) | BUY/SELL kayıtları (shares/price orijinal değerlerde) |
 | `splits` | user-specific (RLS) | ticker, split_date, ratio (stock split bilgisi) |
-| `profiles` | user-specific (RLS, public read) | user_id PK, username (unique), display_name |
-| `price_cache` | **paylaşımlı** (auth read+upsert) | ticker PK, price + d1/w1/m1/y1 + p_d1…p_y1 + updated_at |
+| `profiles` | user-specific (RLS, public read) | user_id PK, username (unique), display_name, parse_calls_today (INT DEFAULT 0), parse_calls_date (DATE DEFAULT CURRENT_DATE) |
+| `price_cache` | **paylaşımlı** (service_role write only) | ticker PK, price + d1/w1/m1/y1 + p_d1…p_y1 + updated_at |
 
-`price_cache` RLS: `authenticated` rolüne SELECT/INSERT/UPDATE; DELETE policy yok.
-`profiles` RLS: SELECT herkese (auth) açık (ileride social feed için), INSERT/UPDATE sadece kendi satırına.
+`price_cache` RLS: `authenticated` rolüne SELECT; INSERT/UPDATE/DELETE policy kaldırıldı — tüm write `fetch-prices` edge function üstünden **service_role** ile (Sprint 5).
+`profiles` RLS: SELECT herkese (auth) açık (ileride social feed için), INSERT/UPDATE sadece kendi satırına. `parse_calls_today/date` sütunları sadece `increment_parse_calls` RPC (SECURITY DEFINER) ile service_role üstünden güncellenir.
 
 ### pg_cron job
 
-`refresh-price-cache-6h` — `0 */6 * * *` (her 6 saat). `pg_net.http_post` ile edge function'ı çağırır, anon Bearer header.
+`refresh-price-cache-6h` — `0 */6 * * *` (her 6 saat). `pg_net.http_post` ile edge function'ı çağırır, `CRON_SECRET` Bearer header (Sprint 4 — anon Bearer yerine geçti).
 
 ## `index.html` Yapısı (bileşen haritası)
 
@@ -80,6 +80,7 @@ Root → Login (IL mark) | App
 ```
 
 Üst-level yardımcılar (top-level, App/Root dışı):
+- `edgeCallAuth(fn, body)` — parse-transaction için: `sb.auth.getSession()` ile gerçek kullanıcı JWT'si alıp gönderir (anon key değil); rate limit kimlik doğrulaması için
 - `rebuildPositions(userId)` — split-aware pozisyon yeniden hesabı
 - `xirr(cashflows)` — Newton-Raphson IRR (yıllık return)
 - `buildCashflows(txs, mvNow)` — XIRR için cash flow serisi
@@ -93,6 +94,8 @@ Root → Login (IL mark) | App
 - `NAV_ICONS` — desktop topbar (s=14) + mobile bottom-tabs (s=20) SVG'leri (5 entry: dashboard/history/analysis/search/settings)
 - `ADD_TYPES` — AddTab type picker için 6 entry (US_STOCK/BIST/FUND/CRYPTO/GOLD/FX) + icon/label/desc
 - `BLOCK_TYPES` — Dashboard pozisyon blokları için 6 entry (US Hisse/ETF/BIST/Kripto/Altın/Döviz) — currency-yerine asset_type bazlı gruplama
+- `BENCHMARKS` — Dashboard benchmark karşılaştırması için 2 entry: `[{ticker:"SPY",label:"S&P 500",type:"US_STOCK"},{ticker:"XU100",label:"BIST 100",type:"BIST"}]`
+- `SECTOR_COLORS` — AnalysisTab Sektör Dağılımı için 10 renk dizisi; "Bilinmiyor" her zaman `SECTOR_UNKNOWN_COLOR` (#8e8e93 gri)
 - `CRYPTO_SYMBOLS` — ManuelPosForm CRYPTO chip picker için 12 popüler kripto (BTC/ETH/SOL/...)
 - `COMMODITY_SYMBOLS` — ManuelPosForm GOLD chip picker için 4 emtia (XAU/XAG/XPT/XPD + ikon)
 - `GOLD_UNITS` — ManuelPosForm GOLD birim picker için 6 birim (oz/g/quarter/half/full/republic) + `grams` ağırlık + `purity` saflık faktörü
@@ -208,11 +211,10 @@ TYPE_COLORS = {
 
 ## Price Cache Akışı
 
-1. **Mount**: `loadData` `price_cache` select eder → `hist`/`prc` state'ine yazar (hızlı chart)
-2. **Backfill**: LS'te olup cache'te olmayan ticker'lar bir kerelik cache'e yazılır
-3. **Auto-fetch**: `pos` değiştiğinde, cache'te eksik ticker varsa arka planda `fetchHist(missing)` tetiklenir
-4. **Yazma**: her başarılı `fetch-prices` sonucu `price_cache`'e upsert (paylaşım)
-5. **Cron**: `refresh-price-cache` her 6 saatte bir en stale 5 ticker'ı tazeler
+1. **Mount**: `loadData` `price_cache` SELECT eder → `hist`/`prc` state'ine yazar (hızlı chart)
+2. **Auto-fetch**: `pos` değiştiğinde cache'te eksik ticker varsa arka planda `fetchHist(missing)` tetiklenir
+3. **Yazma**: her başarılı `fetch-prices` sonucu edge function **service_role** ile `price_cache`'e upsert eder (Sprint 5 — frontend write kaldırıldı, backfill kaldırıldı)
+4. **Cron**: `refresh-price-cache` her 6 saatte bir en stale 5 ticker'ı tazeler; `CRON_SECRET` Bearer header ile korunuyor (Sprint 4)
 
 ## Price Provider Routing
 
@@ -278,14 +280,14 @@ TYPE_COLORS = {
 
 ## Analiz Tab (Portföy Analizi, 2026-04-25)
 
-Sticky pos.3 nav sekmesi (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar). 4 kart, hepsi mevcut tasarım sistemiyle (`.card`, `.pie-row`, `.lbl`, `.stitle`):
+Sticky pos.3 nav sekmesi (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar). 7 kart, hepsi mevcut tasarım sistemiyle (`.card`, `.pie-row`, `.lbl`, `.stitle`):
 
 1. **Varlık Dağılımı** (filter chip ile)
    - Filter chip `.mtab`: `Genel · US Hisse · BIST · ...` (sadece pozisyonu olan tipler dinamik)
    - Genel mode: type breakdown (Dashboard pie ile aynı veri)
    - Type-spesifik mode: o tipin altındaki ticker breakdown
    - Currency: BIST filter → `₺`, US/diğer → `$`, Genel mixed → `$` (FX conversion ROADMAP'te)
-   - Filter sadece **bu kart**ı etkiler — diğer 3 kart sabit
+   - Filter sadece **bu kart**ı etkiler — diğer kartlar sabit
 
 2. **Bölge Dağılımı**
    - Heuristik: `REGION_OF` map → `us` (US_STOCK + FUND), `tr` (BIST), `crypto` (CRYPTO), `emtia` (GOLD), `fx` (FX)
@@ -306,6 +308,12 @@ Sticky pos.3 nav sekmesi (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar). 
    - **noPrice sayım dışı**: `prc[ticker]` yoksa (sold-out + cache'te yok) o tx atlanır, küçük not gösterilir
    - **Bilinen kısıt**: time horizon = bugünkü fiyat (1A/3A/6A window seçimi ROADMAP)
 
+5. **Portföy Sağlık Tablosu** — 8 metrik renk pill (P/E, ROE, Net/Op Marj, Gelir/Kâr 5Y, Borç/Özk, NetBorç/FCF); default kapalı + 3 rozet (🟢/🟡/🔴 aggregate) + Detay ▾; "Eksikleri Çek" CTA; satır click → openDetail
+
+6. **Konsantrasyon Riski** (Sprint 4) — Top 3 pozisyon ağırlığı + renk pill (>%60 kırmızı / %40-60 sarı / <=%40 yeşil); HHI basit versiyonu (Σwi²×10000); yatay bar chart. Tamamen frontend hesabı.
+
+7. **Sektör Dağılımı** (Sprint 5) — `metaCacheGet(ticker)?.sic_description || .industry` ile sektör grupları; pie + legend; `SECTOR_COLORS` 10-renk; "Meta Çek" butonu (US/BIST/FUND için, CRYPTO/GOLD/FX hariç); `sectorMetaTick` state ile fetch sonrası reaktif re-render. Yeni API yok — mevcut meta cache okur.
+
 ## Search Tab (global ticker arama)
 
 - **Veri kaynağı**: SEC EDGAR `company_tickers.json` (~10.348 US) + Twelve Data /stocks XIST (~636 BIST) merged.
@@ -317,9 +325,10 @@ Sticky pos.3 nav sekmesi (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar). 
 
 ## Ölçeklenme Notları
 
-- Şu an `price_cache` write policy frontend'e açık (auth user'lar yazabilir). Kullanıcı sayısı arttıkça **service_role'a daraltılmalı** ve tüm write edge function üstünden yapılmalı.
+- `price_cache` write policy Sprint 5'te service_role'a daraltıldı — frontend artık read-only, tüm write `fetch-prices` edge function üstünden service_role ile.
+- `parse-transaction` günlük 20 çağrı/kullanıcı limiti var (`increment_parse_calls` RPC, Sprint 5); frontend `edgeCallAuth` ile JWT gönderir, edge fn kimliği verify eder.
 - Auto-fetch on mount: çok user'da rate limit'i zorlar — opt-in'e çevirmek gerekebilir.
-- Detay: ROADMAP.md "Aşama 2" notları.
+- Detay: ROADMAP.md "Ölçeklenme & Mass Kullanım" bölümü.
 
 ## Gotchas
 
@@ -408,16 +417,16 @@ Detaylı liste için **`ROADMAP.md`** dosyasına bakın. Tamamlananlar:
 - ✅ **Dark/Light tema desteği** (2026-04-26) — `[data-theme="light"]` CSS tokens; `applyTheme()` + `matchMedia`; Settings "Görünüm" 3-button segmented; LS `il_theme` persist.
 - ✅ **Touch tooltip** (2026-04-26) — `data-tip` mobil tap-to-show: global `touchstart` listener, `data-tip-visible` CSS class, 2500ms auto-dismiss, button/a skip.
 - ✅ **Tarihsel fundamental trend** (2026-04-26) — 5Y gelir/net kâr SVG bar chart (`TrendMiniChart`); edge fn FMP + BIST annual array.
+- ✅ **Sprint 4: Güvenlik hızlı kazanımlar + UX** (2026-04-27) — refresh-price-cache CRON_SECRET (XOR constant-time compare, fail-closed); massiveHistorical + yfHistorical explicit `{error:…}` flag (sessiz {} bitti); AddTxInline + saveAI + saveTx NaN/negative guard; CSV `shares≤0 || !isFinite || price<0` skip + console.warn; Dashboard varsayılan sıra P&L% azalan (`sortPos` null-safe `-Infinity` fallback); Konsantrasyon Riski kartı (top-3 ağırlık + HHI + renk pill).
+- ✅ **Sprint 5: price_cache write-lock + benchmark karşılaştırması** (2026-04-27) — price_cache RLS write policy kaldırıldı (service_role only); `fetch-prices` service_role upsert; frontend backfill + fetchHist client upsert kaldırıldı; `BENCHMARKS` constant (SPY + XU100); Dashboard benchmark getiri bölümü seçili period için; `benchTypeMap` fetchHist'e eklendi.
+- ✅ **Sprint 5 devam: Parse rate limiting + Sektör Dağılımı** (2026-04-27) — `parse-transaction` JWT-verified identity (`edgeCallAuth` + `auth.getUser(token)`); `increment_parse_calls` PL/pgSQL RPC (TOCTOU-safe atomic increment); 20 parse/gün/kullanıcı; 401 unauthenticated için; image type/size validation; max_tokens 800→1200; `profiles.parse_calls_today/date` migration. AnalysisTab 7. kart: Sektör Dağılımı (SIC/borsa-mcp industry; pie + legend; "Meta Çek" CTA; SECTOR_COLORS palette).
 
 Açık başlıklar (detay için `ROADMAP.md`):
 - **TR altın işçilik premium göstergesi** — Reşat/Ata birimi + Dashboard "Spot saf · Premium %" render
-- **TEFAS entegrasyonu** ⚠ BLOCKER (borsa-mcp + TEFAS resmi endpoint 404; provider keşfi gerek)
+- **TEFAS entegrasyonu** — WAF cloud IP bloğu sorunu; Supabase edge function üstünden test bekleniyor
 - **FX/GOLD ham ticker normalize** — edge function future-proofing
 - **Sektör-aware fundamental eşikler** — tech P/E ≤30, utility ≤15 vs.
 - **EDGAR + market price** — P/E ve P/S için CommonStockSharesOutstanding × current price
-- **massiveHistorical silent {}** — edge fn hata durumunda explicit throw/flag gerekli
-- **refresh-price-cache cron secret** — pg_cron anon Bearer açık; CRON_SECRET ile koruma
-- **Input validation guards** — AddTxInline NaN, CSV negative/Infinity, price_cache sanity
-- **Periyodik agent denetim turu** — her 2-3 sprint; bir sonraki Sprint 5 sonu
+- **Periyodik agent denetim turu** — her 2-3 sprint; bir sonraki Sprint 6 sonu
 - **Sosyal**: risk profili, anonim feed (privacy gerektirir)
 - **Eğitim**: Investment Basics modülü

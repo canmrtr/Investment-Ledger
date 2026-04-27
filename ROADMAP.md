@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-04-27** (Sprint 4 planı eklendi; Analiz Tab 8 yeni fikir eklendi)
+İlk toplama: **2026-04-24** | Son grooming: **2026-04-27** (Sprint 4+5 tamamlandı; Analiz Tab 8 yeni fikir eklendi; Sprint 6 önizlemesi güncellendi)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -41,6 +41,9 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [x] ~~**signOut LS temizliği + DEBUG gating + safeUrl**~~ (2026-04-25/26) — privacy/cache LS temizliği; console.warn/log DEBUG ile gated; external link rel.
 - [x] ~~**Sprint 3: Veri girişi güvenilirliği + TR Altın birimleri MVP**~~ (2026-04-27) — `step="any"` ondalık adet bug fix (0.5 BTC, 3.75 gram); form inline validation (`aria-invalid` + 11px error text); backdrop click guard (`danger:true` modal'da explicit iptal zorunlu); TR altın birimleri MVP (`positions.unit` migration + `GOLD_UNITS` oz-eq tablo + birim picker 6 unit + Dashboard back-conversion); Piyasa Değeri mobil full-width (`.g3 > *:first-child { grid-column:1/-1 }`); ↻ Güncelle otomatik (30dk `setInterval` + `visibilitychange`) + Settings'e manuel "↻ Şimdi Güncelle" taşıması; CORS lockdown tüm 4 edge fn → `https://canmrtr.github.io`; EDGAR UA email fix (prod email); `rebuildPositions` unit snapshot fix.
 - [x] ~~**Periyodik agent denetim turu — ilk tur**~~ (2026-04-27) — client-security-auditor + edge-reviewer paralel; 15 bulgu; kritik 10 item Sprint 4 backlog'a eklendi.
+- [x] ~~**Sprint 4: Güvenlik hızlı kazanımlar + UX**~~ (2026-04-27) — refresh-price-cache CRON_SECRET (XOR constant-time, fail-closed); massiveHistorical + yfHistorical explicit `{error:…}` flag; AddTxInline/saveAI/saveTx NaN guard; CSV negative/Infinity skip; Dashboard varsayılan sıra P&L% azalan; Konsantrasyon Riski kartı (top-3 + HHI + renk pill).
+- [x] ~~**Sprint 5: price_cache write-lock + benchmark karşılaştırması**~~ (2026-04-27) — price_cache RLS write kaldırıldı (service_role only); `fetch-prices` service_role upsert; BENCHMARKS constant (SPY + XU100); Dashboard benchmark getiri bölümü.
+- [x] ~~**Sprint 5 devam: Parse rate limiting + Sektör Dağılımı**~~ (2026-04-27) — `edgeCallAuth` + `auth.getUser(token)` JWT-verified identity; `increment_parse_calls` PL/pgSQL RPC (TOCTOU-safe); 20 parse/gün/kullanıcı; 401 unauthenticated; image validation; AnalysisTab Sektör Dağılımı kartı (SIC/borsa-mcp; SECTOR_COLORS; "Meta Çek" CTA).
 
 ---
 
@@ -80,15 +83,15 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [ ] **EDGAR P/E + P/S** `[M]` `[P2]` — `CommonStockSharesOutstanding` × current price = market cap; P/E + P/S EDGAR modunda da dolu gelir.
 - [ ] **Fundamental data Supabase cache** `[M]` `[P2]` — şu an LS yeterli; kullanıcı sayısı arttıkça merkezi cache gerekebilir.
 - [ ] **Kullanıcı kendi eşiklerini tanımlasın** `[M]` `[P2]` — PE < X, ROE > Y gibi; şu an top-level `FUND_THRESHOLDS` sabit.
-- [ ] **Benchmark karşılaştırması** `[M]` `[P1]` — portföy vs SPY / XU100.IS / QQQ; seçilen dönemde "Piyasayı geçiyor muyum?". Massive.com (SPY) + Yahoo Finance (XU100.IS) mevcut `fetch-prices` ile çekilebilir.
+- [x] ~~**Benchmark karşılaştırması**~~ (2026-04-27 Sprint 5) — portföy vs SPY (Massive) + XU100 (Yahoo Finance); BENCHMARKS constant; Dashboard seçili period için getiri gösterimi.
 - [ ] **FMP rate limit guard** `[S]` `[P2]` — free tier sınırını test et + guard ekle.
 
 ## Analiz Tab — Yeni Özellikler
 
 ### Portföy Analizi
 
-- [ ] **Konsantrasyon Risk Göstergesi** `[S]` `[P1]` — Top 3 pozisyonun toplam ağırlığı; kırmızı >%60, sarı %40-60, yeşil <=%40. Herfindahl-Hirschman Index veya basit top-N yüzdesi. Tamamen frontend hesabı, yeni veri yok. **Sprint 4 scope.**
-- [ ] **Sektör Dağılımı** `[M]` `[P1]` — FMP `sector` + borsa-mcp `industry` alanlarını birleştirip sektörel pie chart. Veriler fundamentals cache'te zaten mevcut; sadece okuma + görselleştirme.
+- [x] ~~**Konsantrasyon Risk Göstergesi**~~ (2026-04-27 Sprint 4) — Top 3 pozisyon ağırlığı + HHI + renk pill; tamamen frontend.
+- [x] ~~**Sektör Dağılımı**~~ (2026-04-27 Sprint 5) — SIC/borsa-mcp industry; pie + legend; "Meta Çek" CTA; SECTOR_COLORS 10-renk palette.
 - [ ] **"Dip mi Tepeden mi Girdim?" Giriş Kalitesi** `[S]` `[P2]` — avg_cost'u 52W aralığına yerleştiren yatay progress bar; "İyi giriş / Tepeden giriş" etiketi. 52W verisi fundamentals cache'te mevcut.
 - [ ] **Portföy Çeşitlendirme Skoru** `[M]` `[P2]` — Bölge × Sektör × Asset Type matrisinden 1-10 skor; tek bölge/sektör yoğunlaşmasına göre uyarı cümlesi. Tamamen frontend hesabı.
 - [ ] **Yeniden Dengeleme Önerisi (Rebalancing)** `[M]` `[P2]` — Kullanıcı hedef dağılım girer (US %50, BIST %30 vb.); mevcut dağılımla fark gösterilir. Hedef için `profiles` tablosuna JSON kolonu gerekir.
@@ -181,16 +184,16 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 - [x] ~~**AI parse autofill pill (ConfirmBox)**~~ (2026-04-26) — _priceFallback / _priceAutoFilled flag + ⚠/↻ pill.
 - [x] ~~**ConfirmBox inline edit**~~ (2026-04-26) — Tek: Tarih/Adet/Fiyat/Broker/Komisyon inline input; Toplam reaktif. Çoklu: ✎ per-row → expand edit panel + ✓ Tamam.
-- [ ] **Dashboard pozisyon listesi varsayılan sıralama: kazanım** `[S]` `[P1]` — her blokta (US Hisse / BIST / vb.) varsayılan sıra P&L% azalan olsun; en çok kazandıran hisse en üste gelsin. Şu an sıralama yok (insert sırası). **Sprint 4 scope.**
+- [x] ~~**Dashboard pozisyon listesi varsayılan sıralama: kazanım**~~ (2026-04-27 Sprint 4) — varsayılan sıra P&L% azalan; `sortPos` null-safe `-Infinity` fallback ile fiyatsız pozisyonlar sona itilir.
 - [ ] **Dashboard ↻ Güncelle başarısız ticker ayrıntısı** `[S]` `[P2]` — şu an "başarısız: AAPL" toast; Settings → Sistem Durumu'nda per-ticker hata sebebi (HTTP 403, bulunamadı vb.).
-- [ ] **AddTxInline NaN guard** `[S]` `[P1]` — parse sonucu `shares/price` NaN/undefined olursa form temiz error state göstermeli; şu an sessiz gönderim. **Sprint 4 scope.**
-- [ ] **CSV negatif/Infinity guard** `[S]` `[P1]` — `shares ≤ 0` veya `price = Infinity` olan CSV satırları import edilmemeli; skip count'a eklenmeli. **Sprint 4 scope.**
+- [x] ~~**AddTxInline NaN guard**~~ (2026-04-27 Sprint 4) — saveAI/saveTx/saveManual NaN filter; geçersiz satırlar atlanıp "X işlem kaydedildi, Y geçersiz atlandı" flash.
+- [x] ~~**CSV negatif/Infinity guard**~~ (2026-04-27 Sprint 4) — `shares≤0 || !isFinite(shares) || price<0 || !isFinite(price)` satırlar skip; console.warn + skip sayacı.
 - [ ] **price_cache sanity check** `[S]` `[P2]` — `price = 0 || price = null` olan satırlar "bayat" sayılıp yeniden fetch tetiklemeli.
 - [ ] **maxLength ticker/name/broker** `[S]` `[P2]` — ManuelPosForm + AddTxInline ticker (16), name (80), broker (40) inputlarına `maxLength` prop.
 - [ ] **il_recent_search signOut temizliği** `[S]` `[P2]` — `signOut` handler son aramaları LS'ten temizlemeli (`il_recent_search` kullanıcıya özel hissedebilir).
 - [ ] **Form tutarı gizli-mod preview** `[S]` `[P2]` — `hide=true` iken form amount alanlarında girilen değerler `mask()` ile maskelenmeli.
-- [ ] **massiveHistorical silent {}** `[S]` `[P1]` — `fetch-prices` edge function `massiveHistorical()` hata durumunda `{}` dönüyor; caller farkında değil. Explicit `throw` veya `{error:…}` flag gerekli. **Sprint 4 scope.**
-- [ ] **refresh-price-cache cron secret** `[S]` `[P1]` — pg_cron job anon Bearer kullanıyor; `SERVICE_ROLE_KEY` veya ayrı `CRON_SECRET` env ile koruma. Şu an herkes bildik URL ile tetikleyebilir. **Sprint 4 scope.**
+- [x] ~~**massiveHistorical silent {}**~~ (2026-04-27 Sprint 4) — massiveHistorical + yfHistorical explicit `{error:"…"}` flag; caller console.warn + sparkline "yetersiz veri" empty state.
+- [x] ~~**refresh-price-cache cron secret**~~ (2026-04-27 Sprint 4) — CRON_SECRET env; XOR constant-time compare; fail-closed (secret yoksa 500, yanlışsa 401); pg_cron job güncellendi.
 - [ ] **BIST/CRYPTO/GOLD cron refresh** `[S]` `[P2]` — `refresh-price-cache` sadece US_STOCK çekiyor; BIST/CRYPTO/GOLD sütunları stale kalıyor. Cron job'ı asset_type dönüşümlü yapılmalı.
 - [ ] **İş Yatırım fetch timeout** `[S]` `[P2]` — `fetch-fundamentals` isyatirim call'larında `AbortSignal.timeout(8000)` yok; ağ hatalarında edge fn asılı kalabiliyor.
 
@@ -205,10 +208,10 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 ### Kritik (Blocking — İlk 100 Kullanıcı Öncesi)
 
-- [ ] **price_cache güvenlik + fetch lock MVP** `[M]` `[P0]` — İKİ İŞ BİR ARADA (aynı code path): (A) **Güvenlik**: `authenticated` rolünün doğrudan write yetkisini kaldır, tüm write `fetch-prices` edge function üstünden service_role ile yapılsın — race condition + manipülasyon riski giderilir. (B) **Stale-while-revalidate**: `price_cache`'e `fetching_since TIMESTAMPTZ` kolonu ekle; kullanıcı gelince cache'ten anlık göster, `updated_at` 15 dk'dan eskiyse edge function lock alarak fetch başlat (N kullanıcı = 1 API çağrısı); tarihsel (p_d1/w1/m1/y1) cron'da kalır. Uygulama sırası: SQL migration → edge fn lock → frontend SWR akışı.
+- [x] ~~**price_cache güvenlik (write-lock)**~~ (2026-04-27 Sprint 5) — `authenticated` rolü write policy kaldırıldı; tüm write `fetch-prices` service_role üstünden; frontend backfill + upsert kaldırıldı. **Not**: `fetching_since` SWR lock (N kullanıcı = 1 API çağrısı) hâlâ açık — ROADMAP'te "Shared price cache mimarisi" item'ına taşındı.
 - [ ] **Yahoo Finance → resmi BIST data kaynağı** `[L]` `[P1]` — unofficial endpoint, herhangi bir güncellemede veya bot-block'ta tüm BIST kullanıcıları için fiyat kesilir. Adaylar: Rasyonet, Matriks, Bigpara API, Investing.com TR. Seçilene kadar mevcut Yahoo devam eder ama geçiş mimarisi edge function içinde izole — frontend değişmez.
 - [ ] **borsa-mcp self-host** `[M]` `[P1]` — tek geliştirici hosted instance, SLA yok. Supabase Edge Function içine ya da ayrı bir VPS'e Docker ile al (Python 3.11, `saidsurucu/borsa-mcp`). Alternatif: `yahoo-finance2` npm paketi Deno'da çalışıyor mu test et.
-- [ ] **Claude Haiku parse rate limiting + maliyet kotası** `[S]` `[P1]` — her kullanıcı makbuz/görsel parse edebiliyor; token maliyeti kullanıcı sayısıyla doğru orantılı büyür. Kullanıcı başına günlük parse limiti (ör. 10 istek) + Supabase `profiles` tablosunda sayaç. Gerekirse parse özelliğini premium'a al.
+- [x] ~~**Claude Haiku parse rate limiting + maliyet kotası**~~ (2026-04-27 Sprint 5) — JWT-verified identity (`auth.getUser(token)`); `increment_parse_calls` PL/pgSQL RPC (atomic, TOCTOU-safe); 20/gün/kullanıcı; `edgeCallAuth` frontend helper; image type+size validation; max_tokens 1200.
 
 ### Önemli (İlk 500 Kullanıcı Öncesi)
 
@@ -280,7 +283,7 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 - [x] ~~**AddTab CSV import skip count**~~ (2026-04-26) — geçersiz satırlar için `flash_("X işlem alındı, Y satır atlandı")` gösterimi eklendi.
 - [x] ~~**cur-seg dokunma hedefi mobile**~~ (2026-04-26) — mobile media query 44px AA dokunma hedefi.
-- [ ] **Period buton wrap dar ekran** `[S]` `[P1]` — `flex:1 + minWidth:40` 320px'de eziliyor. **Sprint 4 scope.**
+- [ ] **Period buton wrap dar ekran** `[S]` `[P1]` — `flex:1 + minWidth:40` 320px'de eziliyor. Sprint 3-4-5'ten taşındı; **Sprint 6 scope.**
 - [x] ~~**↻ Güncelle progress mobile**~~ (2026-04-26) — otomatik güncelleme (30dk interval + visibility API) + Settings'e taşındı; `.mprog` mobil progress strip eklendi.
 - [x] ~~**Flash position:fixed**~~ (2026-04-26) — `position:fixed; top:60px` sticky banner; scroll'da kaybolma giderildi.
 - [x] ~~**Sparkline empty state min-height**~~ (2026-04-26) — data <2 ise kart min-height korunuyor.
@@ -311,21 +314,14 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 4 — 2026-04-28 → 2026-05-11 | **Güvenlik hızlı kazanımlar + UX boşlukları**
+Sprint 4 ✅ tamamlandı (2026-04-27) | Sprint 5 ✅ tamamlandı (2026-04-27)
 
-Aktif sprint scope'u (`sprints/sprint-04.md`):
+Sprint 6 adayları (öncelik sırasına göre):
 
-1. **refresh-price-cache cron secret** `[S][P1]` — `CRON_SECRET` env; pg_cron anon Bearer yerine. **Bu sprint.**
-2. **massiveHistorical silent {} fix** `[S][P1]` — edge fn explicit error flag; sparkline sessiz bozukluk giderildi. **Bu sprint.**
-3. **AddTxInline NaN guard + CSV negatif/Infinity guard** `[S][P1]` — form ve CSV import veri kalitesi. **Bu sprint.**
-4. **Period buton wrap dar ekran** `[S][P1]` — 320px'de eziliyor; Sprint 3'ten taşındı. **Bu sprint.**
-5. **Dashboard varsayılan sıralama: kazanım** `[S][P1]` — P&L% azalan; her sabah en iyi/kötü görünür. **Bu sprint.**
-6. **Konsantrasyon Risk Göstergesi** `[S][P1]` — Analiz Tab yeni kart; Top 3 ağırlık + HHI + renk pill. **Bu sprint.**
-
-Sprint 5 önizlemesi (sonraki):
-
-- **price_cache güvenlik + fetch lock MVP** `[M][P0]` — SQL migration + edge fn service_role write + frontend SWR. En kritik mimari item.
-- **Dividend (temettü) tracking** `[M][P1]` — `transactions.way:"DIV"` + Dashboard total return dahil.
-- **TEFAS endpoint keşfi** `[S][P2]` — 1 oturum keşif bütçesi; çalışırsa Sprint 6'ya tam entegrasyon.
-- **Benchmark karşılaştırması (SPY/XU100)** `[M][P1]` — portföy vs endeks; Massive.com + Yahoo Finance mevcut altyapıyla.
-- **Periyodik agent denetim turu** `[S][P1]` — Sprint 5 sonu; 5 agent paralel.
+1. **Dividend (temettü) tracking** `[M][P1]` — `transactions.way:"DIV"` + Dashboard total return; value-investing temel taşı.
+2. **Period buton wrap dar ekran** `[S][P1]` — 320px iPhone SE'de butonlar eziliyor; Sprint 3-4-5'ten taşındı; küçük CSS fix.
+3. **EUR tablosu sort** `[S][P1]` — EUR blok sort yok; kolaydan zora.
+4. **Potansiyel Kayıp (Max Pain) Simülasyonu** `[S][P1]` — %10/%20/%30 düşüş senaryosu; tamamen frontend. Yüksek günlük değer, sıfır fetch.
+5. **Pozisyon Yıllık Getiri (CAGR) Tablosu** `[S][P2]` — ilk BUY'dan bugüne yıllıklandırılmış getiri; tamamen frontend + price_cache.
+6. **TEFAS WAF testi** `[S][P2]` — Supabase edge function üstünden test; çalışırsa Sprint 7'ye entegrasyon.
+7. **Periyodik agent denetim turu** `[S][P1]` — Sprint 6 sonu; client-security-auditor + edge-reviewer + rls-auditor + test-runner paralel.
