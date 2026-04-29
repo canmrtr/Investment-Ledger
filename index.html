@@ -4826,10 +4826,12 @@ function App({session}){
       {tab==="dashboard"&&pos.length>0&&(()=>{
         const PERIODS=[
           {key:"m1",  lbl:"1A",  priceKey:"p_m1", days:30},
+          {key:"m3",  lbl:"3A",  priceKey:"p_m3", days:90},
+          {key:"m6",  lbl:"6A",  priceKey:"p_m6", days:180},
           {key:"y1",  lbl:"1Y",  priceKey:"p_y1", days:365},
           {key:"max", lbl:"Max", priceKey:null,   days:null},
         ];
-        const sel=PERIODS.find(p=>p.key===period)||PERIODS[2];
+        const sel=PERIODS.find(p=>p.key===period)||PERIODS[4];
 
         // Split-aware shares at given date (returns split-adjusted shares
         // in today's reference; uses same factor logic as rebuildPositions).
