@@ -16,6 +16,7 @@
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://canmrtr.github.io",
   "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 // SEC ToS: tüm istekler User-Agent header gerektirir, contact info zorunlu.

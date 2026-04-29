@@ -15,6 +15,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://canmrtr.github.io",
   "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const RATE_LIMIT_MS = 7500;

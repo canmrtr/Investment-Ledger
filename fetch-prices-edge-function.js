@@ -17,6 +17,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://canmrtr.github.io",
   "Access-Control-Allow-Headers": "authorization, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
 const yesterdayISO = () => new Date(Date.now() - 86400000).toISOString().split("T")[0];
@@ -253,6 +254,8 @@ Deno.serve(async (req) => {
   try {
     const { ticker, mode, date, from, to, asset_type } = await req.json();
     if (!ticker) return json({ error: "ticker required" }, 400);
+    // Ticker format validation — path traversal / SSRF prevention
+    if (!/^[A-Z0-9:.\-_/]{1,30}$/i.test(ticker)) return json({ error: "Geçersiz ticker formatı" }, 400);
 
     const massiveKey = Deno.env.get("MASSIVE_KEY");
     const tdKey      = Deno.env.get("TWELVEDATA_KEY");

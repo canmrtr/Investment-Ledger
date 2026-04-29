@@ -2096,7 +2096,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
 
   const delPos=async(tk)=>{
     if(!(await confirm_(`${tk} pozisyonu silinsin mi?`,{okLbl:"Sil"})))return;
-    await sb.from("positions").delete().eq("user_id",user.id).eq("ticker",tk);
+    await sb.from("positions").delete().eq("user_id",user.id).eq("ticker",tk).eq("portfolio_id",portfolioId);
     await loadData();flash_(`${tk} silindi`);
   };
 
@@ -3741,7 +3741,7 @@ function App({session}){
   // Portföy listesi + aktif portföy — Faz 1 altyapı.
   // activePortfolioId ileride switcher'dan değişir; şimdilik Ana Portföy otomatik seçilir.
   const [portfolios,setPortfolios]=useState([]);
-  const [activePortfolioId,setActivePortfolioId]=useState(()=>localStorage.getItem("il_active_portfolio")||null);
+  const [activePortfolioId,setActivePortfolioId]=useState(null); // set by loadData after server validation
   const [prc,setPrc_]=useState(()=>{const p=LS.get("il_prc",null);return p?p.p:{};});
   const [pdate,setPdate]=useState(()=>{const p=LS.get("il_prc",null);return p?p.d:"—";});
   const [hist,setHist_]=useState(()=>LS.get("il_hist",{}));
@@ -3859,7 +3859,7 @@ function App({session}){
       sb.from("portfolios").select("id,name,is_public,privacy_level").eq("user_id",user.id).order("created_at")
     ]);
     if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker,unit:p.unit||null})));
-    if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission})));
+    if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission,notes:t.notes||""})));
     if(sr.data)setSplits(sr.data);
     setProfile(pf?.data||null);
     // Portfolios: validate/set activePortfolioId
@@ -4612,8 +4612,8 @@ function App({session}){
             ))}
           </div>
           <button className="danger" onClick={()=>{
-            // Cross-account leak'i önle: privacy mode + cache LS key'lerini temizle.
-            ["il_hide","il_prc","il_hist"].forEach(k=>localStorage.removeItem(k));
+            // Cross-account leak'i önle: privacy mode + cache + portfolio LS key'lerini temizle.
+            ["il_hide","il_prc","il_hist","il_active_portfolio"].forEach(k=>localStorage.removeItem(k));
             sb.auth.signOut();
           }} style={{width:"100%"}}>Çıkış Yap</button>
         </div>
