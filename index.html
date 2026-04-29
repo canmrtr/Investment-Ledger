@@ -2863,6 +2863,8 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   // Kart collapse state'leri — default kapalı (özet üstte, detay isteğe bağlı).
   const [healthOpen,setHealthOpen]=useState(false);
   const [commOpen,setCommOpen]=useState(false);
+  const [cagrOpen,setCagrOpen]=useState(true);
+  const [resilienceOpen,setResilienceOpen]=useState(false);
   const [assetPieOpen,setAssetPieOpen]=useState(true);
   const [regionPieOpen,setRegionPieOpen]=useState(true);
   const [sectorPieOpen,setSectorPieOpen]=useState(true);
@@ -2941,6 +2943,21 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   const healthEligible = filteredPos.filter(p=>p.type==="US_STOCK"||p.type==="BIST");
   const healthFiltered = healthFilter==="all" ? healthEligible : healthEligible.filter(p=>p.type===healthFilter);
   const healthMissing = healthFiltered.filter(p=>!fundCache[p.ticker]);
+  // Piyasa Düşüşü Dayanıklılık Skoru
+  const ISY_KNOWN_BANKS = new Set(["GARAN","AKBNK","YKBNK","ISCTR","HALKB","VAKBN","ALBRK","QNBFB","TSKB","ICBCT","SKBNK"]);
+  const resilienceEligible = filteredPos.filter(p =>
+    (p.type === "US_STOCK" || p.type === "BIST") && !ISY_KNOWN_BANKS.has(p.ticker)
+  );
+  const resilienceMissing = resilienceEligible.filter(p => !fundCache[p.ticker]);
+  const resilienceScore = (m) => {
+    if (!m) return null;
+    let raw = 0, counted = 0;
+    if (m.liabToEquity != null) { counted++; if (m.liabToEquity < 0.5) raw += 2; }
+    if (m.fcfMargin != null) { counted++; if (m.fcfMargin > 0.10) raw += 2; }
+    if (m.operatingMargin != null) { counted++; if (m.operatingMargin > 0.15) raw += 2; }
+    if (counted === 0) return null;
+    return Math.round(raw / (counted * 2) * 9) + 1; // 1–10 scale
+  };
   // Bir pozisyonun skoru: kaç metrik "good" (yeşil) / toplam değerli (null hariç)
   const rowScore = (m) => {
     if(!m) return {good:0,total:0};
@@ -2954,12 +2971,13 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
     return {good,total};
   };
   const fetchAllFund = async () => {
-    if(healthMissing.length===0||fundBusy)return;
+    const allMissing = [...new Map([...healthMissing, ...resilienceMissing].map(p=>[p.ticker,p])).values()];
+    if(allMissing.length===0||fundBusy)return;
     setFundBusy(true);
     const next={...fundCache};
-    for(let i=0;i<healthMissing.length;i++){
-      const p=healthMissing[i];
-      setFundProg(`${p.ticker} (${i+1}/${healthMissing.length})`);
+    for(let i=0;i<allMissing.length;i++){
+      const p=allMissing[i];
+      setFundProg(`${p.ticker} (${i+1}/${allMissing.length})`);
       try{
         const r=await edgeCall("fetch-fundamentals",{ticker:p.ticker,asset_type:p.type});
         const d=await r.json();
@@ -2969,7 +2987,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           setFundCache({...next});  // her başarıda UI tazele
         }
       }catch(e){DEBUG && console.warn(`[health ${p.ticker}]`,e);}
-      if(i<healthMissing.length-1) await new Promise(r=>setTimeout(r,800));
+      if(i<allMissing.length-1) await new Promise(r=>setTimeout(r,800));
     }
     setFundBusy(false);
     setFundProg("");
@@ -3259,6 +3277,31 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
               </button>
             </div>
           </div>
+
+          {/* Portföy F/K KPI — her zaman görünür (healthOpen'dan bağımsız) */}
+          {(()=>{
+            let weightedSum=0, weightTotal=0, included=0, missing=0;
+            healthFiltered.forEach(p => {
+              const pe = fundCache[p.ticker]?.metrics?.pe;
+              const mv = mvDisp(p);
+              if (pe != null && pe > 0 && mv > 0) { weightedSum += pe * mv; weightTotal += mv; included++; }
+              else missing++;
+            });
+            const portfolioPE = weightTotal > 0 ? weightedSum / weightTotal : null;
+            if (portfolioPE == null) return null;
+            const sp500ref = 22;
+            const below = portfolioPE < sp500ref;
+            return (
+              <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,flexWrap:"wrap"}}>
+                <span style={{fontSize:11,color:"var(--text2)"}}>Portföy F/K</span>
+                <span className="mono" style={{fontSize:18,fontWeight:600}}>{portfolioPE.toFixed(1)}x</span>
+                <span className={"hp "+(below?"hp-ok":"hp-warn")} style={{fontSize:11}}>
+                  {below ? `S&P 500 (${sp500ref}x) altında` : `S&P 500 (${sp500ref}x) üstünde`}
+                </span>
+                <span style={{fontSize:10,color:"var(--text3)"}}>{included} pozisyon dahil{missing>0?`, ${missing} veri yok`:""}</span>
+              </div>
+            );
+          })()}
 
           {/* Filter chips + Eksikleri Çek CTA — sadece detay açıkken */}
           {healthOpen && (() => {
@@ -4075,6 +4118,195 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           </div>
         );
       })()}
+
+      {/* ── Kart: Pozisyon Yıllık Getiri (CAGR) ───────────────────── */}
+      {filteredPos.length > 0 && (
+        <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:cagrOpen?12:0}}>
+            <div className="stitle" style={{marginBottom:0}}>Pozisyon Yıllık Getiri (CAGR)</div>
+            <button className="btn-xs" onClick={()=>setCagrOpen(o=>!o)} style={{fontSize:11}}>
+              {cagrOpen ? "▴" : "▾"}
+            </button>
+          </div>
+          {cagrOpen && (()=>{
+            const today = new Date().toISOString().split("T")[0];
+            const msPerYear = 365.25 * 24 * 3600 * 1000;
+            const cagrRows = filteredPos.map(p => {
+              const buyTxs = (txs || []).filter(t => t.ticker === p.ticker && t.way === "BUY");
+              const firstBuyDate = buyTxs.length > 0 ? buyTxs.map(t=>t.date).sort()[0] : null;
+              const price = prc[p.ticker];
+              const mv = price != null ? price * p.shares : null;
+              const cost = (p.avg_cost || 0) * p.shares;
+              if (mv == null || cost <= 0) return { p, firstBuyDate, years: null, totalRetPct: null, cagr: null, noPrice: mv == null };
+              const totalRetPct = (mv - cost) / cost * 100;
+              if (!firstBuyDate) return { p, firstBuyDate, years: null, totalRetPct, cagr: null, noPrice: false };
+              const years = (new Date(today) - new Date(firstBuyDate)) / msPerYear;
+              if (years < 0.083) return { p, firstBuyDate, years, totalRetPct, cagr: null, noPrice: false, isNew: true };
+              const cagr = (Math.pow(mv / cost, 1 / years) - 1) * 100;
+              return { p, firstBuyDate, years, totalRetPct, cagr, noPrice: false };
+            }).filter(r => r != null);
+            cagrRows.sort((a, b) => {
+              if (a.cagr == null && b.cagr == null) return 0;
+              if (a.cagr == null) return 1;
+              if (b.cagr == null) return -1;
+              return b.cagr - a.cagr;
+            });
+            if (cagrRows.length === 0) return <div className="empty" style={{padding:"30px 0"}}>Yeterli veri yok</div>;
+            return (
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <thead>
+                    <tr>
+                      <th scope="col" style={{textAlign:"left",paddingBottom:8,color:"var(--text3)",fontWeight:500}}>Ticker</th>
+                      <th scope="col" style={{textAlign:"right",paddingBottom:8,color:"var(--text3)",fontWeight:500}}>Süre</th>
+                      <th scope="col" style={{textAlign:"right",paddingBottom:8,color:"var(--text3)",fontWeight:500}}>Toplam %</th>
+                      <th scope="col" style={{textAlign:"right",paddingBottom:8,color:"var(--text3)",fontWeight:500}}>CAGR %</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cagrRows.map(({p, years, totalRetPct, cagr, noPrice, isNew}) => {
+                      const cagrColor = cagr == null ? "var(--text3)" : cagr >= 15 ? "var(--ok)" : cagr >= 0 ? "var(--warn)" : "var(--err)";
+                      return (
+                        <tr key={p.ticker} className="pos-row"
+                          onClick={()=>openDetail(p.ticker,p.type,"analysis")}
+                          style={noPrice ? {opacity:.5} : {}}>
+                          <td style={{paddingBottom:6}}>
+                            <span className="tsym">{p.ticker}</span>
+                            {p.type==="BIST" && <span style={{fontSize:9,color:"var(--text3)",marginLeft:5}}>BIST</span>}
+                          </td>
+                          <td style={{textAlign:"right",paddingBottom:6,fontFamily:"'DM Mono',monospace",color:"var(--text2)"}}>
+                            {years != null ? (years >= 1 ? `${years.toFixed(1)}Y` : `${Math.round(years*12)}A`) : "—"}
+                          </td>
+                          <td style={{textAlign:"right",paddingBottom:6,fontFamily:"'DM Mono',monospace",color:totalRetPct!=null?(totalRetPct>=0?"var(--ok)":"var(--err)"):"var(--text3)"}}>
+                            {noPrice ? <span style={{fontSize:10,color:"var(--text3)"}}>fiyat bekleniyor</span> : totalRetPct != null ? fmtP(totalRetPct) : "—"}
+                          </td>
+                          <td style={{textAlign:"right",paddingBottom:6,fontFamily:"'DM Mono',monospace",fontWeight:600,color:cagrColor}}>
+                            {isNew
+                              ? <span style={{fontSize:10,color:"var(--text3)"}}>Yeni Pozisyon</span>
+                              : noPrice ? "—"
+                              : cagr != null ? fmtP(cagr)
+                              : <span style={{fontSize:10,color:"var(--text3)"}}>işlem tarihi yok</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                <div style={{fontSize:10,color:"var(--text3)",marginTop:8}}>
+                  CAGR = yıllık bileşik getiri · (Piyasa Değeri / Maliyet)^(1/Yıl) − 1 · &lt;30 gün: Yeni Pozisyon
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ── Kart: Piyasa Düşüşü Dayanıklılığı ──────────────────────── */}
+      {resilienceEligible.length > 0 && (
+        <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+          {(()=>{
+            let wSum=0, wTotal=0, resilientMV=0, totalMVRes=0;
+            resilienceEligible.forEach(p => {
+              const m = fundCache[p.ticker]?.metrics;
+              const mv = mvDisp(p);
+              const sc = resilienceScore(m);
+              if (sc != null && mv > 0) {
+                wSum += sc * mv; wTotal += mv;
+                if (sc >= 7) resilientMV += mv;
+              }
+              if (mv > 0) totalMVRes += mv;
+            });
+            const portfolioScore = wTotal > 0 ? wSum / wTotal : null;
+            const resilientPct = totalMVRes > 0 ? (resilientMV / totalMVRes) * 100 : null;
+            const scoreColor = portfolioScore == null ? "var(--text3)"
+              : portfolioScore >= 7 ? "var(--ok)"
+              : portfolioScore >= 5 ? "var(--warn)"
+              : "var(--err)";
+            return (
+              <>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                  <div className="stitle" style={{marginBottom:0}}>Piyasa Düşüşü Dayanıklılığı</div>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    {portfolioScore != null && (
+                      <span className="mono" style={{fontSize:18,fontWeight:600,color:scoreColor}}>
+                        {portfolioScore.toFixed(1)}<span style={{fontSize:11,color:"var(--text3)",fontWeight:400}}>/10</span>
+                      </span>
+                    )}
+                    <button className="btn-xs" onClick={()=>setResilienceOpen(o=>!o)} style={{fontSize:11}}>
+                      {resilienceOpen ? "▴" : "▾"}
+                    </button>
+                  </div>
+                </div>
+
+                {resilientPct != null && (
+                  <div style={{fontSize:12,color:"var(--text2)",marginTop:8}}>
+                    Portföyünüzün{" "}
+                    <span style={{color:resilientPct>=60?"var(--ok)":resilientPct>=40?"var(--warn)":"var(--err)",fontWeight:600}}>
+                      %{resilientPct.toFixed(0)}
+                    </span>
+                    {" "}resesyona dayanıklı şirketlerden oluşuyor
+                    <span style={{fontSize:10,color:"var(--text3)",marginLeft:6}}>(skor ≥ 7)</span>
+                  </div>
+                )}
+
+                {resilienceMissing.length > 0 && (
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"8px 10px",background:"var(--bg3)",borderRadius:8,marginTop:10,flexWrap:"wrap"}}>
+                    <span style={{fontSize:11,color:"var(--text2)"}}>
+                      {fundBusy
+                        ? <><span className="spin" style={{width:11,height:11,marginRight:6,verticalAlign:"middle"}}></span>Çekiliyor: {fundProg}</>
+                        : `${resilienceMissing.length} pozisyon için fundamental veri eksik.`}
+                    </span>
+                    {!fundBusy && <button className="pri btn-xs" onClick={fetchAllFund}>Eksikleri Çek</button>}
+                  </div>
+                )}
+
+                {resilienceOpen && (()=>{
+                  const rows = resilienceEligible.map(p => {
+                    const m = fundCache[p.ticker]?.metrics;
+                    const sc = resilienceScore(m);
+                    const mv = mvDisp(p);
+                    return {p, m, sc, mv};
+                  }).sort((a,b) => {
+                    if (a.sc == null && b.sc == null) return 0;
+                    if (a.sc == null) return 1;
+                    if (b.sc == null) return -1;
+                    return b.sc - a.sc;
+                  });
+                  return (
+                    <div style={{marginTop:12}}>
+                      {rows.map(({p, sc}) => {
+                        const barPct = sc != null ? (sc / 10) * 100 : 0;
+                        const barColor = sc == null ? "var(--bg4)"
+                          : sc >= 7 ? "var(--ok)"
+                          : sc >= 5 ? "var(--warn)"
+                          : "var(--err)";
+                        return (
+                          <div key={p.ticker} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0"}}
+                            className="pos-row" onClick={()=>openDetail(p.ticker,p.type,"analysis")}>
+                            <span style={{flex:"0 0 70px",fontSize:12,fontFamily:"'DM Mono',monospace"}}>
+                              {p.ticker}
+                              {p.type==="BIST" && <span style={{fontSize:9,color:"var(--text3)",marginLeft:4}}>BIST</span>}
+                            </span>
+                            <div style={{flex:1,height:6,background:"var(--bg3)",borderRadius:3,overflow:"hidden"}}>
+                              <div style={{width:barPct+"%",height:"100%",background:barColor,transition:"width .3s"}}/>
+                            </div>
+                            <span className="mono" style={{flex:"0 0 40px",textAlign:"right",fontSize:12,fontWeight:600,color:sc!=null?barColor:"var(--text3)"}}>
+                              {sc != null ? sc+"/10" : "—"}
+                            </span>
+                          </div>
+                        );
+                      })}
+                      <div style={{fontSize:10,color:"var(--text3)",marginTop:8,lineHeight:1.5}}>
+                        Skor: Yük./Özk &lt;0.5 (+2), FCF Marjı &gt;10% (+2), Op. Marjı &gt;15% (+2) → 1–10 · CRYPTO/GOLD/FX ve bankalar kapsam dışı
+                      </div>
+                    </div>
+                  );
+                })()}
+              </>
+            );
+          })()}
+        </div>
+      )}
 
     </div>
   );

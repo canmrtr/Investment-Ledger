@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-04-29** (Sprint 7+8 tamamlandı; Dividend tracking, Risk Dashboard, Temettü Projeksiyonu, pie redesign, güvenlik sertleştirme teslim edildi)
+İlk toplama: **2026-04-24** | Son grooming: **2026-04-29** (Sprint 9 backlog grooming; Volatilite/Kur Riski tamamlandı olarak işaretlendi; Sprint 9 scope: Social Faz 2, CAGR, Portföy P/E, Dayanıklılık Skoru, PWA, agent denetim)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -110,8 +110,8 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 ### Risk
 
-- [ ] **Volatilite / Drawdown Analizi** `[S]` `[P1]` — `price_cache.p_d1/w1/m1/y1` değişim yüzdelerinden ağırlıklı portföy volatilitesi; en dalgalı 3 pozisyon "Yüksek Volatilite" işaretli. Yeni fetch yok.
-- [ ] **Kur Riski Göstergesi** `[S]` `[P1]` — TRY/USD/EUR exposure dağılımı; "₺'nin %10 değer kaybı portföyünüzü $X etkiler" simülasyonu. `convert()` + `fxRates` zaten hazır.
+- [x] ~~**Volatilite / Drawdown Analizi**~~ (2026-04-29) — Risk Dashboard sprint'inde (Sprint 7) teslim edildi: `price_cache.p_d1/w1/m1/y1` bazlı ağırlıklı portföy volatilitesi; en oynaklı 3 pozisyon "Yüksek Volatilite" işaretli; AnalysisTab "Dönem Bazlı Getiri" kartına entegre edildi.
+- [x] ~~**Kur Riski Göstergesi**~~ (2026-04-29) — Risk Dashboard sprint'inde (Sprint 7) teslim edildi: USD/EUR/TRY exposure yatay bar + USDTRY %10 artış portföy etkisi simülasyonu; FX Risk kartı; `convert()` + `fxRates` bazlı; FX null warn-card.
 - [x] ~~**Temettü Getiri Projeksiyonu**~~ (2026-04-29) — TickerDetailTab: tahmini yıllık (≥2 DIV tx), maliyete getiri %, cari getiri %; AnalysisTab Temettü Özeti kartı: portföy verimi + top-5 bar. Dividend tracking tamamlanmasıyla birlikte teslim edildi.
 - [ ] **Likidite Analizi** `[M]` `[P2]` — `marketCap` bazlı "kolayca satılabilir / az likit" sınıflandırması; portföyün kaçte kaçının 1 günde piyasada satılabileceği. Fundamentals cache'ten.
 
@@ -125,7 +125,9 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 ### Karşılaştırma
 
 - [ ] **Peer Sektör Ortalamasıyla Karşılaştırma** `[L]` `[P3]` — FMP sektör ortalaması P/E, ROE, marjla hisse bazında karşılaştırma. FMP'de yeni endpoint (`/stable/sector-pe-snapshot`) gerekir.
-- [ ] **Ağırlıklı Ortalama Portföy P/E** `[S]` `[P2]` — Her pozisyonun piyasa değeri ağırlığıyla P/E ortalaması; tek satır "Portföyünüzün ortalama F/K'sı 18.4 — S&P 500 ortalamasının altında / üstünde" gibi bağlam cümlesi. Fundamentals cache (`fund_${ticker}`) zaten mevcut; sadece aggregation. Yeni fetch yok. Value-investing lens için doğal "ucuz mu pahalı mı?" özeti.
+- [ ] **Ağırlıklı Ortalama Portföy P/E** `[S]` `[P2]` — Her pozisyonun piyasa değeri ağırlığıyla P/E ortalaması; tek satır "Portföyünüzün ortalama F/K'sı 18.4 — S&P 500 ortalamasının altında / üstünde" gibi bağlam cümlesi. Fundamentals cache (`fund_${ticker}`) zaten mevcut; sadece aggregation. Yeni fetch yok. Value-investing lens için doğal "ucuz mu pahalı mı?" özeti. **Sprint 9 scope.**
+  - [ ] (a) AnalysisTab Portföy Sağlık Tablosu altına tek-satır KPI olarak ekle; MV-ağırlıklı P/E hesabı — cache'te P/E yoksa o pozisyon atlanır, atlanma sayısı küçük not ile gösterilir `[S]`
+  - [ ] (b) S&P 500 karşılaştırma cümlesi — hardcoded ~22 referans (FMP /stable/market-overview ile güncellenebilir ama şimdilik sabit) `[S]`
 
 ### Vergi & Muhasebe
 
@@ -135,11 +137,17 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 ### Risk (Ek)
 
 - [x] ~~**Potansiyel Kayıp (Max Pain) Simülasyonu**~~ (2026-04-29) — AnalysisTab kart 8; %10/20/30 senaryo yatay bar (sarı/turuncu/kırmızı); totalMV display cur'da; FX eksikse warn-card; tamamen frontend.
-- [ ] **Piyasa Düşüşü Dayanıklılık Skoru** `[M]` `[P2]` — Düşük borç (Borç/Özk < 0.5), yüksek FCF marjı (>10%), geniş op marjı (>15%) hisselerin portföydeki ağırlıklı payı → 1–10 dayanıklılık puanı; "Portföyünüzün %62'si resesyona dayanıklı şirketlerden oluşuyor" çıktısı. Fundamentals cache'ten; ek fetch yok. Banka/BIST bankalar hariç (early-exit seti).
+- [ ] **Piyasa Düşüşü Dayanıklılık Skoru** `[M]` `[P2]` — Düşük borç (Borç/Özk < 0.5), yüksek FCF marjı (>10%), geniş op marjı (>15%) hisselerin portföydeki ağırlıklı payı → 1–10 dayanıklılık puanı; "Portföyünüzün %62'si resesyona dayanıklı şirketlerden oluşuyor" çıktısı. Fundamentals cache'ten; ek fetch yok. Banka/BIST bankalar hariç (early-exit seti). **Sprint 9 scope.**
+  - [ ] (a) `resilienceScore(fund)` fonksiyonu: 3 metrik puanlama (debtToEquity, fcfMargin, operatingMargin) → 0/1/2 puan her metrik → toplam 0-6 → 1-10 scale; fund null veya eksik metrik ise `null` `[S]`
+  - [ ] (b) Portföy ağırlıklı skor hesabı: MV-weighted average, dayanıklı (%62) vs dayanıksız ayrımı `[S]`
+  - [ ] (c) AnalysisTab yeni kart "Piyasa Dayanıklılığı" — skor + bar + "Eksikleri Çek" CTA (Sağlık Tablosu CTA pattern'ı); BIST bankalar ve CRYPTO/GOLD/FX/FUND için kapsam dışı notu `[S]`
 
 ### Performans (Ek)
 
-- [ ] **Pozisyon Yıllık Getiri (CAGR) Tablosu** `[S]` `[P2]` — Her açık pozisyon için: ilk BUY tarihi → bugün arası zaman + toplam getiri → yıllık CAGR; "THYAO · 2.1 yıl · +%43 toplam · %18.7/yıl". Kazandırandakileri azalan sıra. `transactions` BUY kaydı + `price_cache` + frontend hesabı; yeni veri yok. Uzun vadeli yatırımcının "hangi hisse gerçekten çalıştı?" sorusu.
+- [ ] **Pozisyon Yıllık Getiri (CAGR) Tablosu** `[S]` `[P2]` — Her açık pozisyon için: ilk BUY tarihi → bugün arası zaman + toplam getiri → yıllık CAGR; "THYAO · 2.1 yıl · +%43 toplam · %18.7/yıl". Kazandırandakileri azalan sıra. `transactions` BUY kaydı + `price_cache` + frontend hesabı; yeni veri yok. Uzun vadeli yatırımcının "hangi hisse gerçekten çalıştı?" sorusu. **Sprint 9 scope.**
+  - [ ] (a) Her pozisyon için `firstBuyDate` hesabı: `transactions` içinde o ticker'ın en erken BUY tarihi; split-adjusted avg_cost (factorFor) `[S]`
+  - [ ] (b) CAGR formülü: `((currentMV / totalCost) ^ (1 / years)) - 1`; fiyat yoksa o satır gri "fiyat bekleniyor" `[S]`
+  - [ ] (c) AnalysisTab yeni kart "Pozisyon Getirileri (CAGR)" — tablo render; azalan sıra; click→openDetail `[S]`
 - [ ] **Giriş Zamanlaması Örüntüsü (Ay Bazlı)** `[M]` `[P3]` — BUY işlemlerini ay gruplarına göre say + o giriş sonrası 3A/6A ortalama getiri hesabı; "Ocak alımlarınız Temmuz alımlarından ortalama %12 daha iyi performans gösterdi". `transactions` + `price_cache`; ek fetch az (bazı eski fiyatlar cache'te olmayabilir → sadece cache'te olan ticker'lar dahil edilir). Davranışsal öz-farkındalık; yıllık "yatırım takvimi" pattern'ı.
 
 ### Kişisel & Eğitim
@@ -175,7 +183,11 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 ## Sosyal & Kişiselleştirme
 
 - [x] ~~**Social Portfolios Faz 1 — Multi-portfolio altyapısı**~~ (2026-04-29) — DB tabloları, FK'lar, backfill migration, RLS, frontend prop threading. Detay: Tamamlananlar arşivinde.
-- [ ] **Social Portfolios Faz 2 — Profil & Public portföyler** `[M]` `[P2]` — `UserProfileModal`; `portfolios.is_public` toggle + `privacy_level` alanı; public portföylere erişim için RLS okuma politikası; "Portföyümü paylaş" URL/slug üretimi. Faz 1 altyapısı tamamlandıktan sonra önkoşul karşılandı.
+- [ ] **Social Portfolios Faz 2 — Profil & Public portföyler** `[M]` `[P2]` — `UserProfileModal`; `portfolios.is_public` toggle + `privacy_level` alanı; public portföylere erişim için RLS okuma politikası; "Portföyümü paylaş" URL/slug üretimi. Faz 1 altyapısı tamamlandıktan sonra önkoşul karşılandı. **Sprint 9 scope.**
+  - [ ] (a) Settings'e `is_public` toggle — mevcut portfolios tablosuna `UPDATE SET is_public` çağrısı; basit switch UI `[S]`
+  - [ ] (b) RLS okuma politikası — `authenticated` kullanıcılar `is_public=true` portföyleri SELECT edebilir; rls-auditor sign-off zorunlu `[S]`
+  - [ ] (c) `UserProfileModal` — avatar emoji picker + bio alanı (profiles tablosu) + kullanıcının public portföy listesi; Search'ten kullanıcı arama bağlantısı `[M]`
+  - [ ] (d) Public portföy read-only view — pozisyon listesi (tutar gizli seçenek); "Bu portföy salt okunur" banner `[S]`
 - [ ] **Social Portfolios Faz 3 — Takip sistemi** `[M]` `[P2]` — `follows` tablosu; follow/unfollow UI; takipçi sayısı; `portfolio_activities` feed için yazma. Faz 2 tamamlandıktan sonra.
 - [ ] **Social Portfolios Faz 4 — Sosyal Feed tab** `[L]` `[P2]` — Yeni "Portföyler" ana sekmesi; "Portföyler" alt sekmesi (public portföyler listesi) + "Aktivite" alt sekmesi (takip edilenlerin son hareketleri); anonim veya kullanıcı adı bazlı. Faz 3 tamamlandıktan sonra.
 - [ ] **Yatırımcı risk profili** `[M]` `[P2]` — anket → muhafazakar / dengeli / agresif.
@@ -217,7 +229,8 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 ## Güvenlik & Süreç
 
 - [x] ~~**Periyodik agent denetim turu — ilk tur**~~ (2026-04-27) — client-security-auditor + edge-reviewer; 15 bulgu; Sprint 4 backlog'a eklendi.
-- [x] ~~**Periyodik agent denetim turu — 2. tur**~~ (2026-04-29, Sprint 7) — rls-auditor + client-security-auditor + edge-reviewer paralel; 3 kritik bulgu (parse-transaction sunucu auth, RLS portfolio_id subquery, activities cross-portfolio insert); tüm bulgular `002_rls_fixes.sql` + parse-transaction rewrite ile kapatıldı. Sonraki tur: Sprint 9-10.
+- [x] ~~**Periyodik agent denetim turu — 2. tur**~~ (2026-04-29, Sprint 7) — rls-auditor + client-security-auditor + edge-reviewer paralel; 3 kritik bulgu (parse-transaction sunucu auth, RLS portfolio_id subquery, activities cross-portfolio insert); tüm bulgular `002_rls_fixes.sql` + parse-transaction rewrite ile kapatıldı. Sonraki tur: Sprint 9.
+- [ ] **Periyodik agent denetim turu — 3. tur** `[S]` `[P1]` — Sprint 9 sonu kalite kapısı; odak: Social Faz 2 yeni RLS okuma politikası (kullanıcı A, kullanıcı B'nin public portföyüne erişebiliyor ama private portföyüne erişemiyor doğrulaması); public portföy read-only view'de XSS/veri sızıntısı kontrolü; edge-reviewer değişiklik yoksa skip. **Sprint 9 scope.**
 
 ## Ölçeklenme & Mass Kullanım
 
@@ -252,7 +265,10 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 ### Aşama M1 — PWA (Hemen Uygulanabilir)
 
-- [ ] **Progressive Web App (PWA) hazırlığı** `[M]` `[P1]` — `manifest.json` (icon 192/512px, `display:standalone`, `theme_color`), minimal `service-worker.js` (offline shell cache), `<link rel="manifest">`. iOS Safari'de "Ana Ekrana Ekle" + Android Chrome'da install prompt aktif olur. App Store başvurusu gerektirmez, dağıtım GitHub Pages üstünden devam eder. **Bu adım mevcut index.html mimarisini bozmaz.**
+- [ ] **Progressive Web App (PWA) hazırlığı** `[M]` `[P1]` — `manifest.json` (icon 192/512px, `display:standalone`, `theme_color`), minimal `service-worker.js` (offline shell cache), `<link rel="manifest">`. iOS Safari'de "Ana Ekrana Ekle" + Android Chrome'da install prompt aktif olur. App Store başvurusu gerektirmez, dağıtım GitHub Pages üstünden devam eder. **Bu adım mevcut index.html mimarisini bozmaz.** **Sprint 9 scope.**
+  - [ ] (a) `manifest.json` — name/short_name: "Investment Ledger", start_url: "/Investment-Ledger/", display: standalone, background_color/theme_color: #000; icons 192px + 512px PNG `[S]`
+  - [ ] (b) `service-worker.js` minimal — install event: offline shell (index.html + manifest.json) precache; fetch event: cache-first for shell, network-first for API calls; stale-while-revalidate pattern `[S]`
+  - [ ] (c) `index.html` head: `<link rel="manifest">` + `<meta name="apple-mobile-web-app-capable">` + `<meta name="theme-color">` + service worker registration script `[S]`
 - [ ] **PWA ikonları + splash screen** `[S]` `[P2]` — 192/512px PNG ikonlar; iOS için `apple-touch-icon`; splash screen `theme_color` ile uyumlu.
 
 ### Aşama M2 — Build Sistemi Geçişi (Mobil Uygulama Önkoşulu)
@@ -331,15 +347,15 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ (2026-04-29) | **Sprint 9 planlanıyor**
+Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ (2026-04-29) | **Sprint 9 → 2026-04-30 / 2026-05-13**
 
 Sprint 7+8 retro özeti: Güvenlik sertleştirme (parse-transaction server auth, RLS hardening), Dividend tracking (DIV schema + cashflow + projeksiyonu), Risk Dashboard (3 kart), Temettü Özeti (AnalysisTab), pie redesign (stacked + collapsible), Dashboard badge temizliği. Tüm maddeler teslim edildi ve push edildi.
 
-Sprint 9 önerilen scope (öncelik sırasına göre):
+Sprint 9 groomed scope (öncelik sırasına göre — `sprints/sprint-09.md` detayı):
 
-1. **[Öncelik 1] Social Portfolios Faz 2** `[M][P2]` — `portfolios.is_public` toggle Settings'te; `UserProfileModal` (bio, avatar emoji, public portföy listesi); SearchTab kullanıcı arama; public portföy read-only view. Faz 1 altyapısı hazır.
-2. **[Öncelik 2] Ağırlıklı Ortalama Portföy P/E** `[S][P2]` — Fundamentals cache zaten hazır; sadece aggregation + AnalysisTab kart; "portföyünüzün F/K'sı 18.4" özeti.
-3. **[Öncelik 3] Pozisyon Yıllık Getiri (CAGR) Tablosu** `[S][P2]` — Her pozisyon için ilk BUY → bugün CAGR; yeni veri yok (transactions + price_cache).
-4. **[Öncelik 4] Piyasa Düşüşü Dayanıklılık Skoru** `[M][P2]` — Borç/Özk + FCF marjı + op marjı → 1-10 skor; fundamentals cache'ten; ek fetch yok.
-5. **[Öncelik 5] Periyodik agent denetim turu — 3. tur** `[S][P1]` — Sprint 9 sonu; yeni kartlar + Social Faz 2 RLS doğrulaması.
-6. **[Öncelik 6] PWA hazırlığı** `[M][P1]` — `manifest.json` + minimal service-worker; "Ana Ekrana Ekle" için; mevcut index.html mimarisini bozmaz.
+1. **[Öncelik 1] Social Portfolios Faz 2** `[M][P2]` — `portfolios.is_public` toggle (Settings); `UserProfileModal` (avatar emoji + bio + public portföy listesi); public portföy read-only view. Alt-hikayeler: (a) is_public toggle S, (b) RLS okuma politikası S, (c) UserProfileModal M, (d) read-only görünüm S. Faz 1 altyapısı hazır; rls-auditor sign-off gerekli.
+2. **[Öncelik 2] Ağırlıklı Ortalama Portföy P/E** `[S][P2]` — `fund_${ticker}` LS cache'ten aggregation; AnalysisTab yeni kart; "Portföyünüzün F/K'sı 18.4 — S&P 500 ortalamasının altında/üstünde" bağlam cümlesi. Yeni fetch yok; fundamentals cache zaten mevcut.
+3. **[Öncelik 3] Pozisyon Yıllık Getiri (CAGR) Tablosu** `[S][P2]` — Her açık pozisyon için ilk BUY tarihi → bugün arası CAGR; split-adjusted (`factorFor`); azalan sıra; transactions + price_cache yeterli.
+4. **[Öncelik 4] Piyasa Düşüşü Dayanıklılık Skoru** `[M][P2]` — Borç/Özk + FCF marjı + op marjı → ağırlıklı 1-10 skor; "Portföyünüzün %62'si resesyona dayanıklı" özeti; "Eksikleri Çek" CTA; fundamentals cache'ten; ek fetch yok.
+5. **[Öncelik 5] PWA hazırlığı** `[M][P1]` — `manifest.json` (icon 192/512px, display:standalone) + minimal `service-worker.js` (offline shell cache) + `<link rel="manifest">`; index.html mimarisini bozmaz; "Ana Ekrana Ekle" aktif.
+6. **[Öncelik 6] Periyodik agent denetim turu — 3. tur** `[S][P1]` — Sprint sonu kalite kapısı; rls-auditor (Social Faz 2 yeni politikaları) + client-security-auditor (public portföy view XSS kontrolü) + edge-reviewer.
