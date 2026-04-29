@@ -5060,7 +5060,7 @@ function App({session}){
                       {!hide&&<span style={{fontSize:15,fontWeight:500,fontFamily:"'DM Mono','Fira Code',monospace",color:"var(--text)"}}>{mask(cfg.sym+fmt(totMv,0))}</span>}
                       {blockDeltaPct!=null&&(
                         <span style={{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,background:blockDeltaDlr>=0?"rgba(0,217,126,0.15)":"rgba(255,51,102,0.15)",color:blockDeltaDlr>=0?"var(--ok)":"var(--err)"}}>
-                          {fmtP(blockDeltaPct)}
+                          {Math.abs(blockDeltaPct).toFixed(1)+"%"}
                         </span>
                       )}
                       <span style={{fontSize:11,color:"var(--text3)"}}>{isOpen?"▾":"▸"}</span>
