@@ -319,6 +319,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [x] ~~**AddTxInline NaN guard**~~ (2026-04-27 Sprint 4) — saveAI/saveTx/saveManual NaN filter; geçersiz satırlar atlanıp "X işlem kaydedildi, Y geçersiz atlandı" flash.
 - [x] ~~**CSV negatif/Infinity guard**~~ (2026-04-27 Sprint 4) — `shares≤0 || !isFinite(shares) || price<0 || !isFinite(price)` satırlar skip; console.warn + skip sayacı.
 - [ ] **price_cache sanity check** `[S]` `[P2]` — `price = 0 || price = null` olan satırlar "bayat" sayılıp yeniden fetch tetiklemeli.
+- [ ] **TRY-denominated avg_cost tespiti ve uyarısı** `[S]` `[P2]` — Non-BIST pozisyonda `avg_cost` TRY cinsinden girildiyse (belirtisi: `avgCost > prc[ticker] × 30`) TickerDetailTab'da ve ManuelPosForm'da uyarı göster ("Maliyet TRY gibi görünüyor; USD bekleniyor"). Root cause: BTC gibi kripto pozisyonları eski bir girişte TRY fiyatıyla kaydedilip `currency:"USD"` olarak normalize edilmiş — `positions.avg_cost ≈ ₺3,143,709` ama `prc["BTC"] ≈ $77,625`. Kullanıcının işlemi düzeltip ♻️ Yeniden Hesapla çalıştırması gerekiyor; bu uyarı o adımı tetikler.
 - [x] ~~**maxLength ticker/name/broker**~~ (2026-04-29) — broker `maxLength={50}` (AddTxInline/HistoryTab×2/ManuelPosForm), ticker `maxLength={20}`, name `maxLength={100}` (ManuelPosForm).
 - [ ] **il_recent_search signOut temizliği** `[S]` `[P2]` — `signOut` handler son aramaları LS'ten temizlemeli (`il_recent_search` kullanıcıya özel hissedebilir).
 - [ ] **Form tutarı gizli-mod preview** `[S]` `[P2]` — `hide=true` iken form amount alanlarında girilen değerler `mask()` ile maskelenmeli.
