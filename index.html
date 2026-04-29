@@ -885,7 +885,7 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType,portfoli
             <input className="finp sm" value={form.notes} maxLength={200} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="e.g. Q1 temettü, ikramiye..."/>
           </div>
           {form.shares&&form.price&&(
-            <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: ${fmt((+form.shares)*(+form.price),2)}</div>
+            <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: {displaySym(effCur)}{fmt((+form.shares)*(+form.price),2)}</div>
           )}
           <div className="brow">
             <button className="pri btn-md" onClick={saveManual} disabled={saving||!form.shares||!form.price}>{saving?"...":"Kaydet"}</button>
@@ -2731,7 +2731,7 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
     }));
     const txInserts=allCsvMapped.filter(r=>{
       const ok=r.shares>0&&isFinite(r.shares)&&r.price>=0&&isFinite(r.price);
-      if(!ok)console.warn("[CSV skip]",r.ticker,"shares="+r.shares,"price="+r.price);
+      if(!ok)DEBUG&&console.warn("[CSV skip]",r.ticker,"shares="+r.shares,"price="+r.price);
       return ok;
     });
     const csvExtraSkip=allCsvMapped.length-txInserts.length;
@@ -3647,7 +3647,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
             .map(p => {
               const buyTxs = filteredTxs.filter(t => t.ticker === p.ticker && t.way === "BUY");
               const totalComm = buyTxs.reduce((a, t) => a + (t.commission || 0), 0);
-              const breakEven = p.shares > 0 ? (p.shares * p.avg_cost + totalComm) / p.shares : null;
+              const breakEven = p.shares > 0 ? (p.shares * p.avgCost + totalComm) / p.shares : null;
               const curPrice = prc[p.ticker];
               const distPct = (breakEven != null && breakEven > 0 && curPrice != null)
                 ? ((curPrice - breakEven) / breakEven) * 100
@@ -3680,18 +3680,18 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                     {sorted.map(r => (
                       <tr key={r.ticker} className="pos-row" onClick={() => openDetail(r.ticker, r.type, "analysis")}
                         style={{cursor:"pointer"}}>
-                        <td style={{padding:"5px 8px 5px 0",fontWeight:600,fontFamily:"var(--mono)"}}>
+                        <td style={{padding:"5px 8px 5px 0",fontWeight:600,fontFamily:"'DM Mono',monospace"}}>
                           {r.ticker}
                         </td>
-                        <td style={{padding:"5px 8px 5px 0",textAlign:"right",fontFamily:"var(--mono)"}}>
+                        <td style={{padding:"5px 8px 5px 0",textAlign:"right",fontFamily:"'DM Mono',monospace"}}>
                           {r.breakEven != null ? mask(r.sym + fmt(r.breakEven, 2)) : <span className="dim">—</span>}
                         </td>
-                        <td style={{padding:"5px 8px 5px 0",textAlign:"right",fontFamily:"var(--mono)"}}>
+                        <td style={{padding:"5px 8px 5px 0",textAlign:"right",fontFamily:"'DM Mono',monospace"}}>
                           {r.curPrice != null
                             ? mask(r.sym + fmt(r.curPrice, 2))
                             : <span style={{fontSize:10,color:"var(--text3)"}}>Fiyat yok</span>}
                         </td>
-                        <td style={{padding:"5px 0 5px 0",textAlign:"right",fontFamily:"var(--mono)"}}>
+                        <td style={{padding:"5px 0 5px 0",textAlign:"right",fontFamily:"'DM Mono',monospace"}}>
                           {r.distPct != null
                             ? <span className={r.distPct > 0 ? "ok" : "err"} style={{fontWeight:600}}>
                                 {fmtP(r.distPct)}
@@ -4738,7 +4738,7 @@ function App({session}){
           };
           np[t]=v.price;cnt++;
         } else {
-          failed.push(t);console.warn(`[fetchHist ${t}]`,v?.error||d.error||"no data");
+          failed.push(t);DEBUG&&console.warn(`[fetchHist ${t}]`,v?.error||d.error||"no data");
         }
       }catch(e){failed.push(t);DEBUG && console.warn(`[fetchHist ${t}]`,e);}
       if(i<fetchable.length-1)await sleep(CFG.RATE_LIMIT_MS);
