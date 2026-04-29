@@ -4,11 +4,13 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Investment Ledger</title>
-  <meta name="theme-color" content="#000000"/>
+  <meta name="theme-color" content="#6658ff"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Ledger"/>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>"/>
+  <link rel="apple-touch-icon" href="/Investment-Ledger/icon-192.png"/>
+  <link rel="manifest" href="/Investment-Ledger/manifest.json"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -5410,7 +5412,7 @@ function App({session}){
           </div>
           <button className="danger" onClick={()=>{
             // Cross-account leak'i önle: privacy mode + cache + portfolio LS key'lerini temizle.
-            ["il_hide","il_prc","il_hist","il_active_portfolio"].forEach(k=>localStorage.removeItem(k));
+            ["il_hide","il_prc","il_hist","il_active_portfolio","il_recent_search"].forEach(k=>localStorage.removeItem(k));
             sb.auth.signOut();
           }} style={{width:"100%"}}>Çıkış Yap</button>
         </div>
@@ -5464,6 +5466,14 @@ function Root(){
 }
 
 ReactDOM.createRoot(document.getElementById("app")).render(<Root/>);
+</script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('/Investment-Ledger/service-worker.js')
+      .catch(e=>console.warn('[SW]',e));
+  });
+}
 </script>
 </body>
 </html>

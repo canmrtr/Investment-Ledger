@@ -306,7 +306,7 @@ function isyBuildUrl(code, group, years) {
 
 async function isyFetch(code, group, years) {
   try {
-    const r = await fetch(isyBuildUrl(code, group, years), { headers: ISY_HEADERS });
+    const r = await fetch(isyBuildUrl(code, group, years), { headers: ISY_HEADERS, signal: AbortSignal.timeout(8000) });
     if (!r.ok) return null;
     const d = await r.json();
     if (!d.ok || !Array.isArray(d.value) || d.value.length === 0) return null;
