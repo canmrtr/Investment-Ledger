@@ -1609,6 +1609,29 @@ function AccountSection({user,profile,flash_,confirm_,onSaved}){
   const [uname,setUname]=useState("");
   const [busy,setBusy]=useState(false);
 
+  // Profilim state
+  const [profileOpen,setProfileOpen]=useState(false);
+  const [bioVal,setBioVal]=useState("");
+  const [avatarVal,setAvatarVal]=useState("👤");
+  const [profilePublic,setProfilePublic]=useState(false);
+  const [profileBusy,setProfileBusy]=useState(false);
+
+  const saveProfile=async()=>{
+    if(bioVal.length>160){flash_("Bio 160 karakteri geçemez","err");return;}
+    setProfileBusy(true);
+    const{error}=await sb.from("profiles").upsert({
+      user_id:user.id,
+      bio:bioVal.trim()||null,
+      avatar_emoji:avatarVal,
+      is_profile_public:profilePublic,
+      updated_at:new Date().toISOString()
+    },{onConflict:"user_id"});
+    setProfileBusy(false);
+    if(error){flash_("Kaydedilemedi","err");return;}
+    flash_("Profil güncellendi ✓");
+    if(onSaved)onSaved();
+  };
+
   const cancel=()=>{setEditing(null);setPw1("");setPw2("");setEmail("");setUname("");};
 
   const savePw=async()=>{
@@ -1655,6 +1678,75 @@ function AccountSection({user,profile,flash_,confirm_,onSaved}){
   return(
     <div className="sg">
       <label>Hesap</label>
+      {/* Profilim — collapsible */}
+      <div style={{borderBottom:"1px solid var(--border)",paddingBottom:10,marginBottom:10}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0"}}>
+          <div>
+            <div style={{fontSize:11,color:"var(--text2)",textTransform:"uppercase",letterSpacing:".05em"}}>Profilim</div>
+            <div style={{fontSize:13,marginTop:2}}>
+              <span style={{marginRight:6}}>{profile?.avatar_emoji||"👤"}</span>
+              {profile?.bio
+                ?<span style={{color:"var(--text2)",fontSize:12}}>{profile.bio.slice(0,40)}{profile.bio.length>40?"…":""}</span>
+                :<span className="dim" style={{fontSize:12}}>Bio eklenmemiş</span>}
+            </div>
+          </div>
+          <button className="btn-sm" onClick={()=>{
+            if(!profileOpen){
+              setBioVal(profile?.bio||"");
+              setAvatarVal(profile?.avatar_emoji||"👤");
+              setProfilePublic(profile?.is_profile_public||false);
+            }
+            setProfileOpen(o=>!o);
+          }}>{profileOpen?"Kapat":"Düzenle"}</button>
+        </div>
+
+        {profileOpen&&(
+          <div style={{background:"var(--bg3)",borderRadius:8,padding:"12px 14px",marginTop:8}}>
+            <div className="kk" style={{marginBottom:6}}>Avatar</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+              {["👤","🦁","🐯","🦊","🐻","🦅","🌊","⚡","🔥","💎","🚀","🎯"].map(e=>(
+                <button key={e} onClick={()=>setAvatarVal(e)}
+                  style={{
+                    width:36,height:36,borderRadius:8,border:`2px solid ${avatarVal===e?"var(--info)":"transparent"}`,
+                    background:avatarVal===e?"rgba(102,88,255,0.15)":"var(--bg4)",
+                    fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"
+                  }}>{e}</button>
+              ))}
+            </div>
+
+            <div className="kk" style={{marginBottom:4}}>Bio <span style={{color:"var(--text3)",fontWeight:400}}>{bioVal.length}/160</span></div>
+            <textarea
+              className="finp sm"
+              value={bioVal}
+              onChange={e=>setBioVal(e.target.value.slice(0,160))}
+              placeholder="Kendini kısaca tanıt..."
+              rows={3}
+              maxLength={160}
+              style={{resize:"none",width:"100%",marginBottom:12,boxSizing:"border-box"}}
+            />
+
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <div>
+                <div style={{fontSize:12,fontWeight:500}}>Profili herkese göster</div>
+                <div style={{fontSize:11,color:"var(--text3)"}}>Diğer kullanıcılar adını ve biyografini görebilir</div>
+              </div>
+              <button
+                className={"btn-sm"+(profilePublic?" btn-danger-out":"")}
+                onClick={()=>setProfilePublic(v=>!v)}
+                style={{flexShrink:0}}
+              >{profilePublic?"Gizle":"Göster"}</button>
+            </div>
+
+            <div className="brow">
+              <button className="pri btn-md" onClick={saveProfile} disabled={profileBusy}>
+                {profileBusy?"Kaydediliyor...":"Kaydet"}
+              </button>
+              <button className="btn-md" onClick={()=>setProfileOpen(false)} disabled={profileBusy}>İptal</button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Kullanıcı adı satırı */}
       <div className="row" style={{borderBottom:"none",padding:"5px 0"}}>
         <div>
@@ -4312,6 +4404,12 @@ function App({session}){
   // Portföy listesi + aktif portföy — Faz 1 altyapı.
   // activePortfolioId ileride switcher'dan değişir; şimdilik Ana Portföy otomatik seçilir.
   const [portfolios,setPortfolios]=useState([]);
+  // Public portfolio read-only view — ?portfolio=<uuid> URL param
+  const [publicViewId,setPublicViewId]=useState(()=>{
+    const p=new URLSearchParams(window.location.search).get("portfolio");
+    return (p&&/^[0-9a-f-]{36}$/i.test(p))?p:null;
+  });
+  const [publicViewData,setPublicViewData]=useState(null);
   const [activePortfolioId,setActivePortfolioId]=useState(null); // set by loadData after server validation
   const [prc,setPrc_]=useState(()=>{const p=LS.get("il_prc",null);return p?p.p:{};});
   const [pdate,setPdate]=useState(()=>{const p=LS.get("il_prc",null);return p?p.d:"—";});
@@ -4459,6 +4557,23 @@ function App({session}){
     setBusy(b=>({...b,d:false}));
   };
   useEffect(()=>{loadData();},[]);
+  // Public portfolio view — URL param ile açıldığında portföyü çek
+  useEffect(()=>{
+    if(!publicViewId)return;
+    (async()=>{
+      const{data:pf}=await sb.from("portfolios").select("id,name,is_public,privacy_level,user_id").eq("id",publicViewId).eq("is_public",true).maybeSingle();
+      if(!pf){flash_("Bu portföy bulunamadı veya gizli","err");setPublicViewId(null);return;}
+      let positions=[];
+      if(pf.privacy_level==="full"){
+        const{data}=await sb.from("positions").select("ticker,name,type,shares,avg_cost,currency").eq("portfolio_id",publicViewId);
+        positions=data||[];
+      }
+      // Owner username
+      const{data:owner}=await sb.from("profiles").select("username,display_name,avatar_emoji").eq("user_id",pf.user_id).maybeSingle();
+      setPublicViewData({portfolio:pf,positions,owner:owner||{}});
+      setTab("publicview");
+    })();
+  },[publicViewId]);
   // FX: mount + pos/txs değişince EUR ihtiyacı oluşursa tetikle. Cache 24h fresh ise atla.
   useEffect(()=>{
     const fresh = fxAt && (Date.now() - fxAt) < FX_TTL_MS;
@@ -5099,6 +5214,61 @@ function App({session}){
           closeDetail={closeDetail} hideAmts={hide} mask={mask} portfolioId={activePortfolioId}/>
       )}
 
+      {/* PUBLIC PORTFOLIO VIEW — ?portfolio=<uuid> */}
+      {tab==="publicview"&&publicViewData&&(()=>{
+        const{portfolio,positions,owner}=publicViewData;
+        const totalCost=positions.reduce((a,p)=>a+(p.avg_cost||0)*p.shares,0);
+        const rows=positions.map(p=>({
+          ...p,
+          cost:(p.avg_cost||0)*p.shares,
+          pct:totalCost>0?((p.avg_cost||0)*p.shares/totalCost*100):0,
+        })).sort((a,b)=>b.pct-a.pct);
+        return(
+          <div>
+            {/* Banner */}
+            <div style={{position:"sticky",top:52,zIndex:90,background:"rgba(255,184,0,0.12)",borderBottom:"1px solid rgba(255,184,0,0.25)",padding:"8px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+              <span style={{fontSize:12,color:"var(--warn)"}}>🔒 Bu portföy salt okunur görünümdür — tutar ve maliyet bilgileri gizlidir</span>
+              <button className="btn-xs" onClick={()=>{setPublicViewId(null);setPublicViewData(null);setTab("dashboard");}}>Kendi Portföyüne Dön</button>
+            </div>
+            <div style={{padding:"16px 16px 80px"}}>
+              {/* Portföy başlık kartı */}
+              <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:28}}>{owner.avatar_emoji||"👤"}</span>
+                  <div>
+                    <div style={{fontSize:15,fontWeight:600}}>{portfolio.name}</div>
+                    <div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>
+                      {owner.display_name||owner.username||"Anonim kullanıcı"}
+                      {owner.username&&<span className="mono" style={{marginLeft:6,fontSize:11}}>@{owner.username}</span>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* Pozisyon listesi */}
+              {portfolio.privacy_level!=="full"?(
+                <div className="warn-card">Bu portföy yalnızca özet bilgi paylaşıyor — pozisyon detayları gizli.</div>
+              ):rows.length===0?(
+                <div className="empty-card"><div className="ttl">Bu portföyde pozisyon yok</div></div>
+              ):(
+                <div className="card" style={{padding:"14px 16px"}}>
+                  <div className="stitle" style={{marginBottom:12}}>Pozisyonlar <span style={{fontWeight:400,color:"var(--text3)"}}>{rows.length} varlık</span></div>
+                  {rows.map((p,i)=>(
+                    <div key={p.ticker} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:i<rows.length-1?"1px solid var(--border)":"none"}}>
+                      <span className="tsym" style={{flex:"0 0 70px"}}>{p.ticker}</span>
+                      <span style={{flex:1,fontSize:11,color:"var(--text3)"}}>{p.name||p.type}</span>
+                      <div style={{flex:"0 0 120px",height:6,background:"var(--bg3)",borderRadius:3,overflow:"hidden"}}>
+                        <div style={{width:p.pct+"%",height:"100%",background:TYPE_COLORS[p.type]||"var(--info)"}}/>
+                      </div>
+                      <span className="mono" style={{flex:"0 0 48px",textAlign:"right",fontSize:12,color:"var(--text2)"}}>{p.pct.toFixed(1)}%</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* SETTINGS */}
       {tab==="settings"&&(
         <div>
@@ -5181,13 +5351,21 @@ function App({session}){
                       {isPublic ? "Herkese açık — bağlantısı olan herkes görebilir" : "Sadece siz görebilirsiniz"}
                     </div>
                   </div>
-                  <button
-                    className={"btn-sm"+(isPublic?" btn-danger-out":"")}
-                    onClick={togglePublic}
-                    style={{whiteSpace:"nowrap",flexShrink:0}}
-                  >
-                    {isPublic ? "Gizle" : "Herkese Aç"}
-                  </button>
+                  <div style={{display:"flex",gap:6,flexShrink:0}}>
+                    {isPublic&&(
+                      <button className="btn-sm" onClick={()=>{
+                        const url=`${window.location.origin}${window.location.pathname}?portfolio=${activePortfolioId}`;
+                        navigator.clipboard?.writeText(url).then(()=>flash_("Bağlantı kopyalandı ✓")).catch(()=>flash_("Kopyalanamadı","err"));
+                      }}>Paylaş</button>
+                    )}
+                    <button
+                      className={"btn-sm"+(isPublic?" btn-danger-out":"")}
+                      onClick={togglePublic}
+                      style={{whiteSpace:"nowrap"}}
+                    >
+                      {isPublic ? "Gizle" : "Herkese Aç"}
+                    </button>
+                  </div>
                 </div>
               </div>
             );
