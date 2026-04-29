@@ -4446,6 +4446,7 @@ function App({session}){
   const [sort,setSort]=useState({by:"plPct",dir:"desc"});
   const [sortTry,setSortTry]=useState({by:"plPct",dir:"desc"});
   const [dashTypeFilter,setDashTypeFilter]=useState(()=>BLOCK_TYPES.map(b=>b.type));
+  const [collapsedBlocks,setCollapsedBlocks]=useState(new Set());
   const [distMode,setDistMode]=useState("mv"); // "cost" | "mv" — pie chart mode
   const [busy,setBusy]=useState({p:false,h:false,d:false});
   const [pprog,setPprog]=useState("");
@@ -5120,35 +5121,55 @@ function App({session}){
               if(items.length===0) return null;
               const sortedItems = sortPos(items, sort);
               const totMv = items.reduce((a,p)=>a+(p.mv ?? p.cost),0);
+              const blockDeltaDlr = items.filter(p=>p.periodChgDlr!=null).reduce((s,p)=>s+p.periodChgDlr,0);
+              const blockHasChg = items.some(p=>p.periodChgDlr!=null);
+              const blockStartMv = totMv - blockDeltaDlr;
+              const blockDeltaPct = blockHasChg && blockStartMv>0 ? (blockDeltaDlr/blockStartMv*100) : null;
+              const isOpen = !collapsedBlocks.has(cfg.type);
+              const toggleBlock = () => setCollapsedBlocks(prev=>{const n=new Set(prev);n.has(cfg.type)?n.delete(cfg.type):n.add(cfg.type);return n;});
               return(
-                <div key={cfg.type} style={{marginTop:idx===0?0:22,marginBottom:8}}>
-                  <div className="stitle" style={{marginBottom:10,display:"flex",alignItems:"center",gap:6}}>
-                    <span style={{color:"var(--text3)",display:"flex",opacity:.7}}>{cfg.icon&&cfg.icon(14)}</span>
-                    {cfg.label} · {mask(cfg.sym+fmt(totMv,0))}
+                <div key={cfg.type} style={{marginTop:idx===0?0:16,marginBottom:8}}>
+                  {/* Blok başlık — tıklanınca collapse */}
+                  <div onClick={toggleBlock} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:"var(--bg3)",borderRadius:10,cursor:"pointer",userSelect:"none",marginBottom:isOpen?10:0}}>
+                    <span style={{fontSize:15,fontWeight:600,color:"var(--text)",letterSpacing:"-0.2px"}}>{cfg.label}</span>
+                    <div style={{display:"flex",alignItems:"center",gap:8}}>
+                      {!hide&&<span style={{fontSize:14,fontWeight:500,fontFamily:"'DM Mono','Fira Code',monospace",color:"var(--text)"}}>{mask(cfg.sym+fmt(totMv,0))}</span>}
+                      {blockDeltaPct!=null&&!hide&&(
+                        <span style={{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,background:blockDeltaDlr>=0?"rgba(0,217,126,0.15)":"rgba(255,51,102,0.15)",color:blockDeltaDlr>=0?"var(--ok)":"var(--err)"}}>
+                          {blockDeltaDlr>=0?"+":""}{fmtP(blockDeltaPct)}
+                        </span>
+                      )}
+                      <span style={{fontSize:11,color:"var(--text3)"}}>{isOpen?"▾":"▸"}</span>
+                    </div>
                   </div>
 
+                  {isOpen&&<>
                   {/* Desktop tablo */}
                   <div className="tbl-wrap pos-tbl-desktop">
                     <table>
                       <thead><tr>
                         <th scope="col" className="l" onClick={()=>tsort("ticker")}>Ticker{sa("ticker")}</th>
                         {!hide&&<th scope="col" className="r" onClick={()=>tsort("shares")}>Adet{sa("shares")}</th>}
-                        {!hide&&<th scope="col" className="r" onClick={()=>tsort("cost")}>Maliyet{sa("cost")}</th>}
+                        {!hide&&<th scope="col" className="r">Fiyat</th>}
                         {!hide&&<th scope="col" className="r" onClick={()=>tsort("mv")}>Değer{sa("mv")}</th>}
                         <th scope="col" className="r" onClick={()=>tsort("plPct")} data-tip="(Değer − Maliyet) / Maliyet × 100">P&L%{sa("plPct")}</th>
                         {hasH&&<th scope="col" className="r" onClick={()=>tsort("periodChgPct")} data-tip={`Seçili periyot (${sel.lbl}) fiyat değişimi`}>Δ {sel.lbl}{sa("periodChgPct")}</th>}
                       </tr></thead>
                       <tbody>
-                        {sortedItems.map(p=>(
+                        {sortedItems.map(p=>{
+                          const isGU2=p.type==="GOLD"&&p.unit&&p.unit!=="oz";
+                          const ozF2=isGU2?goldOzPerUnit(p.unit):1;
+                          const curPrc=prc[p.ticker];
+                          return(
                           <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
                             <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span></div></td>
-                            {!hide&&<td className="r">{(()=>{if(p.type==="GOLD"&&p.unit&&p.unit!=="oz"){const f=goldOzPerUnit(p.unit);const lbl={g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit;return <>{fmtShares(p.shares/f)}<span style={{fontSize:10,color:"var(--text2)",marginLeft:2}}>{lbl}</span></>;}return fmtShares(p.shares);})()}</td>}
-                            {!hide&&<td className="r">{p.cost?mask(cfg.sym+fmt(p.cost,0)):"—"}</td>}
+                            {!hide&&<td className="r">{(()=>{if(isGU2){const lbl={g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit;return <>{fmtShares(p.shares/ozF2)}<span style={{fontSize:10,color:"var(--text2)",marginLeft:2}}>{lbl}</span></>;}return fmtShares(p.shares);})()}</td>}
+                            {!hide&&<td className="r mono" style={{color:"var(--text2)"}}>{curPrc!=null?mask(cfg.sym+fmt(curPrc*ozF2,2)):"—"}</td>}
                             {!hide&&<td className="r">{p.mv?mask(cfg.sym+fmt(p.mv,0)):"—"}</td>}
                             <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
                             {hasH&&<td className="r">{(()=>{if(p.periodChgPct==null)return"—";const s=p.periodChgPct>=0?"+":"-";return<><div className={"mono"+pc(p.periodChgPct)} style={{fontWeight:600,fontSize:12,lineHeight:1.25}}>{s}{fmtP(Math.abs(p.periodChgPct))}</div><div className={"mono"+pc(p.periodChgPct)} style={{fontSize:10,opacity:.75}}>{s}{cfg.sym}{fmt(Math.abs(p.periodChgDlr),0)}</div></>;})()}</td>}
                           </tr>
-                        ))}
+                        );})}
                       </tbody>
                     </table>
                   </div>
@@ -5186,6 +5207,7 @@ function App({session}){
                       );
                     })}
                   </div>
+                  </>}
 
                 </div>
               );
