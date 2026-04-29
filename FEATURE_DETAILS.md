@@ -96,9 +96,9 @@ Dashboard'daki 4 özet kart (hepsi **display currency**'de — toggle ile $ veya
 
 Sticky pos.3 nav (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar).
 
-1. **Varlık Dağılımı** — filter chip `.mtab`: Genel · US Hisse · BIST · ... (sadece var olan tipler). Genel=type breakdown, type-specific=ticker breakdown. Stacked horizontal bar + collapsible legend.
+1. **Varlık Dağılımı** — Stacked horizontal bar + collapsible legend. Legend satırları: renk swatch · tür adı · % (tutar yok). Tür satırına tıklanınca ▸/▾ ile ticker drill-down açılır (>1 ticker varsa); sub-row: ticker · ad · within-type %. `expandedAssetType` state ile kontrol edilir. Filter chip kaldırıldı.
 
-2. **Bölge Dağılımı** — `REGION_OF` map heuristik: `us` (US_STOCK+FUND), `tr` (BIST), `crypto`, `emtia` (GOLD), `fx`. Stacked bar + legend. Kısıt: ETF underlying yok.
+2. **Bölge Dağılımı** — `REGION_OF` map heuristik: `us` (US_STOCK+FUND), `tr` (BIST), `crypto`, `emtia` (GOLD), `fx`. Stacked bar + legend (sadece %). Kısıt: ETF underlying yok.
 
 3. **Toplam Komisyon** — `byCurrency` KPI (₺/$/€ ayrı) + broker × currency bar + yıl bar. Collapsible detay. Multi-currency: `"$5.62 + ₺0.10"` join.
 
@@ -108,7 +108,7 @@ Sticky pos.3 nav (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar).
 
 6. **Konsantrasyon Riski** — Top 3 ağırlık + renk pill (>60% kırmızı / 40-60% sarı). HHI basit (Σwi²×10000). Frontend hesabı.
 
-7. **Sektör Dağılımı** — `metaCacheGet(ticker)?.sic_description || .industry`. Stacked bar + legend. "Meta Çek" CTA. `sectorMetaTick` state ile reaktif re-render.
+7. **Sektör Dağılımı** — `metaCacheGet(ticker)?.sic_description || .industry`. Stacked bar + legend (sadece %). "Meta Çek" CTA. `sectorMetaTick` state ile reaktif re-render.
 
 8. **Başa Baş Analizi** — komisyon dahil break-even fiyat + distPct%.
 
@@ -122,7 +122,7 @@ Sticky pos.3 nav (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar).
 
 13. **Temettü Özeti** — toplam DIV gelir KPI + portföy verimi + top-5 ödeyici bar (sadece DIV tx varken).
 
-14. **CAGR Tablosu** — 5Y gelir + kâr büyüme + CAGR satırları. Collapsible.
+14. ~~**CAGR Tablosu**~~ — Kaldırıldı (2026-04-29). "İşlem tarihi yok" hatası; transactions BUY kaydından firstBuyDate okunamıyordu.
 
 15. **Dayanıklılık Skoru** — liabToEquity + fcfMargin + operatingMargin → 1-10 puan, renk pill.
 
