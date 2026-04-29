@@ -69,7 +69,6 @@
     #fab{display:none;position:fixed;bottom:76px;right:20px;width:54px;height:54px;border-radius:50%;background:var(--info);border:none;color:#fff;box-shadow:0 6px 20px rgba(102,88,255,0.45);z-index:101;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s,box-shadow .12s;}
     #fab:hover{transform:scale(1.05);box-shadow:0 8px 28px rgba(102,88,255,0.55);}
     #fab:active{transform:scale(0.96);}
-    .mprog{display:none;}
     @media (max-width:640px){
       .topbar-nav{display:none;}
       .logo-text{display:none;}
@@ -83,7 +82,6 @@
          font'unu 16px'e çıkarmak bu davranışı engeller. */
       input,textarea,select,.finp,.finp.sm{font-size:16px;}
       .cur-seg button{min-height:44px;padding:4px 12px;}
-      .mprog{display:flex;position:fixed;top:52px;left:0;right:0;z-index:140;background:var(--bg2);border-bottom:1px solid var(--border);padding:5px 14px;font-size:12px;color:var(--text2);align-items:center;gap:8px;}
     }
     /* Base — ghost stil (default). Özel class'lı butonlar (.tab, .btab, .eye-btn, #fab vb.) cascade ile bunu override eder. */
     button{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;padding:7px 14px;transition:opacity .12s,background .12s;}
@@ -4831,7 +4829,6 @@ function App({session}){
       </header>
 
       {flash&&<div className={"flash "+flash.t}>{flash.msg}</div>}
-      {(busy.p||busy.h)&&pprog&&<div className="mprog"><span className="spin" style={{width:11,height:11}}/><span>{pprog}</span></div>}
 
       <main id="app-main">
 
@@ -5114,7 +5111,11 @@ function App({session}){
                 </div>
               );
             })()}
-            {BLOCK_TYPES.map((cfg, idx) => {
+            {[...BLOCK_TYPES].sort((a,b)=>{
+              const mvOf=t=>filteredPos.filter(p=>p.type===t).map(wrapPos).reduce((s,p)=>s+(p.mv??p.cost),0);
+              const toUsd=(mv,t)=>t==="BIST"?(convert(mv,"TRY","USD",fxRates)??0):mv;
+              return toUsd(mvOf(b.type),b.type)-toUsd(mvOf(a.type),a.type);
+            }).map((cfg, idx) => {
               const items = filteredPos.filter(p => p.type===cfg.type).map(p=>{const w=wrapPos(p);const chg=periodChange(w);return{...w,periodChgPct:chg?.pct??null,periodChgDlr:chg?.dlr??null};});
               if(items.length===0) return null;
               const sortedItems = sortPos(items, sort);
