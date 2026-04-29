@@ -3038,9 +3038,6 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   // Tüm dağılım kartları display currency sembolünde gösterir
   const sym = dSym;
 
-  // SVG path generation
-  const slicesPath = buildSlicesPath(slices.arr, 60, 60, 50);
-
   // Region slices — type→region mapping. Tüm currency'ler display cur'a convert.
   const regionSlices = (() => {
     const byRegion = {};
@@ -3056,7 +3053,6 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
     arr.forEach(s => s.frac = total > 0 ? s.value/total : 0);
     return {arr, total};
   })();
-  const regionPath = buildSlicesPath(regionSlices.arr, 60, 60, 50);
 
   // Komisyon — filtreli tx'ler display cur'a convert; KPI/broker/year tek tutar.
   const commData = (() => {
@@ -3148,102 +3144,90 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           </div>
         );
       })()}
-      {/* Varlık dağılımı pie */}
+      {/* Varlık dağılımı — stacked bar */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:assetPieOpen?12:0}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div className="stitle" style={{marginBottom:0}}>Varlık Dağılımı</div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            {!assetPieOpen&&slices.total>0&&(
-              <span style={{fontSize:11,color:"var(--text3)"}}>{slices.arr.length} tür · {mask(sym+fmt(slices.total,0))}</span>
-            )}
+            <div className="seg" style={{fontSize:11}}>
+              <button className={assetDistMode==="cost"?"on":""} onClick={()=>setAssetDistMode("cost")}>Maliyet</button>
+              <button className={assetDistMode==="mv"?"on":""} onClick={()=>setAssetDistMode("mv")}>Piyasa</button>
+            </div>
             <button className="btn-xs" onClick={()=>setAssetPieOpen(o=>!o)}>{assetPieOpen?"▴":"▾"}</button>
           </div>
         </div>
-        {assetPieOpen&&(
-          <div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-              <div className="seg">
-                <button className={assetDistMode==="cost"?"on":""} onClick={()=>setAssetDistMode("cost")}>Maliyet</button>
-                <button className={assetDistMode==="mv"?"on":""} onClick={()=>setAssetDistMode("mv")}>Piyasa</button>
-              </div>
-            </div>
+        {slices.arr.length > 0 && (
+          <div style={{height:12,borderRadius:6,overflow:"hidden",display:"flex",gap:1,marginTop:12}}>
+            {slices.arr.map(s=>(
+              <div key={s.key} style={{width:(s.frac*100)+"%",height:"100%",background:s.color}}
+                data-tip={`${s.label}: ${(s.frac*100).toFixed(1)}%`}/>
+            ))}
+          </div>
+        )}
+        {assetPieOpen && (
+          <div style={{marginTop:14}}>
             {slices.arr.length === 0 ? (
-              <div className="empty" style={{padding:"40px 0"}}>Bu varlık türünde değerli pozisyon yok</div>
+              <div className="empty" style={{padding:"20px 0"}}>Bu varlık türünde değerli pozisyon yok</div>
             ) : (
-              <div>
-                <div style={{display:"flex",justifyContent:"center",marginBottom:14}}>
-                  <svg viewBox="0 0 120 120" style={{width:140,height:140}}>
-                    {slicesPath.map(s => (
-                      <path key={s.key} d={s.path} fill={s.color} stroke="var(--bg2)" strokeWidth="1"/>
-                    ))}
-                  </svg>
-                </div>
-                <div>
-                  {slicesPath.map(s => (
-                    <div key={s.key} className="pie-row">
-                      <span className="pie-sw" style={{background:s.color}}></span>
-                      <span style={{flex:1,minWidth:0}}>{s.label}</span>
-                      <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(sym+fmt(s.value,0))}</span>
-                      <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
-                    </div>
-                  ))}
-                  <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
-                    <span className="pie-sw" style={{visibility:"hidden"}}></span>
-                    <span style={{flex:1,minWidth:0}}>Toplam</span>
-                    <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(sym+fmt(slices.total,0))}</span>
-                    <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
+              <>
+                {slices.arr.map(s=>(
+                  <div key={s.key} className="pie-row">
+                    <span className="pie-sw" style={{background:s.color}}></span>
+                    <span style={{flex:1,minWidth:0}}>{s.label}</span>
+                    <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(sym+fmt(s.value,0))}</span>
+                    <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
                   </div>
+                ))}
+                <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
+                  <span className="pie-sw" style={{visibility:"hidden"}}></span>
+                  <span style={{flex:1,minWidth:0}}>Toplam</span>
+                  <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(sym+fmt(slices.total,0))}</span>
+                  <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
                 </div>
-              </div>
+              </>
             )}
           </div>
         )}
       </div>
 
-      {/* Bölge Dağılımı — type→region heuristik (filter chip etkilemez) */}
+      {/* Bölge Dağılımı — stacked bar */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:regionPieOpen?12:0}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div className="stitle" style={{marginBottom:0}}>Bölge Dağılımı</div>
-          <div style={{display:"flex",gap:8,alignItems:"center"}}>
-            {!regionPieOpen&&regionSlices.total>0&&(
-              <span style={{fontSize:11,color:"var(--text3)"}}>{regionSlices.arr.length} bölge · {mask(dSym+fmt(regionSlices.total,0))}</span>
-            )}
-            <button className="btn-xs" onClick={()=>setRegionPieOpen(o=>!o)}>{regionPieOpen?"▴":"▾"}</button>
-          </div>
+          <button className="btn-xs" onClick={()=>setRegionPieOpen(o=>!o)}>{regionPieOpen?"▴":"▾"}</button>
         </div>
-        {regionPieOpen&&(
-          <div>
+        {regionSlices.arr.length > 0 && (
+          <div style={{height:12,borderRadius:6,overflow:"hidden",display:"flex",gap:1,marginTop:12}}>
+            {regionSlices.arr.map(s=>(
+              <div key={s.key} style={{width:(s.frac*100)+"%",height:"100%",background:s.color}}
+                data-tip={`${s.label}: ${(s.frac*100).toFixed(1)}%`}/>
+            ))}
+          </div>
+        )}
+        {regionPieOpen && (
+          <div style={{marginTop:14}}>
             {regionSlices.arr.length === 0 ? (
-              <div className="empty" style={{padding:"40px 0"}}>Pozisyon yok</div>
+              <div className="empty" style={{padding:"20px 0"}}>Pozisyon yok</div>
             ) : (
-              <div>
-                <div style={{display:"flex",justifyContent:"center",marginBottom:14}}>
-                  <svg viewBox="0 0 120 120" style={{width:140,height:140}}>
-                    {regionPath.map(s => (
-                      <path key={s.key} d={s.path} fill={s.color} stroke="var(--bg2)" strokeWidth="1"/>
-                    ))}
-                  </svg>
-                </div>
-                <div>
-                  {regionPath.map(s => (
-                    <div key={s.key} className="pie-row">
-                      <span className="pie-sw" style={{background:s.color}}></span>
-                      <span style={{flex:1,minWidth:0}}>{s.label}</span>
-                      <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(s.value,0))}</span>
-                      <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
-                    </div>
-                  ))}
-                  <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
-                    <span className="pie-sw" style={{visibility:"hidden"}}></span>
-                    <span style={{flex:1,minWidth:0}}>Toplam</span>
-                    <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(regionSlices.total,0))}</span>
-                    <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
+              <>
+                {regionSlices.arr.map(s=>(
+                  <div key={s.key} className="pie-row">
+                    <span className="pie-sw" style={{background:s.color}}></span>
+                    <span style={{flex:1,minWidth:0}}>{s.label}</span>
+                    <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(s.value,0))}</span>
+                    <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
                   </div>
+                ))}
+                <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
+                  <span className="pie-sw" style={{visibility:"hidden"}}></span>
+                  <span style={{flex:1,minWidth:0}}>Toplam</span>
+                  <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(regionSlices.total,0))}</span>
+                  <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
                 </div>
                 <div style={{fontSize:10,color:"var(--text3)",marginTop:10,lineHeight:1.5}}>
                   Heuristik: US_STOCK/FUND→US, BIST→Türkiye, CRYPTO→Global·Kripto, GOLD→Global·Emtia, FX→Döviz. ETF içerikleri (MCHI=Çin gibi) ileride.
                 </div>
-              </div>
+              </>
             )}
           </div>
         )}
@@ -3739,8 +3723,6 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           frac: total > 0 ? value / total : 0,
         }));
 
-        const sectorPath = buildSlicesPath(sliceArr, 60, 60, 50);
-
         // Pozisyonlar arasından meta eksik olanları bul (US_STOCK + BIST için anlamlı)
         const metaMissingPos = filteredPos.filter(p => {
           if (p.type !== "US_STOCK" && p.type !== "BIST" && p.type !== "FUND") return false;
@@ -3768,69 +3750,56 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
 
         return (
           <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:sectorPieOpen?12:0}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div className="stitle" style={{marginBottom:0}}>Sektör Dağılımı</div>
-              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                {!sectorPieOpen&&sliceArr.length>0&&(
-                  <span style={{fontSize:11,color:"var(--text3)"}}>{sliceArr.length} sektör</span>
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                {metaMissingPos.length > 0 && (
+                  sectorMetaBusy
+                    ? <span style={{fontSize:11,color:"var(--text2)",display:"flex",alignItems:"center",gap:5}}>
+                        <span className="spin" style={{width:11,height:11}}></span>
+                      </span>
+                    : <button className="pri btn-xs" onClick={fetchMissingMeta}
+                        data-tip={`${metaMissingPos.length} pozisyon için sektör verisi eksik`}>
+                        Meta Çek
+                      </button>
                 )}
                 <button className="btn-xs" onClick={()=>setSectorPieOpen(o=>!o)}>{sectorPieOpen?"▴":"▾"}</button>
               </div>
             </div>
 
-            {sectorPieOpen&&(
-              <div>
-                {metaMissingPos.length > 0 && (
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-                    {sectorMetaBusy
-                      ? <span style={{fontSize:11,color:"var(--text2)",display:"flex",alignItems:"center",gap:5}}>
-                          <span className="spin" style={{width:11,height:11}}></span>
-                          Meta çekiliyor…
-                        </span>
-                      : <button className="pri btn-xs" onClick={fetchMissingMeta}
-                          data-tip={`${metaMissingPos.length} pozisyon için sektör verisi eksik`}>
-                          Meta Çek
-                        </button>
-                    }
-                  </div>
-                )}
+            {sliceArr.length > 0 && (
+              <div style={{height:12,borderRadius:6,overflow:"hidden",display:"flex",gap:1,marginTop:12}}>
+                {sliceArr.map(s=>(
+                  <div key={s.key} style={{width:(s.frac*100)+"%",height:"100%",background:s.color}}
+                    data-tip={`${s.label}: ${(s.frac*100).toFixed(1)}%`}/>
+                ))}
+              </div>
+            )}
 
+            {sectorPieOpen && (
+              <div style={{marginTop:14}}>
                 {sliceArr.length === 0 ? (
-                  <div className="empty" style={{padding:"40px 0"}}>Pozisyon yok</div>
+                  <div className="empty" style={{padding:"20px 0"}}>Pozisyon yok</div>
                 ) : (
-                  <div>
-                    <div style={{display:"flex",justifyContent:"center",marginBottom:14}}>
-                      <svg viewBox="0 0 120 120" style={{width:140,height:140}}>
-                        {sectorPath.map(s=>(
-                          <path key={s.key} d={s.path} fill={s.color} stroke="var(--bg2)" strokeWidth="1"/>
-                        ))}
-                      </svg>
-                    </div>
-                    <div>
-                      {sectorPath.map(s=>(
-                        <div key={s.key} className="pie-row">
-                          <span className="pie-sw" style={{background:s.color}}></span>
-                          <span style={{flex:1,minWidth:0}}>{s.label}</span>
-                          <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(s.value,0))}</span>
-                          <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
-                        </div>
-                      ))}
-                      <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
-                        <span className="pie-sw" style={{visibility:"hidden"}}></span>
-                        <span style={{flex:1,minWidth:0}}>Toplam</span>
-                        <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(total,0))}</span>
-                        <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
+                  <>
+                    {sliceArr.map(s=>(
+                      <div key={s.key} className="pie-row">
+                        <span className="pie-sw" style={{background:s.color}}></span>
+                        <span style={{flex:1,minWidth:0}}>{s.label}</span>
+                        <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(s.value,0))}</span>
+                        <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
                       </div>
+                    ))}
+                    <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
+                      <span className="pie-sw" style={{visibility:"hidden"}}></span>
+                      <span style={{flex:1,minWidth:0}}>Toplam</span>
+                      <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(dSym+fmt(total,0))}</span>
+                      <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
                     </div>
-                    {metaMissingPos.length > 0 && !sectorMetaBusy && (
-                      <div style={{fontSize:10,color:"var(--text3)",marginTop:8}}>
-                        {metaMissingPos.length} pozisyon için sektör meta verisi eksik — "Meta Çek" ile çek.
-                      </div>
-                    )}
-                    <div style={{fontSize:10,color:"var(--text3)",marginTop:6,lineHeight:1.5}}>
+                    <div style={{fontSize:10,color:"var(--text3)",marginTop:8,lineHeight:1.5}}>
                       Kaynak: US hisseler → SIC açıklaması, BIST → sektör (borsa-mcp). Cache 7 gün.
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             )}
