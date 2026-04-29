@@ -2962,6 +2962,7 @@ const buildSlicesPath = (sliceArr, CX, CY, R) => {
 
 function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRates,openDetail}){
   const [assetDistMode,setAssetDistMode]=useState("mv"); // "cost" | "mv"
+  const [expandedAssetType,setExpandedAssetType]=useState(null);
   const [activeTypes,setActiveTypes]=useState(()=>BLOCK_TYPES.filter(cfg=>pos.some(p=>p.type===cfg.type)).map(cfg=>cfg.type));
   useEffect(()=>{
     const all=BLOCK_TYPES.filter(cfg=>pos.some(p=>p.type===cfg.type)).map(cfg=>cfg.type);
@@ -2973,7 +2974,6 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   // Kart collapse state'leri — default kapalı (özet üstte, detay isteğe bağlı).
   const [healthOpen,setHealthOpen]=useState(false);
   const [commOpen,setCommOpen]=useState(false);
-  const [cagrOpen,setCagrOpen]=useState(true);
   const [resilienceOpen,setResilienceOpen]=useState(false);
   const [assetPieOpen,setAssetPieOpen]=useState(true);
   const [regionPieOpen,setRegionPieOpen]=useState(true);
@@ -3278,23 +3278,41 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           <div style={{marginTop:14}}>
             {slices.arr.length === 0 ? (
               <div className="empty" style={{padding:"20px 0"}}>Bu varlık türünde değerli pozisyon yok</div>
-            ) : (
-              <>
-                {slices.arr.map(s=>(
-                  <div key={s.key} className="pie-row">
-                    <span className="pie-sw" style={{background:s.color}}></span>
-                    <span style={{flex:1,minWidth:0}}>{s.label}</span>
-                    <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(sym+fmt(s.value,0))}</span>
-                    <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
-                  </div>
-                ))}
+            ) : (()=>{
+                const valFn=assetDistMode==="cost"?costDisp:mvDisp;
+                return(<>
+                {slices.arr.map(s=>{
+                  const typePos=filteredPos.filter(p=>p.type===s.key).map(p=>({p,v:valFn(p)})).filter(r=>r.v>0).sort((a,b)=>b.v-a.v);
+                  const isExpanded=expandedAssetType===s.key;
+                  const toggleable=typePos.length>1;
+                  return(
+                  <React.Fragment key={s.key}>
+                    <div className="pie-row" onClick={toggleable?()=>setExpandedAssetType(isExpanded?null:s.key):undefined} style={toggleable?{cursor:"pointer"}:{}}>
+                      <span className="pie-sw" style={{background:s.color}}></span>
+                      <span style={{flex:1,minWidth:0}}>{s.label}</span>
+                      {toggleable&&<span style={{fontSize:9,color:"var(--text3)",marginRight:2}}>{isExpanded?"▾":"▸"}</span>}
+                      <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(sym+fmt(s.value,0))}</span>
+                      <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
+                    </div>
+                    {isExpanded&&typePos.map(({p,v})=>(
+                      <div key={p.ticker} className="pie-row" onClick={()=>openDetail(p.ticker)} style={{paddingLeft:20,cursor:"pointer",opacity:.85}}>
+                        <span style={{width:6,height:6,borderRadius:"50%",background:s.color,flexShrink:0,marginRight:2}}></span>
+                        <span style={{flex:1,minWidth:0,fontSize:11}}><span style={{fontFamily:"'DM Mono',monospace",fontWeight:500}}>{p.ticker}</span><span style={{color:"var(--text3)",marginLeft:5,fontSize:10}}>{p.name}</span></span>
+                        <span className="mono" style={{textAlign:"right",flex:"0 0 70px",fontSize:11}}>{mask(sym+fmt(v,0))}</span>
+                        <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{s.value>0?(v/s.value*100).toFixed(1):"—"}%</span>
+                      </div>
+                    ))}
+                  </React.Fragment>
+                  );
+                })}
                 <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
                   <span className="pie-sw" style={{visibility:"hidden"}}></span>
                   <span style={{flex:1,minWidth:0}}>Toplam</span>
                   <span className="mono" style={{textAlign:"right",flex:"0 0 70px"}}>{mask(sym+fmt(slices.total,0))}</span>
                   <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
                 </div>
-              </>
+                </>);
+              })()}
             )}
           </div>
         )}
@@ -4198,87 +4216,6 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
         );
       })()}
 
-      {/* ── Kart: Pozisyon Yıllık Getiri (CAGR) ───────────────────── */}
-      {filteredPos.length > 0 && (
-        <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:cagrOpen?12:0}}>
-            <div className="stitle" style={{marginBottom:0}}>Pozisyon Yıllık Getiri (CAGR)</div>
-            <button className="btn-xs" onClick={()=>setCagrOpen(o=>!o)} style={{fontSize:11}}>
-              {cagrOpen ? "▴" : "▾"}
-            </button>
-          </div>
-          {cagrOpen && (()=>{
-            const today = new Date().toISOString().split("T")[0];
-            const msPerYear = 365.25 * 24 * 3600 * 1000;
-            const cagrRows = filteredPos.map(p => {
-              const buyTxs = (txs || []).filter(t => t.ticker === p.ticker && t.way === "BUY");
-              const firstBuyDate = buyTxs.length > 0 ? buyTxs.map(t=>t.date).sort()[0] : null;
-              const price = prc[p.ticker];
-              const mv = price != null ? price * p.shares : null;
-              const cost = (p.avg_cost || 0) * p.shares;
-              if (mv == null || cost <= 0) return { p, firstBuyDate, years: null, totalRetPct: null, cagr: null, noPrice: mv == null };
-              const totalRetPct = (mv - cost) / cost * 100;
-              if (!firstBuyDate) return { p, firstBuyDate, years: null, totalRetPct, cagr: null, noPrice: false };
-              const years = (new Date(today) - new Date(firstBuyDate)) / msPerYear;
-              if (years < 0.083) return { p, firstBuyDate, years, totalRetPct, cagr: null, noPrice: false, isNew: true };
-              const cagr = (Math.pow(mv / cost, 1 / years) - 1) * 100;
-              return { p, firstBuyDate, years, totalRetPct, cagr, noPrice: false };
-            }).filter(r => r != null);
-            cagrRows.sort((a, b) => {
-              if (a.cagr == null && b.cagr == null) return 0;
-              if (a.cagr == null) return 1;
-              if (b.cagr == null) return -1;
-              return b.cagr - a.cagr;
-            });
-            if (cagrRows.length === 0) return <div className="empty" style={{padding:"30px 0"}}>Yeterli veri yok</div>;
-            return (
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                  <thead>
-                    <tr>
-                      <th scope="col" style={{textAlign:"left",paddingBottom:8,color:"var(--text3)",fontWeight:500}}>Ticker</th>
-                      <th scope="col" style={{textAlign:"right",paddingBottom:8,color:"var(--text3)",fontWeight:500}}>Süre</th>
-                      <th scope="col" style={{textAlign:"right",paddingBottom:8,color:"var(--text3)",fontWeight:500}}>Toplam %</th>
-                      <th scope="col" style={{textAlign:"right",paddingBottom:8,color:"var(--text3)",fontWeight:500}}>CAGR %</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {cagrRows.map(({p, years, totalRetPct, cagr, noPrice, isNew}) => {
-                      const cagrColor = cagr == null ? "var(--text3)" : cagr >= 15 ? "var(--ok)" : cagr >= 0 ? "var(--warn)" : "var(--err)";
-                      return (
-                        <tr key={p.ticker} className="pos-row"
-                          onClick={()=>openDetail(p.ticker,p.type,"analysis")}
-                          style={noPrice ? {opacity:.5} : {}}>
-                          <td style={{paddingBottom:6}}>
-                            <span className="tsym">{p.ticker}</span>
-                            {p.type==="BIST" && <span style={{fontSize:9,color:"var(--text3)",marginLeft:5}}>BIST</span>}
-                          </td>
-                          <td style={{textAlign:"right",paddingBottom:6,fontFamily:"'DM Mono',monospace",color:"var(--text2)"}}>
-                            {years != null ? (years >= 1 ? `${years.toFixed(1)}Y` : `${Math.round(years*12)}A`) : "—"}
-                          </td>
-                          <td style={{textAlign:"right",paddingBottom:6,fontFamily:"'DM Mono',monospace",color:totalRetPct!=null?(totalRetPct>=0?"var(--ok)":"var(--err)"):"var(--text3)"}}>
-                            {noPrice ? <span style={{fontSize:10,color:"var(--text3)"}}>fiyat bekleniyor</span> : totalRetPct != null ? fmtP(totalRetPct) : "—"}
-                          </td>
-                          <td style={{textAlign:"right",paddingBottom:6,fontFamily:"'DM Mono',monospace",fontWeight:600,color:cagrColor}}>
-                            {isNew
-                              ? <span style={{fontSize:10,color:"var(--text3)"}}>Yeni Pozisyon</span>
-                              : noPrice ? "—"
-                              : cagr != null ? fmtP(cagr)
-                              : <span style={{fontSize:10,color:"var(--text3)"}}>işlem tarihi yok</span>}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <div style={{fontSize:10,color:"var(--text3)",marginTop:8}}>
-                  CAGR = yıllık bileşik getiri · (Piyasa Değeri / Maliyet)^(1/Yıl) − 1 · &lt;30 gün: Yeni Pozisyon
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      )}
 
       {/* ── Kart: Piyasa Düşüşü Dayanıklılığı ──────────────────────── */}
       {resilienceEligible.length > 0 && (
@@ -4850,7 +4787,12 @@ function App({session}){
         const periodChange=(p)=>{
           const cur=prc[p.ticker];
           if(cur==null)return null;
-          if(sel.key==="max"){if(p.cost==null||p.mv==null)return null;return{pct:p.plPct,dlr:p.mv-p.cost};}
+          if(sel.key==="max"){
+            if(p.cost==null||p.mv==null||p.cost<=0)return null;
+            const maxRatio=p.mv/p.cost;
+            if(maxRatio<0.05||maxRatio>100)return null;
+            return{pct:p.plPct,dlr:p.mv-p.cost};
+          }
           const base=hist[p.ticker]?.[sel.priceKey];
           if(base==null||base<=0)return null;
           // Sanity: if ratio >100x or <0.05x the currencies almost certainly differ
