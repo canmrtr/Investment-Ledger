@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-04-29** (Sprint 9 backlog grooming; Volatilite/Kur Riski tamamlandı olarak işaretlendi; Sprint 9 scope: Social Faz 2, CAGR, Portföy P/E, Dayanıklılık Skoru, PWA, agent denetim)
+İlk toplama: **2026-04-24** | Son grooming: **2026-04-29** (Sprint 9 backlog grooming; Volatilite/Kur Riski tamamlandı olarak işaretlendi; Sprint 9 scope: Social Faz 2, CAGR, Portföy P/E, Dayanıklılık Skoru, PWA, agent denetim; +3 yeni görselleştirme item eklendi)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -84,6 +84,9 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [x] ~~**Bölge Dağılımı emoji bayrakları kaldır**~~ (2026-04-26) — Plain text "US"/"Türkiye".
 - [ ] **Sparkline interactivity** `[S]` `[P2]` — hover'da değer/tarih tooltip; SVG `<circle>` cursor + dikey kılavuz çizgi.
 - [ ] **Pie chart segment selection** `[M]` `[P2]` — slice hover/select; legend tıklanabilir; seçili slice dış kenarda 2px outline + ortada toplam label.
+- [ ] **AnalysisTab: Dağılım kartları pie → stacked bar** `[M]` `[P2]` — Varlık Dağılımı, Bölge Dağılımı, Sektör Dağılımı kartlarındaki pie SVG'lerini kaldır; yerine tek satır yatay stacked horizontal bar koy (win/loss görseli pattern'ı). Legend/liste/yüzdeler collapse edilebilir (▾/▴) kalır; bar her zaman açık görünür. 3 kart × CSS değişimi + `buildStackedBar` render helper. Pie SVG artık sadece AnalysisTab'da değil, Varlık Dağılımı'nın tek görseli olarak kalırdı; kaldırılırsa `buildSlicesPath` helper dead code olur — önce kullanım yerlerini denetle.
+- [ ] **Dashboard: Varlık türü filtre bar'ı sticky** `[S]` `[P2]` — `.fbar` chip bar'ı `position:sticky; top: <topbar-height>px` ile topbar'ın hemen altına sabitle; scroll'da kaymasın. Mobile'da `bottom-tabs` yokken düşük `z-index` sorunu olmamalı; topbar `z-index` ile hiyerarşiyi koru. Topbar yüksekliği CSS değişkeni veya `--topbar-h` custom property ile yönetilmeli (hardcoded `px` magic number ekleme).
+- [ ] **Dashboard: Blok bazında toplam ve dönem getiri kartları** `[M]` `[P2]` — Her varlık türü bloğunun (US Hisse, BIST, Kripto, Altın, Döviz) başlığına/altına o bloğun toplam maliyet, piyasa değeri ve seçili dönem getirisi (1G/1H/1A vb.) ekle. `periodReturn` hesabı mevcut dönem seçicisine bağlı kalır — `filteredPos.filter(p => p.type === blockType)` ile blok-spesifik hesap. Birden fazla blokta aynı period mantığı çalışmalı; XIRR blok bazında anlamlı olmayabilir — sadece simple return göster (XIRR sadece portföy toplamında kalsın).
 
 ## Navigasyon & Sayfalar
 

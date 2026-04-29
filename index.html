@@ -4976,21 +4976,23 @@ function App({session}){
                 });
               };
               return (
-                <div className="fbar" style={{marginBottom:14,marginTop:4}}>
-                  <button
-                    className={"mtab"+(allSelected?" on":"")}
-                    onClick={()=>setDashTypeFilter(BLOCK_TYPES.map(b=>b.type))}
-                  >Tümü</button>
-                  {presentTypes.map(cfg=>(
+                <div style={{position:"sticky",top:52,zIndex:90,background:"var(--bg)",paddingTop:8,paddingBottom:6,marginBottom:8}}>
+                  <div className="fbar" style={{marginBottom:0,marginTop:0}}>
                     <button
-                      key={cfg.type}
-                      className={"mtab"+(dashTypeFilter.includes(cfg.type)?" on":"")}
-                      onClick={()=>toggleType(cfg.type)}
-                    >
-                      <span style={{opacity:.7,display:"flex"}}>{cfg.icon(12)}</span>
-                      {cfg.label}
-                    </button>
-                  ))}
+                      className={"mtab"+(allSelected?" on":"")}
+                      onClick={()=>setDashTypeFilter(BLOCK_TYPES.map(b=>b.type))}
+                    >Tümü</button>
+                    {presentTypes.map(cfg=>(
+                      <button
+                        key={cfg.type}
+                        className={"mtab"+(dashTypeFilter.includes(cfg.type)?" on":"")}
+                        onClick={()=>toggleType(cfg.type)}
+                      >
+                        <span style={{opacity:.7,display:"flex"}}>{cfg.icon(12)}</span>
+                        {cfg.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               );
             })()}
