@@ -4852,7 +4852,10 @@ function App({session}){
           if(cur==null)return null;
           if(sel.key==="max"){if(p.cost==null||p.mv==null)return null;return{pct:p.plPct,dlr:p.mv-p.cost};}
           const base=hist[p.ticker]?.[sel.priceKey];
-          if(base==null)return null;
+          if(base==null||base<=0)return null;
+          // Sanity: >100x ratio means cur/base are in different currencies (e.g. USD vs TRY stale cache)
+          const ratio=cur/base;
+          if(ratio>100||ratio<0.01)return null;
           return{pct:(cur/base-1)*100,dlr:p.shares*(cur-base)};
         };
 
@@ -5048,22 +5051,22 @@ function App({session}){
               const isOpen = !collapsedBlocks.has(cfg.type);
               const toggleBlock = () => setCollapsedBlocks(prev=>{const n=new Set(prev);n.has(cfg.type)?n.delete(cfg.type):n.add(cfg.type);return n;});
               return(
-                <div key={cfg.type} style={{marginTop:idx===0?0:16,marginBottom:8}}>
-                  {/* Blok başlık — tıklanınca collapse */}
-                  <div onClick={toggleBlock} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:"var(--bg3)",borderRadius:10,cursor:"pointer",userSelect:"none",marginBottom:isOpen?10:0}}>
-                    <span style={{fontSize:15,fontWeight:600,color:"var(--text)",letterSpacing:"-0.2px"}}>{cfg.label}</span>
+                <div key={cfg.type} style={{marginTop:idx===0?0:20}}>
+                  {/* Blok başlık — tıklanınca collapse; Alt B: accent-line pattern */}
+                  <div onClick={toggleBlock} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",background:"var(--bg3)",borderRadius:isOpen?"10px 10px 0 0":"10px",cursor:"pointer",userSelect:"none"}}>
+                    <span style={{fontSize:17,fontWeight:700,color:"var(--text)",letterSpacing:"-0.3px"}}>{cfg.label}</span>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
-                      {!hide&&<span style={{fontSize:14,fontWeight:500,fontFamily:"'DM Mono','Fira Code',monospace",color:"var(--text)"}}>{mask(cfg.sym+fmt(totMv,0))}</span>}
+                      {!hide&&<span style={{fontSize:15,fontWeight:500,fontFamily:"'DM Mono','Fira Code',monospace",color:"var(--text)"}}>{mask(cfg.sym+fmt(totMv,0))}</span>}
                       {blockDeltaPct!=null&&!hide&&(
                         <span style={{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,background:blockDeltaDlr>=0?"rgba(0,217,126,0.15)":"rgba(255,51,102,0.15)",color:blockDeltaDlr>=0?"var(--ok)":"var(--err)"}}>
-                          {blockDeltaDlr>=0?"+":""}{fmtP(blockDeltaPct)}
+                          {fmtP(blockDeltaPct)}
                         </span>
                       )}
                       <span style={{fontSize:11,color:"var(--text3)"}}>{isOpen?"▾":"▸"}</span>
                     </div>
                   </div>
 
-                  {isOpen&&<>
+                  {isOpen&&<div style={{borderLeft:"3px solid var(--info)",background:"var(--bg2)",borderRadius:"0 0 10px 10px",paddingTop:4,paddingBottom:4,marginBottom:8}}>
                   {/* Desktop tablo */}
                   <div className="tbl-wrap pos-tbl-desktop">
                     <table>
@@ -5127,7 +5130,7 @@ function App({session}){
                       );
                     })}
                   </div>
-                  </>}
+                  </div>}
 
                 </div>
               );
