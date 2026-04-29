@@ -193,6 +193,27 @@
     /* Clickable position rows */
     .pos-row{cursor:pointer;transition:background .12s ease;}
     .pos-row:hover{background:var(--bg3);}
+    /* Responsive position list — desktop:table, mobile:card-rows */
+    .pos-card-list{display:none;}
+    @media(max-width:640px){
+      .pos-tbl-desktop{display:none;}
+      .pos-card-list{display:block;border-radius:12px;overflow:hidden;background:var(--bg3);border:1px solid var(--border);}
+      .pos-sort-bar{display:flex;align-items:center;gap:2px;padding:7px 12px;background:var(--bg2);}
+      .pos-sort-bar>span{flex:1;font-size:10px;color:var(--text3);font-weight:500;text-transform:uppercase;letter-spacing:.5px;}
+      .psb-btn{background:none;border:none;color:var(--text3);font:11px 'DM Sans',sans-serif;cursor:pointer;padding:4px 7px;border-radius:6px;white-space:nowrap;}
+      .psb-btn.on{color:var(--text);background:rgba(255,255,255,0.06);}
+      .pcr{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg2);cursor:pointer;transition:background .12s;gap:8px;border-top:1px solid var(--bg3);}
+      .pcr:first-of-type{border-top:none;}
+      .pcr:hover,.pcr:active{background:var(--bg3);}
+      .pcr-left{display:flex;flex-direction:column;gap:3px;min-width:0;}
+      .pcr-ticker{font:700 15px/1.2 'DM Mono','Fira Code',monospace;color:var(--text);}
+      .pcr-sub{font-size:12px;color:var(--text3);font-family:'DM Mono','Fira Code',monospace;white-space:nowrap;}
+      .pcr-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0;}
+      .pcr-mv{font:600 15px/1.2 'DM Mono','Fira Code',monospace;color:var(--text);}
+      .pcr-chg{font-size:12px;font-family:'DM Mono','Fira Code',monospace;color:var(--text3);white-space:nowrap;}
+      .pcr-chg.ok{color:var(--ok);}
+      .pcr-chg.err{color:var(--err);}
+    }
     /* Segmented control (toggle) */
     .seg{display:inline-flex;background:var(--bg3);border-radius:7px;padding:2px;}
     .seg button{background:transparent;border:none;padding:4px 10px;font-size:11px;border-radius:5px;color:var(--text2);cursor:pointer;}
@@ -4825,13 +4846,23 @@ function App({session}){
       )}
       {tab==="dashboard"&&pos.length>0&&(()=>{
         const PERIODS=[
+          {key:"d1",  lbl:"1G",  priceKey:"p_d1", days:1},
           {key:"m1",  lbl:"1A",  priceKey:"p_m1", days:30},
           {key:"m3",  lbl:"3A",  priceKey:"p_m3", days:90},
           {key:"m6",  lbl:"6A",  priceKey:"p_m6", days:180},
           {key:"y1",  lbl:"1Y",  priceKey:"p_y1", days:365},
           {key:"max", lbl:"Max", priceKey:null,   days:null},
         ];
-        const sel=PERIODS.find(p=>p.key===period)||PERIODS[4];
+        const sel=PERIODS.find(p=>p.key===period)||PERIODS[5];
+        // Per-pozisyon seçili periyot değişimi — max=P&L bazlı, diğerleri hist bazlı
+        const periodChange=(p)=>{
+          const cur=prc[p.ticker];
+          if(cur==null)return null;
+          if(sel.key==="max"){if(p.cost==null||p.mv==null)return null;return{pct:p.plPct,dlr:p.mv-p.cost};}
+          const base=hist[p.ticker]?.[sel.priceKey];
+          if(base==null)return null;
+          return{pct:(cur/base-1)*100,dlr:p.shares*(cur-base)};
+        };
 
         // Split-aware shares at given date (returns split-adjusted shares
         // in today's reference; uses same factor logic as rebuildPositions).
@@ -5084,7 +5115,7 @@ function App({session}){
               );
             })()}
             {BLOCK_TYPES.map((cfg, idx) => {
-              const items = filteredPos.filter(p => p.type===cfg.type).map(wrapPos);
+              const items = filteredPos.filter(p => p.type===cfg.type).map(p=>{const w=wrapPos(p);const chg=periodChange(w);return{...w,periodChgPct:chg?.pct??null,periodChgDlr:chg?.dlr??null};});
               if(items.length===0) return null;
               const sortedItems = sortPos(items, sort);
               const totMv = items.reduce((a,p)=>a+(p.mv ?? p.cost),0);
@@ -5094,26 +5125,66 @@ function App({session}){
                     <span style={{color:"var(--text3)",display:"flex",opacity:.7}}>{cfg.icon&&cfg.icon(14)}</span>
                     {cfg.label} · {mask(cfg.sym+fmt(totMv,0))}
                   </div>
-                  <div className="tbl-wrap">
+
+                  {/* Desktop tablo */}
+                  <div className="tbl-wrap pos-tbl-desktop">
                     <table>
                       <thead><tr>
                         <th scope="col" className="l" onClick={()=>tsort("ticker")}>Ticker{sa("ticker")}</th>
+                        {!hide&&<th scope="col" className="r" onClick={()=>tsort("shares")}>Adet{sa("shares")}</th>}
+                        {!hide&&<th scope="col" className="r" onClick={()=>tsort("cost")}>Maliyet{sa("cost")}</th>}
                         {!hide&&<th scope="col" className="r" onClick={()=>tsort("mv")}>Değer{sa("mv")}</th>}
                         <th scope="col" className="r" onClick={()=>tsort("plPct")} data-tip="(Değer − Maliyet) / Maliyet × 100">P&L%{sa("plPct")}</th>
-                        {hasH&&<th scope="col" className="r" onClick={()=>tsort("d1")} data-tip="Son 1 gündeki yüzde değişim">1G{sa("d1")}</th>}
+                        {hasH&&<th scope="col" className="r" onClick={()=>tsort("periodChgPct")} data-tip={`Seçili periyot (${sel.lbl}) fiyat değişimi`}>Δ {sel.lbl}{sa("periodChgPct")}</th>}
                       </tr></thead>
                       <tbody>
                         {sortedItems.map(p=>(
                           <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
                             <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span></div></td>
+                            {!hide&&<td className="r">{(()=>{if(p.type==="GOLD"&&p.unit&&p.unit!=="oz"){const f=goldOzPerUnit(p.unit);const lbl={g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit;return <>{fmtShares(p.shares/f)}<span style={{fontSize:10,color:"var(--text2)",marginLeft:2}}>{lbl}</span></>;}return fmtShares(p.shares);})()}</td>}
+                            {!hide&&<td className="r">{p.cost?mask(cfg.sym+fmt(p.cost,0)):"—"}</td>}
                             {!hide&&<td className="r">{p.mv?mask(cfg.sym+fmt(p.mv,0)):"—"}</td>}
                             <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
-                            {hasH&&<td className={"r"+pc(p.d1)}>{fmtP(p.d1)}</td>}
+                            {hasH&&<td className="r">{(()=>{if(p.periodChgPct==null)return"—";const s=p.periodChgPct>=0?"+":"-";return<><div className={"mono"+pc(p.periodChgPct)} style={{fontWeight:600,fontSize:12,lineHeight:1.25}}>{s}{fmtP(Math.abs(p.periodChgPct))}</div><div className={"mono"+pc(p.periodChgPct)} style={{fontSize:10,opacity:.75}}>{s}{cfg.sym}{fmt(Math.abs(p.periodChgDlr),0)}</div></>;})()}</td>}
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Mobile kart listesi */}
+                  <div className="pos-card-list">
+                    <div className="pos-sort-bar">
+                      <span>Sırala</span>
+                      {[["plPct","P&L%"],["periodChgPct","Δ "+sel.lbl],["mv","Değer"]].map(([k,lbl])=>(
+                        <button key={k} className={"psb-btn"+(sort.by===k?" on":"")} onClick={()=>tsort(k)}>{lbl}{sa(k)}</button>
+                      ))}
+                    </div>
+                    {sortedItems.map(p=>{
+                      const isGU=p.type==="GOLD"&&p.unit&&p.unit!=="oz";
+                      const ozF=isGU?goldOzPerUnit(p.unit):1;
+                      const uLbl=isGU?({g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit):"";
+                      const adetStr=fmtShares(p.shares/ozF)+(uLbl?" "+uLbl:"");
+                      const avgStr=cfg.sym+fmt(p.avgCost*ozF,2);
+                      const cPct=p.periodChgPct,cDlr=p.periodChgDlr,hasC=cPct!=null;
+                      const pos=hasC&&cPct>=0,sign=pos?"+":"-";
+                      return(
+                        <div key={p.ticker} className="pcr" onClick={()=>openDetail(p.ticker)}>
+                          <div className="pcr-left">
+                            <span className="pcr-ticker">{p.ticker}</span>
+                            <span className="pcr-sub">{hide?"•••• | ••••":`${adetStr} | ${avgStr}`}</span>
+                          </div>
+                          <div className="pcr-right">
+                            <span className="pcr-mv">{p.mv!=null?mask(cfg.sym+fmt(p.mv,0)):"—"}</span>
+                            <span className={"pcr-chg"+(hasC?(pos?" ok":" err"):"")}>
+                              {hide?"••••":hasC?`${sign}${cfg.sym}${fmt(Math.abs(cDlr),0)}  ${sign}${fmtP(Math.abs(cPct))}`:"—"}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
                 </div>
               );
             })}
