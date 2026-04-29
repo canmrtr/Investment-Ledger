@@ -110,10 +110,6 @@
     .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:16px;}
     .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
     @media(max-width:500px){.g4{grid-template-columns:repeat(2,1fr);}.g3{grid-template-columns:1fr 1fr;}.g3>*:first-child{grid-column:1/-1;}}
-    .dashboard-charts{display:grid;grid-template-columns:1fr 340px;gap:12px;margin-bottom:16px;align-items:start;}
-    .dashboard-charts > .card{margin-bottom:0!important;}
-    .dashboard-charts:has(> .card:only-child){grid-template-columns:1fr;}
-    @media (max-width:640px){.dashboard-charts{grid-template-columns:1fr;}}
     .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);}
     .row:last-child{border-bottom:none;}
     .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
@@ -762,9 +758,7 @@ function Login(){
   );
 }
 
-// ── SparkChart — küçük SVG portföy değer grafiği ─────────────────
-// 7 nokta: 1Y / 6A / 3A / 1A / 1H / 1G / Bugün. "Bugünkü pozisyonların
-// geçmiş fiyatla değeri" — gerçek tarihi portföy değeri değildir.
+// ── SparkChart kaldırıldı (2026-04-29)
 function SparkChart({data}){
   if(!data||data.length<2)return<div className="dim" style={{fontSize:11,padding:"14px 0",textAlign:"center",minHeight:80,display:"flex",alignItems:"center",justifyContent:"center"}}>Grafik için yeterli veri yok</div>;
   const W=400,H=70,pad=6;
@@ -5038,80 +5032,6 @@ function App({session}){
               </div>
             )}
 
-            {/* Sparkline + Allocation pie — yan yana grid (mobile'da alt alta) */}
-            <div className="dashboard-charts">
-            {/* Değer trendi (mevcut pozisyonların geçmiş fiyatlarla değeri) */}
-            {hasH&&!hide&&(()=>{
-              const CHART=[
-                {lbl:"1Y", priceKey:"p_y1"},
-                {lbl:"6A", priceKey:"p_m6"},
-                {lbl:"3A", priceKey:"p_m3"},
-                {lbl:"1A", priceKey:"p_m1"},
-                {lbl:"1H", priceKey:"p_w1"},
-                {lbl:"1G", priceKey:"p_d1"},
-                {lbl:"Bugün", priceKey:null},
-              ];
-              const data=CHART.map(({lbl,priceKey})=>{
-                if(priceKey===null)return{lbl,value:tM};
-                // Tüm pozisyonlar — geçmiş fiyat * shares, currency'sine göre display cur'a convert
-                const valid=allDisp.filter(p=>p.mv!=null&&hist[p.ticker]?.[priceKey]!=null);
-                if(!valid.length)return null;
-                const value=valid.reduce((a,p)=>{
-                  const raw=p.shares*hist[p.ticker][priceKey];
-                  const conv=cnv(raw,p.currency||"USD");
-                  return a+(conv||0);
-                },0);
-                return{lbl,value};
-              }).filter(Boolean);
-              if(data.length<2)return null;
-              return(
-                <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
-                  <div className="stitle" style={{marginBottom:10}}>Değer Trendi</div>
-                  <SparkChart data={data}/>
-                  <div className="dim" style={{fontSize:10,marginTop:6}}>ℹ Mevcut pozisyonların geçmiş fiyatlarla değeri — gerçek tarihi bakiye değil.</div>
-                </div>
-              );
-            })()}
-
-            </div>
-
-            {/* Pozisyon tabloları — varlık türüne göre 6 ayrı blok (US Hisse / ETF / BIST /
-                Kripto / Altın / Döviz). Her blok kendi natural currency'sinde ham değerlerle.
-                Üst KPI'lar tüm pozisyonları display cur'a convert ediyor (ayrı sistem). */}
-            {(()=>{
-              const presentTypes = BLOCK_TYPES.filter(cfg => pos.some(p=>p.type===cfg.type));
-              if (presentTypes.length <= 1) return null;
-              const allSelected = presentTypes.every(cfg => dashTypeFilter.includes(cfg.type));
-              const toggleType = (type) => {
-                setDashTypeFilter(prev => {
-                  if (prev.includes(type)) {
-                    const next = prev.filter(t=>t!==type);
-                    return next.length > 0 ? next : prev;
-                  }
-                  return [...prev, type];
-                });
-              };
-              return (
-                <div style={{position:"sticky",top:52,zIndex:90,background:"var(--bg)",paddingTop:8,paddingBottom:6,marginBottom:8}}>
-                  <div className="fbar" style={{marginBottom:0,marginTop:0}}>
-                    <button
-                      className={"mtab"+(allSelected?" on":"")}
-                      onClick={()=>setDashTypeFilter(BLOCK_TYPES.map(b=>b.type))}
-                    >Tümü</button>
-                    {presentTypes.map(cfg=>(
-                      <button
-                        key={cfg.type}
-                        className={"mtab"+(dashTypeFilter.includes(cfg.type)?" on":"")}
-                        onClick={()=>toggleType(cfg.type)}
-                      >
-                        <span style={{opacity:.7,display:"flex"}}>{cfg.icon(12)}</span>
-                        {cfg.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
             {[...BLOCK_TYPES].sort((a,b)=>{
               const mvOf=t=>filteredPos.filter(p=>p.type===t).map(wrapPos).reduce((s,p)=>s+(p.mv??p.cost),0);
               const toUsd=(mv,t)=>t==="BIST"?(convert(mv,"TRY","USD",fxRates)??0):mv;
