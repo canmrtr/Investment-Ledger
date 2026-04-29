@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-04-27** (Global filtre + mobile chip bar + kripto currency bug fix tamamlandı; Sprint 6 önizlemesi güncellendi)
+İlk toplama: **2026-04-24** | Son grooming: **2026-04-29** (Sprint 5 retro + Sprint 6 planlandı; P1 item'lar sınıflandırıldı; Sektör bug, Break-Even, Max Pain bu sprint'e alındı)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -110,7 +110,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 ### Performans
 
 - [ ] **Dönem Bazlı Getiri Karşılaştırması** `[S]` `[P1]` — Hisse bazında 1A/3A/6A/1Y getiri horizontal bar chart, en çok kazandırandan azalana sıralı. `price_cache.p_d1/w1/m1/y1` yeterli; Win/Loss kartının doğal devamı.
-- [ ] **Başa Baş (Break-Even) Analizi** `[S]` `[P1]` — Komisyon dahil gerçek maliyet tabanlı break-even fiyatı; "THYAO'nun ₺52.3'e çıkması gerekiyor · %8 uzakta". `positions.avg_cost` + `transactions` komisyon toplamı + `price_cache`. Tamamen frontend.
+- [x] ~~**Başa Baş (Break-Even) Analizi**~~ (2026-04-29) — AnalysisTab kart 7; komisyon dahil breakEven=(shares×avg_cost+totalComm)/shares; distPct % uzaklık; pos-row click→openDetail; mask() gizli mod.
 - [ ] **Satılan Pozisyonların Realized P&L Özeti** `[M]` `[P2]` — Kapatılmış pozisyonların yıl bazında tablo; "2024: +$3,200 · 2023: -$800". `transactions` BUY+SELL eşleştirmesi. Vergi & Muhasebe ile örtüşür.
 - [ ] **DCA Etkinliği** `[M]` `[P2]` — Çoklu alımlarda zamanlama avantajı: "THYAO için 5 alım — tek sefere göre ortalama %8 daha iyi giriş". `transactions` BUY kayıtları.
 
@@ -126,7 +126,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 ### Risk (Ek)
 
-- [ ] **Potansiyel Kayıp (Max Pain) Simülasyonu** `[S]` `[P1]` — Portföy %10 / %20 / %30 düşerse toplam kayıp (display cur'da); kur etkisi ayrıca gösterilir ("₺ %10 değer kaybı ekleniyle toplam etki: -$X"). Üç senaryolu yatay bar; tamamen frontend, `convert()` + `fxRates` yeterli. Yeni fetch yok. Sabah "ne kadar riske giriyorum?" sorusuna anlık yanıt.
+- [x] ~~**Potansiyel Kayıp (Max Pain) Simülasyonu**~~ (2026-04-29) — AnalysisTab kart 8; %10/20/30 senaryo yatay bar (sarı/turuncu/kırmızı); totalMV display cur'da; FX eksikse warn-card; tamamen frontend.
 - [ ] **Piyasa Düşüşü Dayanıklılık Skoru** `[M]` `[P2]` — Düşük borç (Borç/Özk < 0.5), yüksek FCF marjı (>10%), geniş op marjı (>15%) hisselerin portföydeki ağırlıklı payı → 1–10 dayanıklılık puanı; "Portföyünüzün %62'si resesyona dayanıklı şirketlerden oluşuyor" çıktısı. Fundamentals cache'ten; ek fetch yok. Banka/BIST bankalar hariç (early-exit seti).
 
 ### Performans (Ek)
@@ -200,12 +200,12 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [x] ~~**refresh-price-cache cron secret**~~ (2026-04-27 Sprint 4) — CRON_SECRET env; XOR constant-time compare; fail-closed (secret yoksa 500, yanlışsa 401); pg_cron job güncellendi.
 - [ ] **BIST/CRYPTO/GOLD cron refresh** `[S]` `[P2]` — `refresh-price-cache` sadece US_STOCK çekiyor; BIST/CRYPTO/GOLD sütunları stale kalıyor. Cron job'ı asset_type dönüşümlü yapılmalı.
 - [ ] **İş Yatırım fetch timeout** `[S]` `[P2]` — `fetch-fundamentals` isyatirim call'larında `AbortSignal.timeout(8000)` yok; ağ hatalarında edge fn asılı kalabiliyor.
-- [ ] **Sektör Dağılımı — tümü "Bilinmiyor" görünüyor** `[S]` `[P1]` — Analiz Tab Sektör Dağılımı kartında tüm pozisyonlar "Bilinmiyor" sektörüne düşüyor. Olası sebepler: (1) ETF/FUND ticker'larında SIC kodu yok (`sic_description=null` — ETF'lerin ~%52 portföy ağırlığı); (2) meta henüz çekilmemiş (kart açıldığında "Meta Çek" CTA görünür ama sektör hâlâ boş kalıyor); (3) BIST için `sic_description = borsa-mcp sector` mapping doğru ama `metaCacheGet(ticker)` henüz çağrılmamış olabilir. Düzeltme yönü: kart render'ında `metaCacheGet` eksik ticker'ları otomatik tetikle (tek seferde 1 chunk); ETF için FMP `etf_classification` veya borsa-mcp `industry` fallback; null ise "Diğer" yerine "ETF / Fon" olarak göster.
+- [x] ~~**Sektör Dağılımı "Bilinmiyor" bug fix**~~ (2026-04-29) — AnalysisTab mount useEffect ile auto-fetch; CRYPTO→"Kripto", GOLD→"Emtia", FX→"Döviz", FUND→"ETF / Fon" tip bazlı fallback. US_STOCK/BIST meta çekilene kadar "Bilinmiyor" kalır (kaçınılmaz).
 
 ## Güvenlik & Süreç
 
 - [x] ~~**Periyodik agent denetim turu — ilk tur**~~ (2026-04-27) — client-security-auditor + edge-reviewer; 15 bulgu; Sprint 4 backlog'a eklendi.
-- [ ] **Periyodik agent denetim turu (her 2-3 sprint)** `[S]` `[P1]` — Bir sonraki tur: Sprint 5 sonu. 5 agent paralel: client-security-auditor, edge-reviewer, rls-auditor, test-runner, product-owner.
+- [ ] **Periyodik agent denetim turu (her 2-3 sprint)** `[S]` `[P1]` — Sprint 6 sonu (Sprint 5 turu kaçırıldı). 3 agent paralel: client-security-auditor, edge-reviewer, rls-auditor; ardından test-runner E2E smoke. **Sprint 6 Milestone C.**
 
 ## Ölçeklenme & Mass Kullanım
 
@@ -282,13 +282,13 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 - [x] ~~**Loading state standardı (SkeletonRow/SkeletonCard)**~~ (2026-04-26) — SkeletonLine/SkeletonCard/SkeletonRows shimmer components. Dashboard ilk yük → 3 skeleton kart + 5 satır; meta/fund → SkeletonRows.
 - [x] ~~**Form input error inline**~~ (2026-04-27) — invalid date/negatif adet; `aria-invalid` + 11px error text; kırmızı border + inline mesaj.
 - [x] ~~**Confirm modal backdrop click guard (danger)**~~ (2026-04-27) — `danger:true` modal'da backdrop click iptal sayılmaz; explicit "İptal" zorunlu.
-- [ ] **EUR tablosu sort** `[S]` `[P1]` — USD/TRY tablolarında sort var, EUR statik; en azından Ticker alfabetik.
+- [x] ~~**EUR tablosu sort**~~ (2026-04-29) — Kod zaten `localeCompare` ile alfabetik sıralıyordu; tamamlanmış sayıldı.
 
 ### Grup 2 — Bildirim/Feedback (P1)
 
 - [x] ~~**AddTab CSV import skip count**~~ (2026-04-26) — geçersiz satırlar için `flash_("X işlem alındı, Y satır atlandı")` gösterimi eklendi.
 - [x] ~~**cur-seg dokunma hedefi mobile**~~ (2026-04-26) — mobile media query 44px AA dokunma hedefi.
-- [ ] **Period buton wrap dar ekran** `[S]` `[P1]` — `flex:1 + minWidth:40` 320px'de eziliyor. Sprint 3-4-5'ten taşındı; **Sprint 6 scope.**
+- [x] ~~**Period buton wrap dar ekran**~~ (2026-04-29) — `.fbar` scrollable container, `flex:"0 0 auto" padding:"5px 14px"`. 320px'de artık yatay kaydırma ile çalışıyor.
 - [x] ~~**↻ Güncelle progress mobile**~~ (2026-04-26) — otomatik güncelleme (30dk interval + visibility API) + Settings'e taşındı; `.mprog` mobil progress strip eklendi.
 - [x] ~~**Flash position:fixed**~~ (2026-04-26) — `position:fixed; top:60px` sticky banner; scroll'da kaybolma giderildi.
 - [x] ~~**Sparkline empty state min-height**~~ (2026-04-26) — data <2 ise kart min-height korunuyor.
@@ -319,14 +319,18 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 4 ✅ tamamlandı (2026-04-27) | Sprint 5 ✅ tamamlandı (2026-04-27) | Sprint 6 hazırlık (2026-04-27) — global filtre + kripto bug fix ✅
+Sprint 4 ✅ tamamlandı (2026-04-27) | Sprint 5 ✅ tamamlandı (2026-04-27) | **Sprint 6 aktif** (2026-04-29 → 2026-05-10)
 
-Sprint 6 adayları (öncelik sırasına göre):
+Sprint 6 scope (öncelik sırasına göre):
 
-1. **Sektör Dağılımı bug fix** `[S][P1]` — tüm pozisyonlar "Bilinmiyor" gösteriyor; ETF SIC kodu yok; otomatik meta trigger gerekiyor.
-2. **Dividend (temettü) tracking** `[M][P1]` — `transactions.way:"DIV"` + Dashboard total return; value-investing temel taşı.
-3. **Period buton wrap dar ekran** `[S][P1]` — 320px iPhone SE'de butonlar eziliyor; küçük CSS fix.
-4. **EUR tablosu sort** `[S][P1]` — EUR blok sort yok; kolaydan zora.
-5. **Potansiyel Kayıp (Max Pain) Simülasyonu** `[S][P1]` — %10/%20/%30 düşüş senaryosu; tamamen frontend.
-6. **Pozisyon Yıllık Getiri (CAGR) Tablosu** `[S][P2]` — ilk BUY'dan bugüne yıllıklandırılmış getiri; tamamen frontend + price_cache.
-7. **Periyodik agent denetim turu** `[S][P1]` — Sprint 6 sonu; 5 agent paralel.
+1. ✅ **[Milestone A] Sektör Dağılımı bug fix** — auto-fetch on mount + CRYPTO/GOLD/FX/FUND tip bazlı etiket (2026-04-29).
+2. ✅ **[Milestone A] Period buton wrap** — `.fbar` scrollable, `flex:"0 0 auto"` (2026-04-29).
+3. ✅ **[Milestone A] EUR tablosu sort** — kod zaten alfabetik sıralıyordu; tamamlanmış (2026-04-29).
+4. ✅ **[Milestone B] Break-Even Analizi** — Komisyon dahil break-even + uzaklık%; AnalysisTab kart 7 (2026-04-29).
+5. ✅ **[Milestone B] Max Pain Simülasyonu** — %10/%20/%30 senaryo bar; AnalysisTab kart 8 (2026-04-29).
+6. **[Milestone C] Agent denetim turu** `[S][P1]` — Sprint 6 kapanışında; 3 agent paralel.
+
+Sprint 7 öngörüsü:
+- Dividend (temettü) tracking `[M][P1]` — Sprint 7 ana teması
+- Risk Dashboard (Volatilite + Kur Riski + Temettü Getiri Projeksiyonu) `[S×3][P1]`
+- Dönem Bazlı Getiri Karşılaştırması `[S][P1]`
