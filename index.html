@@ -2816,7 +2816,7 @@ const buildSlicesPath = (sliceArr, CX, CY, R) => {
   });
 };
 
-function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,openDetail}){
+function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRates,openDetail}){
   const [assetDistMode,setAssetDistMode]=useState("mv"); // "cost" | "mv"
   const [activeTypes,setActiveTypes]=useState(()=>BLOCK_TYPES.filter(cfg=>pos.some(p=>p.type===cfg.type)).map(cfg=>cfg.type));
   useEffect(()=>{
@@ -3717,6 +3717,210 @@ function AnalysisTab({pos,txs,splits,prc,hide,mask,setTab,displayCur,fxRates,ope
           </div>
         );
       })()}
+
+      {/* ── Kart: Dönem Bazlı Getiri ─────────────────────────────── */}
+      {(()=>{
+        const PERIODS = [
+          { key:"d1",  label:"1G",  fn:(h,p,pr)=>h?.d1 },
+          { key:"w1",  label:"1H",  fn:(h,p,pr)=>h?.w1 },
+          { key:"m1",  label:"1A",  fn:(h,p,pr)=>h?.m1 },
+          { key:"m3",  label:"3A",  fn:(h,p,pr)=>h?.p_m3&&pr?(pr-h.p_m3)/h.p_m3*100:null },
+          { key:"m6",  label:"6A",  fn:(h,p,pr)=>h?.p_m6&&pr?(pr-h.p_m6)/h.p_m6*100:null },
+          { key:"y1",  label:"1Y",  fn:(h,p,pr)=>h?.y1 },
+        ];
+        const priceCurOf = p => p.type==="BIST" ? "TRY" : (p.currency==="EUR" ? "EUR" : "USD");
+        const posMV = filteredPos.map(p=>{
+          const pr = prc[p.ticker];
+          const mv = pr!=null ? cnv(p.shares*pr, priceCurOf(p)) : null;
+          return {...p, pr, mv};
+        }).filter(p=>p.mv!=null&&p.mv>0);
+        const totalMV = posMV.reduce((a,p)=>a+p.mv,0);
+        const portfolioReturns = PERIODS.map(pd=>{
+          const eligible = posMV.filter(p=>pd.fn(hist[p.ticker],p,p.pr)!=null);
+          if(!eligible.length) return {...pd, ret:null};
+          const weightedMV = eligible.reduce((a,p)=>a+p.mv,0);
+          const ret = eligible.reduce((a,p)=>{
+            return a+(pd.fn(hist[p.ticker],p,p.pr)/100)*(p.mv/weightedMV);
+          },0)*100;
+          return {...pd, ret};
+        });
+        const benchRet = (ticker,pd)=>{
+          const h = hist[ticker];
+          const pr = prc[ticker];
+          return pd.fn(h,null,pr);
+        };
+        const fmtRet = r => r==null
+          ? React.createElement("span",{className:"dim",style:{color:"var(--text3)"}},"—")
+          : React.createElement("span",{
+              className: r>=0?"ok":"err",
+              style:{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:600}
+            },(r>=0?"+":"")+r.toFixed(2)+"%");
+        return (
+          <div className="card" style={{marginBottom:14,padding:"16px 18px"}}>
+            <div className="stitle" style={{marginBottom:4}}>Dönem Bazlı Getiri</div>
+            <div style={{fontSize:11,color:"var(--text3)",marginBottom:14}}>Portföy vs Benchmark (ağırlıklı ortalama)</div>
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead>
+                <tr>
+                  <th scope="col" style={{textAlign:"left",paddingBottom:8,color:"var(--text3)",fontWeight:500,fontSize:11}}>Dönem</th>
+                  <th scope="col" style={{textAlign:"right",paddingBottom:8,color:"var(--text3)",fontWeight:500,fontSize:11}}>Portföy</th>
+                  <th scope="col" style={{textAlign:"right",paddingBottom:8,color:"var(--text3)",fontWeight:500,fontSize:11}}>SPY</th>
+                  <th scope="col" style={{textAlign:"right",paddingBottom:8,color:"var(--text3)",fontWeight:500,fontSize:11}}>XU100</th>
+                </tr>
+              </thead>
+              <tbody>
+                {portfolioReturns.map(pd=>{
+                  const spyR = benchRet("SPY",pd);
+                  const xu100R = benchRet("XU100",pd);
+                  return (
+                    <tr key={pd.key} style={{borderTop:"1px solid var(--border)"}}>
+                      <td style={{padding:"7px 0",fontSize:12,color:"var(--text2)",fontWeight:500}}>{pd.label}</td>
+                      <td style={{textAlign:"right",padding:"7px 0"}}>{fmtRet(pd.ret)}</td>
+                      <td style={{textAlign:"right",padding:"7px 0"}}>{fmtRet(spyR)}</td>
+                      <td style={{textAlign:"right",padding:"7px 0"}}>{fmtRet(xu100R)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <div style={{fontSize:10,color:"var(--text3)",marginTop:10}}>Portföy ağırlığı anlık piyasa değeri bazında; benchmark SPY ve XU100 tarihi veriden.</div>
+          </div>
+        );
+      })()}
+
+      {/* ── Kart: Kur Riski ──────────────────────────────────────── */}
+      {(()=>{
+        const priceCurOf = p => p.type==="BIST" ? "TRY" : (p.currency==="EUR" ? "EUR" : "USD");
+        const fxGroups = {USD:0, TRY:0, EUR:0};
+        filteredPos.forEach(p=>{
+          const pr = prc[p.ticker];
+          if(pr==null) return;
+          const priceCur = priceCurOf(p);
+          const mv = cnv(p.shares*pr, priceCur);
+          if(mv!=null) fxGroups[priceCur] = (fxGroups[priceCur]||0) + mv;
+        });
+        const fxTotal = Object.values(fxGroups).reduce((a,b)=>a+b,0);
+        const usdFrac = fxTotal>0 ? fxGroups.USD/fxTotal : 0;
+        const eurFrac = fxTotal>0 ? fxGroups.EUR/fxTotal : 0;
+        const usdSens10 = usdFrac*10;
+        const CUR_COLORS = {USD:"#0a84ff", TRY:"var(--info)", EUR:"#ffd60a"};
+        return (
+          <div className="card" style={{marginBottom:14,padding:"16px 18px"}}>
+            <div className="stitle" style={{marginBottom:4}}>Kur Riski</div>
+            <div style={{fontSize:11,color:"var(--text3)",marginBottom:14}}>Para birimi bazında piyasa değeri dağılımı</div>
+            {fxTotal>0 ? (
+              <div>
+                {[["USD","#0a84ff"],["TRY","var(--info)"],["EUR","#ffd60a"]].map(([cur,color])=>{
+                  const val = fxGroups[cur]||0;
+                  const pct = fxTotal>0 ? val/fxTotal*100 : 0;
+                  if(val===0) return null;
+                  return (
+                    <div key={cur} style={{marginBottom:12}}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:5,alignItems:"center"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{width:8,height:8,borderRadius:"50%",background:color,display:"inline-block"}}></span>
+                          <span style={{fontSize:12,color:"var(--text2)",fontWeight:500}}>{cur}</span>
+                        </div>
+                        <div style={{display:"flex",gap:12,alignItems:"center"}}>
+                          {!hide&&<span className="mono" style={{fontSize:11,color:"var(--text3)"}}>{mask(dSym+fmt(val,0))}</span>}
+                          <span className="mono" style={{fontSize:12,fontWeight:600,minWidth:42,textAlign:"right"}}>{pct.toFixed(1)}%</span>
+                        </div>
+                      </div>
+                      <div style={{height:6,background:"var(--bg3)",borderRadius:3,overflow:"hidden"}}>
+                        <div style={{width:pct+"%",height:"100%",background:color,borderRadius:3,transition:"width 0.4s ease"}}/>
+                      </div>
+                    </div>
+                  );
+                })}
+                {displayCur==="TRY"&&usdFrac>0.05&&(
+                  <div className="warn-card" style={{marginTop:8,marginBottom:0,fontSize:11}}>
+                    USD pozisyon <strong>%{(usdFrac*100).toFixed(0)}</strong> — USDTRY +%10'da portföy ≈{" "}
+                    <strong className="ok">+%{usdSens10.toFixed(1)}</strong>
+                  </div>
+                )}
+                {displayCur==="TRY"&&eurFrac>0.05&&(
+                  <div className="warn-card" style={{marginTop:8,marginBottom:0,fontSize:11}}>
+                    EUR pozisyon <strong>%{(eurFrac*100).toFixed(0)}</strong> — portföyde karışık kur riski mevcut.
+                  </div>
+                )}
+              </div>
+            ):(
+              <div className="dim" style={{fontSize:12}}>Fiyat verisi eksik — kur hesabı yapılamadı.</div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ── Kart: 6 Aylık Performans ─────────────────────────────── */}
+      {(()=>{
+        const priceCurOf = p => p.type==="BIST" ? "TRY" : (p.currency==="EUR" ? "EUR" : "USD");
+        const perf6m = filteredPos.map(p=>{
+          const pr = prc[p.ticker];
+          const h = hist[p.ticker];
+          if(pr==null||!h?.p_m6) return null;
+          const ret = (pr-h.p_m6)/h.p_m6*100;
+          return {ticker:p.ticker, name:p.name, ret, type:p.type, currency:p.currency};
+        }).filter(Boolean).sort((a,b)=>b.ret-a.ret);
+        const gainers = perf6m.filter(p=>p.ret>=0);
+        const losers  = perf6m.filter(p=>p.ret<0);
+        const eligibleMV6m = perf6m.map(p=>{
+          const pr = prc[p.ticker];
+          const pos2 = filteredPos.find(fp=>fp.ticker===p.ticker);
+          const priceCur = pos2 ? priceCurOf(pos2) : "USD";
+          const mv = pr!=null&&pos2 ? cnv(pos2.shares*pr,priceCur) : null;
+          return {...p, mv};
+        }).filter(p=>p.mv!=null&&p.mv>0);
+        const totalEligibleMV = eligibleMV6m.reduce((a,p)=>a+p.mv,0);
+        const portf6m = totalEligibleMV>0
+          ? eligibleMV6m.reduce((a,p)=>a+(p.ret/100)*(p.mv/totalEligibleMV),0)*100
+          : null;
+        return (
+          <div className="card" style={{marginBottom:14,padding:"16px 18px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <div className="stitle">6 Aylık Performans</div>
+              {portf6m!=null&&(
+                <span className={portf6m>=0?"ok":"err"} style={{fontFamily:"DM Mono,monospace",fontSize:13,fontWeight:700}}>
+                  {portf6m>=0?"+":""}{portf6m.toFixed(2)}%
+                </span>
+              )}
+            </div>
+            <div style={{fontSize:11,color:"var(--text3)",marginBottom:14}}>6 ay önceki fiyata göre pozisyon bazlı getiri</div>
+            {perf6m.length===0 ? (
+              <div className="dim" style={{fontSize:12}}>Yeterli tarihi veri yok — fiyatları güncelle.</div>
+            ):(
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                <div>
+                  <div className="lbl" style={{marginBottom:8,color:"var(--ok)"}}>En İyi</div>
+                  {gainers.slice(0,3).map(p=>(
+                    <div key={p.ticker} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}}>
+                      <span style={{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:600,color:"var(--text)"}}>{p.ticker}</span>
+                      <span className="ok" style={{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:700}}>+{p.ret.toFixed(1)}%</span>
+                    </div>
+                  ))}
+                  {gainers.length===0&&<div className="dim" style={{fontSize:11}}>—</div>}
+                </div>
+                <div>
+                  <div className="lbl" style={{marginBottom:8,color:"var(--err)"}}>En Kötü</div>
+                  {losers.slice(-3).reverse().map(p=>(
+                    <div key={p.ticker} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}}>
+                      <span style={{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:600,color:"var(--text)"}}>{p.ticker}</span>
+                      <span className="err" style={{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:700}}>{p.ret.toFixed(1)}%</span>
+                    </div>
+                  ))}
+                  {losers.length===0&&<div className="dim" style={{fontSize:11}}>—</div>}
+                </div>
+              </div>
+            )}
+            {perf6m.length>0&&(
+              <div style={{fontSize:10,color:"var(--text3)",marginTop:12}}>
+                {perf6m.length}/{filteredPos.length} pozisyon için veri mevcut.{" "}
+                {portf6m!=null&&"Ağırlıklı portföy getirisi gösterildi."}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
     </div>
   );
 }
@@ -4515,7 +4719,7 @@ function App({session}){
 
       {/* ANALYSIS */}
       {tab==="analysis"&&(
-        <AnalysisTab pos={pos} txs={txs} splits={splits} prc={prc} hide={hide} mask={mask} setTab={setTab} displayCur={displayCur} fxRates={fxRates} openDetail={openDetail}/>
+        <AnalysisTab pos={pos} txs={txs} splits={splits} prc={prc} hist={hist} hide={hide} mask={mask} setTab={setTab} displayCur={displayCur} fxRates={fxRates} openDetail={openDetail}/>
       )}
 
       {/* SEARCH */}
