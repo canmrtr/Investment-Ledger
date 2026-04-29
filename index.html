@@ -5165,14 +5165,15 @@ function App({session}){
                       const ozF=isGU?goldOzPerUnit(p.unit):1;
                       const uLbl=isGU?({g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit):"";
                       const adetStr=fmtShares(p.shares/ozF)+(uLbl?" "+uLbl:"");
-                      const avgStr=cfg.sym+fmt(p.avgCost*ozF,2);
+                      const curPrice=prc[p.ticker];
+                      const priceStr=curPrice!=null?cfg.sym+fmt(curPrice*ozF,2):"—";
                       const cPct=p.periodChgPct,cDlr=p.periodChgDlr,hasC=cPct!=null;
                       const pos=hasC&&cPct>=0,sign=pos?"+":"-";
                       return(
                         <div key={p.ticker} className="pcr" onClick={()=>openDetail(p.ticker)}>
                           <div className="pcr-left">
                             <span className="pcr-ticker">{p.ticker}</span>
-                            <span className="pcr-sub">{hide?"•••• | ••••":`${adetStr} | ${avgStr}`}</span>
+                            <span className="pcr-sub">{hide?"•••• | ••••":`${adetStr} | ${priceStr}`}</span>
                           </div>
                           <div className="pcr-right">
                             <span className="pcr-mv">{p.mv!=null?mask(cfg.sym+fmt(p.mv,0)):"—"}</span>
