@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-04-29** (Sprint 5 retro + Sprint 6 planlandı; P1 item'lar sınıflandırıldı; Sektör bug, Break-Even, Max Pain bu sprint'e alındı)
+İlk toplama: **2026-04-24** | Son grooming: **2026-04-29** (Sprint 6 retro + Sprint 7 planlandı; Social Portfolios Faz 1 altyapısı tamamlandı; Sprint 7 ana teması: Dividend tracking + Risk Dashboard)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -46,6 +46,8 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [x] ~~**Sprint 5 devam: Parse rate limiting + Sektör Dağılımı**~~ (2026-04-27) — `edgeCallAuth` + `auth.getUser(token)` JWT-verified identity; `increment_parse_calls` PL/pgSQL RPC (TOCTOU-safe); 20 parse/gün/kullanıcı; 401 unauthenticated; image validation; AnalysisTab Sektör Dağılımı kartı (SIC/borsa-mcp; SECTOR_COLORS; "Meta Çek" CTA).
 - [x] ~~**Global varlık türü filtresi (multi-select)**~~ (2026-04-27) — Dashboard + AnalysisTab'da `dashTypeFilter`/`activeTypes` state; `.fbar` yatay kaydırmalı chip bar (mobile-friendly, no-wrap, hidden scrollbar); tüm hesaplamalar (KPI, pie, komisyon, win/loss, sağlık, konsantrasyon, sektör) filtreye göre `filteredPos`/`filteredTxs` üzerinden. Varlık Dağılımı kartındaki per-card filter kaldırıldı.
 - [x] ~~**Kripto/non-BIST market value konversiyon bug**~~ (2026-04-27) — `mvDisp` (AnalysisTab) ve `allDisp` (Dashboard KPI) artık `priceCur = p.type==="BIST"?"TRY":"USD"` kullanıyor — `p.currency` stale kalırsa (AI-parse TRY hatası vb.) MV yanlış kur üstünden bölünüyordu (BTC=$18 görünüm). `rebuildPositions` currency normalizer eklendi (BIST→TRY, diğer→USD, EUR korunur). Dashboard BLOCK_TYPES filtresi currency check kaldırıldı (type-only). HistoryTab `$` hardcode → `displaySym(currency)`.
+- [x] ~~**Sprint 6 Milestone A+B: Analiz Tab tamamlama + bug fix**~~ (2026-04-29) — Sektör Dağılımı mount useEffect auto-fetch + CRYPTO/GOLD/FX/FUND tip bazlı fallback etiketi; period buton wrap `.fbar` scrollable (320px çalışıyor); EUR tablosu sort (kod zaten alfabetik sıralıydı); Break-Even Analizi (kart 7: komisyon dahil breakEven + distPct% + renk pill + mask()); Potansiyel Kayıp Simülasyonu (kart 8: %10/20/30 yatay bar, FX warn-card, tamamen frontend).
+- [x] ~~**Social Portfolios Faz 1 — Multi-portfolio altyapısı**~~ (2026-04-29) — DB: `portfolios`, `follows`, `portfolio_activities` tabloları; `positions`/`transactions`/`splits`'e `portfolio_id NOT NULL` FK; mevcut kullanıcılar için "Ana Portföy" backfill migration (Supabase'e apply edildi); RLS politikaları (rls-auditor onaylı); frontend: `rebuildPositions` portfolio-scoped; `loadData` portfolios fetch + `activePortfolioId` LS sync; tüm write path'lerine `portfolio_id` prop threading (AddTxInline, TickerDetailTab, HistoryTab, AddTab, ManuelPosForm).
 
 ---
 
@@ -166,8 +168,12 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 ## Sosyal & Kişiselleştirme
 
+- [x] ~~**Social Portfolios Faz 1 — Multi-portfolio altyapısı**~~ (2026-04-29) — DB tabloları, FK'lar, backfill migration, RLS, frontend prop threading. Detay: Tamamlananlar arşivinde.
+- [ ] **Social Portfolios Faz 2 — Profil & Public portföyler** `[M]` `[P2]` — `UserProfileModal`; `portfolios.is_public` toggle + `privacy_level` alanı; public portföylere erişim için RLS okuma politikası; "Portföyümü paylaş" URL/slug üretimi. Faz 1 altyapısı tamamlandıktan sonra önkoşul karşılandı.
+- [ ] **Social Portfolios Faz 3 — Takip sistemi** `[M]` `[P2]` — `follows` tablosu; follow/unfollow UI; takipçi sayısı; `portfolio_activities` feed için yazma. Faz 2 tamamlandıktan sonra.
+- [ ] **Social Portfolios Faz 4 — Sosyal Feed tab** `[L]` `[P2]` — Yeni "Portföyler" ana sekmesi; "Portföyler" alt sekmesi (public portföyler listesi) + "Aktivite" alt sekmesi (takip edilenlerin son hareketleri); anonim veya kullanıcı adı bazlı. Faz 3 tamamlandıktan sonra.
 - [ ] **Yatırımcı risk profili** `[M]` `[P2]` — anket → muhafazakar / dengeli / agresif.
-- [ ] **Social feed** `[L]` `[P2]` — benzer risk profilindeki yatırımcıların pozisyonları; opt-in, anonim toplam. RLS policy güncellemesi gerektirir.
+- [ ] **Social feed** `[L]` `[P2]` — benzer risk profilindeki yatırımcıların pozisyonları; opt-in, anonim toplam. RLS policy güncellemesi gerektirir. Faz 4 ile birleştirilebilir.
 
 ## Hesap Yönetimi
 
@@ -205,7 +211,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 ## Güvenlik & Süreç
 
 - [x] ~~**Periyodik agent denetim turu — ilk tur**~~ (2026-04-27) — client-security-auditor + edge-reviewer; 15 bulgu; Sprint 4 backlog'a eklendi.
-- [ ] **Periyodik agent denetim turu (her 2-3 sprint)** `[S]` `[P1]` — Sprint 6 sonu (Sprint 5 turu kaçırıldı). 3 agent paralel: client-security-auditor, edge-reviewer, rls-auditor; ardından test-runner E2E smoke. **Sprint 6 Milestone C.**
+- [ ] **Periyodik agent denetim turu (her 2-3 sprint)** `[S]` `[P1]` — Sprint 6 Milestone C olarak planlandı; Social Portfolios Faz 1 altyapısı (yeni tablolar, RLS, FK'lar) ve Sprint 6 yeni kartlar bu tura dahil edilmeli. 3 agent paralel: client-security-auditor, edge-reviewer, rls-auditor; ardından test-runner E2E smoke. **Sprint 7'ye taşındı — öncelik: Social altyapının RLS doğrulaması kritik.**
 
 ## Ölçeklenme & Mass Kullanım
 
@@ -319,18 +325,15 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 4 ✅ tamamlandı (2026-04-27) | Sprint 5 ✅ tamamlandı (2026-04-27) | **Sprint 6 aktif** (2026-04-29 → 2026-05-10)
+Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ (2026-04-29) | **Sprint 7 planlanıyor** (başlangıç: 2026-04-30)
 
-Sprint 6 scope (öncelik sırasına göre):
+Sprint 6 retro özeti: Milestone A (3 item) + Milestone B (2 yeni analiz kartı) tam tamamlandı. Social Portfolios Faz 1 altyapısı bu session'da teslim edildi — sprint planının dışında kalan büyük bir altyapı adımı. Milestone C (agent denetim turu) Social altyapı eklenmesiyle daha kapsamlı hale geldi; Sprint 7'ye taşındı.
 
-1. ✅ **[Milestone A] Sektör Dağılımı bug fix** — auto-fetch on mount + CRYPTO/GOLD/FX/FUND tip bazlı etiket (2026-04-29).
-2. ✅ **[Milestone A] Period buton wrap** — `.fbar` scrollable, `flex:"0 0 auto"` (2026-04-29).
-3. ✅ **[Milestone A] EUR tablosu sort** — kod zaten alfabetik sıralıyordu; tamamlanmış (2026-04-29).
-4. ✅ **[Milestone B] Break-Even Analizi** — Komisyon dahil break-even + uzaklık%; AnalysisTab kart 7 (2026-04-29).
-5. ✅ **[Milestone B] Max Pain Simülasyonu** — %10/%20/%30 senaryo bar; AnalysisTab kart 8 (2026-04-29).
-6. **[Milestone C] Agent denetim turu** `[S][P1]` — Sprint 6 kapanışında; 3 agent paralel.
+Sprint 7 önerilen scope (öncelik sırasına göre):
 
-Sprint 7 öngörüsü:
-- Dividend (temettü) tracking `[M][P1]` — Sprint 7 ana teması
-- Risk Dashboard (Volatilite + Kur Riski + Temettü Getiri Projeksiyonu) `[S×3][P1]`
-- Dönem Bazlı Getiri Karşılaştırması `[S][P1]`
+1. **[Öncelik 1] Periyodik agent denetim turu** `[S][P1]` — Social Portfolios Faz 1 RLS doğrulaması dahil; 3 agent paralel; kritik bulgu yoksa Sprint 7'ye devam.
+2. **[Öncelik 2] Dividend (temettü) tracking** `[M][P1]` — `transactions.way:"DIV"` schema; Dashboard total return entegrasyonu; HistoryTab temettü satırı. Sprint 7'nin ana yeni özelliği.
+3. **[Öncelik 3] Risk Dashboard** `[S×3][P1]` — Volatilite/Drawdown + Kur Riski Göstergesi + Temettü Getiri Projeksiyonu; üç S-effort item tek milestone altında.
+4. **[Öncelik 4] Dönem Bazlı Getiri Karşılaştırması** `[S][P1]` — `price_cache.p_d1/w1/m1/y1` yeterli; Win/Loss kartının devamı.
+5. **[Öncelik 5] Social Portfolios Faz 2** `[M][P2]` — is_public toggle + UserProfileModal; Faz 1 altyapısı hazır, Can'ın "kritik öneme gelecek" notu göz önünde — erken başlamak mantıklı.
+6. **[Öncelik 6] Ağırlıklı Ortalama Portföy P/E** `[S][P2]` — Fundamentals cache zaten hazır; sadece aggregation; value-investing lens için kısa bir "portföyünüzün F/K'sı kaç?" özeti.
