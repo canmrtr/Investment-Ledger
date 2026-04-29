@@ -4853,9 +4853,10 @@ function App({session}){
           if(sel.key==="max"){if(p.cost==null||p.mv==null)return null;return{pct:p.plPct,dlr:p.mv-p.cost};}
           const base=hist[p.ticker]?.[sel.priceKey];
           if(base==null||base<=0)return null;
-          // Sanity: >100x ratio means cur/base are in different currencies (e.g. USD vs TRY stale cache)
+          // Sanity: if ratio >100x or <0.05x the currencies almost certainly differ
+          // (USD cur vs TRY historic base → ratio ≈ 1/38 ≈ 0.026, caught by <0.05)
           const ratio=cur/base;
-          if(ratio>100||ratio<0.01)return null;
+          if(ratio>100||ratio<0.05)return null;
           return{pct:(cur/base-1)*100,dlr:p.shares*(cur-base)};
         };
 
@@ -5057,7 +5058,7 @@ function App({session}){
                     <span style={{fontSize:17,fontWeight:700,color:"var(--text)",letterSpacing:"-0.3px"}}>{cfg.label}</span>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       {!hide&&<span style={{fontSize:15,fontWeight:500,fontFamily:"'DM Mono','Fira Code',monospace",color:"var(--text)"}}>{mask(cfg.sym+fmt(totMv,0))}</span>}
-                      {blockDeltaPct!=null&&!hide&&(
+                      {blockDeltaPct!=null&&(
                         <span style={{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,background:blockDeltaDlr>=0?"rgba(0,217,126,0.15)":"rgba(255,51,102,0.15)",color:blockDeltaDlr>=0?"var(--ok)":"var(--err)"}}>
                           {fmtP(blockDeltaPct)}
                         </span>
