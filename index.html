@@ -2439,15 +2439,18 @@ function SearchTab({pos,txs,openDetail,flash_}){
   useEffect(()=>{
     if(tickerDb)return;
     setLoading(true);
-    edgeCall("fetch-fundamentals",{mode:"ticker-list"})
-      .then(r=>r.json())
-      .then(d=>{
-        if(Array.isArray(d.list)){
-          tickerDbCacheSet(d.list);
-          setTickerDb(d.list);
-        } else {
-          flash_("Ticker veritabanı yüklenemedi","err");
+    // ticker_db tablosunu doğrudan Supabase'den oku (edge function / SEC EDGAR bypass).
+    // Tablo haftalık pg_cron ile sync-ticker-db modu üstünden beslenir.
+    sb.from("ticker_db").select("ticker,name,exchange").limit(15000)
+      .then(({data,error})=>{
+        if(error||!data||data.length===0){
+          // Supabase okuma başarısız veya tablo henüz dolu değilse edge fn fallback
+          return edgeCall("fetch-fundamentals",{mode:"ticker-list"})
+            .then(r=>r.json())
+            .then(d=>{ if(Array.isArray(d.list)){tickerDbCacheSet(d.list);setTickerDb(d.list);} });
         }
+        tickerDbCacheSet(data);
+        setTickerDb(data);
       })
       .catch(e=>flash_("Ticker DB hatası: "+e.message,"err"))
       .finally(()=>setLoading(false));

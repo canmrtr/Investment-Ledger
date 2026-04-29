@@ -346,10 +346,10 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 ### Önemli (İlk 500 Kullanıcı Öncesi)
 
-- [ ] **Shared price cache mimarisi — user-başına fetch kaldır** `[M]` `[P1]` — "price_cache güvenlik + fetch lock MVP" (üstteki P0 item) tamamlandıktan sonraki adım: cron kapsamını genişlet, frontend read-only hale getir, yazma tamamen edge function'da olsun. P0 item'ı bu maddenin MVP'si sayılır.
+- [x] ~~**Shared price cache mimarisi — user-başına fetch kaldır**~~ (2026-04-29) — Cron kapsam genişletildi (tüm asset_type); frontend zaten read-only (Sprint 5); yazma tamamen edge function. MVP tamamlandı. `fetching_since` SWR lock (N kullanıcı = 1 API çağrısı) hâlâ açık — Massive paid tier gerektirir.
 - [ ] **Massive.com rate limit yönetimi** `[M]` `[P1]` — `CFG.RATE_LIMIT_MS = 7500` ile 10 ticker = 75 sn; shared rate limit altında çok kullanıcı çakışınca 429. Seçenekler: Paid tier (real-time + yüksek limit), ya da önce cache-first mimariye geç (üstteki madde), sonra paid'e geçmek kolaylaşır.
-- [ ] **SEC EDGAR ticker DB → Supabase tablosu** `[M]` `[P2]` — şu an her yeni kullanıcı ilk SearchTab açılışında edge function üstünden ~11K entry çekiyor. Haftalık cron ile `ticker_db` Supabase tablosuna sync et; frontend doğrudan Supabase'den okur. EDGAR 10 req/sn limiti + edge function cold start ortadan kalkar.
-- [ ] **refresh-price-cache cron — asset_type rotasyonu** `[S]` `[P2]` — şu an cron sadece US_STOCK tickerları tazeler; BIST/CRYPTO/GOLD stale kalıyor. Cron job'ı sırayla tüm asset_type'ları döngüye al; ya da asset_type bazlı 4 ayrı job.
+- [x] ~~**SEC EDGAR ticker DB → Supabase tablosu**~~ (2026-04-29) — `ticker_db` tablosu (005_ticker_db.sql); RLS (authenticated SELECT); haftalık pg_cron `sync-ticker-db-weekly` (Pazar 03:00 UTC); `fetch-fundamentals` `mode:"sync-ticker-db"` CRON_SECRET korumalı; frontend Supabase SELECT'e geçti + edge fn fallback; 10.980 ticker (10.345 US + 635 BIST) initial sync tamamlandı.
+- [x] ~~**refresh-price-cache cron — asset_type rotasyonu**~~ (2026-04-29) — `refresh-price-cache` yeniden yazıldı: tüm asset_type'lardan `(ticker, asset_type)` çekiyor; BIST→Yahoo Finance (`yfHistorical`), CRYPTO→Massive (`X:{BASE}USD`), GOLD→Massive (`C:{SYM}USD`), FX→Massive, US_STOCK/FUND→Massive; ticker URL injection regex koruması; BIST arası 1s bekleme; AbortSignal.timeout(10s) tüm external fetch'lerde.
 - [ ] **Auto-fetch opt-in** `[S]` `[P2]` — şu an mount'ta otomatik; çok kullanıcıda rate limit zorlar. İleride "otomatik güncelleme aralığı" kullanıcı ayarı yapılabilir.
 
 ### İzlenmesi Gerekenler (Scalability Monitor)
@@ -370,7 +370,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
   - [ ] (a) `manifest.json` — name/short_name: "Investment Ledger", start_url: "/Investment-Ledger/", display: standalone, background_color/theme_color: #000; icons 192px + 512px PNG `[S]`
   - [ ] (b) `service-worker.js` minimal — install event: offline shell (index.html + manifest.json) precache; fetch event: cache-first for shell, network-first for API calls; stale-while-revalidate pattern `[S]`
   - [ ] (c) `index.html` head: `<link rel="manifest">` + `<meta name="apple-mobile-web-app-capable">` + `<meta name="theme-color">` + service worker registration script `[S]`
-- [ ] **PWA ikonları + splash screen** `[S]` `[P2]` — 192/512px PNG ikonlar; iOS için `apple-touch-icon`; splash screen `theme_color` ile uyumlu.
+- [x] ~~**PWA ikonları**~~ (2026-04-29) — `icon-192.png` + `icon-512.png` brand purple (#6658ff) solid PNG; geçerli PNG format (deflate). Splash screen `theme_color` manifest'te zaten `#6658ff`.
 
 ### Aşama M2 — Build Sistemi Geçişi (Mobil Uygulama Önkoşulu)
 

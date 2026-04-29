@@ -440,6 +440,8 @@ Detaylı liste için **`ROADMAP.md`** dosyasına bakın. Tamamlananlar:
 - ✅ **Sprint 9 Milestone C: PWA + küçük düzeltmeler** (2026-04-29) — `manifest.json` (standalone, #6658ff theme, 192+512 icon placeholder); `service-worker.js` (shell cache-first, API network-first, offline fallback); SW registration `load` event; `<meta theme-color>` + `apple-touch-icon` head tag'leri. `fetch-fundamentals` edge fn `AbortSignal.timeout(8000)`. signOut LS cleanup `il_recent_search` eklendi.
 - ✅ **Sprint 9: P1 bug fix bundle** (2026-04-29) — BreakEven `p.avg_cost` → `p.avgCost` (wrapPos camelCase mapping, tüm değerler NaN'dı); AddTxInline total preview hardcoded `$` → `displaySym(effCur)` (TRY işlemlerde yanlış sembol); BreakEven tablo `var(--mono)` → `'DM Mono',monospace` (CSS değişkeni yok); CSV skip + fetchHist `console.warn` → `DEBUG &&` gate (güvenlik audit LOW).
 
+- ✅ **Altyapı & Ölçekleme sprint** (2026-04-29) — `refresh-price-cache` tüm asset_type desteği (BIST Yahoo, CRYPTO/GOLD/FX Massive normalize, ticker URL injection koruması, BIST 1s delay); `ticker_db` Supabase tablosu (005_ticker_db.sql, 10.980 satır initial sync, haftalık pg_cron `sync-ticker-db-weekly`); `fetch-fundamentals` mode:"sync-ticker-db" + getTickerDb/getBistList AbortSignal.timeout; frontend SearchTab Supabase SELECT'e geçti; `İş Yatırım` isyFetch AbortSignal.timeout(8000); `icon-192.png` + `icon-512.png` geçerli PNG.
+
 Açık başlıklar (detay için `ROADMAP.md`):
 - **TR altın işçilik premium göstergesi** — Reşat/Ata birimi + Dashboard "Spot saf · Premium %" render
 - **TEFAS entegrasyonu** — WAF cloud IP bloğu sorunu; Supabase edge function üstünden test bekleniyor
@@ -449,4 +451,3 @@ Açık başlıklar (detay için `ROADMAP.md`):
 - **Social Portfolios Faz 3** — takip sistemi (follows UI), sosyal feed, risk profili
 - **Watchlist & alarm** — izleme listesi + hedef fiyat bildirimi (ROADMAP.md detay)
 - **Temettü takvimi** — FMP dividend-calendar mode + yaklaşan temettüler UI
-- **PWA iconları** — `icon-192.png` ve `icon-512.png` gerçek dosyalar (şu an placeholder)
