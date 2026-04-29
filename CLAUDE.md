@@ -49,16 +49,20 @@ Root → Login (IL mark) | App
     │                            👁 hide, + İşlem Ekle); manuel "↻ Şimdi Güncelle" Settings'te
     ├─ <main #app-main>
     │   ├─ Dashboard          — KPI kartlar (TR + XIRR, display cur'da convert),
-    │   │                       [Sparkline + Pie] yan yana, pozisyon blokları VARLIK
-    │   │                       TÜRÜNE göre (US Hisse/ETF/BIST/Kripto/Altın/Döviz —
-    │   │                       BLOCK_TYPES config), EUR cost-only ayrı blok
+    │   │                       pozisyon blokları VARLIK TÜRÜNE göre (BLOCK_TYPES config,
+    │   │                       6 tip: US Hisse/ETF/BIST/Kripto/Altın/Döviz).
+    │   │                       Bloklar başlangıçta hepsi kapalı (collapsedBlocks init=all).
+    │   │                       Başlık: [Etiket] [PeriodPill unsigned] [TotMV] [▸/▾]
+    │   │                       Açık halde Alt-B accent-line: header borderRadius "10px 10px 0 0",
+    │   │                       body borderLeft 3px --info + bg2. EUR cost-only ayrı blok
     │   ├─ HistoryTab         — filtre toolbar, accordion (ticker gruplu, search)
-    │   ├─ AnalysisTab        — 5 kart: Varlık Dağılımı (filter chip ile type→ticker),
-    │   │                       Bölge Dağılımı (heuristik US/TR/Crypto/Emtia/Döviz),
-    │   │                       **Portföy Sağlık Tablosu** (8 metrik renk pill +
-    │   │                       collapsible: 🟢/🟡/🔴 aggregate rozet üstte),
-    │   │                       Toplam Komisyon (collapsible: KPI üstte + Detay ▾),
-    │   │                       Kazanan/Kaybeden Trade (BUY+SELL bağımsız, split-adj)
+    │   ├─ AnalysisTab        — Varlık Dağılımı (stacked bar + collapsible legend;
+    │   │                       type row tıklanınca ticker drill-down, >1 ticker için ▸/▾),
+    │   │                       Bölge Dağılımı, Portföy Sağlık Tablosu (8 metrik),
+    │   │                       Toplam Komisyon, Kazanan/Kaybeden Trade,
+    │   │                       + diğer kartlar (ROADMAP.md / FEATURE_DETAILS.md detay).
+    │   │                       NOT: Pozisyon Yıllık Getiri (CAGR) kartı kaldırıldı —
+    │   │                       transactions olmadan çalışmıyordu (işlem tarihi yok).
     │   ├─ SearchTab          — global ticker arama (~11k: 10.348 US + 636 BIST),
     │   │                       portföy + tüm hisseler iki ayrı bölüm
     │   ├─ AddTab             — 6-kart asset type picker → 4 mod: text/image/csv/manuel;
@@ -229,6 +233,9 @@ Fundamental Veri (FMP + EDGAR + İş Yatırım) · AnalysisTab kartları · Sear
 - **Supabase CLI**: `npx supabase link --project-ref jfetubcilmuthpddkodg` ile bağlı. Edge fn deploy: `supabase/functions/<fn-name>/index.ts` yapısı gerekli (`.js` + rename). `npx supabase functions deploy <fn-name> --no-verify-jwt`. `db query --linked --query "SELECT..."` ile schema sorgusu.
 - **`p.currency` vs price_cache currency**: `prc[ticker]` değerleri her zaman BIST→TRY (Yahoo), diğer→USD (Massive) döner — `p.currency` ile aynı olmak zorunda değil (AI-parse hatası, stale data). MV hesaplarken (`mvDisp`, `allDisp`) `p.type==="BIST"?"TRY":"USD"` kullan; cost hesaplarken `p.currency` doğru (avg_cost o currency'de saklanır). `rebuildPositions` normCur ile yeni kayıtlar her zaman doğru currency alır ama eski DB verileri için bu ayrım önemli.
 - **`.fbar` filter chip bar**: `flex:1;min-width:70px` olan `.mtab`'ı içeren wrapper'da asla `flexWrap:"wrap"` kullanma — mobile'da çok satıra açılır. `.fbar` CSS sınıfı kullan: `overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch`. `.fbar .mtab` override: `flex:0 0 auto; white-space:nowrap`.
+- **`periodChange` ratio sanity check**: `cur/base < 0.05` ise null döner (USD cur vs TRY stale historic price → ratio ≈1/40 ≈0.025 yakalanır). Max period path için `mv/cost < 0.05` aynı guard (TRY avgCost vs USD mv). 95%+ gerçek kayıp vakaları için false-positive riski var ama kabul edilebilir.
+- **TRY avgCost data integrity**: Non-BIST pozisyonun `avg_cost` TRY cinsinde girilmişse (`currency="USD"` ama değer ~₺3M gibi), wrapPos ve periodChange yanlış hesaplar. Çözüm: işlemi USD fiyatıyla düzelt → Ayarlar → ♻️ Yeniden Hesapla. Uyarı mekanizması ROADMAP'te.
+- **JSX ternary'de IIFE**: `: (` yerine `: (()=>{ return<>...</>; })()` yazarken orphaned `)` metin nodu bırakmamaya dikkat — JSX'te `}` ve `)` text node olarak render olur. Kapanış bracket'larını dikkatli say; değişiklik sonrası babel check koş.
 
 ## Hooks (otomatik validasyon)
 
