@@ -433,6 +433,12 @@ Detaylı liste için **`ROADMAP.md`** dosyasına bakın. Tamamlananlar:
 - ✅ **UX polish bundle** (2026-04-29) — AddTxInline manuel form'a "Not" input alanı; `notes` artık "Detay sayfasından" hardcode yerine kullanıcıdan alınıyor; broker `maxLength={50}` (AddTxInline/HistoryTab×2/ManuelPosForm), ticker `maxLength={20}`, name `maxLength={100}` (ManuelPosForm).
 - ✅ **AnalysisTab pie kartları yeniden tasarlandı** (2026-04-29) — Varlık Dağılımı, Bölge Dağılımı, Sektör Dağılımı: pie üstte ortalı (140×140), legend tam genişlikte altında; her kart ▴/▾ toggle ile collapsible; kapalı halde özet satır (tür sayısı + toplam).
 - ✅ **Dashboard ETF/₿ rozetleri kaldırıldı** (2026-04-29) — Pozisyon satırlarındaki ETF ve kripto rozetleri gereksiz gürültü yarattığı için kaldırıldı. Rozetler TickerDetailTab ve SearchTab'da korunuyor.
+- ✅ **Sprint 9 Milestone A: AnalysisTab analitik kartlar** (2026-04-29) — Portföy F/K KPI (Sağlık Tablosu kartına eklendi, ağırlıklı ortalama); CAGR Tablosu (5Y gelir + kâr büyüme + CAGR satırları, collapsible); Dayanıklılık Skoru (liabToEquity + fcfMargin + operatingMargin → 1-10 puan, renk pill, held tüm pozisyonlar + missings CTA).
+- ✅ **Sprint 9: AnalysisTab pie → stacked horizontal bar** (2026-04-29) — Varlık Dağılımı, Bölge Dağılımı, Sektör Dağılımı kartlarındaki SVG pie kaldırıldı; yerine tek satır yatay stacked bar (her dilim `data-tip` tooltip'li). Bar her zaman görünür; legend/liste collapsible (▴/▾). `buildSlicesPath` dead call'ları temizlendi.
+- ✅ **Sprint 9: Dashboard sticky filter chips** (2026-04-29) — Varlık türü filtre bar'ı `position:sticky; top:52px; z-index:90` ile topbar'ın hemen altına sabitlendi; scroll'da kayma yok. Background `var(--bg)` ile içerik üstüne kapama.
+- ✅ **Sprint 9 Milestone B: Social Portfolios Faz 2** (2026-04-29) — Settings'e "Portföy Gizliliği" kartı (is_public toggle + privacy_level + paylaş butonu → `?portfolio=<uuid>` URL). `profiles` biyografi/avatar/is_profile_public düzenleme (AccountSection içi UserProfileModal). Public portfolio read-only view (`tab==="publicview"`, `?portfolio=` URL param, allocation % bar, sahip badge). Migration `004_social_faz2_rls.sql` (profiles_public_read + follows_public_count AND guard + profiles backfill FALSE).
+- ✅ **Sprint 9 Milestone C: PWA + küçük düzeltmeler** (2026-04-29) — `manifest.json` (standalone, #6658ff theme, 192+512 icon placeholder); `service-worker.js` (shell cache-first, API network-first, offline fallback); SW registration `load` event; `<meta theme-color>` + `apple-touch-icon` head tag'leri. `fetch-fundamentals` edge fn `AbortSignal.timeout(8000)`. signOut LS cleanup `il_recent_search` eklendi.
+- ✅ **Sprint 9: P1 bug fix bundle** (2026-04-29) — BreakEven `p.avg_cost` → `p.avgCost` (wrapPos camelCase mapping, tüm değerler NaN'dı); AddTxInline total preview hardcoded `$` → `displaySym(effCur)` (TRY işlemlerde yanlış sembol); BreakEven tablo `var(--mono)` → `'DM Mono',monospace` (CSS değişkeni yok); CSV skip + fetchHist `console.warn` → `DEBUG &&` gate (güvenlik audit LOW).
 
 Açık başlıklar (detay için `ROADMAP.md`):
 - **TR altın işçilik premium göstergesi** — Reşat/Ata birimi + Dashboard "Spot saf · Premium %" render
@@ -440,6 +446,7 @@ Açık başlıklar (detay için `ROADMAP.md`):
 - **FX/GOLD ham ticker normalize** — edge function future-proofing
 - **Sektör-aware fundamental eşikler** — tech P/E ≤30, utility ≤15 vs.
 - **EDGAR + market price** — P/E ve P/S için CommonStockSharesOutstanding × current price
-- **Social Portfolios Faz 2** — is_public toggle + UserProfileModal + public portföy RLS okuma
-- **Sosyal**: risk profili, anonim feed (privacy gerektirir)
-- **Eğitim**: Investment Basics modülü
+- **Social Portfolios Faz 3** — takip sistemi (follows UI), sosyal feed, risk profili
+- **Watchlist & alarm** — izleme listesi + hedef fiyat bildirimi (ROADMAP.md detay)
+- **Temettü takvimi** — FMP dividend-calendar mode + yaklaşan temettüler UI
+- **PWA iconları** — `icon-192.png` ve `icon-512.png` gerçek dosyalar (şu an placeholder)

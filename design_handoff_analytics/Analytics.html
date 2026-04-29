@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Investment Ledger — Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:     #000;
+  --s1:     #0c0c0c;
+  --s2:     #141414;
+  --s3:     #1c1c1c;
+  --bd:     rgba(255,255,255,0.06);
+  --bd2:    rgba(102,88,255,0.28);
+  --tx:     #f0ede8;
+  --tx2:    #666;
+  --tx3:    #333;
+  --ac:     #6658ff;
+  --ac-dim: rgba(102,88,255,0.12);
+  --ok:     #00d97e;
+  --err:    #ff3366;
+  --warn:   #ffb800;
+  --r-sm:   6px;
+  --r-md:   10px;
+  --r-lg:   16px;
+}
+body {
+  background: var(--bg);
+  color: var(--tx);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--s3); border-radius: 3px; }
+
+.app { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  background: var(--s1);
+  border-right: 1px solid var(--bd);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 20;
+}
+.sidebar-logo {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--bd);
+  display: flex; align-items: center; gap: 10px;
+}
+.sidebar-logo-mark {
+  width: 30px; height: 30px;
+  background: var(--ac); border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: #fff;
+  letter-spacing: -0.05em; flex-shrink: 0;
+}
+.sidebar-logo-text { font-size: 13px; font-weight: 600; color: var(--tx); letter-spacing: -0.02em; }
+.sidebar-logo-sub  { font-size: 10px; color: var(--tx2); margin-top: 1px; }
+.nav { padding: 12px 10px; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px; border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 400; color: var(--tx2);
+  cursor: pointer; transition: background .12s, color .12s;
+  margin-bottom: 2px; border: none; background: transparent;
+  width: 100%; text-align: left;
+}
+.nav-item:hover { background: var(--s2); color: var(--tx); }
+.nav-item.active { background: var(--ac-dim); color: var(--ac); font-weight: 500; }
+.sidebar-footer { padding: 14px 10px; border-top: 1px solid var(--bd); }
+.user-chip { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--r-sm); cursor: pointer; }
+.user-chip:hover { background: var(--s2); }
+.user-avatar {
+  width: 26px; height: 26px; background: var(--ac-dim);
+  border-radius: 50%; border: 1px solid var(--bd2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--ac); font-weight: 600;
+}
+.user-email { font-size: 11px; color: var(--tx2); }
+
+/* Main */
+.main { margin-left: 220px; flex: 1; min-height: 100vh; }
+.topbar {
+  height: 52px; border-bottom: 1px solid var(--bd);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+  position: sticky; top: 0;
+  background: rgba(0,0,0,0.85); backdrop-filter: blur(12px); z-index: 10;
+}
+.topbar-title { font-size: 14px; font-weight: 600; color: var(--tx); letter-spacing: -0.02em; }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+
+.content { padding: 28px; max-width: 1060px; }
+
+/* Period pills */
+.period-bar { display: flex; gap: 4px; }
+.period-btn {
+  background: transparent; border: 1px solid var(--bd);
+  color: var(--tx2); font-family: 'DM Sans', sans-serif;
+  font-size: 11px; font-weight: 500; padding: 5px 10px;
+  border-radius: var(--r-sm); cursor: pointer; transition: all .12s;
+}
+.period-btn:hover { color: var(--tx); border-color: rgba(255,255,255,0.15); }
+.period-btn.on { background: var(--ac-dim); border-color: var(--bd2); color: var(--ac); }
+
+/* KPI row */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.kpi-card {
+  background: var(--s1); border: 1px solid var(--bd);
+  border-radius: var(--r-lg); padding: 18px 20px;
+  transition: border-color .15s;
+}
+.kpi-card:hover { border-color: var(--bd2); }
+.kpi-label { font-size: 10px; font-weight: 500; color: var(--tx2); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+.kpi-value { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; color: var(--tx); letter-spacing: -0.02em; line-height: 1; }
+.kpi-value.ok  { color: var(--ok); }
+.kpi-value.err { color: var(--err); }
+.kpi-value.ac  { color: var(--ac); }
+.kpi-value.warn { color: var(--warn); }
+.kpi-sub { font-size: 11px; color: var(--tx2); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+
+/* Cards */
+.card { background: var(--s1); border: 1px solid var(--bd); border-radius: var(--r-lg); overflow: hidden; }
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--bd);
+}
+.card-title { font-size: 13px; font-weight: 600; color: var(--tx); letter-spacing: -0.01em; }
+.card-sub { font-size: 11px; color: var(--tx2); margin-top: 2px; }
+
+/* Layout grids */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.mb16 { margin-bottom: 16px; }
+
+/* Asset type filter */
+.asset-filter { display: flex; gap: 6px; flex-wrap: wrap; }
+.asset-chip {
+  background: transparent; border: 1px solid var(--bd);
+  color: var(--tx2); font-family: 'DM Sans', sans-serif;
+  font-size: 11px; font-weight: 500; padding: 4px 10px;
+  border-radius: 99px; cursor: pointer; transition: all .15s;
+}
+.asset-chip:hover { color: var(--tx); border-color: rgba(255,255,255,.15); }
+.asset-chip.on { color: var(--ac); border-color: var(--bd2); background: var(--ac-dim); }
+
+/* Pie chart */
+.pie-layout { display: flex; align-items: center; gap: 28px; padding: 24px 24px; }
+.pie-svg-wrap { flex-shrink: 0; }
+.pie-legend { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.pie-row { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: var(--r-sm); cursor: pointer; transition: background .1s; }
+.pie-row:hover { background: var(--s2); }
+.pie-row.active { background: var(--s2); }
+.pie-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.pie-row-label { font-size: 12px; color: var(--tx); flex: 1; }
+.pie-row-val { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--tx2); margin-right: 4px; }
+.pie-row-pct { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: var(--tx); min-width: 36px; text-align: right; }
+
+/* Win/Loss bar */
+.winloss-wrap { padding: 20px 24px; }
+.winloss-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+.winloss-stat { text-align: center; }
+.winloss-stat-val { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 500; line-height: 1; }
+.winloss-stat-lbl { font-size: 10px; color: var(--tx2); text-transform: uppercase; letter-spacing: .08em; margin-top: 4px; }
+.winloss-divider { width: 1px; height: 40px; background: var(--bd); }
+.winloss-bar-track {
+  height: 10px; background: var(--s3); border-radius: 99px; overflow: hidden;
+  display: flex; margin-bottom: 8px;
+}
+.winloss-bar-win { height: 100%; background: var(--ok); transition: width .5s ease; }
+.winloss-bar-loss { height: 100%; background: var(--err); transition: width .5s ease; }
+.winloss-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--tx2); }
+.winloss-months { margin-top: 24px; display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; align-items: flex-end; height: 80px; }
+.month-bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; height: 100%; justify-content: flex-end; }
+.month-bar-inner { width: 100%; border-radius: 3px 3px 0 0; min-height: 3px; transition: opacity .15s; cursor: pointer; }
+.month-bar-inner:hover { opacity: .75; }
+.month-lbl { font-size: 8px; color: var(--tx3); text-transform: uppercase; letter-spacing: .04em; }
+
+/* Commission */
+.commission-wrap { padding: 20px 24px; }
+.commission-total { font-family: 'DM Mono', monospace; font-size: 32px; font-weight: 500; color: var(--warn); letter-spacing: -0.02em; margin-bottom: 4px; }
+.commission-sub { font-size: 11px; color: var(--tx2); margin-bottom: 20px; }
+.commission-rows { display: flex; flex-direction: column; gap: 0; }
+.comm-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--bd);
+}
+.comm-row:last-child { border-bottom: none; }
+.comm-row-label { font-size: 12px; color: var(--tx); flex: 1; }
+.comm-row-count { font-size: 11px; color: var(--tx2); min-width: 40px; text-align: right; }
+.comm-row-val { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--warn); min-width: 64px; text-align: right; }
+.comm-bar { height: 3px; background: var(--s3); border-radius: 99px; overflow: hidden; margin-top: 4px; }
+.comm-bar-fill { height: 100%; border-radius: 99px; background: var(--warn); opacity: .6; transition: width .4s; }
+
+/* Region */
+.region-wrap { padding: 20px 24px; }
+.region-map-placeholder {
+  height: 160px; background: var(--s2); border-radius: var(--r-md);
+  border: 1px solid var(--bd); margin-bottom: 16px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.region-rows { display: flex; flex-direction: column; gap: 10px; }
+.region-row { display: flex; flex-direction: column; gap: 4px; }
+.region-row-top { display: flex; align-items: center; justify-content: space-between; }
+.region-row-label { font-size: 12px; color: var(--tx); }
+.region-row-meta { display: flex; align-items: center; gap: 12px; }
+.region-row-val { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--tx2); }
+.region-row-pct { font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; color: var(--tx); }
+.region-bar { height: 3px; background: var(--s3); border-radius: 99px; overflow: hidden; }
+.region-bar-fill { height: 100%; border-radius: 99px; transition: width .5s ease; }
+
+/* Btn */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: var(--r-sm); font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 500; cursor: pointer;
+  transition: opacity .12s, background .12s;
+  border: none; padding: 8px 14px; line-height: 1;
+}
+.btn-ghost { background: var(--s2); color: var(--tx); border: 1px solid var(--bd); }
+.btn-ghost:hover { opacity: .8; }
+
+/* Tooltip */
+.pie-center-label {
+  font-family: 'DM Mono', monospace;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .content { padding: 16px; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .grid-2 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo } = React;
+
+// ── Mock Data ────────────────────────────────────────────────────
+
+const ASSET_COLORS = {
+  'US Hisse':  '#6658ff',
+  'BIST':      '#00d97e',
+  'Kripto':    '#ffb800',
+  'Fon/ETF':   '#ff6b9d',
+  'Tahvil':    '#4ec9e8',
+};
+
+const ASSET_BREAKDOWN = {
+  'US Hisse': [
+    { label: 'Teknoloji',   pct: 52, val: 34200 },
+    { label: 'Finans',      pct: 21, val: 13800 },
+    { label: 'Sağlık',      pct: 15, val: 9850 },
+    { label: 'Enerji',      pct: 12, val: 7880 },
+  ],
+  'BIST': [
+    { label: 'Bankacılık',  pct: 40, val: 8200 },
+    { label: 'Havacılık',   pct: 28, val: 5740 },
+    { label: 'Perakende',   pct: 18, val: 3690 },
+    { label: 'Sanayi',      pct: 14, val: 2870 },
+  ],
+  'Kripto': [
+    { label: 'Bitcoin',     pct: 62, val: 11470 },
+    { label: 'Ethereum',    pct: 24, val: 4440 },
+    { label: 'Diğer',       pct: 14, val: 2590 },
+  ],
+  'Fon/ETF': [
+    { label: 'QQQ',         pct: 55, val: 5940 },
+    { label: 'SPY',         pct: 30, val: 3240 },
+    { label: 'Diğer',       pct: 15, val: 1620 },
+  ],
+  'Tahvil': [
+    { label: 'ABD Hazine',  pct: 70, val: 5250 },
+    { label: 'Özel Sektör', pct: 30, val: 2250 },
+  ],
+};
+
+const OVERALL_ALLOCATION = [
+  { label: 'US Hisse', pct: 42, val: 65730 },
+  { label: 'BIST',     pct: 13, val: 20500 },
+  { label: 'Kripto',   pct: 12, val: 18500 },
+  { label: 'Fon/ETF',  pct: 8,  val: 10800 },
+  { label: 'Tahvil',   pct: 5,  val: 7500  },
+];
+
+const MONTHLY_TRADES = [
+  { month: 'Oca', win: 8,  loss: 3 },
+  { month: 'Şub', win: 5,  loss: 6 },
+  { month: 'Mar', win: 11, loss: 2 },
+  { month: 'Nis', win: 7,  loss: 4 },
+  { month: 'May', win: 9,  loss: 3 },
+  { month: 'Haz', win: 4,  loss: 7 },
+  { month: 'Tem', win: 12, loss: 1 },
+  { month: 'Ağu', win: 6,  loss: 5 },
+  { month: 'Eyl', win: 8,  loss: 4 },
+  { month: 'Eki', win: 10, loss: 2 },
+  { month: 'Kas', win: 7,  loss: 5 },
+  { month: 'Ara', win: 9,  loss: 3 },
+];
+
+const COMMISSION_DATA = [
+  { label: 'US Hisse', trades: 38, amount: 142.5 },
+  { label: 'BIST',     trades: 24, amount: 610.0 },
+  { label: 'Kripto',   trades: 18, amount: 87.3  },
+  { label: 'Fon/ETF',  trades: 12, amount: 18.0  },
+  { label: 'Tahvil',   trades: 6,  amount: 24.0  },
+];
+
+const REGION_DATA = [
+  { label: 'Kuzey Amerika', pct: 48, val: 75200, color: '#6658ff' },
+  { label: 'Türkiye',       pct: 18, val: 28200, color: '#00d97e' },
+  { label: 'Global/ETF',    pct: 14, val: 21900, color: '#4ec9e8' },
+  { label: 'Kripto',        pct: 12, val: 18800, color: '#ffb800' },
+  { label: 'Avrupa',        pct: 8,  val: 12500, color: '#ff6b9d' },
+];
+
+const KPI = [
+  { label: 'Portföy Değeri', value: '$156,730', sub: '+$14,320 bu ay', cls: '' },
+  { label: 'Toplam Kazanç',  value: '+$28,540', sub: '+22.3% getiri',  cls: 'ok' },
+  { label: 'Toplam İşlem',   value: '98',        sub: '12 bu ay',      cls: '' },
+  { label: 'Win Rate',       value: '68%',       sub: '67 kazanan işlem', cls: 'ok' },
+];
+
+// ── SVG Pie ──────────────────────────────────────────────────────
+function polarToXY(cx, cy, r, deg) {
+  const rad = (deg - 90) * Math.PI / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function PieChart({ data, size = 180, innerR = 62, hoveredIdx, setHoveredIdx }) {
+  const cx = size / 2, cy = size / 2, r = size / 2 - 6;
+  let cursor = 0;
+  const slices = data.map((d, i) => {
+    const start = cursor;
+    const sweep = (d.pct / 100) * 360;
+    cursor += sweep;
+    const end = cursor;
+    const s = polarToXY(cx, cy, r, start);
+    const e = polarToXY(cx, cy, r, end);
+    const li = polarToXY(cx, cy, innerR, start);
+    const lo = polarToXY(cx, cy, innerR, end);
+    const large = sweep > 180 ? 1 : 0;
+    const path = [
+      `M ${s.x} ${s.y}`,
+      `A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`,
+      `L ${lo.x} ${lo.y}`,
+      `A ${innerR} ${innerR} 0 ${large} 0 ${li.x} ${li.y}`,
+      'Z'
+    ].join(' ');
+    return { path, color: ASSET_COLORS[d.label] || '#555', d, i };
+  });
+
+  const hov = hoveredIdx !== null ? data[hoveredIdx] : null;
+
+  return (
+    <svg width={size} height={size} style={{overflow:'visible'}}>
+      {slices.map(s => (
+        <path
+          key={s.i}
+          d={s.path}
+          fill={s.color}
+          opacity={hoveredIdx === null ? 1 : hoveredIdx === s.i ? 1 : 0.35}
+          style={{cursor:'pointer', transition:'opacity .2s'}}
+          onMouseEnter={() => setHoveredIdx(s.i)}
+          onMouseLeave={() => setHoveredIdx(null)}
+        />
+      ))}
+      <circle cx={cx} cy={cy} r={innerR - 2} fill="#0c0c0c"/>
+      {hov ? (
+        <>
+          <text x={cx} y={cy - 10} textAnchor="middle" fill="#f0ede8" fontSize="15" fontFamily="DM Mono" fontWeight="500">{hov.pct}%</text>
+          <text x={cx} y={cy + 8} textAnchor="middle" fill="#666" fontSize="9" fontFamily="DM Sans" letterSpacing="1">{hov.label.toUpperCase()}</text>
+          <text x={cx} y={cy + 24} textAnchor="middle" fill="#666" fontSize="9" fontFamily="DM Mono">${hov.val?.toLocaleString()}</text>
+        </>
+      ) : (
+        <>
+          <text x={cx} y={cy - 4} textAnchor="middle" fill="#f0ede8" fontSize="13" fontFamily="DM Mono" fontWeight="500">Dağılım</text>
+          <text x={cx} y={cy + 14} textAnchor="middle" fill="#666" fontSize="9" fontFamily="DM Sans" letterSpacing="1">HOVERla</text>
+        </>
+      )}
+    </svg>
+  );
+}
+
+// ── Region World Mini-Map ────────────────────────────────────────
+function WorldMapSVG() {
+  return (
+    <svg viewBox="0 0 400 200" width="100%" height="100%" style={{opacity:.18}}>
+      {/* simplified landmasses */}
+      <path d="M30 70 Q50 50 90 55 Q110 50 130 65 Q140 75 130 90 Q110 100 80 95 Q50 100 30 85 Z" fill="#666"/>
+      <path d="M130 60 Q160 45 200 50 Q230 48 250 58 Q260 70 255 85 Q240 100 210 100 Q175 105 150 90 Q130 80 130 60 Z" fill="#666"/>
+      <path d="M255 65 Q290 55 320 60 Q345 62 355 75 Q358 88 340 95 Q310 100 280 98 Q255 95 252 80 Z" fill="#666"/>
+      <path d="M80 110 Q100 105 120 115 Q135 125 130 140 Q120 155 100 158 Q80 160 68 148 Q58 135 65 120 Z" fill="#666"/>
+      <path d="M280 105 Q305 100 325 108 Q340 118 335 135 Q325 148 305 150 Q285 150 275 138 Q268 125 275 112 Z" fill="#666"/>
+      <path d="M320 60 Q355 55 375 65 Q385 75 380 90 Q370 100 350 100 Q328 98 320 85 Z" fill="#666"/>
+    </svg>
+  );
+}
+
+// ── Main App ─────────────────────────────────────────────────────
+function App() {
+  const [period, setPeriod] = useState('YTD');
+  const [assetFilter, setAssetFilter] = useState(null);
+  const [pieHov, setPieHov] = useState(null);
+
+  const pieData = assetFilter
+    ? (ASSET_BREAKDOWN[assetFilter] || []).map(d => ({ ...d, label: d.label }))
+    : OVERALL_ALLOCATION;
+
+  // For breakdown pie, use a different color scheme
+  const breakdownColors = ['#6658ff','#a855f7','#4ec9e8','#00d97e','#ffb800'];
+
+  const totalWin  = MONTHLY_TRADES.reduce((a, m) => a + m.win, 0);
+  const totalLoss = MONTHLY_TRADES.reduce((a, m) => a + m.loss, 0);
+  const totalTrades = totalWin + totalLoss;
+  const winPct = Math.round((totalWin / totalTrades) * 100);
+
+  const totalCommission = COMMISSION_DATA.reduce((a, c) => a + c.amount, 0);
+  const maxComm = Math.max(...COMMISSION_DATA.map(c => c.amount));
+  const maxMonthTotal = Math.max(...MONTHLY_TRADES.map(m => m.win + m.loss));
+
+  const navItems = [
+    { label: 'Portföy',    icon: <IconGrid/> },
+    { label: 'İşlemler',   icon: <IconList/> },
+    { label: 'Analiz',     icon: <IconChart/>, active: true },
+    { label: 'Raporlar',   icon: <IconDoc/> },
+    { label: 'Ayarlar',    icon: <IconGear/> },
+  ];
+
+  return (
+    <div className="app">
+      {/* Sidebar */}
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <div className="sidebar-logo-mark">IL</div>
+          <div>
+            <div className="sidebar-logo-text">Investment Ledger</div>
+            <div className="sidebar-logo-sub">Portföy Takip</div>
+          </div>
+        </div>
+        <nav className="nav">
+          {navItems.map(n => (
+            <button key={n.label} className={`nav-item${n.active ? ' active' : ''}`}>
+              {n.icon}
+              <span>{n.label}</span>
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          <div className="user-chip">
+            <div className="user-avatar">AK</div>
+            <div className="user-email">ahmet@mail.com</div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <main className="main">
+        <header className="topbar">
+          <span className="topbar-title">Analiz</span>
+          <div className="topbar-right">
+            <div className="period-bar">
+              {['1A','3A','6A','YTD','1Y','Tümü'].map(p => (
+                <button key={p} className={`period-btn${period===p?' on':''}`} onClick={() => setPeriod(p)}>{p}</button>
+              ))}
+            </div>
+          </div>
+        </header>
+
+        <div className="content">
+
+          {/* KPI strip */}
+          <div className="kpi-grid" style={{marginBottom:24}}>
+            {KPI.map(k => (
+              <div key={k.label} className="kpi-card">
+                <div className="kpi-label">{k.label}</div>
+                <div className={`kpi-value${k.cls ? ' '+k.cls : ''}`}>{k.value}</div>
+                <div className="kpi-sub">{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Row 1: Pie + Win/Loss */}
+          <div className="grid-2 mb16">
+
+            {/* Pie */}
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <div className="card-title">Varlık Dağılımı</div>
+                  <div className="card-sub">
+                    {assetFilter ? `${assetFilter} kırılımı` : 'Genel portföy dağılımı'}
+                  </div>
+                </div>
+                {assetFilter && (
+                  <button className="btn btn-ghost" style={{fontSize:11,padding:'4px 10px'}} onClick={() => { setAssetFilter(null); setPieHov(null); }}>
+                    ← Genel
+                  </button>
+                )}
+              </div>
+              {/* Asset type pills */}
+              {!assetFilter && (
+                <div style={{padding:'12px 20px 0', borderBottom:'1px solid var(--bd)', display:'flex', gap:6, flexWrap:'wrap', paddingBottom:12}}>
+                  {Object.keys(ASSET_BREAKDOWN).map(key => (
+                    <button
+                      key={key}
+                      className="asset-chip"
+                      onClick={() => { setAssetFilter(key); setPieHov(null); }}
+                      style={{borderColor: ASSET_COLORS[key]+'44', color: ASSET_COLORS[key]}}
+                    >
+                      {key}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="pie-layout">
+                <div className="pie-svg-wrap">
+                  <PieChart
+                    data={pieData}
+                    size={170}
+                    innerR={58}
+                    hoveredIdx={pieHov}
+                    setHoveredIdx={setPieHov}
+                  />
+                </div>
+                <div className="pie-legend">
+                  {pieData.map((d, i) => {
+                    const color = assetFilter
+                      ? breakdownColors[i % breakdownColors.length]
+                      : ASSET_COLORS[d.label] || '#555';
+                    return (
+                      <div
+                        key={d.label}
+                        className={`pie-row${pieHov === i ? ' active' : ''}`}
+                        onMouseEnter={() => setPieHov(i)}
+                        onMouseLeave={() => setPieHov(null)}
+                      >
+                        <div className="pie-dot" style={{background: color}}/>
+                        <span className="pie-row-label">{d.label}</span>
+                        <span className="pie-row-val">${d.val?.toLocaleString()}</span>
+                        <span className="pie-row-pct">{d.pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Win / Loss */}
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <div className="card-title">Kazanan / Kaybeden İşlemler</div>
+                  <div className="card-sub">Aylık işlem performansı</div>
+                </div>
+              </div>
+              <div className="winloss-wrap">
+                <div className="winloss-header">
+                  <div className="winloss-stat">
+                    <div className="winloss-stat-val" style={{color:'var(--ok)'}}>{winPct}%</div>
+                    <div className="winloss-stat-lbl">Win Rate</div>
+                  </div>
+                  <div className="winloss-divider"/>
+                  <div className="winloss-stat">
+                    <div className="winloss-stat-val" style={{color:'var(--ok)'}}>{totalWin}</div>
+                    <div className="winloss-stat-lbl">Kazanan</div>
+                  </div>
+                  <div className="winloss-divider"/>
+                  <div className="winloss-stat">
+                    <div className="winloss-stat-val" style={{color:'var(--err)'}}>{totalLoss}</div>
+                    <div className="winloss-stat-lbl">Kaybeden</div>
+                  </div>
+                  <div className="winloss-divider"/>
+                  <div className="winloss-stat">
+                    <div className="winloss-stat-val" style={{color:'var(--tx)'}}>{totalTrades}</div>
+                    <div className="winloss-stat-lbl">Toplam</div>
+                  </div>
+                </div>
+
+                <div className="winloss-bar-track">
+                  <div className="winloss-bar-win" style={{width:`${winPct}%`}}/>
+                  <div className="winloss-bar-loss" style={{width:`${100-winPct}%`}}/>
+                </div>
+                <div className="winloss-labels">
+                  <span style={{color:'var(--ok)'}}>● Kazanan {winPct}%</span>
+                  <span style={{color:'var(--err)'}}>Kaybeden {100-winPct}% ●</span>
+                </div>
+
+                {/* Monthly bars */}
+                <div className="winloss-months">
+                  {MONTHLY_TRADES.map((m, i) => {
+                    const total = m.win + m.loss;
+                    const maxH = 64;
+                    const winH = Math.round((m.win / maxMonthTotal) * maxH);
+                    const lossH = Math.round((m.loss / maxMonthTotal) * maxH);
+                    return (
+                      <div key={m.month} className="month-bar-wrap">
+                        <div style={{display:'flex', flexDirection:'column', gap:1, justifyContent:'flex-end', height: maxH+'px'}}>
+                          <div className="month-bar-inner" style={{height:winH+'px', background:'var(--ok)', opacity:.7, borderRadius:'2px 2px 0 0'}} title={`${m.win} kazanan`}/>
+                          <div className="month-bar-inner" style={{height:lossH+'px', background:'var(--err)', opacity:.5, borderRadius:'0 0 2px 2px'}} title={`${m.loss} kaybeden`}/>
+                        </div>
+                        <div className="month-lbl">{m.month}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Row 2: Commission + Region */}
+          <div className="grid-2">
+
+            {/* Commission */}
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <div className="card-title">Ödenen Komisyon</div>
+                  <div className="card-sub">Seçili dönemde toplam komisyon gideri</div>
+                </div>
+              </div>
+              <div className="commission-wrap">
+                <div className="commission-total">${totalCommission.toFixed(2)}</div>
+                <div className="commission-sub">98 işlemde ortalama ${(totalCommission/98).toFixed(2)} komisyon/işlem</div>
+                <div className="commission-rows">
+                  {COMMISSION_DATA.map(c => (
+                    <div key={c.label} className="comm-row">
+                      <div style={{flex:1}}>
+                        <div style={{display:'flex', justifyContent:'space-between', marginBottom:4}}>
+                          <span className="comm-row-label">{c.label}</span>
+                          <div style={{display:'flex', gap:16, alignItems:'center'}}>
+                            <span className="comm-row-count">{c.trades} işlem</span>
+                            <span className="comm-row-val">${c.amount.toFixed(2)}</span>
+                          </div>
+                        </div>
+                        <div className="comm-bar">
+                          <div className="comm-bar-fill" style={{width: `${(c.amount/maxComm)*100}%`}}/>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Region */}
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <div className="card-title">Bölge Dağılımı</div>
+                  <div className="card-sub">Coğrafi portföy ağırlıkları</div>
+                </div>
+              </div>
+              <div className="region-wrap">
+                <div className="region-rows">
+                  {REGION_DATA.map(r => (
+                    <div key={r.label} className="region-row">
+                      <div className="region-row-top">
+                        <div style={{display:'flex', alignItems:'center', gap:8}}>
+                          <div style={{width:8, height:8, borderRadius:2, background:r.color, flexShrink:0}}/>
+                          <span className="region-row-label">{r.label}</span>
+                        </div>
+                        <div className="region-row-meta">
+                          <span className="region-row-val">${r.val.toLocaleString()}</span>
+                          <span className="region-row-pct">{r.pct}%</span>
+                        </div>
+                      </div>
+                      <div className="region-bar">
+                        <div className="region-bar-fill" style={{width:`${r.pct}%`, background:r.color, opacity:.7}}/>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ── Icons ────────────────────────────────────────────────────────
+function IconGrid() { return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="9" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="1" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.2"/></svg>; }
+function IconList() { return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M2 4h11M2 7.5h11M2 11h11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>; }
+function IconChart() { return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M1 13l4-5 3 3 3-4 3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M1 13h13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>; }
+function IconDoc() { return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><rect x="2.5" y="1" width="10" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.2"/><path d="M5 5h5M5 7.5h5M5 10h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>; }
+function IconGear() { return <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="2" stroke="currentColor" strokeWidth="1.2"/><path d="M7.5 1.5v1M7.5 12.5v1M1.5 7.5h1M12.5 7.5h1M3.3 3.3l.7.7M11 11l.7.7M3.3 11.7l.7-.7M11 4l.7-.7" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>; }
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

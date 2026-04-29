@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-04-29** (Sprint 9 backlog grooming; Volatilite/Kur Riski tamamlandı olarak işaretlendi; Sprint 9 scope: Social Faz 2, CAGR, Portföy P/E, Dayanıklılık Skoru, PWA, agent denetim; +3 yeni görselleştirme item eklendi)
+İlk toplama: **2026-04-24** | Son grooming: **2026-04-29** (Kapsamlı yeni özellik analizi: kullanıcı senaryoları, rakip gap, API boşlukları, otomasyon, sosyal/gamification, monetizasyon — 6 yeni bölüm + mevcut bölümlere 25+ yeni item)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -57,6 +57,20 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 ---
 
+## Watchlist & Alarm Sistemi
+
+> Can şu an portföyde olmayan bir hisseyi takip etmek için SearchTab'dan manuel bakıyor. Hedef fiyata ulaştığında haber yok. Bu bölüm "izlemek istiyorum ama henüz almadım" ve "şu fiyata düşerse al" akışlarını kapsar.
+
+- [ ] **Watchlist (İzleme Listesi)** `[M]` `[P2]` — Portföyde olmayan ticker'ları kaydedebilme; SearchTab non-held sonuçlarına "İzlemeye Ekle" butonu; yeni "İzleme" sub-section altında sparkline + temel metrik satırı; pozisyon eklenmeden fiyat takibi. Yeni `watchlist` Supabase tablosu (user_id, ticker, note, added_at). `price_cache` zaten mevcut → anlık fiyat bedava.
+  - [ ] (a) `watchlist` tablosu + RLS migration; sql-writer `[S]`
+  - [ ] (b) SearchTab "İzlemeye Ekle" CTA; Dashboard'da ayrı "İzleme" collapsible blok (BLOCK_TYPES pattern) `[M]`
+  - [ ] (c) TickerDetailTab'da "İzliyorsunuz" badge + "İzlemeden Çıkar" butonu `[S]`
+
+- [ ] **Hedef Fiyat Bildirimi (Edge Function Alarm)** `[L]` `[P3]` — Kullanıcı ticker için hedef fiyat ve yön (≥ veya ≤) tanımlar; pg_cron job'ı her 6 saatte `price_cache`'i tarar → hedef aşılırsa Supabase `auth.users.email`'e transactional mail (Resend veya Supabase Mailer). `target_prices` tablosu + pg_cron + Resend API key. **Not**: Hedef Fiyat & Değerleme Notu item'ı önce bitmeli (tablo paylaşımı olası).
+  - Bağımlılık: `target_prices` tablosu → "Hedef Fiyat & Değerleme Notu" item'ından alınabilir.
+
+---
+
 ## Bekleyenler / Blokerli
 
 - [ ] **TEFAS WAF testi** `[S]` `[P2]` — Endpoint bulundu: `https://fundturkey.com.tr/api/DB/BindHistoryInfo` (POST, cookie + `X-Requested-With` header zorunlu). Bloker: F5 WAF cloud IP'lerini engelliyor (Nisan 2026 issue #35 — Render.com/AWS'ten robot check). **Test adımı**: Supabase Dashboard → Edge Functions → Test tab'dan doğrudan POST dene. Çalışırsa Sprint 5'e tam entegrasyon girer (edge function FUND dalı + US ETF vs TEFAS ayrımı). Çalışmazsa: RapidAPI wrapper (`rapidapi.com/kbilgen1980/api/tefas2`) fiyatlandırmasına bak veya borsa-mcp proxy üstünden dene.
@@ -74,6 +88,22 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [ ] **FX/GOLD ham ticker normalize** `[S]` `[P2]` — edge function `asset_type:"FX"` ile prefix'siz `USDTRY` gelirse 404 dönüyor sessizce; `C:` autoprefix + length/format guard. Aktif bug değil ama future-proofing.
 - [ ] **BIST price-cache TRY-aware** `[S]` `[P2]` — `prc[ticker]` raw değer; pos.currency="TRY" ile FE doğru sembol seçiyor (şu an sağlam). TRY/USD fx conversion hazırlığı gerekirse bu item devreye girer.
 - [ ] **Vadeli mevduat** `[M]` `[P2]` — faiz oranı, vade, getiri hesabı; provider yok, kullanıcı girer.
+- [ ] **Eurobond / Tahvil takibi** `[M]` `[P2]` — US Treasury + BIST devlet tahvili; kupon tarihleri, vade, YTM (yield to maturity) hesabı; manuel giriş. `asset_type:"BOND"` yeni tip; AddTab'a 7. kart olarak girer. Fiyat beslemesi: Massive `AGG` veya `TLT` ETF proxy (ABD); BIST tahvil için manuel veya Hazine websitesi parse.
+- [ ] **Kripto staking / getiri takibi** `[S]` `[P2]` — Staking kazancını DIV gibi takip etme; `staking_yield` kolonu veya DIV işlemi olarak kaydedilir; TickerDetailTab staking getiri oranı göstergesi. Mevcut `transactions.way:"DIV"` altyapısı yeniden kullanılır — yeni tablo yok.
+- [ ] **DCA Planı (Otomatik Alım Hatırlatıcısı)** `[M]` `[P3]` — Kullanıcı ticker + dönem (haftalık/aylık) + tutar girer; pg_cron job'ı belirlenen günde email hatırlatma gönderir ("THYAO için aylık ₺1000 alım zamanı"). Gerçek işlem tetiklemez — sadece hatırlatıcı. Yeni `dca_plans` tablosu + Resend API.
+
+## Temettü Takvimi
+
+> Mevcut DIV takibi geçmişi kaydediyor ama "önümüzdeki 30 günde hangi hisseden temettü bekliyorum?" sorusunu yanıtlamıyor.
+
+- [ ] **Temettü Takvimi** `[M]` `[P2]` — FMP `/stable/stock/dividends` endpoint'i (ücretsiz tier, ex-date + pay-date + amount döner); tutulan ticker'lar için sonraki temettü tarihini çek; HistoryTab altına "Yaklaşan Temettüler" collapsible bölüm veya TickerDetailTab'da "Sonraki Temettü: 15 Mayıs · $0.24/hisse · Tahmini ₺480" satırı. Mevcut `fetch-fundamentals` edge fn'a yeni mod eklenebilir (`mode:"dividend-calendar"`). Yeni API yok — FMP zaten entegre.
+  - [ ] (a) `fetch-fundamentals` edge fn'a `mode:"dividend-calendar"` dalı; `dividends` array → ex-date, amount `[S]`
+  - [ ] (b) TickerDetailTab: "Sonraki Temettü" satırı (held position varsa) `[S]`
+  - [ ] (c) Dashboard veya HistoryTab: "Bu ay beklenen temettüler" özet satırı `[S]`
+
+- [ ] **Kazanç Takvimi (Earnings Calendar)** `[S]` `[P3]` — FMP `/stable/earning-calendar` endpoint'i; US hisseler için sonraki bilançosu hangi tarihte. TickerDetailTab meta bölümüne "Sonraki Bilanço: 28 Nisan" satırı. Tamamen FMP üzerinden; yeni key gerekmez.
+
+---
 
 ## Görselleştirme
 
@@ -87,6 +117,8 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [ ] **AnalysisTab: Dağılım kartları pie → stacked bar** `[M]` `[P2]` — Varlık Dağılımı, Bölge Dağılımı, Sektör Dağılımı kartlarındaki pie SVG'lerini kaldır; yerine tek satır yatay stacked horizontal bar koy (win/loss görseli pattern'ı). Legend/liste/yüzdeler collapse edilebilir (▾/▴) kalır; bar her zaman açık görünür. 3 kart × CSS değişimi + `buildStackedBar` render helper. Pie SVG artık sadece AnalysisTab'da değil, Varlık Dağılımı'nın tek görseli olarak kalırdı; kaldırılırsa `buildSlicesPath` helper dead code olur — önce kullanım yerlerini denetle.
 - [ ] **Dashboard: Varlık türü filtre bar'ı sticky** `[S]` `[P2]` — `.fbar` chip bar'ı `position:sticky; top: <topbar-height>px` ile topbar'ın hemen altına sabitle; scroll'da kaymasın. Mobile'da `bottom-tabs` yokken düşük `z-index` sorunu olmamalı; topbar `z-index` ile hiyerarşiyi koru. Topbar yüksekliği CSS değişkeni veya `--topbar-h` custom property ile yönetilmeli (hardcoded `px` magic number ekleme).
 - [ ] **Dashboard: Blok bazında toplam ve dönem getiri kartları** `[M]` `[P2]` — Her varlık türü bloğunun (US Hisse, BIST, Kripto, Altın, Döviz) başlığına/altına o bloğun toplam maliyet, piyasa değeri ve seçili dönem getirisi (1G/1H/1A vb.) ekle. `periodReturn` hesabı mevcut dönem seçicisine bağlı kalır — `filteredPos.filter(p => p.type === blockType)` ile blok-spesifik hesap. Birden fazla blokta aynı period mantığı çalışmalı; XIRR blok bazında anlamlı olmayabilir — sadece simple return göster (XIRR sadece portföy toplamında kalsın).
+- [ ] **Fundamental Ratio Trendi (5Y Grafik)** `[M]` `[P2]` — TickerDetailTab'da P/E, P/S, ROE için yıllık trend SVG çizgi grafik; "Bu şirketin F/K değeri son 5 yılda düşüyor mu yükseliyor mu?" sorusunu yanıtlar. FMP `/stable/ratios` annual array zaten `fetch-fundamentals` edge fn'da mevcut (5Y) — sadece frontend rendering yok. `TrendMiniChart` (gelir/kâr için zaten var) aynı pattern ile yeniden kullanılır; yeni fetch yok.
+- [ ] **Portföy Değer Geçmişi (Tarihsel MV)** `[M]` `[P2]` — Mevcut Sparkline sadece `price_cache` anlık verisiyle çiziliyor; tarihsel portföy toplam değeri Supabase'de saklanmıyor. `portfolio_snapshots` tablosu: her gün kapanışta (cron) portföy MV anlık görüntüsü; Dashboard Sparkline'ı bu gerçek geçmişten besle. Büyük mimari değişiklik — Vite geçişinden önce değil ama düşünülmeli. **Uzun vade.**
 
 ## Navigasyon & Sayfalar
 
@@ -100,6 +132,9 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [ ] **Kullanıcı kendi eşiklerini tanımlasın** `[M]` `[P2]` — PE < X, ROE > Y gibi; şu an top-level `FUND_THRESHOLDS` sabit.
 - [x] ~~**Benchmark karşılaştırması**~~ (2026-04-27 Sprint 5) — portföy vs SPY (Massive) + XU100 (Yahoo Finance); BENCHMARKS constant; Dashboard seçili period için getiri gösterimi.
 - [ ] **FMP rate limit guard** `[S]` `[P2]` — free tier sınırını test et + guard ekle.
+- [ ] **Analist Derecelendirme Geçmişi** `[S]` `[P2]` — FMP `/stable/grade` endpoint'i; US hisseler için son 5 analist tavsiyesi (Strong Buy/Buy/Hold/Sell); TickerDetailTab'da küçük tablo. Mevcut FMP entegrasyonu üstünden, yeni key gerekmez; `fetch-fundamentals` edge fn'a yeni alan eklenir. Simply Wall St'in en çok bakılan özelliklerinden biri.
+- [ ] **DCF Hızlı Değerleme** `[M]` `[P3]` — FMP `/stable/discounted-cash-flow` endpoint'i; "Bugünkü adil değer: $145, şu an $132 — %9 ucuz" satırı. FMP free tier'da mevcut. TickerDetailTab fundamental bölümünde alt satır. Value-investing araç olarak doğrudan hedefle örtüşür. Önemli uyarı: DCF varsayıma dayalı; UI'da "tahmini" etiketi zorunlu.
+- [ ] **Snowflake Skor (Çok Boyutlu)** `[L]` `[P3]` — Simply Wall St'in 5-boyut skoru (Değer, Büyüme, Kalite, Borç, Temettü) benzeri; `FUND_THRESHOLDS` + fundamentals cache üstünden her boyuta 0-20 puan; 5-dilimli radar/pentagon SVG. Tamamen frontend hesabı, yeni fetch yok. Büyük UI işi; önce diğer fundamentals tamamlanmalı.
 
 ## Analiz Tab — Yeni Özellikler
 
@@ -136,6 +171,8 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 - [ ] **Vergi Yılı Özeti** `[L]` `[P2]` — Seçilen yılda realized kazanç/kayıp; US short-term (<1Y) / long-term (>=1Y) ayrımı; TR BIST 2 yıl muafiyet kuralı; tahmini vergi. Tarihi FX kuru için Frankfurter historical API.
 - [ ] **Ortalama Elde Tutma Süresi** `[S]` `[P2]` — Pozisyon ve portföy bazında "kaç aydır tutuyorum"; "Portföy ortalaması: 8.3 ay". `transactions` BUY tarihleri, tamamen frontend.
+- [ ] **FIFO / LIFO Maliyet Muhasebesi** `[L]` `[P3]` — Şu an `avg_cost` kullanılıyor; vergi raporlaması için FIFO (ilk alınan ilk satılan) veya LIFO seçeneği. Kısmi satışlarda lot bazlı takip gerekir. Büyük mimari değişiklik (`transactions` tablosu lot ID eklenebilir); vergi danışmanlığı alanı. US/TR farklı muhasebe kuralları.
+- [ ] **Yıllık Portföy Raporu (PDF)** `[L]` `[P3]` — Seçilen yıl için: başlangıç/bitiş portföy değeri, toplam kazanç/kayıp, temettü geliri, komisyon özeti, en iyi/en kötü 3 işlem. Tarayıcı `window.print()` + print CSS; PDF oluşturma için server-side araç gerekmez. Yıl sonu "muhasebe" paylaşım formatı.
 
 ### Risk (Ek)
 
@@ -164,6 +201,23 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 - [ ] **Art Arda Kazanma/Kaybetme Serisi (Streak)** `[S]` `[P3]` — Kapatılmış tüm işlemler (SELL) tarih sırasına göre: kârlı/zararlı zincir; "En uzun kârlı serin 5 ardışık işlem (Mart–Nisan 2025)". Tamamen `transactions` BUY+SELL eşleştirmesi, frontend hesabı; yeni fetch yok. Davranışsal öz-farkındalık; aşırı güven / panik satış pattern'larını ortaya çıkarır.
 - [ ] **Portföy Beta Tahmini** `[M]` `[P2]` — `price_cache.p_w1/m1` hareketlerini benchmark (SPY veya XU100) ile karşılaştırarak pozisyon bazlı yaklaşık beta; ağırlıklı portföy betası "Piyasa %1 düşünce portföyünüz ortalama %X etkiler" cümlesi. Benchmark fiyat geçmişi `fetch-prices` ile çekilir (Massive: SPY; Yahoo: XU100.IS) — küçük ek fetch, sonuç cache'lenebilir. `[Benchmark karşılaştırması]` item tamamlandıktan sonra kolaylaşır.
+- [ ] **Alım Fiyatı Bölgesi Analizi (52W Konumu)** `[S]` `[P2]` — avg_cost'u 52W low/high aralığına yerleştiren yatay progress bar; "İyi giriş (%28 — 52 haftanın alt çeyreğinde)" veya "Tepeden giriş (%89 — 52 haftanın tepesine yakın)". 52W verisi fundamentals cache'te borsa-mcp `high_52w / low_52w` olarak mevcut; yeni fetch yok. Yatırım kalitesi öz-değerlendirmesi için çok somut bir metrik. Hem TickerDetailTab'da hem AnalysisTab Portföy Kalitesi kartında kullanılabilir.
+- [ ] **Kayıp Realizasyonu Analizi (Tax Loss Harvesting Fırsatı)** `[S]` `[P3]` — Şu an zararda olan pozisyonlar + elde tutma süresi birleşimi; "XYZ 2 yıldır zararda — satıp vergi avantajı elde edebilirsiniz" uyarısı. Tamamen `transactions` + `price_cache` frontend hesabı. Vergi dönemi yaklaştıkça (Aralık) kullanıcıya çok somut değer katar.
+
+## Otomasyon & Raporlama
+
+> pg_cron + Supabase edge function altyapısı zaten mevcut. Bu bölümdeki maddeler "kullanıcı uygulamayı açmasa da çalışır" kategorisinde.
+
+- [ ] **Haftalık Portföy Özeti E-postası** `[M]` `[P2]` — Her Pazar sabahı 09:00 pg_cron job'ı: haftanın getirisi, en iyi/en kötü 3 ticker, toplam MV vs önceki haftaya göre değişim; Supabase Mailer veya Resend API ile HTML email. `portfolio_snapshots` tablosu (Pazartesi/Pazar anlık görüntüsü) gerektiriyor — görselleştirme bölümündeki "Portföy Değer Geçmişi" item'ından bağımsız basit versiyon yeterli. **Önce tek satır `portfolio_weekly_snapshot` tablosu dene (user_id, week_start, mv_usd, mv_try, top_gainer, top_loser).**
+  - Bağımlılık: Resend API key (yeni secret); e-posta gönderimi şu an mevcut değil.
+
+- [ ] **Aylık Performans Özetini Kopyala / Paylaş** `[S]` `[P2]` — "Aylık Özet" butonu → metin formatında clipboard'a kopyalar: "Nisan 2026: Portföy +%4.2 · SPY +%2.1 · En iyi: AAPL +%12 · En kötü: GARAN -%3". Supabase gerektirmez; tamamen frontend hesabı; `navigator.clipboard.writeText()`. Sosyal medyada paylaşıma hazır format. **Effort S; tek akşam.**
+
+- [ ] **Stale Fiyat Uyarısı (price_cache yaşı)** `[S]` `[P2]` — `price_cache.updated_at` 24 saatten eski olan ticker'lar için Dashboard'da pozisyon satırına turuncu "Fiyat eski (2 gün)" badge. Şu an sadece topbar "son güncelleme yaşı" var ama per-ticker granülaritesi yok. `updated_at` zaten cache'te mevcut; sadece render mantığı.
+
+- [ ] **Otomatik Split Tespiti** `[L]` `[P3]` — FMP `/stable/historical-price-adjusted` ile mevcut avg_cost'u split-adjusted fiyatla karşılaştır; büyük uyumsuzluk varsa "Bu hisse için split olmuş olabilir — bölünmeyi kaydettiniz mi?" uyarısı. Şu an split'ler manuel giriliyor; unutulan split sessiz hata yaratıyor. Yeni API çağrısı gerekir; risk yüksek (yanlış pozitif mümkün) → sadece çok büyük sapmalar için tetikle (>50%).
+
+---
 
 ## Analiz Tab Açık Alt Görevler
 
@@ -177,11 +231,30 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 ## İçerik
 
-- [ ] **Haber entegrasyonu** `[L]` `[P2]` — ticker bazlı; provider gerek (NewsAPI, Polygon news, benzeri).
+- [ ] **Haber entegrasyonu** `[L]` `[P2]` — ticker bazlı; provider gerek (NewsAPI, Polygon news, benzeri). **Not**: borsa-mcp'nin `get_news` tool'u olup olmadığı kontrol edilmeli — varsa BIST hisseler için bedava.
+- [ ] **AI Portföy Yorumu** `[M]` `[P2]` — "Portföyümü analiz et" butonu → Claude Haiku'ya mevcut positions + fundamentals cache özeti gönderilir; 3-5 cümlelik Türkçe yorum döner ("Portföyünüz büyüme ağırlıklı, ancak teknoloji sektörü konsantrasyonu yüksek..."). `parse-transaction` edge fn altyapısı + rate limiting zaten var; yeni edge fn veya mevcut fn'a yeni mod eklenir. Günde 3 çağrı/kullanıcı limiti (`increment_parse_calls` RPC pattern yeniden kullan). **Değer-odaklı araç kimliğiyle doğrudan uyuşuyor.**
+- [ ] **Borsa Takvimi (Piyasa Tatilleri)** `[S]` `[P3]` — NYSE + BIST tatil günleri; fiyat güncellemesi yokken "Bugün piyasa kapalı" banner. Statik liste (yıllık güncelleme); Supabase gerektirmez. Özellikle hafta sonu + tatil günlerinde "neden fiyat gelmiyor?" sorusu yönetilmiş olur.
 
 ## Öğrenme & Eğitim
 
 - [ ] **Investment Basics modülü** `[L]` `[P2]` — uygulama içi temel finansal okuryazarlık; bileşik faiz, çeşitlendirme, risk-return, DCA, P/E açıklamaları. Kart serisi veya "lesson" formatı. Yeni kullanıcı onboarding ile entegre olabilir. Can'ın kararıyla sonraya ertelendi.
+
+## Gamification & Başarı Sistemi
+
+> Solo kullanıcı bile motivasyon ve öz-farkındalıktan yararlanır. Bu bölüm "sistematik yatırımcı" kimliğini pekiştiren hafif mekanizmalar.
+
+- [ ] **Yatırımcı Rozetleri (Başarı Sistemi)** `[M]` `[P3]` — Belirli eşiklere ulaşınca rozet kazanılır; Settings veya profil modal'da koleksiyon görünümü. Öneri rozet listesi (tamamen frontend hesabı, Supabase veri yeterli):
+  - "İlk İşlem" — ilk BUY kaydedildi
+  - "Çeşitlenmiş" — 5+ farklı asset_type pozisyonu
+  - "Temettü Toplayıcı" — 10+ DIV işlemi
+  - "Uzun Vadeli" — 1+ pozisyon 2 yıldan uzun süre tutuldu
+  - "Değer Yatırımcısı" — P/E < 15 olan 3+ pozisyon (fundamentals cache)
+  - "Disiplinli" — 12 ay üst üste her ay en az 1 BUY
+  - Yeni rozet kazanıldığında flash mesaj ("Yeni rozet: Çeşitlenmiş"). `profiles.badges` JSONB kolonu (opsiyonel — tamamen LS'te de tutulabilir başlangıçta).
+
+- [ ] **Portföy Performans Karşılaştırma (Anonim Leaderboard)** `[L]` `[P3]` — Opt-in; anonim kullanıcıların seçilen period getirileri sıralanır; "Bu ay kullanıcıların %68'inden iyi performans gösterdiniz." Foliok TR benzeri. Sadece Faz 3 (takip sistemi) tamamlandıktan sonra anlamlı; büyük RLS + privacy dikkat.
+
+---
 
 ## Sosyal & Kişiselleştirme
 
@@ -195,6 +268,31 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [ ] **Social Portfolios Faz 4 — Sosyal Feed tab** `[L]` `[P2]` — Yeni "Portföyler" ana sekmesi; "Portföyler" alt sekmesi (public portföyler listesi) + "Aktivite" alt sekmesi (takip edilenlerin son hareketleri); anonim veya kullanıcı adı bazlı. Faz 3 tamamlandıktan sonra.
 - [ ] **Yatırımcı risk profili** `[M]` `[P2]` — anket → muhafazakar / dengeli / agresif.
 - [ ] **Social feed** `[L]` `[P2]` — benzer risk profilindeki yatırımcıların pozisyonları; opt-in, anonim toplam. RLS policy güncellemesi gerektirir. Faz 4 ile birleştirilebilir.
+
+## Monetizasyon (Referans Plan)
+
+> Bu bölüm şu an geliştirme önceliği değil. Can ilerleyen aşamada ücretli plan açmak isterse hangi özelliklerin "premium" olduğuna rehberlik eder. **Kural**: Free plan kullanıcıyı tamamen kaybetmeyecek kadar değerli olmalı; premium kullanıcıyı elde tutacak kadar fark yaratmalı.
+
+**Ücretsiz (Free) Plan — Şu anki tüm temel özellikler:**
+- Tek portföy, sınırsız pozisyon
+- Manuel işlem girişi + AI parse (20/gün)
+- Dashboard, HistoryTab, AnalysisTab temel kartlar
+- BIST + US + Kripto + Altın fiyat takibi
+- 21-metrik fundamental checklist
+- Temettü takibi + CAGR tablosu
+- Haftada 1 e-posta özeti (gelecekte)
+
+**Premium Plan — Ayırt Edici Özellikler:**
+- [ ] **Çoklu portföy yönetimi** `[M]` `[P3]` — Şu an multi-portfolio altyapısı var ama tek aktif portföy; premium'da 5+ portföy arasında geçiş + karşılaştırma dashboard'u. Faz 1 DB altyapısı hazır — sadece UI limit kaldırılır.
+- [ ] **Gelişmiş AI parse limiti** `[S]` `[P3]` — Free: 20/gün → Premium: 100/gün; `parse_calls_today` RPC limit parametresi.
+- [ ] **Vergi Yılı Özeti raporu** `[M]` `[P3]` — PDF export + short/long-term lot bazlı muhasebe; Free'de sadece özet sayılar.
+- [ ] **Gerçek zamanlı fiyat (intraday)** `[L]` `[P3]` — Şu an 6 saatlik cron cache; premium için kullanıcı tetiklemeli anlık fiyat veya 15 dakika gecikmeli; Massive API paid tier gerekir.
+- [ ] **Özel Fundamental Eşikler** `[S]` `[P3]` — Free'de `FUND_THRESHOLDS` sabit; premium'da kendi P/E < X, ROE > Y tanımı.
+- [ ] **Portföy Paylaşım Linki (Branded)** `[S]` `[P3]` — Free portföy: pozisyon sayısı + sektör dağılımı; Premium: ticker listeleri + getiri rakamları + özel slug (`investmentledger.com/@canmerter`).
+
+**Not**: Monetizasyon için Supabase Auth + `profiles.plan` kolonu ("free"/"premium") + RLS satır filtresi yeterli. Stripe entegrasyonu Supabase Webhooks üstünden yapılabilir.
+
+---
 
 ## Hesap Yönetimi
 
@@ -341,10 +439,76 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 - [ ] **SearchTab autoFocus mobile** `[S]` `[P2]` — sekme geçişinde anında klavye açıyor; desktop-only focus + 150ms delay.
 - [ ] **Türkçe/İngilizce term sözlüğü** `[S]` `[P2]` — CLAUDE.md'ye glossary ekle; `period` → `dönem` vb.
 
+## UI Polish & Tutarlılık
+
+> Kapsamlı kod incelemesi — 2026-04-29. Boyut: `[S]`=1-2h / `[M]`=yarım gün / `[L]`=1+ gün. Öncelik: `[P1]`=bug/veri hatası / `[P2]`=görünür tutarsızlık / `[P3]`=iyileştirme.
+
+### Gerçek Buglar (P1)
+
+- [ ] **BreakEven `p.avg_cost` → `p.avgCost`** `[S]` `[P1]` — AnalysisTab BreakEven kartı ~satır 3650: `p.shares * p.avg_cost` yazıyor ama `pos` state'i `avg_cost` → `avgCost` map'liyor (~satır 4532). Tüm başa-baş fiyatları `NaN` dönüyor. Düzeltme: `p.avgCost` kullan.
+- [ ] **AddTxInline toplam önizlemede `$` hardcode** `[S]` `[P1]` — ~satır 888: `Toplam: $X.XX`. BIST/TRY pozisyonlar için yanlış para birimi gösterir. Düzeltme: `displaySym(effCur)` kullan.
+- [ ] **`var(--mono)` CSS değişkeni tanımsız** `[S]` `[P1]` — BreakEven tablo hücreleri ~satır 3683–3694 inline `fontFamily:"var(--mono)"` kullanıyor; `:root`'ta bu token tanımlı değil. Tarayıcı varsayılan sans-serif'e düşüyor. Düzeltme: `"'DM Mono',monospace"` olarak yaz.
+
+### Tasarım Tutarsızlığı — Kart Padding
+
+- [ ] **Kart padding standart dışı** `[S]` `[P2]` — `.card` CSS'i `12px 14px` tanımlarken AnalysisTab kartları `14px 16px`, Dashboard Sparkline/Dönem Bazlı/Kur Riski/Temettü Özeti/6 Aylık `16px 18px` inline override kullanıyor. Tek token (`--card-pad`) ile standardize et ve inline override'ları kaldır.
+
+### Tasarım Tutarsızlığı — Spinner Boyutları
+
+- [ ] **Spinner boyut karmaşası** `[S]` `[P2]` — CSS `.spin` default 18×18; inline'da 11×11 (topbar/health CTA/sektör/dayanıklılık), 12×12 (ManuelPosForm), 14×14 (Settings/Login) var. İki CSS değişkene (`--spin-sm:12px`, `--spin-md:16px`) normalize et. Sprint Audit Backlog Grup 3'teki aynı madde ile birleştir.
+
+### Tasarım Tutarsızlığı — Buton Loading Metni
+
+- [ ] **Yükleniyor metin standardı tutarsız** `[S]` `[P2]` — `"..."`, `"Kaydediliyor..."`, `"Parse ediliyor..."`, `"Okunuyor..."` karışık. Login spin icon'a geçmiş ama form butonları geçmemiş. Kural: kısa buton → spin icon; uzun metin buton → `"Kaydediliyor..."` standart Türkçe metin.
+
+### Tasarım Tutarsızlığı — `.stitle` Inline Override
+
+- [ ] **`.stitle` marginBottom inline override'ları** `[S]` `[P3]` — `.stitle` CSS `marginBottom:10px` tanımlı ama kod içinde 0/4/6/8/12 çakışıyor. Farklı spacing gerekiyorsa `data-tight`/`data-loose` modifier class ekle; aksi halde inline'ları kaldır.
+
+### Tasarım Tutarsızlığı — Renk Çakışması
+
+- [ ] **`CUR_COLORS` `TYPE_COLORS` ile çakışıyor** `[S]` `[P2]` — AnalysisTab Kur Riski ~satır 3989: `USD:"#0a84ff"` (FUND rengi) ve `TRY:"var(--info)"` (#6658ff, brand mor). `USD` için `TYPE_COLORS.US_STOCK` (#30d158 yeşil), `TRY` için `TYPE_COLORS.BIST` (#bf5af2 mor) daha semantik. Kasıtlıysa yorum ekle.
+
+### Boş Durum (Empty State) Tutarsızlığı
+
+- [ ] **TickerDetailTab "işlem yok" div.dim** `[S]` `[P3]` — ~satır 1514: `<div className="dim">Bu ticker için işlem yok.</div>` minimal. Diğer boş durumlar `.empty-card` kullanıyor. Tutarlı hale getir.
+- [ ] **AnalysisTab grafik alanları `.empty` sınıfı** `[S]` `[P3]` — ~satır 3264/3304/3600/3665 `<div className="empty">` kullanılıyor. `.empty-card` ile fark kasıtlıysa CSS tanımını yorumla belgele.
+
+### Erişilebilirlik
+
+- [ ] **Nav öğelerine `aria-label` eksik** `[S]` `[P2]` — `<nav id="bottom-tabs">` (~satır 5422) ve `<nav className="topbar-nav">` (~satır 4783) `aria-label` içermiyor. `aria-label="Ana navigasyon"` ve `aria-label="Mobil navigasyon"` ekle.
+- [ ] **HistoryTab/TickerDetailTab accordion `aria-expanded` eksik** `[M]` `[P2]` — `onClick` ile `open` state toggle eden satırlarda `aria-expanded={open}` yok. Ekran okuyucular genişletme durumunu alamıyor.
+- [ ] **ManuelPosForm sadece USD pozisyonları listeler** `[S]` `[P2]` — ~satır 2402: `pos.filter(p=>p.currency==="USD")` ile "Mevcut Pozisyonlar" TRY/EUR pozisyonlarını göstermiyor. Düzeltme: `pos.filter(p=>p.shares>CFG.DUST_THRESHOLD)` kullan.
+
+### Etkileşim Tutarsızlıkları
+
+- [ ] **EUR tablosu sıralanamıyor** `[S]` `[P2]` — Dashboard USD tablosu `tsort`, TRY tablosu `sortTry` ile sıralanıyor; EUR tablosu (~satır 5157–5176) sadece alfabetik. `sortEur` state ekle. Not: Sprint Audit Backlog'da "EUR tablosu sort" tamamlandı işaretli — kod incelemesinde sort header eksik; işareti kaldır.
+- [ ] **Konsantrasyon Risk satırları `.pos-row` eksik** `[S]` `[P3]` — ~satır 3622: `cursor:"pointer"` inline var ama `.pos-row` class yok, hover efekti yok. `.pos-row` ekle; BreakEven tablosundaki fazla inline `cursor:"pointer"` kaldır.
+- [ ] **HistoryTab filtre toolbar `flexWrap:"wrap"`** `[S]` `[P2]` — ~satır 1984: `flexWrap:"wrap"` dar mobilde select'ler ikinci satıra kayıyor. `.fbar` pattern ile `overflow-x:auto; scrollbar-width:none` yatay kaydırmalı yap.
+
+### Mikrokopi Tutarsızlıkları
+
+- [ ] **Temettü Özeti `dSym` EUR'u atlıyor** `[S]` `[P2]` — ~satır 4068: `const dSym=displayCur==="TRY"?"₺":"$"` EUR'u dikkate almıyor. `displaySym(displayCur)` kullan.
+- [ ] **HistoryTab tarih `fontFamily:"monospace"` sistem fontu** `[S]` `[P3]` — ~satır 2069: `"monospace"` yerine `"'DM Mono',monospace"` kullan. Sprint Audit Backlog Grup 3'teki madde ile birleştir.
+
+### Görsel Hiyerarşi
+
+- [ ] **AnalysisTab 15 kart bölüm başlıkları yok** `[M]` `[P2]` — Dağılım (Varlık/Bölge/Sektör), Risk (Konsantrasyon/BreakEven/MaxPain/KurRiski/Dayanıklılık), Performans (Dönem/6Aylık/CAGR/WinLoss), Gelir (Temettü) gruplarına bölüm başlığı ekle. Collapsible olmayan kartları da ▴/▾ ile tutarlı yap ya da kuralı netleştir.
+- [ ] **Collapsible kural belgesi eksik** `[S]` `[P3]` — Hangi kartlar default kapalı/açık, hangilerinde toggle var yazılı değil. Öneri: ayrıntı içeriği → collapsible; özet KPI → her zaman açık. CLAUDE.md'ye ekle.
+
+### Diğer Kod Kalitesi
+
+- [ ] **`today` değişkeni üst-seviye fonksiyonu gölgeliyor** `[S]` `[P3]` — ~satır 4195 CAGR bileşeninde `const today = new Date().toISOString()...` (string) tanımlanıyor; üst seviyede `const today = ()=>new Date()...` (fonksiyon) var. `todayStr` olarak adlandır.
+- [ ] **PublicView çift padding** `[S]` `[P3]` — ~satır 5235: `<div style={{padding:"16px 16px 80px"}}>` `<main id="app-main">` içinde render oluyor; `app-main` zaten `padding:24px 20px 60px`. Alt padding ~140px'e ulaşıyor. Outer padding kaldır veya `app-main` padding'ini PublicView'da sıfırla.
+
 ## Açık Sorular
 
 - Provider seçimleri ücretsiz mi? Daily rate limit ne? (Massive, FMP free tier sınırı)
 - Social feed için kullanıcı pozisyon paylaşımı → RLS policy güncellemesi mimarisi
+- borsa-mcp'de `get_news` tool'u var mı? → BIST haber entegrasyonu için test et
+- FMP `/stable/discounted-cash-flow` ücretsiz tier'da mı? → DCF değerleme önkoşulu
+- Resend API ücretsiz tier limiti nedir? → Haftalık özet email + hedef fiyat alarmı için
+- `portfolio_snapshots` tablosu ne zaman devreye girmeli? → Sparkline geçmişi + haftalık email önkoşulu
 
 ---
 
@@ -362,3 +526,11 @@ Sprint 9 groomed scope (öncelik sırasına göre — `sprints/sprint-09.md` det
 4. **[Öncelik 4] Piyasa Düşüşü Dayanıklılık Skoru** `[M][P2]` — Borç/Özk + FCF marjı + op marjı → ağırlıklı 1-10 skor; "Portföyünüzün %62'si resesyona dayanıklı" özeti; "Eksikleri Çek" CTA; fundamentals cache'ten; ek fetch yok.
 5. **[Öncelik 5] PWA hazırlığı** `[M][P1]` — `manifest.json` (icon 192/512px, display:standalone) + minimal `service-worker.js` (offline shell cache) + `<link rel="manifest">`; index.html mimarisini bozmaz; "Ana Ekrana Ekle" aktif.
 6. **[Öncelik 6] Periyodik agent denetim turu — 3. tur** `[S][P1]` — Sprint sonu kalite kapısı; rls-auditor (Social Faz 2 yeni politikaları) + client-security-auditor (public portföy view XSS kontrolü) + edge-reviewer.
+
+**Sprint 10+ için Yeni Analiz Sonuçları — Öne Çıkan Adaylar** (2026-04-29 grooming):
+
+- Temettü Takvimi `[M][P2]` — FMP `/stable/dividends` zaten entegre; yeni modal yok
+- Alım Fiyatı Bölgesi Analizi `[S][P2]` — 52W verisi cache'te mevcut; tek akşam
+- Aylık Özet Kopyala/Paylaş `[S][P2]` — clipboard, sıfır backend
+- Analist Derecelendirme Geçmişi `[S][P2]` — FMP grade endpoint; fundamental tab
+- AI Portföy Yorumu `[M][P2]` — Claude Haiku; mevcut rate limit altyapısı

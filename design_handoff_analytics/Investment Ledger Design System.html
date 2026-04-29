@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Investment Ledger — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; font-family: 'DM Sans', sans-serif; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+
+// ─── THEME DEFINITIONS ──────────────────────────────────────────
+const themes = {
+
+  // ── 1. LEDGER CLASSIC ─────────────────────────────────────────
+  // Private banking: deep navy, antique gold, Playfair + Space Grotesk
+  classic: {
+    name: "Ledger Classic",
+    subtitle: "Private banking · editorial · gold accent",
+    colors: {
+      bg:      "#0d0f14",
+      surface: "#141720",
+      raised:  "#1c2030",
+      border:  "rgba(255,255,255,0.07)",
+      border2: "rgba(255,255,255,0.13)",
+      text:    "#e8e4d9",
+      text2:   "#7a7d8c",
+      text3:   "#3d3f4a",
+      accent:  "#c9a84c",
+      accentDim:"rgba(201,168,76,0.12)",
+      ok:      "#4caf6e",
+      err:     "#d95f4b",
+      warn:    "#d9964b",
+      info:    "#4c84c9",
+    },
+    fonts: {
+      heading: "'Playfair Display', Georgia, serif",
+      body:    "'Space Grotesk', sans-serif",
+      mono:    "'DM Mono', 'Fira Code', monospace",
+    },
+    radius: { sm: "4px", md: "6px", lg: "10px" },
+    weights: { normal: 400, medium: 500, semibold: 600, bold: 700 },
+  },
+
+  // ── 2. VOID ───────────────────────────────────────────────────
+  // Terminal fintech: true black, electric indigo, Space Mono
+  void: {
+    name: "Void",
+    subtitle: "Terminal · brutalist · electric indigo",
+    colors: {
+      bg:      "#000000",
+      surface: "#0a0a0a",
+      raised:  "#111111",
+      border:  "rgba(255,255,255,0.06)",
+      border2: "rgba(102,88,255,0.3)",
+      text:    "#f0f0f0",
+      text2:   "#666",
+      text3:   "#333",
+      accent:  "#6658ff",
+      accentDim:"rgba(102,88,255,0.12)",
+      ok:      "#00d97e",
+      err:     "#ff3366",
+      warn:    "#ffb800",
+      info:    "#6658ff",
+    },
+    fonts: {
+      heading: "'Syne', sans-serif",
+      body:    "'Space Grotesk', sans-serif",
+      mono:    "'Space Mono', monospace",
+    },
+    radius: { sm: "2px", md: "4px", lg: "6px" },
+    weights: { normal: 400, medium: 500, semibold: 600, bold: 800 },
+  },
+
+  // ── 4. HYBRID: Void Colors × Sage Fonts ──────────────────────
+  // Siyah zemin, indigo accent, DM Sans + DM Mono, yumuşak radius
+  hybrid: {
+    name: "Hybrid",
+    subtitle: "Void renkleri × Sage fontları — önerilen yön",
+    colors: {
+      bg:       "#000000",
+      surface:  "#0c0c0c",
+      raised:   "#141414",
+      border:   "rgba(255,255,255,0.06)",
+      border2:  "rgba(102,88,255,0.28)",
+      text:     "#f0ede8",
+      text2:    "#666",
+      text3:    "#333",
+      accent:   "#6658ff",
+      accentDim:"rgba(102,88,255,0.12)",
+      ok:       "#00d97e",
+      err:      "#ff3366",
+      warn:     "#ffb800",
+      info:     "#6658ff",
+    },
+    fonts: {
+      heading: "'DM Sans', sans-serif",
+      body:    "'DM Sans', sans-serif",
+      mono:    "'DM Mono', monospace",
+    },
+    radius: { sm: "6px", md: "10px", lg: "16px" },
+    weights: { normal: 300, medium: 400, semibold: 500, bold: 700 },
+  },
+
+  // ── 3. SAGE ───────────────────────────────────────────────────
+  // Calm light: warm off-white, sage green, DM Sans
+  sage: {
+    name: "Sage",
+    subtitle: "Calm · light · humanist · sage green",
+    colors: {
+      bg:      "#f5f4ef",
+      surface: "#ffffff",
+      raised:  "#ede9e0",
+      border:  "rgba(0,0,0,0.07)",
+      border2: "rgba(0,0,0,0.14)",
+      text:    "#1a1a18",
+      text2:   "#6b6b63",
+      text3:   "#b0afa8",
+      accent:  "#4a7c59",
+      accentDim:"rgba(74,124,89,0.1)",
+      ok:      "#3a8c52",
+      err:     "#c04a3a",
+      warn:    "#b07a2a",
+      info:    "#2a6ab0",
+    },
+    fonts: {
+      heading: "'DM Sans', sans-serif",
+      body:    "'DM Sans', sans-serif",
+      mono:    "'DM Mono', monospace",
+    },
+    radius: { sm: "6px", md: "10px", lg: "16px" },
+    weights: { normal: 300, medium: 400, semibold: 500, bold: 600 },
+  },
+};
+
+// ─── DESIGN SYSTEM ARTBOARD ─────────────────────────────────────
+function DSArtboard({ t }) {
+  const c = t.colors, f = t.fonts, r = t.radius;
+
+  const swatch = (color, name, hex) => (
+    <div key={name} style={{ display:"flex", flexDirection:"column", gap:4 }}>
+      <div style={{ width:"100%", aspectRatio:"1.6", borderRadius:r.sm, background:color, border:`1px solid ${c.border2}` }}/>
+      <div style={{ fontSize:9, color:c.text2, fontFamily:f.body, lineHeight:1.3 }}>{name}</div>
+      <div style={{ fontSize:8, color:c.text3, fontFamily:f.mono }}>{hex}</div>
+    </div>
+  );
+
+  const label = (txt) => (
+    <div style={{ fontSize:9, fontFamily:f.body, color:c.text3, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:10, marginTop:20 }}>{txt}</div>
+  );
+
+  const divider = () => (
+    <div style={{ height:"0.5px", background:c.border, margin:"20px 0" }}/>
+  );
+
+  return (
+    <div style={{ background:c.bg, padding:28, fontFamily:f.body, minHeight:900 }}>
+
+      {/* Header */}
+      <div style={{ marginBottom:28 }}>
+        <div style={{ fontSize:22, fontWeight:t.weights.bold, fontFamily:f.heading, color:c.text, letterSpacing:"-0.02em" }}>{t.name}</div>
+        <div style={{ fontSize:11, color:c.text2, marginTop:4, fontFamily:f.body }}>{t.subtitle}</div>
+        <div style={{ display:"flex", gap:8, marginTop:12 }}>
+          <div style={{ height:3, flex:3, background:c.accent, borderRadius:99 }}/>
+          <div style={{ height:3, flex:1, background:c.ok, borderRadius:99 }}/>
+          <div style={{ height:3, flex:1, background:c.err, borderRadius:99 }}/>
+        </div>
+      </div>
+
+      {/* Color palette */}
+      {label("Renk Paleti")}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(5, 1fr)", gap:8, marginBottom:4 }}>
+        {swatch(c.bg,      "BG",      c.bg)}
+        {swatch(c.surface, "Surface", c.surface)}
+        {swatch(c.raised,  "Raised",  c.raised)}
+        {swatch(c.accent,  "Accent",  c.accent)}
+        {swatch(c.text,    "Text",    c.text)}
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4, 1fr)", gap:8 }}>
+        {swatch(c.ok,   "Gain",  c.ok)}
+        {swatch(c.err,  "Loss",  c.err)}
+        {swatch(c.warn, "Warn",  c.warn)}
+        {swatch(c.info, "Info",  c.info)}
+      </div>
+
+      {divider()}
+
+      {/* Typography */}
+      {label("Tipografi")}
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        <div style={{ fontFamily:f.heading, fontSize:28, fontWeight:t.weights.bold, color:c.text, lineHeight:1.1, letterSpacing:"-0.02em" }}>Portfolio Value</div>
+        <div style={{ fontFamily:f.heading, fontSize:18, fontWeight:t.weights.semibold, color:c.text, letterSpacing:"-0.01em" }}>Dashboard Özeti</div>
+        <div style={{ fontFamily:f.body, fontSize:13, fontWeight:t.weights.medium, color:c.text }}>AAPL · Apple Inc. · NASDAQ</div>
+        <div style={{ fontFamily:f.body, fontSize:11, color:c.text2, lineHeight:1.6, maxWidth:280 }}>Yatırım takibi ve portföy analizi için tasarlanmış kişisel muhasebe aracı.</div>
+        <div style={{ display:"flex", gap:16 }}>
+          <span style={{ fontFamily:f.mono, fontSize:18, fontWeight:t.weights.semibold, color:c.text }}>$24,819.40</span>
+          <span style={{ fontFamily:f.mono, fontSize:13, color:c.ok }}>+$1,247.30</span>
+          <span style={{ fontFamily:f.mono, fontSize:13, color:c.ok }}>+5.3%</span>
+        </div>
+        <div style={{ fontSize:9, color:c.text3, fontFamily:f.mono, letterSpacing:"0.05em" }}>
+          {f.heading.split("'")[1] || f.heading.split(",")[0]} · {f.body.split("'")[1] || f.body.split(",")[0]} · {f.mono.split("'")[1] || f.mono.split(",")[0]}
+        </div>
+      </div>
+
+      {divider()}
+
+      {/* Buttons */}
+      {label("Butonlar")}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:12 }}>
+        <button style={{ background:c.accent, border:"none", borderRadius:r.md, color:t.name==="Sage"?"#fff":"#000", fontFamily:f.body, fontSize:12, fontWeight:t.weights.semibold, padding:"8px 16px", cursor:"pointer" }}>İşlem Ekle</button>
+        <button style={{ background:"transparent", border:`1px solid ${c.border2}`, borderRadius:r.md, color:c.text, fontFamily:f.body, fontSize:12, fontWeight:t.weights.medium, padding:"8px 16px", cursor:"pointer" }}>Filtrele</button>
+        <button style={{ background:c.accentDim, border:`1px solid ${c.accent}44`, borderRadius:r.md, color:c.accent, fontFamily:f.body, fontSize:12, fontWeight:t.weights.medium, padding:"8px 16px", cursor:"pointer" }}>Analiz</button>
+        <button style={{ background:"transparent", border:`1px solid ${c.err}44`, borderRadius:r.md, color:c.err, fontFamily:f.body, fontSize:12, fontWeight:t.weights.medium, padding:"7px 14px", cursor:"pointer" }}>Sil</button>
+      </div>
+
+      {/* Badges */}
+      {label("Etiketler / Badges")}
+      <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:4 }}>
+        {[
+          ["BUY",    c.ok,   "rgba(74,175,110,0.12)"],
+          ["SELL",   c.err,  "rgba(217,95,75,0.12)"],
+          ["ETF",    c.info, "rgba(74,132,201,0.12)"],
+          ["CRYPTO", c.warn, "rgba(217,150,75,0.12)"],
+          ["BIST",   c.accent,c.accentDim],
+        ].map(([lbl, col, bg]) => (
+          <span key={lbl} style={{ display:"inline-block", background:bg, color:col, fontFamily:f.mono, fontSize:9, fontWeight:t.weights.semibold, padding:"3px 7px", borderRadius:r.sm, letterSpacing:"0.08em", border:`0.5px solid ${col}33` }}>{lbl}</span>
+        ))}
+      </div>
+
+      {divider()}
+
+      {/* Input */}
+      {label("Form Elemanları")}
+      <div style={{ display:"flex", flexDirection:"column", gap:8, marginBottom:4 }}>
+        <div>
+          <div style={{ fontSize:9, color:c.text2, fontFamily:f.body, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:5 }}>Ticker</div>
+          <div style={{ background:c.surface, border:`1px solid ${c.border2}`, borderRadius:r.md, padding:"9px 12px", fontSize:12, fontFamily:f.mono, color:c.text, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <span>AAPL</span>
+            <span style={{ color:c.text3, fontSize:10 }}>Apple Inc.</span>
+          </div>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+          <div>
+            <div style={{ fontSize:9, color:c.text2, fontFamily:f.body, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:5 }}>Adet</div>
+            <div style={{ background:c.surface, border:`1px solid ${c.accent}55`, borderRadius:r.md, padding:"9px 12px", fontSize:12, fontFamily:f.mono, color:c.text }}>10</div>
+          </div>
+          <div>
+            <div style={{ fontSize:9, color:c.text2, fontFamily:f.body, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:5 }}>Fiyat</div>
+            <div style={{ background:c.surface, border:`1px solid ${c.border2}`, borderRadius:r.md, padding:"9px 12px", fontSize:12, fontFamily:f.mono, color:c.text2 }}>$182.50</div>
+          </div>
+        </div>
+      </div>
+
+      {divider()}
+
+      {/* KPI Cards */}
+      {label("KPI Kartları")}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:4 }}>
+        {[
+          { lbl:"Toplam Değer", val:"$24,819", sub:"+5.3% bugün", ok:true },
+          { lbl:"Toplam P&L",   val:"+$4,247", sub:"Tüm zamanlar", ok:true },
+          { lbl:"XIRR",         val:"18.4%",   sub:"Yıllık getiri", ok:true },
+          { lbl:"Pozisyon",     val:"7",        sub:"Aktif varlık", ok:null },
+        ].map((k, i) => (
+          <div key={i} style={{ background:c.surface, border:`1px solid ${c.border}`, borderRadius:r.lg, padding:"12px 14px" }}>
+            <div style={{ fontSize:9, color:c.text2, fontFamily:f.body, letterSpacing:"0.08em", textTransform:"uppercase", marginBottom:6 }}>{k.lbl}</div>
+            <div style={{ fontFamily:f.mono, fontSize:17, fontWeight:t.weights.semibold, color:k.ok===null?c.text:c.ok, lineHeight:1 }}>{k.val}</div>
+            {k.sub && <div style={{ fontSize:10, color:c.text2, fontFamily:f.body, marginTop:4 }}>{k.sub}</div>}
+          </div>
+        ))}
+      </div>
+
+      {divider()}
+
+      {/* Table */}
+      {label("İşlem Tablosu")}
+      <div style={{ background:c.surface, border:`1px solid ${c.border}`, borderRadius:r.lg, overflow:"hidden" }}>
+        {/* thead */}
+        <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr", padding:"8px 14px", borderBottom:`1px solid ${c.border}` }}>
+          {["Varlık","Adet","Fiyat","Toplam","P&L"].map(h => (
+            <div key={h} style={{ fontSize:9, color:c.text3, fontFamily:f.body, textTransform:"uppercase", letterSpacing:"0.08em", textAlign:h==="Varlık"?"left":"right" }}>{h}</div>
+          ))}
+        </div>
+        {/* rows */}
+        {[
+          { sym:"AAPL", name:"Apple", shares:10, price:182.5, total:1825, pl:247.3 },
+          { sym:"MSFT", name:"Microsoft", shares:5, price:415.2, total:2076, pl:-83.4 },
+          { sym:"QQQ",  name:"Invesco QQQ", shares:8, price:445.0, total:3560, pl:612.0 },
+        ].map((row, i) => (
+          <div key={i} style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr", padding:"10px 14px", borderBottom: i<2 ? `0.5px solid ${c.border}` : "none", alignItems:"center" }}>
+            <div>
+              <div style={{ fontFamily:f.mono, fontSize:12, fontWeight:t.weights.semibold, color:c.text }}>{row.sym}</div>
+              <div style={{ fontFamily:f.body, fontSize:10, color:c.text2, marginTop:1 }}>{row.name}</div>
+            </div>
+            <div style={{ fontFamily:f.mono, fontSize:11, color:c.text, textAlign:"right" }}>{row.shares}</div>
+            <div style={{ fontFamily:f.mono, fontSize:11, color:c.text2, textAlign:"right" }}>${row.price}</div>
+            <div style={{ fontFamily:f.mono, fontSize:11, color:c.text, textAlign:"right" }}>${row.total.toLocaleString()}</div>
+            <div style={{ fontFamily:f.mono, fontSize:11, color:row.pl>=0?c.ok:c.err, textAlign:"right", fontWeight:t.weights.medium }}>
+              {row.pl>=0?"+":""}{row.pl.toFixed(1)}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {divider()}
+
+      {/* Nav Tabs */}
+      {label("Navigasyon")}
+      <div style={{ display:"flex", gap:4, borderBottom:`1px solid ${c.border}`, paddingBottom:0 }}>
+        {["Dashboard","Portföy","İşlemler","Analiz"].map((tab, i) => (
+          <div key={tab} style={{
+            padding:"8px 14px",
+            fontSize:12,
+            fontFamily:f.body,
+            fontWeight: i===0 ? t.weights.semibold : t.weights.normal,
+            color: i===0 ? c.accent : c.text2,
+            borderBottom: i===0 ? `2px solid ${c.accent}` : "2px solid transparent",
+            cursor:"pointer",
+            marginBottom:-1,
+            letterSpacing: "-0.01em",
+          }}>{tab}</div>
+        ))}
+      </div>
+
+      {divider()}
+
+      {/* Spacing tokens */}
+      {label("Spacing & Radius Tokens")}
+      <div style={{ display:"flex", gap:16, alignItems:"flex-end", marginBottom:16 }}>
+        {[4,8,12,16,24,32].map(sp => (
+          <div key={sp} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+            <div style={{ width:sp, height:sp, background:c.accent, borderRadius:2 }}/>
+            <div style={{ fontSize:8, color:c.text3, fontFamily:f.mono }}>{sp}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+        {[r.sm, r.md, r.lg, "9999px"].map((rad, i) => (
+          <div key={i} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+            <div style={{ width:32, height:32, background:c.surface, border:`1px solid ${c.border2}`, borderRadius:rad }}/>
+            <div style={{ fontSize:8, color:c.text3, fontFamily:f.mono }}>{rad}</div>
+          </div>
+        ))}
+      </div>
+
+    </div>
+  );
+}
+
+// ─── MAIN APP ───────────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas title="Investment Ledger — Design System Explorations">
+      <DCSection id="s1" title="Tema Yönleri">
+        {Object.values(themes).map(t => (
+          <DCArtboard key={t.name} id={t.name} label={t.name} width={400} height={1200}>
+            <DSArtboard t={t}/>
+          </DCArtboard>
+        ))}
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

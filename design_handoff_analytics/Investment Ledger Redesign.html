@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Investment Ledger — Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:       #000;
+  --s1:       #0c0c0c;
+  --s2:       #141414;
+  --s3:       #1c1c1c;
+  --bd:       rgba(255,255,255,0.06);
+  --bd2:      rgba(102,88,255,0.28);
+  --tx:       #f0ede8;
+  --tx2:      #666;
+  --tx3:      #333;
+  --ac:       #6658ff;
+  --ac-dim:   rgba(102,88,255,0.12);
+  --ok:       #00d97e;
+  --err:      #ff3366;
+  --warn:     #ffb800;
+  --r-sm:     6px;
+  --r-md:     10px;
+  --r-lg:     16px;
+}
+body {
+  background: var(--bg);
+  color: var(--tx);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--s3); border-radius: 3px; }
+
+/* ── Layout ── */
+.app { display: flex; min-height: 100vh; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: var(--s1);
+  border-right: 1px solid var(--bd);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 20;
+}
+.sidebar-logo {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--bd);
+  display: flex; align-items: center; gap: 10px;
+}
+.sidebar-logo-mark {
+  width: 30px; height: 30px;
+  background: var(--ac);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 700; color: #fff;
+  letter-spacing: -0.05em;
+  flex-shrink: 0;
+}
+.sidebar-logo-text { font-size: 13px; font-weight: 600; color: var(--tx); letter-spacing: -0.02em; }
+.sidebar-logo-sub  { font-size: 10px; color: var(--tx2); margin-top: 1px; }
+
+.nav { padding: 12px 10px; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 10px;
+  border-radius: var(--r-sm);
+  font-size: 13px; font-weight: 400;
+  color: var(--tx2);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+  margin-bottom: 2px;
+  border: none; background: transparent; width: 100%; text-align: left;
+}
+.nav-item:hover { background: var(--s2); color: var(--tx); }
+.nav-item.active { background: var(--ac-dim); color: var(--ac); font-weight: 500; }
+.nav-item svg { flex-shrink: 0; opacity: .7; }
+.nav-item.active svg { opacity: 1; }
+
+.sidebar-footer {
+  padding: 14px 10px;
+  border-top: 1px solid var(--bd);
+}
+.user-chip {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.user-chip:hover { background: var(--s2); }
+.user-avatar {
+  width: 26px; height: 26px;
+  background: var(--ac-dim);
+  border-radius: 50%;
+  border: 1px solid var(--bd2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--ac); font-weight: 600;
+}
+.user-email { font-size: 11px; color: var(--tx2); }
+
+/* ── Main ── */
+.main { margin-left: 220px; flex: 1; min-height: 100vh; }
+.topbar {
+  height: 52px;
+  border-bottom: 1px solid var(--bd);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 28px;
+  position: sticky; top: 0;
+  background: rgba(0,0,0,0.85);
+  backdrop-filter: blur(12px);
+  z-index: 10;
+}
+.topbar-title { font-size: 14px; font-weight: 600; color: var(--tx); letter-spacing: -0.02em; }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+
+.content { padding: 28px; max-width: 1000px; }
+
+/* ── Typography ── */
+.page-heading { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; color: var(--tx); line-height: 1; }
+.page-sub { font-size: 12px; color: var(--tx2); margin-top: 5px; }
+.section-label {
+  font-size: 10px; font-weight: 500; color: var(--tx3);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  margin-bottom: 10px; margin-top: 24px;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  border-radius: var(--r-sm);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: opacity .12s, background .12s;
+  border: none; padding: 8px 14px; line-height: 1;
+}
+.btn:hover { opacity: .8; }
+.btn:active { opacity: .6; }
+.btn-primary { background: var(--ac); color: #fff; }
+.btn-ghost   { background: var(--s2); color: var(--tx); border: 1px solid var(--bd); }
+.btn-outline  { background: transparent; color: var(--ac); border: 1px solid var(--bd2); }
+.btn-danger   { background: transparent; color: var(--err); border: 1px solid rgba(255,51,102,.25); }
+.btn-sm { padding: 6px 10px; font-size: 11px; }
+.btn-xs { padding: 4px 8px; font-size: 10px; }
+
+/* ── KPI Grid ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+@media (max-width: 700px) { .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+.kpi-card {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-lg);
+  padding: 18px 20px;
+  transition: border-color .15s;
+}
+.kpi-card:hover { border-color: var(--bd2); }
+.kpi-label { font-size: 10px; font-weight: 500; color: var(--tx2); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+.kpi-value { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; color: var(--tx); letter-spacing: -0.02em; line-height: 1; }
+.kpi-value.ok  { color: var(--ok); }
+.kpi-value.err { color: var(--err); }
+.kpi-value.ac  { color: var(--ac); }
+.kpi-sub { font-size: 11px; color: var(--tx2); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+.kpi-sub .ok  { color: var(--ok); font-family: 'DM Mono', monospace; font-size: 10px; }
+.kpi-sub .err { color: var(--err); font-family: 'DM Mono', monospace; font-size: 10px; }
+
+/* ── Cards ── */
+.card {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.card-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--bd);
+}
+.card-title { font-size: 13px; font-weight: 600; color: var(--tx); letter-spacing: -0.01em; }
+
+/* ── Sparkline ── */
+.spark-wrap { padding: 12px 20px 16px; }
+
+/* ── Table ── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  font-size: 10px; font-weight: 500; color: var(--tx3);
+  text-transform: uppercase; letter-spacing: .08em;
+  padding: 10px 16px; border-bottom: 1px solid var(--bd);
+  text-align: left; white-space: nowrap;
+}
+thead th.r { text-align: right; }
+tbody td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--bd);
+  font-size: 12px; vertical-align: middle;
+}
+tbody tr:last-child td { border-bottom: none; }
+tbody tr { transition: background .1s; cursor: pointer; }
+tbody tr:hover { background: var(--s2); }
+.mono { font-family: 'DM Mono', monospace; }
+.r { text-align: right; }
+.tx2c { color: var(--tx2); }
+.ok { color: var(--ok); }
+.err { color: var(--err); }
+
+/* Ticker cell */
+.ticker-cell { display: flex; flex-direction: column; gap: 2px; }
+.ticker-sym { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 500; color: var(--tx); }
+.ticker-name { font-size: 10px; color: var(--tx2); }
+
+/* ── Badges ── */
+.badge {
+  display: inline-flex; align-items: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; font-weight: 500;
+  padding: 3px 7px;
+  border-radius: var(--r-sm);
+  letter-spacing: .05em;
+  border: 1px solid transparent;
+}
+.badge-buy  { background: rgba(0,217,126,.1); color: var(--ok);  border-color: rgba(0,217,126,.2); }
+.badge-sell { background: rgba(255,51,102,.1); color: var(--err); border-color: rgba(255,51,102,.2); }
+.badge-etf  { background: rgba(102,88,255,.12); color: var(--ac); border-color: var(--bd2); }
+.badge-cry  { background: rgba(255,184,0,.1); color: var(--warn); border-color: rgba(255,184,0,.2); }
+.badge-bist { background: rgba(102,88,255,.08); color: #9d95ff; border-color: rgba(153,149,255,.2); }
+
+/* ── Progress bar ── */
+.pbar { height: 3px; background: var(--s3); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.pbar-fill { height: 100%; border-radius: 99px; background: var(--ac); transition: width .4s ease; }
+
+/* ── Pie legend ── */
+.pie-legend { display: flex; flex-direction: column; gap: 6px; }
+.pie-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.pie-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.pie-label { font-size: 12px; color: var(--tx); flex: 1; }
+.pie-pct { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--tx2); }
+
+/* ── Input ── */
+.field-label { font-size: 10px; font-weight: 500; color: var(--tx2); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+.input {
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  color: var(--tx);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 400;
+  padding: 10px 13px;
+  width: 100%;
+  outline: none;
+  transition: border-color .15s;
+}
+.input:focus { border-color: var(--ac); }
+.input::placeholder { color: var(--tx3); }
+
+/* ── Tabs (top) ── */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--bd); margin-bottom: 24px; }
+.tab-btn {
+  background: transparent; border: none;
+  padding: 10px 16px; font-size: 13px; font-weight: 400;
+  color: var(--tx2); cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .12s, border-color .12s;
+  font-family: 'DM Sans', sans-serif;
+}
+.tab-btn:hover { color: var(--tx); }
+.tab-btn.on { color: var(--ac); border-bottom-color: var(--ac); font-weight: 500; }
+
+/* ── Modal ── */
+.modal-bg {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; padding: 20px;
+}
+.modal-box {
+  background: var(--s1);
+  border: 1px solid var(--bd2);
+  border-radius: var(--r-lg);
+  padding: 24px 26px;
+  width: 100%; max-width: 380px;
+  box-shadow: 0 30px 80px rgba(0,0,0,.6);
+}
+.modal-title { font-size: 16px; font-weight: 600; margin-bottom: 4px; letter-spacing: -0.02em; }
+.modal-sub { font-size: 12px; color: var(--tx2); margin-bottom: 20px; }
+.form-grid { display: grid; gap: 14px; }
+.form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* ── Flash ── */
+.flash {
+  display: flex; align-items: center; gap: 8px;
+  border-radius: var(--r-md); padding: 10px 14px;
+  font-size: 12px; margin-bottom: 16px;
+}
+.flash.ok  { background: rgba(0,217,126,.08); color: var(--ok); border: 1px solid rgba(0,217,126,.2); }
+.flash.err { background: rgba(255,51,102,.08); color: var(--err); border: 1px solid rgba(255,51,102,.2); }
+
+/* ── Empty state ── */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 60px 20px; text-align: center;
+  color: var(--tx2);
+}
+.empty-state .empty-icon { font-size: 36px; margin-bottom: 14px; opacity: .5; }
+.empty-state .empty-title { font-size: 15px; font-weight: 600; color: var(--tx); margin-bottom: 6px; }
+.empty-state .empty-sub { font-size: 12px; line-height: 1.6; max-width: 260px; margin-bottom: 18px; }
+
+/* ── Login ── */
+.login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+.login-box {
+  width: 100%; max-width: 340px;
+  background: var(--s1);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-lg);
+  padding: 32px 28px;
+}
+.login-logo-mark {
+  width: 40px; height: 40px;
+  background: var(--ac);
+  border-radius: var(--r-md);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 800; color: #fff;
+  margin: 0 auto 16px;
+}
+.login-title { font-size: 20px; font-weight: 700; text-align: center; letter-spacing: -0.03em; margin-bottom: 4px; }
+.login-sub { font-size: 12px; color: var(--tx2); text-align: center; margin-bottom: 26px; }
+
+/* ── Divider ── */
+.divider { height: 1px; background: var(--bd); margin: 20px 0; }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; }
+  .content { padding: 16px; }
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+// ── Mock data ────────────────────────────────────────────────────
+const POSITIONS = [
+  { ticker:"AAPL",  name:"Apple Inc.",        type:"US_STOCK", shares:15,   avgCost:161.2, price:182.5, change:1.3  },
+  { ticker:"MSFT",  name:"Microsoft Corp.",   type:"US_STOCK", shares:8,    avgCost:325.0, price:415.2, change:0.8  },
+  { ticker:"QQQ",   name:"Invesco QQQ ETF",   type:"FUND",     shares:12,   avgCost:398.4, price:445.0, change:1.1  },
+  { ticker:"BTC",   name:"Bitcoin",           type:"CRYPTO",   shares:0.25, avgCost:42000, price:67500, change:-2.4 },
+  { ticker:"THYAO", name:"Türk Hava Yolları", type:"BIST",     shares:500,  avgCost:220,   price:285.5, change:3.2  },
+  { ticker:"NVDA",  name:"NVIDIA Corp.",      type:"US_STOCK", shares:6,    avgCost:480.0, price:875.3, change:2.7  },
+];
+
+const TRANSACTIONS = [
+  { id:1, date:"2024-11-14", ticker:"NVDA", name:"NVIDIA Corp.",      way:"BUY",  shares:3,   price:480,   total:1440,  commission:2 },
+  { id:2, date:"2024-10-22", ticker:"BTC",  name:"Bitcoin",           way:"BUY",  shares:0.1, price:68000, total:6800,  commission:15 },
+  { id:3, date:"2024-09-05", ticker:"AAPL", name:"Apple Inc.",        way:"SELL", shares:5,   price:178,   total:890,   commission:1 },
+  { id:4, date:"2024-08-11", ticker:"QQQ",  name:"Invesco QQQ ETF",   way:"BUY",  shares:4,   price:402,   total:1608,  commission:0 },
+  { id:5, date:"2024-07-19", ticker:"MSFT", name:"Microsoft Corp.",   way:"BUY",  shares:3,   price:318,   total:954,   commission:1.5 },
+  { id:6, date:"2024-06-01", ticker:"THYAO",name:"Türk Hava Yolları", way:"BUY",  shares:200, price:215,   total:43000, commission:50 },
+];
+
+const TYPE_COLORS = { US_STOCK:"#6658ff", FUND:"#00d97e", CRYPTO:"#ffb800", BIST:"#ff3366", GOLD:"#ffd60a", FX:"#666" };
+const TYPE_LABELS = { US_STOCK:"Hisse",   FUND:"ETF/Fon", CRYPTO:"Kripto",  BIST:"BIST",    GOLD:"Altın",   FX:"Döviz" };
+
+const fmt  = (n, d=2) => n==null ? "—" : n.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtD = n => n==null ? "—" : (n>=0?"+$":"-$")+Math.abs(n).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtP = n => n==null ? "—" : (n>=0?"+":"")+n.toFixed(1)+"%";
+const pc   = n => n >= 0 ? "ok" : "err";
+
+// ── Sparkline ────────────────────────────────────────────────────
+function Spark({ up }) {
+  const pts = up
+    ? [0,45, 40,40, 80,42, 120,28, 160,32, 200,15, 240,20, 280,8, 320,12, 360,0]
+    : [0,0,  40,8,  80,5,  120,18, 160,14, 200,30, 240,26, 280,38, 320,35, 360,45];
+  const pStr = pts.reduce((s,v,i)=>s+(i%2===0?` ${v},`:v+" "),"").trim();
+  const aStr = `0,45 ${pStr} 360,45`;
+  const col = up ? "var(--ok)" : "var(--err)";
+  return (
+    <svg viewBox="0 0 360 50" preserveAspectRatio="none" style={{width:"100%",height:50,display:"block"}}>
+      <polygon points={aStr} fill={col} opacity="0.08"/>
+      <polyline points={pStr} fill="none" stroke={col} strokeWidth="1.5" vectorEffect="non-scaling-stroke"/>
+    </svg>
+  );
+}
+
+// ── Pie Chart ────────────────────────────────────────────────────
+function PieChart({ data }) {
+  const total = data.reduce((a,d) => a+d.value, 0);
+  let angle = -90;
+  const slices = data.map(d => {
+    const pct = d.value / total;
+    const deg = pct * 360;
+    const start = angle; angle += deg;
+    return { ...d, pct, deg, start };
+  });
+  const polar = (cx,cy,r,deg) => {
+    const rad = (deg * Math.PI) / 180;
+    return [cx + r*Math.cos(rad), cy + r*Math.sin(rad)];
+  };
+  return (
+    <svg viewBox="0 0 100 100" style={{width:"100%",maxWidth:120,display:"block"}}>
+      {slices.map((s,i) => {
+        const [x1,y1] = polar(50,50,38,s.start);
+        const [x2,y2] = polar(50,50,38,s.start+s.deg);
+        const large = s.deg > 180 ? 1 : 0;
+        const path = `M50,50 L${x1},${y1} A38,38 0 ${large},1 ${x2},${y2} Z`;
+        return <path key={i} d={path} fill={s.color} opacity="0.9"/>;
+      })}
+      <circle cx="50" cy="50" r="22" fill="var(--s1)"/>
+    </svg>
+  );
+}
+
+// ── Icons ────────────────────────────────────────────────────────
+const IcoGrid  = () => <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>;
+const IcoList  = () => <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="3" y1="4" x2="13" y2="4"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="3" y1="12" x2="13" y2="12"/></svg>;
+const IcoChart = () => <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="2,12 6,7 9,10 14,4"/></svg>;
+const IcoPlus  = () => <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2"><line x1="6" y1="1" x2="6" y2="11"/><line x1="1" y1="6" x2="11" y2="6"/></svg>;
+const IcoRefresh = () => <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M12.5 2.5A6 6 0 1 1 7 1h3"/><polyline points="10,1 10,4 7,4"/></svg>;
+
+// ── Add Transaction Modal ────────────────────────────────────────
+function AddModal({ onClose }) {
+  const [form, setForm] = useState({ date: "2024-11-20", way:"BUY", ticker:"", shares:"", price:"", broker:"", commission:"" });
+  const set = k => e => setForm(f => ({...f, [k]: e.target.value}));
+  const total = form.shares && form.price ? (+form.shares * +form.price).toFixed(2) : null;
+  return (
+    <div className="modal-bg" onClick={e => e.target===e.currentTarget && onClose()}>
+      <div className="modal-box">
+        <div className="modal-title">İşlem Ekle</div>
+        <div className="modal-sub">Yeni bir alış veya satış kaydı oluştur</div>
+        <div className="form-grid">
+          <div className="form-row-2">
+            <div>
+              <div className="field-label">Tarih</div>
+              <input className="input" type="date" value={form.date} onChange={set("date")}/>
+            </div>
+            <div>
+              <div className="field-label">İşlem</div>
+              <select className="input" value={form.way} onChange={set("way")} style={{cursor:"pointer"}}>
+                <option value="BUY">Alış</option>
+                <option value="SELL">Satış</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <div className="field-label">Ticker</div>
+            <input className="input" value={form.ticker} onChange={set("ticker")} placeholder="AAPL"/>
+          </div>
+          <div className="form-row-2">
+            <div>
+              <div className="field-label">Adet</div>
+              <input className="input mono" type="number" value={form.shares} onChange={set("shares")} placeholder="0"/>
+            </div>
+            <div>
+              <div className="field-label">Fiyat</div>
+              <input className="input mono" type="number" value={form.price} onChange={set("price")} placeholder="0.00"/>
+            </div>
+          </div>
+          <div className="form-row-2">
+            <div>
+              <div className="field-label">Broker</div>
+              <input className="input" value={form.broker} onChange={set("broker")} placeholder="Akbank"/>
+            </div>
+            <div>
+              <div className="field-label">Komisyon</div>
+              <input className="input mono" type="number" value={form.commission} onChange={set("commission")} placeholder="0"/>
+            </div>
+          </div>
+          {total && <div style={{fontSize:12, color:"var(--tx2)", fontFamily:"'DM Mono',monospace"}}>Toplam: <strong style={{color:"var(--tx)"}}>${total}</strong></div>}
+          <div style={{display:"flex",gap:8,paddingTop:4}}>
+            <button className="btn btn-primary" style={{flex:1}}>Kaydet</button>
+            <button className="btn btn-ghost" onClick={onClose}>İptal</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Dashboard Tab ─────────────────────────────────────────────────
+function DashboardTab({ onAdd }) {
+  const totalMV = POSITIONS.reduce((a,p) => a + p.shares * p.price, 0);
+  const totalCost = POSITIONS.reduce((a,p) => a + p.shares * p.avgCost, 0);
+  const totalPL = totalMV - totalCost;
+  const totalPLPct = (totalPL / totalCost) * 100;
+  const todayPL = POSITIONS.reduce((a,p) => a + p.shares * p.price * (p.change/100), 0);
+
+  // Allocation by type
+  const byType = {};
+  POSITIONS.forEach(p => {
+    const mv = p.shares * p.price;
+    byType[p.type] = (byType[p.type]||0) + mv;
+  });
+  const pieData = Object.entries(byType).map(([type,value]) => ({ type, value, color:TYPE_COLORS[type], label:TYPE_LABELS[type] }));
+
+  return (
+    <div>
+      {/* KPI */}
+      <div className="kpi-grid">
+        <div className="kpi-card">
+          <div className="kpi-label">Portföy Değeri</div>
+          <div className="kpi-value">${fmt(totalMV, 0)}</div>
+          <div className="kpi-sub"><span className={pc(todayPL)}>{fmtD(todayPL)}</span><span style={{color:"var(--tx3)"}}>bugün</span></div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">Toplam P&L</div>
+          <div className={`kpi-value ${pc(totalPL)}`}>{fmtD(totalPL)}</div>
+          <div className="kpi-sub"><span className={pc(totalPLPct)}>{fmtP(totalPLPct)}</span><span style={{color:"var(--tx3)"}}>tüm zamanlar</span></div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">XIRR</div>
+          <div className="kpi-value ac">18.4%</div>
+          <div className="kpi-sub" style={{color:"var(--tx3)"}}>yıllık getiri</div>
+        </div>
+        <div className="kpi-card">
+          <div className="kpi-label">Pozisyon</div>
+          <div className="kpi-value">{POSITIONS.length}</div>
+          <div className="kpi-sub" style={{color:"var(--tx3)"}}>aktif varlık</div>
+        </div>
+      </div>
+
+      {/* Charts row: Sparkline + Pie */}
+      <div style={{display:"grid", gridTemplateColumns:"1fr 260px", gap:12, marginBottom:16}}>
+        {/* Sparkline */}
+        <div className="card">
+          <div className="card-header">
+            <div className="card-title">Portföy Değeri</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"var(--ok)"}}>+18.4% bu yıl</span>
+              <div style={{display:"flex",gap:3}}>
+                {["1H","1A","3A","1Y"].map((p,i) => (
+                  <button key={p} className={`btn btn-xs ${i===1?"btn-outline":"btn-ghost"}`} style={{padding:"3px 8px",fontSize:10}}>{p}</button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="spark-wrap">
+            <Spark up={true}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"var(--tx3)",marginTop:6,fontFamily:"'DM Mono',monospace"}}>
+              {["Oca","Şub","Mar","Nis","May","Haz","Tem","Ağu","Eyl","Eki","Kas","Ara"].map(m=><span key={m}>{m}</span>)}
+            </div>
+          </div>
+        </div>
+
+        {/* Pie */}
+        <div className="card">
+          <div className="card-header"><div className="card-title">Dağılım</div></div>
+          <div style={{padding:"14px 16px",display:"flex",gap:16,alignItems:"center"}}>
+            <div style={{flexShrink:0,width:80}}><PieChart data={pieData}/></div>
+            <div className="pie-legend" style={{flex:1}}>
+              {pieData.sort((a,b)=>b.value-a.value).map(d => (
+                <div key={d.type} className="pie-row" style={{padding:"3px 0"}}>
+                  <div className="pie-dot" style={{background:d.color}}/>
+                  <div className="pie-label" style={{fontSize:11}}>{d.label}</div>
+                  <div className="pie-pct" style={{fontSize:10}}>{((d.value/totalMV)*100).toFixed(1)}%</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Positions table — full width */}
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title">Pozisyonlar</div>
+          <div style={{fontSize:11,color:"var(--tx2)",fontFamily:"'DM Mono',monospace"}}>{POSITIONS.length} varlık · ${fmt(totalMV,0)}</div>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Varlık</th>
+                <th className="r">Adet</th>
+                <th className="r">Ort. Maliyet</th>
+                <th className="r">Güncel Fiyat</th>
+                <th className="r">Piyasa Değeri</th>
+                <th className="r">P&L</th>
+                <th className="r">Değ.</th>
+              </tr>
+            </thead>
+            <tbody>
+              {POSITIONS.map(p => {
+                const mv = p.shares * p.price;
+                const cost = p.shares * p.avgCost;
+                const pl = mv - cost;
+                return (
+                  <tr key={p.ticker}>
+                    <td>
+                      <div className="ticker-cell">
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <span className="ticker-sym">{p.ticker}</span>
+                          {p.type==="FUND"   && <span className="badge badge-etf">ETF</span>}
+                          {p.type==="CRYPTO" && <span className="badge badge-cry">₿</span>}
+                          {p.type==="BIST"   && <span className="badge badge-bist">BIST</span>}
+                        </div>
+                        <span className="ticker-name">{p.name}</span>
+                      </div>
+                    </td>
+                    <td className="r mono tx2c">{p.shares%1===0?p.shares:p.shares.toFixed(4)}</td>
+                    <td className="r mono tx2c">${fmt(p.avgCost)}</td>
+                    <td className="r mono">${fmt(p.price)}</td>
+                    <td className="r mono">${fmt(mv,0)}</td>
+                    <td className={`r mono ${pc(pl)}`}>{fmtD(pl)}</td>
+                    <td className={`r mono ${pc(p.change)}`}>{fmtP(p.change)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Portfolio Tab ─────────────────────────────────────────────────
+function PortfolioTab() {
+  return (
+    <div className="card">
+      <div className="card-header">
+        <div className="card-title">Pozisyonlar</div>
+        <div style={{fontSize:11,color:"var(--tx2)",fontFamily:"'DM Mono',monospace"}}>{POSITIONS.length} varlık</div>
+      </div>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Varlık</th>
+              <th className="r">Adet</th>
+              <th className="r">Ort. Maliyet</th>
+              <th className="r">Güncel Fiyat</th>
+              <th className="r">Piyasa Değeri</th>
+              <th className="r">P&L</th>
+              <th className="r">Değ.</th>
+            </tr>
+          </thead>
+          <tbody>
+            {POSITIONS.map(p => {
+              const mv = p.shares * p.price;
+              const cost = p.shares * p.avgCost;
+              const pl = mv - cost;
+              const plPct = (pl / cost) * 100;
+              return (
+                <tr key={p.ticker}>
+                  <td>
+                    <div className="ticker-cell">
+                      <div style={{display:"flex",alignItems:"center",gap:6}}>
+                        <span className="ticker-sym">{p.ticker}</span>
+                        {p.type==="FUND"   && <span className="badge badge-etf">ETF</span>}
+                        {p.type==="CRYPTO" && <span className="badge badge-cry">₿</span>}
+                        {p.type==="BIST"   && <span className="badge badge-bist">BIST</span>}
+                      </div>
+                      <span className="ticker-name">{p.name}</span>
+                    </div>
+                  </td>
+                  <td className="r mono tx2c">{p.shares%1===0?p.shares:p.shares.toFixed(4)}</td>
+                  <td className="r mono tx2c">${fmt(p.avgCost)}</td>
+                  <td className="r mono">${fmt(p.price)}</td>
+                  <td className="r mono">${fmt(mv,0)}</td>
+                  <td className={`r mono ${pc(pl)}`}>{fmtD(pl)}</td>
+                  <td className={`r mono ${pc(p.change)}`}>{fmtP(p.change)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ── Transactions Tab ──────────────────────────────────────────────
+function TransactionsTab({ onAdd }) {
+  return (
+    <div>
+      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:16}}>
+        <button className="btn btn-primary" onClick={onAdd}><IcoPlus/> İşlem Ekle</button>
+      </div>
+      <div className="card">
+        <div className="card-header">
+          <div className="card-title">İşlem Geçmişi</div>
+          <div style={{fontSize:11,color:"var(--tx2)",fontFamily:"'DM Mono',monospace"}}>{TRANSACTIONS.length} kayıt</div>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tarih</th>
+                <th>Varlık</th>
+                <th>Tip</th>
+                <th className="r">Adet</th>
+                <th className="r">Fiyat</th>
+                <th className="r">Toplam</th>
+                <th className="r">Komisyon</th>
+              </tr>
+            </thead>
+            <tbody>
+              {TRANSACTIONS.map(t => (
+                <tr key={t.id}>
+                  <td className="mono tx2c" style={{fontSize:11}}>{t.date}</td>
+                  <td>
+                    <div className="ticker-cell">
+                      <span className="ticker-sym">{t.ticker}</span>
+                      <span className="ticker-name">{t.name}</span>
+                    </div>
+                  </td>
+                  <td><span className={`badge ${t.way==="BUY"?"badge-buy":"badge-sell"}`}>{t.way==="BUY"?"ALIŞ":"SATIŞ"}</span></td>
+                  <td className="r mono tx2c">{t.shares}</td>
+                  <td className="r mono tx2c">${fmt(t.price)}</td>
+                  <td className="r mono">${fmt(t.total,0)}</td>
+                  <td className="r mono tx2c" style={{fontSize:11}}>${fmt(t.commission,2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Login Screen ──────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [tab, setTab] = useState("login");
+  return (
+    <div className="login-wrap">
+      <div className="login-box">
+        <div className="login-logo-mark">IL</div>
+        <div className="login-title">Investment Ledger</div>
+        <div className="login-sub">Kişisel yatırım takip defteri</div>
+        <div style={{display:"flex",gap:0,marginBottom:20,background:"var(--s2)",borderRadius:"var(--r-md)",padding:3}}>
+          {["login","register"].map(t => (
+            <button key={t} onClick={() => setTab(t)} style={{
+              flex:1, background: tab===t?"var(--s1)":"transparent",
+              border:"none", borderRadius:"calc(var(--r-md) - 2px)",
+              padding:"7px", fontSize:12, fontWeight: tab===t?500:400,
+              color: tab===t?"var(--tx)":"var(--tx2)",
+              cursor:"pointer", fontFamily:"'DM Sans',sans-serif",
+              transition:"background .15s",
+            }}>{t==="login"?"Giriş Yap":"Kayıt Ol"}</button>
+          ))}
+        </div>
+        <div className="form-grid">
+          <div>
+            <div className="field-label">E-posta</div>
+            <input className="input" type="email" placeholder="ornek@mail.com"/>
+          </div>
+          <div>
+            <div className="field-label">Şifre</div>
+            <input className="input" type="password" placeholder="••••••••"/>
+          </div>
+          <button className="btn btn-primary" style={{width:"100%",justifyContent:"center",padding:"11px"}} onClick={onLogin}>
+            {tab==="login"?"Giriş Yap":"Hesap Oluştur"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── App Shell ─────────────────────────────────────────────────────
+function App() {
+  const [screen, setScreen] = useState("login"); // login | app
+  const [tab, setTab] = useState("dashboard");
+  const [showModal, setShowModal] = useState(false);
+
+  if (screen === "login") {
+    return <LoginScreen onLogin={() => setScreen("app")}/>;
+  }
+
+  const navItems = [
+    { id:"dashboard",     label:"Dashboard",   icon:<IcoGrid/> },
+    { id:"portfolio",     label:"Portföy",     icon:<IcoList/> },
+    { id:"transactions",  label:"İşlemler",    icon:<IcoChart/> },
+  ];
+
+  const tabTitles = { dashboard:"Dashboard", portfolio:"Portföy", transactions:"İşlemler" };
+
+  return (
+    <div className="app">
+      {showModal && <AddModal onClose={() => setShowModal(false)}/>}
+
+      {/* Sidebar */}
+      <aside className="sidebar">
+        <div className="sidebar-logo">
+          <div className="sidebar-logo-mark">IL</div>
+          <div>
+            <div className="sidebar-logo-text">Investment Ledger</div>
+            <div className="sidebar-logo-sub">Yatırım takibi</div>
+          </div>
+        </div>
+        <nav className="nav">
+          {navItems.map(item => (
+            <button key={item.id} className={`nav-item ${tab===item.id?"active":""}`} onClick={() => setTab(item.id)}>
+              {item.icon}{item.label}
+            </button>
+          ))}
+          <div className="divider" style={{margin:"12px 0"}}/>
+          <button className="nav-item" onClick={() => setShowModal(true)} style={{color:"var(--ac)"}}>
+            <IcoPlus/> İşlem Ekle
+          </button>
+        </nav>
+        <div className="sidebar-footer">
+          <div className="user-chip">
+            <div className="user-avatar">U</div>
+            <div className="user-email">user@example.com</div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <main className="main">
+        <div className="topbar">
+          <div className="topbar-title">{tabTitles[tab]}</div>
+          <div className="topbar-right">
+            <button className="btn btn-ghost btn-sm"><IcoRefresh/> Güncelle</button>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowModal(true)}><IcoPlus/> Ekle</button>
+          </div>
+        </div>
+        <div className="content">
+          {tab === "dashboard"    && <DashboardTab onAdd={() => setShowModal(true)}/>}
+          {tab === "portfolio"    && <PortfolioTab/>}
+          {tab === "transactions" && <TransactionsTab onAdd={() => setShowModal(true)}/>}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
