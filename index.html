@@ -5147,6 +5147,51 @@ function App({session}){
               </div>
             )}
           </div>
+          {activePortfolioId && portfolios.length > 0 && (()=>{
+            const portfolio = portfolios.find(p => p.id === activePortfolioId);
+            if (!portfolio) return null;
+            const isPublic = portfolio.is_public;
+            const togglePublic = async () => {
+              if (!isPublic) {
+                const ok = await confirm_(
+                  "Portföyünüz herkese açık olacak. Pozisyon listesi (ticker + dağılım) herkes tarafından görülebilir. Devam edilsin mi?",
+                  {okLbl:"Herkese Aç", cancelLbl:"İptal", danger:true}
+                );
+                if (!ok) return;
+              }
+              try {
+                const {error} = await sb.from("portfolios")
+                  .update({is_public: !isPublic, privacy_level: !isPublic ? "public" : "private"})
+                  .eq("id", activePortfolioId)
+                  .eq("user_id", user.id);
+                if (error) throw error;
+                await loadData();
+                flash_(!isPublic ? "Portföy herkese açıldı" : "Portföy gizlendi", "ok");
+              } catch(e) {
+                flash_("Güncelleme başarısız", "err");
+              }
+            };
+            return (
+              <div key="portfolio-section" className="sg">
+                <label>Portföy</label>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,padding:"10px 0"}}>
+                  <div>
+                    <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{portfolio.name}</div>
+                    <div style={{fontSize:11,color:isPublic?"var(--ok)":"var(--text3)",marginTop:3}}>
+                      {isPublic ? "Herkese açık — bağlantısı olan herkes görebilir" : "Sadece siz görebilirsiniz"}
+                    </div>
+                  </div>
+                  <button
+                    className={"btn-sm"+(isPublic?" btn-danger-out":"")}
+                    onClick={togglePublic}
+                    style={{whiteSpace:"nowrap",flexShrink:0}}
+                  >
+                    {isPublic ? "Gizle" : "Herkese Aç"}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
           <div className="sg">
             <label>Pozisyon Bakımı</label>
             <div className="brow">
