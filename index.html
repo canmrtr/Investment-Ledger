@@ -599,10 +599,19 @@ const buildCashflows = (txs, todayMV) => {
 // Stock split'ler: bir işlemin tarihinden SONRA gelen her split'in
 // ratio'su birikimli olarak uygulanır (shares × factor). Toplam cost
 // aynı kalır, shares artar → avg_cost otomatik düşer.
-const rebuildPositions = async (userId) => {
+const rebuildPositions = async (userId, portfolioId = null) => {
+  // portfolioId yoksa DB'den kullanıcının ilk portföyünü al.
+  // Gelecekte: aktif portföy switcher'dan gelir; şimdilik fallback yeterli.
+  let pid = portfolioId;
+  if (!pid) {
+    const {data:pf} = await sb.from("portfolios").select("id").eq("user_id",userId).order("created_at").limit(1).maybeSingle();
+    pid = pf?.id || null;
+  }
+  if (!pid) { DEBUG && console.warn("[rebuildPositions] no portfolio for user",userId); return 0; }
+
   const [txRes,splitRes] = await Promise.all([
-    sb.from("transactions").select("*").eq("user_id",userId).order("date"),
-    sb.from("splits").select("*").eq("user_id",userId)
+    sb.from("transactions").select("*").eq("user_id",userId).eq("portfolio_id",pid).order("date"),
+    sb.from("splits").select("*").eq("user_id",userId).eq("portfolio_id",pid)
   ]);
   const all = txRes.data || [];
   const splits = splitRes.data || [];
@@ -635,11 +644,11 @@ const rebuildPositions = async (userId) => {
     }
   }
   // unit kolonu transaction'da yok; delete öncesi mevcut pozisyonlardan snapshot al.
-  const snapRes = await sb.from("positions").select("ticker,unit").eq("user_id",userId);
+  const snapRes = await sb.from("positions").select("ticker,unit").eq("user_id",userId).eq("portfolio_id",pid);
   const unitMap = Object.fromEntries((snapRes.data||[]).map(p=>[p.ticker,p.unit||null]));
-  await sb.from("positions").delete().eq("user_id",userId);
+  await sb.from("positions").delete().eq("user_id",userId).eq("portfolio_id",pid);
   const np = Object.values(pm).filter(p => p.shares > CFG.DUST_THRESHOLD).map(p => ({
-    user_id: userId, ticker: p.ticker, name: p.name, type: p.type,
+    user_id: userId, portfolio_id: pid, ticker: p.ticker, name: p.name, type: p.type,
     shares: +p.shares.toFixed(6), avg_cost: +(p.cost/p.shares).toFixed(6),
     currency: p.currency, broker: p.broker,
     unit: unitMap[p.ticker] ?? null,
@@ -761,7 +770,7 @@ function SparkChart({data}){
 
 // ── AddTxInline — Detail sayfasından hızlı işlem ekleme ────────
 // Tek ticker için: Manuel form veya AI ile metin parse.
-function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType}){
+function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType,portfolioId}){
   const [mode,setMode]=useState("manuel");
   const E={date:today(),way:"BUY",shares:"",price:"",broker:"",commission:""};
   const [form,setForm]=useState(E);
@@ -791,11 +800,12 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType}){
       total:+(sh*pr).toFixed(4),
       broker:form.broker||"",
       commission:+(form.commission||0),
-      exchange:"",notes:"Detay sayfasından"
+      exchange:"",notes:"Detay sayfasından",
+      portfolio_id:portfolioId
     });
     setSaving(false);
     if(error){flash_(error.message,"err");return;}
-    await rebuildPositions(user.id);await loadData();
+    await rebuildPositions(user.id,portfolioId);await loadData();
     flash_(`${ticker} ${form.way==="BUY"?"alış":"satış"} eklendi ✓`);
     onClose();
   };
@@ -831,11 +841,12 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType}){
       currency:p.currency||effCur,
       total:+((+p.shares)*(+p.price)).toFixed(4),
       broker:p.broker||"",commission:+(p.commission||0),
-      exchange:p.exchange||"",notes:p.notes||""
+      exchange:p.exchange||"",notes:p.notes||"",
+      portfolio_id:portfolioId
     }));
     const{error}=await sb.from("transactions").insert(rows);
     if(error){flash_(error.message,"err");return;}
-    await rebuildPositions(user.id);await loadData();
+    await rebuildPositions(user.id,portfolioId);await loadData();
     const msg=rows.length===1?"İşlem eklendi ✓":`${rows.length} işlem eklendi ✓`;
     flash_(invalidCnt>0?msg+` · ${invalidCnt} geçersiz atlandı`:msg);
     onClose();
@@ -1083,7 +1094,7 @@ const fmtCompact = (n) => {
   return ""+n;
 };
 
-function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,flash_,loadData,closeDetail,hideAmts,mask}){
+function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,flash_,loadData,closeDetail,hideAmts,mask,portfolioId}){
   const [meta,setMeta]=useState(()=>metaCacheGet(ticker));
   const [metaLoading,setMetaLoading]=useState(false);
   const [metaErr,setMetaErr]=useState("");
@@ -1117,13 +1128,13 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       broker:editForm.broker,commission:+(editForm.commission||0),notes:editForm.notes||""
     }).eq("id",t.id).eq("user_id",user.id);
     if(error){flash_(error.message,"err");}
-    else{await rebuildPositions(user.id);await loadData();flash_("Güncellendi ✓");setEditTxId(null);setEditForm({});}
+    else{await rebuildPositions(user.id,portfolioId);await loadData();flash_("Güncellendi ✓");setEditTxId(null);setEditForm({});}
     setSavingTx(false);
   };
   const delTxRow=async(t)=>{
     if(!(await confirm_(`${fmtDateTR(t.date)} tarihli ${t.way==="BUY"?"alış":"satış"} silinsin mi?`,{okLbl:"Sil"})))return;
     await sb.from("transactions").delete().eq("id",t.id).eq("user_id",user.id);
-    await rebuildPositions(user.id);await loadData();flash_("Silindi ✓");
+    await rebuildPositions(user.id,portfolioId);await loadData();flash_("Silindi ✓");
     setExpandedTx(null);
   };
 
@@ -1452,7 +1463,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
         {!showAdd&&<button className="pri btn-sm" onClick={()=>setShowAdd(true)}>+ Ekle</button>}
       </div>
       {showAdd&&(
-        <AddTxInline ticker={ticker} user={user} pos={pos} loadData={loadData} flash_={flash_} onClose={()=>setShowAdd(false)} assetType={effectiveType}/>
+        <AddTxInline ticker={ticker} user={user} pos={pos} loadData={loadData} flash_={flash_} onClose={()=>setShowAdd(false)} assetType={effectiveType} portfolioId={portfolioId}/>
       )}
       {tickerTxs.length===0?(
         <div className="dim" style={{fontSize:13,padding:"14px 0"}}>Bu ticker için işlem yok.</div>
@@ -1768,7 +1779,7 @@ function ConfirmBox({data,onSave,onCancel}){
 }
 
 // ── HistoryTab ───────────────────────────────────────────────────
-function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,openDetail,initialSearch,onConsume,splits}){
+function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,openDetail,initialSearch,onConsume,splits,portfolioId}){
   const [open,setOpen]=useState(()=>initialSearch?{[initialSearch.toUpperCase()]:true}:{});
   const [editId,setEditId]=useState(null);
   const [editForm,setEditForm]=useState({});
@@ -1810,14 +1821,14 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,open
       broker:editForm.broker,commission:+(editForm.commission||0),notes:editForm.notes||""
     }).eq("id",t.id).eq("user_id",user.id);
     if(error){flash_(error.message,"err");}
-    else{await rebuildPositions(user.id);await loadData();flash_("Güncellendi ✓");setEditId(null);}
+    else{await rebuildPositions(user.id,portfolioId);await loadData();flash_("Güncellendi ✓");setEditId(null);}
     setSaving(false);
   };
 
   const delTx=async(t)=>{
     if(!(await confirm_(`${t.ticker} — ${fmtDateTR(t.date)} işlemi silinsin mi?`,{okLbl:"Sil"})))return;
     await sb.from("transactions").delete().eq("id",t.id).eq("user_id",user.id);
-    await rebuildPositions(user.id);await loadData();flash_("Silindi ✓");
+    await rebuildPositions(user.id,portfolioId);await loadData();flash_("Silindi ✓");
   };
 
   if(txs.length===0)return(
@@ -1947,7 +1958,7 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,open
 }
 
 // ── ManuelPosForm ────────────────────────────────────────────────
-function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
+function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,portfolioId}){
   // prefillType: AddTab type-picker'dan gelen başlangıç tipi (US_STOCK/BIST/...).
   // BIST için currency varsayılanı TRY; diğerleri USD. Kullanıcı dropdown'larla
   // istediği zaman değiştirebilir; type değişimi `onChange`'de currency'i de
@@ -2058,7 +2069,8 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
       currency:form.currency,
       total:+(sh*pr).toFixed(4),
       broker:form.broker||"",
-      commission:+(form.commission||0),exchange:"",notes:goldUnitNote
+      commission:+(form.commission||0),exchange:"",notes:goldUnitNote,
+      portfolio_id:portfolioId
     };
     const{error:te}=await sb.from("transactions").insert(tx);
     if(te){flash_(te.message,"err");setSaving(false);return;}
@@ -2072,7 +2084,8 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType}){
       shares:+ns.toFixed(6),avg_cost:+na.toFixed(6),
       currency:form.currency,broker:form.broker||"",
       unit:form.type==="GOLD"?(form.unit||'oz'):null,
-      updated_at:new Date().toISOString()
+      updated_at:new Date().toISOString(),
+      portfolio_id:portfolioId
     },{onConflict:"user_id,ticker"});
 
     await loadData();
@@ -2431,7 +2444,7 @@ const ADD_TYPES = [
   {type:"FX",       label:"Döviz",      desc:"USDTRY, EURUSD"},
 ];
 
-function AddTab({session,user,pos,loadData,flash_,confirm_}){
+function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
   const [pickedType,setPickedType]=useState(null);  // null = picker; set → mode tabs
   const [mode,setMode]=useState("text");
   const [parsed,setParsed]=useState(null);
@@ -2498,11 +2511,12 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
       user_id:user.id,date:p.date,ticker:p.ticker,name:p.name||"",
       asset_type:p.asset_type,way:p.way,shares:+p.shares,price:+p.price,
       currency:p.currency||"USD",total:+((+p.shares)*(+p.price)).toFixed(4),
-      broker:p.broker||"",commission:+(p.commission||0),exchange:p.exchange||"",notes:p.notes||""
+      broker:p.broker||"",commission:+(p.commission||0),exchange:p.exchange||"",notes:p.notes||"",
+      portfolio_id:portfolioId
     }));
     const{error}=await sb.from("transactions").insert(rows);
     if(error){flash_(error.message,"err");return;}
-    await rebuildPositions(user.id);
+    await rebuildPositions(user.id,portfolioId);
     await loadData();
     setParsed(null);setTextInput("");setImgFile(null);
     const msg=rows.length===1?"Kaydedildi ✓":`${rows.length} işlem kaydedildi ✓`;
@@ -2573,7 +2587,8 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
       broker:r.broker||"",
       commission:parseFloat(r.commission)||0,
       exchange:r.exchange||"",
-      notes:r.notes||""
+      notes:r.notes||"",
+      portfolio_id:portfolioId
     }));
     const txInserts=allCsvMapped.filter(r=>{
       const ok=r.shares>0&&isFinite(r.shares)&&r.price>=0&&isFinite(r.price);
@@ -2594,7 +2609,7 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
 
     setProgStep("Pozisyonlar hesaplanıyor...");setProgPct(75);
     setProgStep("Supabase güncelleniyor...");setProgPct(90);
-    const posCount=await rebuildPositions(user.id);
+    const posCount=await rebuildPositions(user.id,portfolioId);
     await loadData();
 
     setProgStep(`✓ ${ok} işlem · ${posCount} pozisyon aktarıldı`+(csvExtraSkip>0?` · ${csvExtraSkip} satır atlandı`:""));
@@ -2729,7 +2744,7 @@ function AddTab({session,user,pos,loadData,flash_,confirm_}){
       )}
 
       {mode==="manuel"&&(
-        <ManuelPosForm key={pickedType} session={session} user={user} pos={pos} loadData={loadData} flash_={flash_} confirm_={confirm_} prefillType={pickedType}/>
+        <ManuelPosForm key={pickedType} session={session} user={user} pos={pos} loadData={loadData} flash_={flash_} confirm_={confirm_} prefillType={pickedType} portfolioId={portfolioId}/>
       )}
     </div>
   );
@@ -3723,6 +3738,10 @@ function App({session}){
   const [txs,setTxs]=useState([]);
   const [splits,setSplits]=useState([]);
   const [profile,setProfile]=useState(null);
+  // Portföy listesi + aktif portföy — Faz 1 altyapı.
+  // activePortfolioId ileride switcher'dan değişir; şimdilik Ana Portföy otomatik seçilir.
+  const [portfolios,setPortfolios]=useState([]);
+  const [activePortfolioId,setActivePortfolioId]=useState(()=>localStorage.getItem("il_active_portfolio")||null);
   const [prc,setPrc_]=useState(()=>{const p=LS.get("il_prc",null);return p?p.p:{};});
   const [pdate,setPdate]=useState(()=>{const p=LS.get("il_prc",null);return p?p.d:"—";});
   const [hist,setHist_]=useState(()=>LS.get("il_hist",{}));
@@ -3831,17 +3850,27 @@ function App({session}){
 
   const loadData=async()=>{
     setBusy(b=>({...b,d:true}));
-    const[pr,tr,sr,pc,pf]=await Promise.all([
+    const[pr,tr,sr,pc,pf,pfls]=await Promise.all([
       sb.from("positions").select("*").eq("user_id",user.id),
       sb.from("transactions").select("*").eq("user_id",user.id).order("date",{ascending:false}),
       sb.from("splits").select("*").eq("user_id",user.id),
       sb.from("price_cache").select("*"),
-      sb.from("profiles").select("*").eq("user_id",user.id).maybeSingle()
+      sb.from("profiles").select("*").eq("user_id",user.id).maybeSingle(),
+      sb.from("portfolios").select("id,name,is_public,privacy_level").eq("user_id",user.id).order("created_at")
     ]);
     if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker,unit:p.unit||null})));
     if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission})));
     if(sr.data)setSplits(sr.data);
     setProfile(pf?.data||null);
+    // Portfolios: validate/set activePortfolioId
+    const plist=pfls.data||[];
+    setPortfolios(plist);
+    if(plist.length){
+      let pid=localStorage.getItem("il_active_portfolio");
+      const pids=plist.map(p=>p.id);
+      if(!pid||!pids.includes(pid)){pid=plist[0].id;localStorage.setItem("il_active_portfolio",pid);}
+      setActivePortfolioId(pid);
+    }
     // Paylaşımlı fiyat cache'ini uygula — LS'teki hist/prc üstüne yazar.
     const cachedSet=new Set((pc.data||[]).map(c=>c.ticker));
     if(pc.data&&pc.data.length){
@@ -4465,7 +4494,7 @@ function App({session}){
 
       {/* HISTORY */}
       {tab==="history"&&(
-        <HistoryTab txs={txs} user={user} loadData={loadData} flash_={flash_} confirm_={confirm_} mask={mask} hideAmts={hide} setTab={setTab} openDetail={openDetail} initialSearch={navTicker} onConsume={()=>setNavTicker("")} splits={splits}/>
+        <HistoryTab txs={txs} user={user} loadData={loadData} flash_={flash_} confirm_={confirm_} mask={mask} hideAmts={hide} setTab={setTab} openDetail={openDetail} initialSearch={navTicker} onConsume={()=>setNavTicker("")} splits={splits} portfolioId={activePortfolioId}/>
       )}
 
 
@@ -4484,7 +4513,7 @@ function App({session}){
 
       {/* ADD */}
       {tab==="add"&&(
-        <AddTab session={session} user={user} pos={pos} loadData={loadData} flash_={flash_} confirm_={confirm_}/>
+        <AddTab session={session} user={user} pos={pos} loadData={loadData} flash_={flash_} confirm_={confirm_} portfolioId={activePortfolioId}/>
       )}
 
       {/* DETAIL — pos-row click ile açılır, tab listesinde yok */}
@@ -4493,7 +4522,7 @@ function App({session}){
           ticker={selectedTicker} assetTypeHint={selectedAssetType}
           pos={pos} txs={txs} prc={prc} hist={hist}
           user={user} confirm_={confirm_} flash_={flash_} loadData={loadData}
-          closeDetail={closeDetail} hideAmts={hide} mask={mask}/>
+          closeDetail={closeDetail} hideAmts={hide} mask={mask} portfolioId={activePortfolioId}/>
       )}
 
       {/* SETTINGS */}
@@ -4549,7 +4578,7 @@ function App({session}){
             <div className="brow">
               <button onClick={async()=>{
                 if(!(await confirm_("Tüm pozisyonlar sıfırlanıp işlemlerden yeniden hesaplanacak. Devam edilsin mi?",{okLbl:"Yeniden Hesapla",danger:true})))return;
-                const n=await rebuildPositions(user.id);
+                const n=await rebuildPositions(user.id,activePortfolioId);
                 await loadData();
                 flash_(`Pozisyonlar yeniden hesaplandı · ${n} pozisyon`);
               }}>♻️ Pozisyonları Yeniden Hesapla</button>
