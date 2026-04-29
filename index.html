@@ -773,7 +773,7 @@ function SparkChart({data}){
 // Tek ticker için: Manuel form veya AI ile metin parse.
 function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType,portfolioId}){
   const [mode,setMode]=useState("manuel");
-  const E={date:today(),way:"BUY",shares:"",price:"",broker:"",commission:""};
+  const E={date:today(),way:"BUY",shares:"",price:"",broker:"",commission:"",notes:""};
   const [form,setForm]=useState(E);
   const [saving,setSaving]=useState(false);
   const [aiText,setAiText]=useState("");
@@ -801,7 +801,7 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType,portfoli
       total:+(sh*pr).toFixed(4),
       broker:form.broker||"",
       commission:+(form.commission||0),
-      exchange:"",notes:"Detay sayfasından",
+      exchange:"",notes:form.notes||"",
       portfolio_id:portfolioId
     });
     setSaving(false);
@@ -870,13 +870,17 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType,portfoli
                 <option value="BUY">Alış</option><option value="SELL">Satış</option><option value="DIV">Temettü</option>
               </select></div>
             <div><div className="kk" style={{marginBottom:3}}>Broker</div>
-              <input className="finp sm" value={form.broker} onChange={e=>setForm(f=>({...f,broker:e.target.value}))} placeholder="Akbank..."/></div>
+              <input className="finp sm" value={form.broker} maxLength={50} onChange={e=>setForm(f=>({...f,broker:e.target.value}))} placeholder="Akbank..."/></div>
             <div><div className="kk" style={{marginBottom:3}}>Adet *</div>
               <input className="finp sm" type="number" step="any" value={form.shares} onChange={e=>setForm(f=>({...f,shares:e.target.value}))} placeholder="0"/></div>
             <div><div className="kk" style={{marginBottom:3}}>Fiyat *</div>
               <input className="finp sm" type="number" step="any" value={form.price} onChange={e=>setForm(f=>({...f,price:e.target.value}))} placeholder="0.00"/></div>
             <div><div className="kk" style={{marginBottom:3}}>Komisyon</div>
               <input className="finp sm" type="number" step="any" value={form.commission} onChange={e=>setForm(f=>({...f,commission:e.target.value}))} placeholder="0"/></div>
+          </div>
+          <div style={{marginBottom:8}}>
+            <div className="kk" style={{marginBottom:3}}>Not (opsiyonel)</div>
+            <input className="finp sm" value={form.notes} maxLength={200} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="e.g. Q1 temettü, ikramiye..."/>
           </div>
           {form.shares&&form.price&&(
             <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: ${fmt((+form.shares)*(+form.price),2)}</div>
@@ -1165,7 +1169,18 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
 
   // Realize / Unrealize / Toplam — bu ticker için tüm zaman
   const totalInvested=tickerTxs.filter(t=>t.way==="BUY").reduce((a,t)=>a+(+t.total+(+t.commission||0)),0);
-  const totalDivIncome=tickerTxs.filter(t=>t.way==="DIV").reduce((a,t)=>a+(+t.total||0),0);
+  const divTxs=tickerTxs.filter(t=>t.way==="DIV").sort((a,b)=>a.date.localeCompare(b.date));
+  const totalDivIncome=divTxs.reduce((a,t)=>a+(+t.total||0),0);
+  // Yıllık temettü tahmini: en az 2 işlem + yeterli zaman aralığı gerekir.
+  const annualDivEst=(()=>{
+    if(divTxs.length<2)return null;
+    const first=new Date(divTxs[0].date),last=new Date(divTxs[divTxs.length-1].date);
+    const years=(last.getTime()-first.getTime())/(365.25*86400000);
+    if(years<0.05)return null;
+    return totalDivIncome/years;
+  })();
+  const yieldOnCost=totalInvested>0&&annualDivEst!=null?(annualDivEst/totalInvested*100):null;
+  const currentYield=mv!=null&&mv>0&&annualDivEst!=null?(annualDivEst/mv*100):null;
   const totalReceived=tickerTxs.filter(t=>t.way==="SELL").reduce((a,t)=>a+(+t.total-(+t.commission||0)),0);
   const totalCommission=tickerTxs.filter(t=>t.way!=="DIV").reduce((a,t)=>a+(+t.commission||0),0);
   const realized=totalReceived+currentCost-totalInvested;
@@ -1282,9 +1297,28 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
           </div>
         </div>
         {totalDivIncome>0&&(
-          <div style={{marginTop:6,padding:"6px 10px",background:"var(--bg3)",borderRadius:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span className="lbl">Temettü Geliri</span>
-            <span className="ok mono" style={{fontSize:13,fontWeight:600}}>{mask("+"+sym+fmt(totalDivIncome,2))}</span>
+          <div style={{marginTop:6,padding:"10px 12px",background:"var(--bg3)",borderRadius:8,border:"1px solid rgba(0,217,126,0.15)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:annualDivEst!=null?6:0}}>
+              <span className="lbl" style={{color:"var(--ok)"}}>Temettü Geliri</span>
+              <span className="ok mono" style={{fontSize:14,fontWeight:600}}>{mask("+"+sym+fmt(totalDivIncome,2))}</span>
+            </div>
+            {annualDivEst!=null&&(
+              <div style={{display:"flex",flexWrap:"wrap",gap:"4px 16px",fontSize:11,color:"var(--text2)"}}>
+                <span data-tip="Geçmiş temettülerden hesaplanan tahmini yıllık gelir" style={{cursor:"help"}}>
+                  Tahmini Yıllık: <span className="ok mono" style={{fontWeight:600}}>{mask(sym+fmt(annualDivEst,2))}</span>
+                </span>
+                {yieldOnCost!=null&&(
+                  <span data-tip="Tahmini yıllık temettü / Toplam maliyet × 100" style={{cursor:"help"}}>
+                    Maliyete Getiri: <span className="ok mono" style={{fontWeight:600}}>{fmtP(yieldOnCost)}</span>
+                  </span>
+                )}
+                {currentYield!=null&&(
+                  <span data-tip="Tahmini yıllık temettü / Piyasa değeri × 100" style={{cursor:"help"}}>
+                    Cari Getiri: <span className="ok mono" style={{fontWeight:600}}>{fmtP(currentYield)}</span>
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         )}
         </React.Fragment>
@@ -1548,7 +1582,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                       <div><div className="kk" style={{marginBottom:3}}>Adet</div><input className="finp sm" type="number" step="any" value={editForm.shares} onChange={e=>setEditForm(f=>({...f,shares:e.target.value}))}/></div>
                       <div><div className="kk" style={{marginBottom:3}}>Fiyat</div><input className="finp sm" type="number" step="any" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))}/></div>
                       <div><div className="kk" style={{marginBottom:3}}>Komisyon</div><input className="finp sm" type="number" step="any" value={editForm.commission} onChange={e=>setEditForm(f=>({...f,commission:e.target.value}))}/></div>
-                      <div style={{gridColumn:"span 3"}}><div className="kk" style={{marginBottom:3}}>Broker</div><input className="finp sm" value={editForm.broker} onChange={e=>setEditForm(f=>({...f,broker:e.target.value}))}/></div>
+                      <div style={{gridColumn:"span 3"}}><div className="kk" style={{marginBottom:3}}>Broker</div><input className="finp sm" maxLength={50} value={editForm.broker} onChange={e=>setEditForm(f=>({...f,broker:e.target.value}))}/></div>
                     </div>
                     <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: {editForm.currency==="TRY"?"₺":"$"}{fmt((+editForm.shares)*(+editForm.price),2)}</div>
                     <div className="brow">
@@ -1926,7 +1960,7 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,open
                       </div>
                       <div><div className="kk" style={{marginBottom:3}}>Adet</div><input className="finp sm" type="number" step="any" value={editForm.shares} onChange={e=>setEditForm(f=>({...f,shares:e.target.value}))}/></div>
                       <div><div className="kk" style={{marginBottom:3}}>Fiyat</div><input className="finp sm" type="number" step="any" value={editForm.price} onChange={e=>setEditForm(f=>({...f,price:e.target.value}))}/></div>
-                      <div><div className="kk" style={{marginBottom:3}}>Broker</div><input className="finp sm" value={editForm.broker} onChange={e=>setEditForm(f=>({...f,broker:e.target.value}))}/></div>
+                      <div><div className="kk" style={{marginBottom:3}}>Broker</div><input className="finp sm" maxLength={50} value={editForm.broker} onChange={e=>setEditForm(f=>({...f,broker:e.target.value}))}/></div>
                       <div><div className="kk" style={{marginBottom:3}}>Komisyon</div><input className="finp sm" type="number" step="any" value={editForm.commission||""} onChange={e=>setEditForm(f=>({...f,commission:e.target.value}))}/></div>
                     </div>
                     <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: {displaySym(editForm.currency)}{fmt((+editForm.shares)*(+editForm.price))}</div>
@@ -2131,7 +2165,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
           <div>
             <div className="kk" style={{marginBottom:4}}>Ticker *</div>
             <div style={{display:"flex",gap:6}}>
-              <input className="finp" style={{textTransform:"uppercase"}} value={form.ticker}
+              <input className="finp" style={{textTransform:"uppercase"}} maxLength={20} value={form.ticker}
                 onChange={e=>{set({ticker:e.target.value.toUpperCase(),name:"",avgCost:""});setCurPrice(null);setPriceNote(null);}}
                 onBlur={e=>e.target.value&&fetchPrice(e.target.value)}
                 placeholder="AAPL" disabled={!!editTk}/>
@@ -2196,7 +2230,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Şirket Adı</div>
-            <input className="finp" value={form.name} onChange={e=>set({name:e.target.value})} placeholder="Apple Inc"/>
+            <input className="finp" maxLength={100} value={form.name} onChange={e=>set({name:e.target.value})} placeholder="Apple Inc"/>
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Varlık Türü</div>
@@ -2247,7 +2281,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Broker</div>
-            <input className="finp" value={form.broker} onChange={e=>set({broker:e.target.value})} placeholder="Akbank, Midas..."/>
+            <input className="finp" maxLength={50} value={form.broker} onChange={e=>set({broker:e.target.value})} placeholder="Akbank, Midas..."/>
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Komisyon</div>
@@ -3847,6 +3881,84 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
             ):(
               <div className="dim" style={{fontSize:12}}>Fiyat verisi eksik — kur hesabı yapılamadı.</div>
             )}
+          </div>
+        );
+      })()}
+
+      {/* ── Kart: Temettü Özeti ──────────────────────────────────── */}
+      {(()=>{
+        const divTxsAll = txs.filter(t=>t.way==="DIV");
+        if(divTxsAll.length===0) return null;
+        // Total income
+        const totalDivAll = divTxsAll.reduce((a,t)=>a+(+t.total||0),0);
+        // Per-ticker breakdown
+        const byTicker = {};
+        divTxsAll.forEach(t=>{
+          if(!byTicker[t.ticker]) byTicker[t.ticker]={ticker:t.ticker,total:0,txs:[]};
+          byTicker[t.ticker].total += (+t.total||0);
+          byTicker[t.ticker].txs.push(t);
+        });
+        const tickerList = Object.values(byTicker).sort((a,b)=>b.total-a.total);
+        // Portfolio-level annual estimate (sum of per-ticker annuals)
+        let annualEstAll = 0; let annualEstCount = 0;
+        tickerList.forEach(tk=>{
+          const sorted = [...tk.txs].sort((a,b)=>a.date.localeCompare(b.date));
+          if(sorted.length<2) return;
+          const years=(new Date(sorted[sorted.length-1].date)-new Date(sorted[0].date))/(365.25*86400000);
+          if(years<0.05) return;
+          annualEstAll += tk.total/years;
+          annualEstCount++;
+        });
+        // Total MV for current yield
+        const priceCurOf=p=>p.type==="BIST"?"TRY":(p.currency==="EUR"?"EUR":"USD");
+        const totalMVAll=pos.reduce((a,p)=>{
+          const pr=prc[p.ticker]; if(pr==null) return a;
+          return a+(cnv(p.shares*pr,priceCurOf(p))||0);
+        },0);
+        const portfolioYield=annualEstCount>0&&totalMVAll>0?(annualEstAll/totalMVAll*100):null;
+        const dSym=displayCur==="TRY"?"₺":"$";
+        return (
+          <div className="card" style={{marginBottom:14,padding:"16px 18px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <div className="stitle">Temettü Özeti</div>
+              <span className="ok mono" style={{fontSize:14,fontWeight:700}}>{mask("+"+dSym+fmt(totalDivAll,2))}</span>
+            </div>
+            <div style={{fontSize:11,color:"var(--text3)",marginBottom:12}}>Gerçekleşen toplam temettü geliri</div>
+            <div style={{display:"flex",gap:16,marginBottom:16,flexWrap:"wrap"}}>
+              {annualEstCount>0&&(
+                <div style={{background:"var(--bg3)",borderRadius:8,padding:"8px 12px",flex:"1 1 120px"}}>
+                  <div className="lbl" style={{marginBottom:4}}>Tahmini Yıllık</div>
+                  <div className="ok mono" style={{fontSize:15,fontWeight:700}}>{mask(dSym+fmt(annualEstAll,2))}</div>
+                  <div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>{annualEstCount} ticker</div>
+                </div>
+              )}
+              {portfolioYield!=null&&(
+                <div style={{background:"var(--bg3)",borderRadius:8,padding:"8px 12px",flex:"1 1 120px"}}>
+                  <div className="lbl" style={{marginBottom:4}}>Portföy Verimi</div>
+                  <div className="ok mono" style={{fontSize:15,fontWeight:700}}>{fmtP(portfolioYield)}</div>
+                  <div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>Yıllık / Piyasa Değeri</div>
+                </div>
+              )}
+            </div>
+            <div className="lbl" style={{marginBottom:8}}>En Çok Temettü</div>
+            {tickerList.slice(0,5).map(tk=>{
+              const pct = totalDivAll>0 ? tk.total/totalDivAll*100 : 0;
+              return (
+                <div key={tk.ticker} style={{marginBottom:7}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
+                    <span className="mono" style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>{tk.ticker}</span>
+                    <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                      <span className="dim" style={{fontSize:11}}>{pct.toFixed(1)}%</span>
+                      <span className="ok mono" style={{fontSize:12,fontWeight:600}}>{mask("+"+dSym+fmt(tk.total,2))}</span>
+                    </div>
+                  </div>
+                  <div style={{height:4,background:"var(--bg3)",borderRadius:2,overflow:"hidden"}}>
+                    <div style={{width:pct+"%",height:"100%",background:"var(--ok)",borderRadius:2,transition:"width 0.4s ease"}}/>
+                  </div>
+                </div>
+              );
+            })}
+            {tickerList.length>5&&<div style={{fontSize:10,color:"var(--text3)",marginTop:6}}>{tickerList.length-5} ticker daha…</div>}
           </div>
         );
       })()}
