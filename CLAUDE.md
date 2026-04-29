@@ -334,7 +334,7 @@ Sticky pos.3 nav sekmesi (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar). 
 
 - Supabase secret adları `SUPABASE_` ile başlayamaz (platform otomatik sağlar): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` zaten edge function runtime'da var.
 - `cron.job_run_details` tablosunda `jobname` kolonu **yok** — `jobid` ile `cron.job`'a join gerekir.
-- `transactions.way` serbest text ama pratikte `BUY`/`SELL`. Dividend için `"DIV"` denenmişti, schema'da CHECK olabilir, revert edildi.
+- `transactions.way` CHECK kısıtı `ANY(ARRAY['BUY','SELL','DIV'])` (003_div_way.sql ile güncellendi). `DIV` artık resmi olarak destekleniyor.
 - **Anon key public**'tir (frontend'de hardcoded OK), **service_role key kesinlikle gizli** — sadece edge function'larda `Deno.env.get(...)` ile.
 - CSV export/import round-trip: virgül/tırnaklı alanlar için `csvEsc()` kullan, aksi halde "Apple, Inc" parçalanır.
 - Edge function `pos` değiştiğinde useEffect ile auto-fetch tetikler → `busy.h/p` guard'ı korunmalı.
@@ -426,6 +426,13 @@ Detaylı liste için **`ROADMAP.md`** dosyasına bakın. Tamamlananlar:
 - ✅ **Kripto/non-BIST market value currency bug fix** (2026-04-27) — `mvDisp` ve `allDisp` artık `priceCur = p.type==="BIST"?"TRY":"USD"` kullanıyor (price_cache: BIST→TRY Yahoo, diğer→USD Massive). `p.currency` stale TRY iken BTC=$18 görünümü düzeltildi. `rebuildPositions` normCur: `BIST→TRY`, `EUR→EUR`, diğer→`USD`. HistoryTab tüm `"$"` hardcode → `displaySym(currency)`.
 - ✅ **Sprint 6 Milestone A+B** (2026-04-29) — Sektör Dağılımı: AnalysisTab mount useEffect auto-fetch + CRYPTO/GOLD/FX/FUND tip bazlı fallback. Period buton wrap: `.fbar` scrollable. Başa Baş Analizi: AnalysisTab kart 7 (komisyon dahil break-even + distPct%). Potansiyel Kayıp Simülasyonu: AnalysisTab kart 8 (%10/20/30 senaryo bar).
 - ✅ **Social Portfolios Faz 1 — Altyapı** (2026-04-29) — `portfolios` tablosu (`id, user_id, name, is_public, privacy_level, created_at, updated_at`); `follows` (follower_id/following_id PK + CHECK self-follow); `portfolio_activities` (buy/sell/position_add/position_remove); `positions`/`transactions`/`splits` tablolarına `portfolio_id UUID NOT NULL` FK (`ON DELETE RESTRICT`); mevcut kullanıcılar için "Ana Portföy" backfill migration (001_portfolios_faz1.sql, Supabase'e apply edildi). RLS: `auth.uid() IS NOT NULL` tüm public read policy'lerinde; `follows` FOR ALL → INSERT + DELETE split (UPDATE vektörü yok); partial index `portfolios(id) WHERE is_public = TRUE`. Frontend: `rebuildPositions(userId, portfolioId)` portfolio-scoped; `loadData` portfolios fetch + `activePortfolioId` LS sync; `AddTxInline`/`TickerDetailTab`/`HistoryTab`/`AddTab`/`ManuelPosForm`/`ManuelPosForm` bileşenlerine `portfolioId` prop threading; tüm transaction/position insert'lerine `portfolio_id` eklendi.
+- ✅ **Sprint 7: Güvenlik sertleştirme** (2026-04-29) — `parse-transaction` edge fn sunucu tarafında JWT doğrulama (`auth.getUser(token)`) + `increment_parse_calls` RPC; RLS hardening migration `002_rls_fixes.sql` (positions_public_read privacy_level filtresi, positions/transactions/splits owner policy portfolio_id sahiplik subquery, activities_owner_insert cross-portfolio zehirleme kapatıldı, portfolios_owner_all → 4 per-command policy, splits RLS enable); fetch-prices ticker validation regex; tüm edge fn `Access-Control-Allow-Methods` header eklendi.
+- ✅ **Dividend (DIV) işlem takibi** (2026-04-29) — `transactions.way` CHECK kısıtı `['BUY','SELL','DIV']` (003_div_way.sql); Dashboard Total Return'e temettü cashflow dahil; XIRR cashflow'u `DIV = +total` (komisyon çıkarılmaz); HistoryTab grup net hesabı DIV pozitif; CSV allowlist güncellendi; way dropdownlarına "Temettü" seçeneği.
+- ✅ **Risk Dashboard — 3 yeni AnalysisTab kartı** (2026-04-29) — Dönem Bazlı Getiri (MV-ağırlıklı 1G/1H/1A/3A/6A/1Y portföy + benchmark SPY/XU100); FX Risk (USD/EUR/TRY dağılım bar + USDTRY +10% simülasyon); 6 Aylık Performans (p_m6 bazlı en iyi/en kötü 3 + ağırlıklı portföy getirisi).
+- ✅ **Sprint 8: Temettü Getiri Projeksiyonu** (2026-04-29) — TickerDetailTab "Temettü Geliri" kartı genişletildi: tahmini yıllık gelir (≥2 div tx'ten), maliyete getiri %, cari getiri %; AnalysisTab yeni "Temettü Özeti" kartı: toplam gelir KPI + portföy verimi + top-5 ödeyici bar chart (sadece DIV tx varken görünür).
+- ✅ **UX polish bundle** (2026-04-29) — AddTxInline manuel form'a "Not" input alanı; `notes` artık "Detay sayfasından" hardcode yerine kullanıcıdan alınıyor; broker `maxLength={50}` (AddTxInline/HistoryTab×2/ManuelPosForm), ticker `maxLength={20}`, name `maxLength={100}` (ManuelPosForm).
+- ✅ **AnalysisTab pie kartları yeniden tasarlandı** (2026-04-29) — Varlık Dağılımı, Bölge Dağılımı, Sektör Dağılımı: pie üstte ortalı (140×140), legend tam genişlikte altında; her kart ▴/▾ toggle ile collapsible; kapalı halde özet satır (tür sayısı + toplam).
+- ✅ **Dashboard ETF/₿ rozetleri kaldırıldı** (2026-04-29) — Pozisyon satırlarındaki ETF ve kripto rozetleri gereksiz gürültü yarattığı için kaldırıldı. Rozetler TickerDetailTab ve SearchTab'da korunuyor.
 
 Açık başlıklar (detay için `ROADMAP.md`):
 - **TR altın işçilik premium göstergesi** — Reşat/Ata birimi + Dashboard "Spot saf · Premium %" render
@@ -433,6 +440,6 @@ Açık başlıklar (detay için `ROADMAP.md`):
 - **FX/GOLD ham ticker normalize** — edge function future-proofing
 - **Sektör-aware fundamental eşikler** — tech P/E ≤30, utility ≤15 vs.
 - **EDGAR + market price** — P/E ve P/S için CommonStockSharesOutstanding × current price
-- **Periyodik agent denetim turu** — her 2-3 sprint; bir sonraki Sprint 6 sonu
+- **Social Portfolios Faz 2** — is_public toggle + UserProfileModal + public portföy RLS okuma
 - **Sosyal**: risk profili, anonim feed (privacy gerektirir)
 - **Eğitim**: Investment Basics modülü
