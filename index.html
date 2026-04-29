@@ -4440,7 +4440,7 @@ function App({session}){
   const [sort,setSort]=useState({by:"plPct",dir:"desc"});
   const [sortTry,setSortTry]=useState({by:"plPct",dir:"desc"});
   const [dashTypeFilter,setDashTypeFilter]=useState(()=>BLOCK_TYPES.map(b=>b.type));
-  const [collapsedBlocks,setCollapsedBlocks]=useState(new Set());
+  const [collapsedBlocks,setCollapsedBlocks]=useState(()=>new Set(BLOCK_TYPES.map(b=>b.type)));
   const [distMode,setDistMode]=useState("mv"); // "cost" | "mv" — pie chart mode
   const [busy,setBusy]=useState({p:false,h:false,d:false});
   const [pprog,setPprog]=useState("");
