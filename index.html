@@ -4798,7 +4798,7 @@ function App({session}){
                             : fmtShares(p.shares);
                           return(
                           <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
-                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}{cfg.badge==="etf"&&<span className="badge etf">ETF</span>}{cfg.badge==="cry"&&<span className="badge cry">₿</span>}</span><span className="tname">{p.name}</span></div></td>
+                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span></div></td>
                             {!hide&&<td className="r">{displayShares}{goldUnit&&goldUnit.key!=="oz"&&<span className="dim" style={{fontSize:10,marginLeft:3}}>{goldUnit.label}</span>}</td>}
                             {!hide&&<td className="r">{mask(cfg.sym+fmt(p.avgCost))}</td>}
                             {!hide&&<td className="r">{p.price?mask(cfg.sym+fmt(p.price)):"—"}</td>}
