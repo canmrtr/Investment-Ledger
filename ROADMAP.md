@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-04-29** (Kapsamlı yeni özellik analizi: kullanıcı senaryoları, rakip gap, API boşlukları, otomasyon, sosyal/gamification, monetizasyon — 6 yeni bölüm + mevcut bölümlere 25+ yeni item)
+İlk toplama: **2026-04-24** | Son grooming: **2026-04-30** (Sprint 10 tamamlandı: P1 bug bundle, Dashboard blok signed pill, TRY avgCost warn-card, Analist Tavsiyeleri kartı)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -54,6 +54,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [x] ~~**Sprint 8: Temettü Getiri Projeksiyonu + UX polish**~~ (2026-04-29) — AnalysisTab Temettü Özeti kartı (toplam + portföy verimi + top-5 bar); AddTxInline'a "Not" alanı; broker/ticker/name maxLength guard.
 - [x] ~~**AnalysisTab pie kartları stacked + collapsible**~~ (2026-04-29) — Varlık Dağılımı, Bölge Dağılımı, Sektör Dağılımı: pie üstte ortalı 140×140, legend tam genişlikte altında; ▴/▾ toggle; kapalı halde özet satır.
 - [x] ~~**Dashboard ETF/₿ rozetleri kaldırıldı**~~ (2026-04-29) — Pozisyon satırlarındaki gereksiz ETF ve kripto rozetleri kaldırıldı.
+- [x] ~~**Sprint 10: P1 bug bundle + Dashboard blok signed pill + TRY avgCost warn-card + Analist Tavsiyeleri**~~ (2026-04-30) — `costDisp` `avgCost` fix (AnalysisTab Maliyet pie); ManuelPosForm + HistoryTab `$` hardcode → `displaySym(currency)`; TRY avgCost warn-card TickerDetailTab (`avgCost > prc*30`); Dashboard blok header pill unsigned → signed `+/-`; `blockStartMv` basit getiri formülü + `missingPriceCount` notu; `fetch-fundamentals` edge fn `/stable/grade` parallel fetch + `grades` array + `annual` field; ticker format regex `^[A-Z0-9.\-]{1,12}$/i` + EDGAR AbortSignal.timeout(10000) + grade field string cap; TickerDetailTab "Analist Tavsiyeleri" kartı (US_STOCK only, Buy/Hold/Sell renk pill).
 
 ---
 
@@ -119,7 +120,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [ ] **AnalysisTab: Dağılım kartları pie → stacked bar** `[M]` `[P2]` — Varlık Dağılımı, Bölge Dağılımı, Sektör Dağılımı kartlarındaki pie SVG'lerini kaldır; yerine tek satır yatay stacked horizontal bar koy (win/loss görseli pattern'ı). Legend/liste/yüzdeler collapse edilebilir (▾/▴) kalır; bar her zaman açık görünür. 3 kart × CSS değişimi + `buildStackedBar` render helper. Pie SVG artık sadece AnalysisTab'da değil, Varlık Dağılımı'nın tek görseli olarak kalırdı; kaldırılırsa `buildSlicesPath` helper dead code olur — önce kullanım yerlerini denetle.
 - [x] ~~**Dashboard: Blok başlık sırası — pill önce, tutar sonra**~~ (2026-04-29) — `Etiket | Pill | Tutar | ▸` sırası; pill unsigned (renk yeterli); tüm bloklar başlangıçta kapalı (collapsedBlocks init all); Alt-B accent-line design (header borderRadius collapse, body 3px --info border + bg2).
 - [ ] **Dashboard: Varlık türü filtre bar'ı sticky** `[S]` `[P2]` — `.fbar` chip bar'ı `position:sticky; top: <topbar-height>px` ile topbar'ın hemen altına sabitle; scroll'da kaymasın. Mobile'da `bottom-tabs` yokken düşük `z-index` sorunu olmamalı; topbar `z-index` ile hiyerarşiyi koru. Topbar yüksekliği CSS değişkeni veya `--topbar-h` custom property ile yönetilmeli (hardcoded `px` magic number ekleme).
-- [ ] **Dashboard: Blok bazında dönem getirisi** `[M]` `[P2]` — Her varlık türü bloğunun başlık satırına seçili döneme göre simple return ekle (örn. `+2.8%` pill veya `+$340 · +2.8%`). `filteredPos.filter(p => p.type === blockType)` ile blok-scope; `mvAtDate` türevleri blok başına çalışır. Hesap notu: XIRR blok bazında anlamlı değil — sadece simple return (portföy toplam XIRR'ı dokunma). "Max" period seçiliyken blok Δ için `hist` verisi yetersizse "—" göster (extrapolation değil). Mobile layout önerileri: (a) tek satır — sağa hizalı `+2.8%` pill, tutar solda kalır; (b) iki satır — başlık + alt satır Δ (blok yüksekliği +16px artar ama 6 blok × 96px kabul edilebilir). `hist` cache'te fiyat eksik ticker varsa o ticker blok Δ'ya dahil edilmez + küçük "N fiyat eksik" notu. Effort gerçekçi ~3-4h: hesap + layout + mobile test + "Max/eksik fiyat" edge case.
+- [x] ~~**Dashboard: Blok bazında dönem getirisi**~~ (2026-04-30 Sprint 10) — Blok header pill unsigned → signed `+2.8%` / `-3.2%`; `blockStartMv` ile basit getiri formülü (`itemsWithChg` üzerinden); fiyatı eksik ticker için `missingPriceCount` + data-tip notu; "Max" period edge case yönetimi.
 - [ ] **Fundamental Ratio Trendi (5Y Grafik)** `[M]` `[P2]` — TickerDetailTab'da P/E, P/S, ROE için yıllık trend SVG çizgi grafik; "Bu şirketin F/K değeri son 5 yılda düşüyor mu yükseliyor mu?" sorusunu yanıtlar. FMP `/stable/ratios` annual array zaten `fetch-fundamentals` edge fn'da mevcut (5Y) — sadece frontend rendering yok. `TrendMiniChart` (gelir/kâr için zaten var) aynı pattern ile yeniden kullanılır; yeni fetch yok.
 - [ ] **Portföy Değer Geçmişi (Tarihsel MV)** `[M]` `[P2]` — Mevcut Sparkline sadece `price_cache` anlık verisiyle çiziliyor; tarihsel portföy toplam değeri Supabase'de saklanmıyor. `portfolio_snapshots` tablosu: her gün kapanışta (cron) portföy MV anlık görüntüsü; Dashboard Sparkline'ı bu gerçek geçmişten besle. Büyük mimari değişiklik — Vite geçişinden önce değil ama düşünülmeli. **Uzun vade.**
 
@@ -135,7 +136,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [ ] **Kullanıcı kendi eşiklerini tanımlasın** `[M]` `[P2]` — PE < X, ROE > Y gibi; şu an top-level `FUND_THRESHOLDS` sabit.
 - [x] ~~**Benchmark karşılaştırması**~~ (2026-04-27 Sprint 5) — portföy vs SPY (Massive) + XU100 (Yahoo Finance); BENCHMARKS constant; Dashboard seçili period için getiri gösterimi.
 - [ ] **FMP rate limit guard** `[S]` `[P2]` — free tier sınırını test et + guard ekle.
-- [ ] **Analist Derecelendirme Geçmişi** `[S]` `[P2]` — FMP `/stable/grade` endpoint'i; US hisseler için son 5 analist tavsiyesi (Strong Buy/Buy/Hold/Sell); TickerDetailTab'da küçük tablo. Mevcut FMP entegrasyonu üstünden, yeni key gerekmez; `fetch-fundamentals` edge fn'a yeni alan eklenir. Simply Wall St'in en çok bakılan özelliklerinden biri.
+- [x] ~~**Analist Derecelendirme Geçmişi**~~ (2026-04-30 Sprint 10) — FMP `/stable/grade?symbol=X&limit=5` parallel fetch; `grades:[{date,company,rating,previousRating}]` response'a eklendi; `annual` field de FMP response'a dahil edildi (TrendMiniChart için); ticker format regex + EDGAR AbortSignal.timeout + grade field string cap (security); TickerDetailTab "Analist Tavsiyeleri" kartı (US_STOCK only, Buy/Hold/Sell renk pill).
 - [ ] **DCF Hızlı Değerleme** `[M]` `[P3]` — FMP `/stable/discounted-cash-flow` endpoint'i; "Bugünkü adil değer: $145, şu an $132 — %9 ucuz" satırı. FMP free tier'da mevcut. TickerDetailTab fundamental bölümünde alt satır. Value-investing araç olarak doğrudan hedefle örtüşür. Önemli uyarı: DCF varsayıma dayalı; UI'da "tahmini" etiketi zorunlu.
 - [ ] **Snowflake Skor (Çok Boyutlu)** `[L]` `[P3]` — Simply Wall St'in 5-boyut skoru (Değer, Büyüme, Kalite, Borç, Temettü) benzeri; `FUND_THRESHOLDS` + fundamentals cache üstünden her boyuta 0-20 puan; 5-dilimli radar/pentagon SVG. Tamamen frontend hesabı, yeni fetch yok. Büyük UI işi; önce diğer fundamentals tamamlanmalı.
 
@@ -517,24 +518,15 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ (2026-04-30 → 2026-05-13) | **Sprint 10 → 2026-05-14 / 2026-05-27**
+Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ✅ (2026-04-30) | **Sprint 11 → planlanacak**
 
-Sprint 9 retro: _Sprint sonu doldurulacak._
+Sprint 10 retro: Milestone A (P1 bug bundle) ve Milestone B (Dashboard blok signed pill) tam teslim edildi. Milestone E (Analist Tavsiyeleri) beklenenin ötesinde teslim edildi: `annual` field fix + ticker format validation + EDGAR timeout güvenlik sertleştirmesi de Sprint 10'a dahil oldu. Milestone D (PWA) önceki sprintte fiilen tamamlanmış çıktı — yeniden açılmadı. Temettü Takvimi (Öncelik 4) Sprint 11'e taşındı.
 
-Sprint 10 scope (öncelik sırasına göre — `sprints/sprint-10.md` detayı):
+**Sprint 11 için Öne Çıkan Adaylar** (2026-04-30 grooming):
 
-1. **[Öncelik 1] P1 Bug Bundle** `[S][P1]` — BreakEven `avg_cost → avgCost` NaN fix; AddTxInline `$` hardcode → `displaySym(effCur)`; `var(--mono)` → `'DM Mono',monospace`. Sprint başına, ~1h.
-2. **[Öncelik 2] TRY avgCost mismatch uyarısı** `[S][P2]` — `avgCost > prc[ticker] * 30` threshold; TickerDetailTab + ManuelPosForm turuncu warn-card. Non-BIST, non-TRY pozisyonlar için.
-3. **[Öncelik 3] Dashboard Blok Bazında Dönem Getirisi** `[M][P2]` — Blok başlık satırına seçili period simple return pill; `price_cache.p_d1/w1/m1/y1` bazlı; "Max"/"eksik fiyat" edge case yönetimi. ~3-4h.
-4. **[Öncelik 4] Temettü Takvimi** `[M][P2]` — (a) `fetch-fundamentals` `mode:"dividend-calendar"` dalı; (b) TickerDetailTab "Sonraki Temettü" satırı; (c) HistoryTab "Yaklaşan Temettüler" collapsible. FMP zaten entegre. ~4-5h.
-5. **[Öncelik 5] PWA — service worker + manifest** `[M][P1]` — `service-worker.js` (offline shell + network-first Supabase) + `manifest.json` + `index.html` head tag. Icon'lar Sprint 9'da bitti; M1 aşaması kapanır. ~2h.
-6. **[Öncelik 6] Analist Derecelendirme Geçmişi** `[S][P2]` — FMP `/stable/grade`; `fetch-fundamentals` edge fn'a yeni alan; TickerDetailTab son 5 tavsiye pill. ~1h freebie.
-
-**Sprint 11+ için Öne Çıkan Adaylar** (2026-04-30 grooming):
-
-- Social Portfolios Faz 3 — Takip sistemi `[M][P2]` — Sprint 9 Faz 2 çıktısı bekleniyor
-- Watchlist & alarm `[M][P2]` — Yeni tablo + RLS + UI; bir sonraki kapsamlı özellik
-- Sektör-aware fundamental eşikler `[M][P1]` — tech P/E ≤30, utility ≤15; edge fn refactor
-- Alım Fiyatı Bölgesi Analizi `[S][P2]` — 52W verisi cache'te; tek akşam
-- Aylık Özet Kopyala/Paylaş `[S][P2]` — clipboard, sıfır backend; freebie
-- AI Portföy Yorumu `[M][P2]` — Claude Haiku; rate limit altyapısı hazır
+1. **Temettü Takvimi** `[M][P2]` — `fetch-fundamentals` `mode:"dividend-calendar"` dalı + TickerDetailTab "Sonraki Temettü" satırı + HistoryTab "Yaklaşan Temettüler" collapsible. FMP zaten entegre; Sprint 10'dan devredildi.
+2. **PWA — service worker + manifest** `[M][P1]` — `service-worker.js` (offline shell + network-first Supabase) + `manifest.json` + `index.html` head tag. Icon'lar hazır; M1 aşaması kapanır.
+3. **Watchlist (İzleme Listesi)** `[M][P2]` — `watchlist` tablosu + RLS + SearchTab CTA + Dashboard collapsible blok; bir sonraki kapsamlı yeni özellik.
+4. **Social Portfolios Faz 3 — Takip sistemi** `[M][P2]` — `follows` tablosu UI; Faz 2 tamamlandıktan sonra önkoşul karşılanır.
+5. **Sektör-aware fundamental eşikler** `[M][P1]` — tech P/E ≤30, utility ≤15; `sic_description`/`sector` ile profile seçimi; edge fn refactor.
+6. **Aylık Özet Kopyala/Paylaş** `[S][P2]` — `navigator.clipboard.writeText()`; sıfır backend; tek akşam freebie.

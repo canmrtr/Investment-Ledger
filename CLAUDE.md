@@ -12,7 +12,7 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
   - `parse-transaction-edge-function.js` — Claude Haiku 4.5 ile metin/görüntü → `{transactions:[...]}` array (multi-line destek)
   - `fetch-prices-edge-function.js` — Multi-provider router: Massive (US/FX/Crypto/GOLD), Yahoo Finance (BIST price/historical), Twelve Data + borsa-mcp (BIST meta paralel merge)
   - `refresh-price-cache-edge-function.js` — Scheduled (pg_cron 6h), `price_cache`'i stale-first batch ile tazeler
-  - `fetch-fundamentals-edge-function.js` — FMP `/stable/` + SEC EDGAR fallback (US); İş Yatırım MaliTablo (BIST, `asset_type:"BIST"`); 21 metrik. Ek mode: `mode:"ticker-list"` → SEC EDGAR (US, ~10.348) + Twelve Data /stocks XIST (BIST, ~636) merged ticker DB
+  - `fetch-fundamentals-edge-function.js` — FMP `/stable/` + SEC EDGAR fallback (US); İş Yatırım MaliTablo (BIST, `asset_type:"BIST"`); 21 metrik + `annual` (5Y gelir/kâr array) + `grades` (`[{date,company,rating,previousRating}]` — FMP `/stable/grade?limit=5`, US path only). Ticker format validation: `^[A-Z0-9.\-]{1,12}$/i` regex (nokta ve tire BIST ticker'larında da mevcut). EDGAR path'te `AbortSignal.timeout(10000)`. Ek mode: `mode:"ticker-list"` → SEC EDGAR (US, ~10.348) + Twelve Data /stocks XIST (BIST, ~636) merged ticker DB
 
 - **Secrets** (Supabase Edge Function env, `Deno.env.get(...)`):
   - `MASSIVE_KEY` — Polygon clone (US/FX/Crypto/GOLD)
@@ -236,6 +236,7 @@ Fundamental Veri (FMP + EDGAR + İş Yatırım) · AnalysisTab kartları · Sear
 - **`periodChange` ratio sanity check**: `cur/base < 0.05` ise null döner (USD cur vs TRY stale historic price → ratio ≈1/40 ≈0.025 yakalanır). Max period path için `mv/cost < 0.05` aynı guard (TRY avgCost vs USD mv). 95%+ gerçek kayıp vakaları için false-positive riski var ama kabul edilebilir.
 - **TRY avgCost data integrity**: Non-BIST pozisyonun `avg_cost` TRY cinsinde girilmişse (`currency="USD"` ama değer ~₺3M gibi), wrapPos ve periodChange yanlış hesaplar. Çözüm: işlemi USD fiyatıyla düzelt → Ayarlar → ♻️ Yeniden Hesapla. Uyarı mekanizması ROADMAP'te.
 - **JSX ternary'de IIFE**: `: (` yerine `: (()=>{ return<>...</>; })()` yazarken orphaned `)` metin nodu bırakmamaya dikkat — JSX'te `}` ve `)` text node olarak render olur. Kapanış bracket'larını dikkatli say; değişiklik sonrası babel check koş.
+- **`fetch-fundamentals` ticker format regex**: US path'e girerken `^[A-Z0-9.\-]{1,12}$/i` regex validation var. Nokta (`.`) ve tire (`-`) karakterleri regex'e dahil — BIST ticker'larında da kullanılıyor (örn. `THYAO`, uzantısız; noktasız BIST için sorun çıkmaz). Yeni ticker formatları eklenirse (ör. `.A`, `BRK.B`) regex'in bu karakterleri zaten kapsadığını unutma. Grade fields `company` 100 char, `rating`/`previousRating` 50 char ile cap'lendi (string injection koruması).
 
 ## Hooks (otomatik validasyon)
 
