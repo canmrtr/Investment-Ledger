@@ -52,7 +52,7 @@ Root → Login (IL mark) | App
     │   │                       pozisyon blokları VARLIK TÜRÜNE göre (BLOCK_TYPES config,
     │   │                       6 tip: US Hisse/ETF/BIST/Kripto/Altın/Döviz).
     │   │                       Bloklar başlangıçta hepsi kapalı (collapsedBlocks init=all).
-    │   │                       Başlık: [Etiket] [PeriodPill unsigned] [TotMV] [▸/▾]
+    │   │                       Başlık: [Etiket] [PeriodPill signed +/-] [TotMV] [▸/▾]
     │   │                       Açık halde Alt-B accent-line: header borderRadius "10px 10px 0 0",
     │   │                       body borderLeft 3px --info + bg2. EUR cost-only ayrı blok
     │   ├─ HistoryTab         — filtre toolbar, accordion (ticker gruplu, search)

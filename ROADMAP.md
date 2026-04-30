@@ -321,7 +321,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [x] ~~**AddTxInline NaN guard**~~ (2026-04-27 Sprint 4) — saveAI/saveTx/saveManual NaN filter; geçersiz satırlar atlanıp "X işlem kaydedildi, Y geçersiz atlandı" flash.
 - [x] ~~**CSV negatif/Infinity guard**~~ (2026-04-27 Sprint 4) — `shares≤0 || !isFinite(shares) || price<0 || !isFinite(price)` satırlar skip; console.warn + skip sayacı.
 - [ ] **price_cache sanity check** `[S]` `[P2]` — `price = 0 || price = null` olan satırlar "bayat" sayılıp yeniden fetch tetiklemeli.
-- [ ] **TRY-denominated avg_cost tespiti ve uyarısı** `[S]` `[P2]` — Non-BIST pozisyonda `avg_cost` TRY cinsinden girildiyse (belirtisi: `avgCost > prc[ticker] × 30`) TickerDetailTab'da ve ManuelPosForm'da uyarı göster ("Maliyet TRY gibi görünüyor; USD bekleniyor"). Root cause: BTC gibi kripto pozisyonları eski bir girişte TRY fiyatıyla kaydedilip `currency:"USD"` olarak normalize edilmiş — `positions.avg_cost ≈ ₺3,143,709` ama `prc["BTC"] ≈ $77,625`. Kullanıcının işlemi düzeltip ♻️ Yeniden Hesapla çalıştırması gerekiyor; bu uyarı o adımı tetikler.
+- [x] ~~**TRY-denominated avg_cost tespiti ve uyarısı**~~ (2026-04-30 Sprint 10) — TickerDetailTab'da `p.type!=="BIST" && p.currency!=="TRY" && p.avgCost > prc[ticker] * 30` koşulunda turuncu warn-card: "Maliyet tutarı TRY cinsinden girilmiş olabilir". `prc[ticker]` yoksa uyarı çıkmaz (safe fallback).
 - [x] ~~**maxLength ticker/name/broker**~~ (2026-04-29) — broker `maxLength={50}` (AddTxInline/HistoryTab×2/ManuelPosForm), ticker `maxLength={20}`, name `maxLength={100}` (ManuelPosForm).
 - [ ] **il_recent_search signOut temizliği** `[S]` `[P2]` — `signOut` handler son aramaları LS'ten temizlemeli (`il_recent_search` kullanıcıya özel hissedebilir).
 - [ ] **Form tutarı gizli-mod preview** `[S]` `[P2]` — `hide=true` iken form amount alanlarında girilen değerler `mask()` ile maskelenmeli.
@@ -449,9 +449,8 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ### Gerçek Buglar (P1)
 
-- [ ] **BreakEven `p.avg_cost` → `p.avgCost`** `[S]` `[P1]` — AnalysisTab BreakEven kartı ~satır 3650: `p.shares * p.avg_cost` yazıyor ama `pos` state'i `avg_cost` → `avgCost` map'liyor (~satır 4532). Tüm başa-baş fiyatları `NaN` dönüyor. Düzeltme: `p.avgCost` kullan.
-- [ ] **AddTxInline toplam önizlemede `$` hardcode** `[S]` `[P1]` — ~satır 888: `Toplam: $X.XX`. BIST/TRY pozisyonlar için yanlış para birimi gösterir. Düzeltme: `displaySym(effCur)` kullan.
-- [ ] **`var(--mono)` CSS değişkeni tanımsız** `[S]` `[P1]` — BreakEven tablo hücreleri ~satır 3683–3694 inline `fontFamily:"var(--mono)"` kullanıyor; `:root`'ta bu token tanımlı değil. Tarayıcı varsayılan sans-serif'e düşüyor. Düzeltme: `"'DM Mono',monospace"` olarak yaz.
+- [x] ~~**`costDisp` `p.avg_cost` → `p.avgCost`**~~ (2026-04-30 Sprint 10) — AnalysisTab `costDisp` helper `p.avg_cost` kullanıyordu; `pos` state'i `avgCost` camelCase map'lediği için Maliyet dağılımı pie'ı hep 0 dönüyordu. `p.avgCost` ile düzeltildi.
+- [x] ~~**ManuelPosForm + HistoryTab edit form `$` hardcode**~~ (2026-04-30 Sprint 10) — ManuelPosForm önizleme "Maliyet: $X" ve HistoryTab edit form "Toplam: $X" EUR pozisyonlarda yanlış sembol gösteriyordu. `displaySym(form.currency)` / `displaySym(editForm.currency)` ile düzeltildi.
 
 ### Tasarım Tutarsızlığı — Kart Padding
 
@@ -518,23 +517,24 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ (2026-04-29) | **Sprint 9 → 2026-04-30 / 2026-05-13**
+Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ (2026-04-30 → 2026-05-13) | **Sprint 10 → 2026-05-14 / 2026-05-27**
 
-Sprint 7+8 retro özeti: Güvenlik sertleştirme (parse-transaction server auth, RLS hardening), Dividend tracking (DIV schema + cashflow + projeksiyonu), Risk Dashboard (3 kart), Temettü Özeti (AnalysisTab), pie redesign (stacked + collapsible), Dashboard badge temizliği. Tüm maddeler teslim edildi ve push edildi.
+Sprint 9 retro: _Sprint sonu doldurulacak._
 
-Sprint 9 groomed scope (öncelik sırasına göre — `sprints/sprint-09.md` detayı):
+Sprint 10 scope (öncelik sırasına göre — `sprints/sprint-10.md` detayı):
 
-1. **[Öncelik 1] Social Portfolios Faz 2** `[M][P2]` — `portfolios.is_public` toggle (Settings); `UserProfileModal` (avatar emoji + bio + public portföy listesi); public portföy read-only view. Alt-hikayeler: (a) is_public toggle S, (b) RLS okuma politikası S, (c) UserProfileModal M, (d) read-only görünüm S. Faz 1 altyapısı hazır; rls-auditor sign-off gerekli.
-2. **[Öncelik 2] Ağırlıklı Ortalama Portföy P/E** `[S][P2]` — `fund_${ticker}` LS cache'ten aggregation; AnalysisTab yeni kart; "Portföyünüzün F/K'sı 18.4 — S&P 500 ortalamasının altında/üstünde" bağlam cümlesi. Yeni fetch yok; fundamentals cache zaten mevcut.
-3. **[Öncelik 3] Pozisyon Yıllık Getiri (CAGR) Tablosu** `[S][P2]` — Her açık pozisyon için ilk BUY tarihi → bugün arası CAGR; split-adjusted (`factorFor`); azalan sıra; transactions + price_cache yeterli.
-4. **[Öncelik 4] Piyasa Düşüşü Dayanıklılık Skoru** `[M][P2]` — Borç/Özk + FCF marjı + op marjı → ağırlıklı 1-10 skor; "Portföyünüzün %62'si resesyona dayanıklı" özeti; "Eksikleri Çek" CTA; fundamentals cache'ten; ek fetch yok.
-5. **[Öncelik 5] PWA hazırlığı** `[M][P1]` — `manifest.json` (icon 192/512px, display:standalone) + minimal `service-worker.js` (offline shell cache) + `<link rel="manifest">`; index.html mimarisini bozmaz; "Ana Ekrana Ekle" aktif.
-6. **[Öncelik 6] Periyodik agent denetim turu — 3. tur** `[S][P1]` — Sprint sonu kalite kapısı; rls-auditor (Social Faz 2 yeni politikaları) + client-security-auditor (public portföy view XSS kontrolü) + edge-reviewer.
+1. **[Öncelik 1] P1 Bug Bundle** `[S][P1]` — BreakEven `avg_cost → avgCost` NaN fix; AddTxInline `$` hardcode → `displaySym(effCur)`; `var(--mono)` → `'DM Mono',monospace`. Sprint başına, ~1h.
+2. **[Öncelik 2] TRY avgCost mismatch uyarısı** `[S][P2]` — `avgCost > prc[ticker] * 30` threshold; TickerDetailTab + ManuelPosForm turuncu warn-card. Non-BIST, non-TRY pozisyonlar için.
+3. **[Öncelik 3] Dashboard Blok Bazında Dönem Getirisi** `[M][P2]` — Blok başlık satırına seçili period simple return pill; `price_cache.p_d1/w1/m1/y1` bazlı; "Max"/"eksik fiyat" edge case yönetimi. ~3-4h.
+4. **[Öncelik 4] Temettü Takvimi** `[M][P2]` — (a) `fetch-fundamentals` `mode:"dividend-calendar"` dalı; (b) TickerDetailTab "Sonraki Temettü" satırı; (c) HistoryTab "Yaklaşan Temettüler" collapsible. FMP zaten entegre. ~4-5h.
+5. **[Öncelik 5] PWA — service worker + manifest** `[M][P1]` — `service-worker.js` (offline shell + network-first Supabase) + `manifest.json` + `index.html` head tag. Icon'lar Sprint 9'da bitti; M1 aşaması kapanır. ~2h.
+6. **[Öncelik 6] Analist Derecelendirme Geçmişi** `[S][P2]` — FMP `/stable/grade`; `fetch-fundamentals` edge fn'a yeni alan; TickerDetailTab son 5 tavsiye pill. ~1h freebie.
 
-**Sprint 10+ için Yeni Analiz Sonuçları — Öne Çıkan Adaylar** (2026-04-29 grooming):
+**Sprint 11+ için Öne Çıkan Adaylar** (2026-04-30 grooming):
 
-- Temettü Takvimi `[M][P2]` — FMP `/stable/dividends` zaten entegre; yeni modal yok
-- Alım Fiyatı Bölgesi Analizi `[S][P2]` — 52W verisi cache'te mevcut; tek akşam
-- Aylık Özet Kopyala/Paylaş `[S][P2]` — clipboard, sıfır backend
-- Analist Derecelendirme Geçmişi `[S][P2]` — FMP grade endpoint; fundamental tab
-- AI Portföy Yorumu `[M][P2]` — Claude Haiku; mevcut rate limit altyapısı
+- Social Portfolios Faz 3 — Takip sistemi `[M][P2]` — Sprint 9 Faz 2 çıktısı bekleniyor
+- Watchlist & alarm `[M][P2]` — Yeni tablo + RLS + UI; bir sonraki kapsamlı özellik
+- Sektör-aware fundamental eşikler `[M][P1]` — tech P/E ≤30, utility ≤15; edge fn refactor
+- Alım Fiyatı Bölgesi Analizi `[S][P2]` — 52W verisi cache'te; tek akşam
+- Aylık Özet Kopyala/Paylaş `[S][P2]` — clipboard, sıfır backend; freebie
+- AI Portföy Yorumu `[M][P2]` — Claude Haiku; rate limit altyapısı hazır

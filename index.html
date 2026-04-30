@@ -1311,6 +1311,11 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
             {totalPLPct!=null&&<div className={"mono"+pc(totalPLPct)} style={{fontSize:11,marginTop:2}}>{fmtP(totalPLPct)}</div>}
           </div>
         </div>
+        {p&&price!=null&&p.type!=="BIST"&&p.currency!=="TRY"&&p.avgCost>price*30&&(
+          <div className="warn-card" style={{marginBottom:8}}>
+            Maliyet tutarı TRY cinsinden girilmiş olabilir ({displaySym(p.currency)} bekleniyor). İşlemi düzeltin ve <b>Ayarlar → ♻️ Yeniden Hesapla</b> çalıştırın.
+          </div>
+        )}
         {totalDivIncome>0&&(
           <div style={{marginTop:6,padding:"10px 12px",background:"var(--bg3)",borderRadius:8,border:"1px solid rgba(0,217,126,0.15)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:annualDivEst!=null?6:0}}>
@@ -1599,7 +1604,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                       <div><div className="kk" style={{marginBottom:3}}>Komisyon</div><input className="finp sm" type="number" step="any" value={editForm.commission} onChange={e=>setEditForm(f=>({...f,commission:e.target.value}))}/></div>
                       <div style={{gridColumn:"span 3"}}><div className="kk" style={{marginBottom:3}}>Broker</div><input className="finp sm" maxLength={50} value={editForm.broker} onChange={e=>setEditForm(f=>({...f,broker:e.target.value}))}/></div>
                     </div>
-                    <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: {editForm.currency==="TRY"?"₺":"$"}{fmt((+editForm.shares)*(+editForm.price),2)}</div>
+                    <div style={{fontSize:11,color:"var(--text2)",marginBottom:10}}>Toplam: {displaySym(editForm.currency)}{fmt((+editForm.shares)*(+editForm.price),2)}</div>
                     <div className="brow">
                       <button className="pri btn-md" onClick={()=>saveEditTx(t)} disabled={savingTx}>{savingTx?"...":"Kaydet"}</button>
                       <button className="btn-md" onClick={cancelEditTx} disabled={savingTx}>İptal</button>
@@ -2397,8 +2402,8 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
           <div style={{display:"flex",alignItems:"flex-end"}}>
             {form.shares&&form.avgCost?(
               <div style={{fontSize:11,color:"var(--text2)",padding:"7px 0"}}>
-                Maliyet: {form.currency==="TRY"?"₺":"$"}{fmt((+form.shares)*(+form.avgCost),0)}
-                {curPrice&&<><br/>Piyasa: {form.currency==="TRY"?"₺":"$"}{fmt((+form.shares)*curPrice,0)}</>}
+                Maliyet: {displaySym(form.currency)}{fmt((+form.shares)*(+form.avgCost),0)}
+                {curPrice&&<><br/>Piyasa: {displaySym(form.currency)}{fmt((+form.shares)*curPrice,0)}</>}
               </div>
             ):null}
           </div>
@@ -3117,7 +3122,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   };
   // Pozisyon maliyet (avg_cost × shares, orijinal currency'de) → display cur'a çevir
   const costDisp = (p) => {
-    const raw = (p.avg_cost || 0) * p.shares;
+    const raw = (p.avgCost || 0) * p.shares;
     if (raw <= 0) return 0;
     return cnv(raw, p.currency || "USD") || 0;
   };
@@ -4983,10 +4988,11 @@ function App({session}){
               if(items.length===0) return null;
               const sortedItems = sortPos(items, sort);
               const totMv = items.reduce((a,p)=>a+(p.mv ?? p.cost),0);
-              const blockDeltaDlr = items.filter(p=>p.periodChgDlr!=null).reduce((s,p)=>s+p.periodChgDlr,0);
-              const blockHasChg = items.some(p=>p.periodChgDlr!=null);
-              const blockStartMv = totMv - blockDeltaDlr;
-              const blockDeltaPct = blockHasChg && blockStartMv>0 ? (blockDeltaDlr/blockStartMv*100) : null;
+              const itemsWithChg = items.filter(p=>p.periodChgDlr!=null);
+              const blockDeltaDlr = itemsWithChg.reduce((s,p)=>s+p.periodChgDlr,0);
+              const blockStartMv = itemsWithChg.reduce((s,p)=>s+(p.mv??p.cost)-p.periodChgDlr,0);
+              const blockDeltaPct = blockStartMv>0 ? (blockDeltaDlr/blockStartMv*100) : null;
+              const missingPriceCount = items.length - itemsWithChg.length;
               const isOpen = !collapsedBlocks.has(cfg.type);
               const toggleBlock = () => setCollapsedBlocks(prev=>{const n=new Set(prev);n.has(cfg.type)?n.delete(cfg.type):n.add(cfg.type);return n;});
               return(
@@ -4997,8 +5003,11 @@ function App({session}){
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       {blockDeltaPct!=null&&(
                         <span style={{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,background:blockDeltaDlr>=0?"rgba(0,217,126,0.15)":"rgba(255,51,102,0.15)",color:blockDeltaDlr>=0?"var(--ok)":"var(--err)"}}>
-                          {Math.abs(blockDeltaPct).toFixed(1)+"%"}
+                          {(blockDeltaDlr>=0?"+":"")+blockDeltaPct.toFixed(1)+"%"}
                         </span>
+                      )}
+                      {missingPriceCount>0&&blockDeltaPct!=null&&(
+                        <span style={{fontSize:10,color:"var(--text3)"}} data-tip={`${missingPriceCount} ticker için ${sel.lbl} fiyatı eksik`}>{missingPriceCount} eksik</span>
                       )}
                       {!hide&&<span style={{fontSize:15,fontWeight:500,fontFamily:"'DM Mono','Fira Code',monospace",color:"var(--text)"}}>{mask(cfg.sym+fmt(totMv,0))}</span>}
                       <span style={{fontSize:11,color:"var(--text3)"}}>{isOpen?"▾":"▸"}</span>
