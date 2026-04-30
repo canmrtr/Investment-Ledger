@@ -255,17 +255,30 @@ Fundamental Veri (FMP + EDGAR + İş Yatırım) · AnalysisTab kartları · Sear
 - **`client-security-auditor`** — auth flow / form / kullanıcı girdisi rendering eden yerlerde `index.html` değişikliği yaptıktan sonra. Ayrıca güvenlik-hassas commit'ten önce manuel çağrı uygundur. XSS, secret leak, LS hijyeni, privacy-mode regression'lerini tarar.
 - **`test-runner`** — Playwright + Chromium ile canlı (veya localhost) E2E test. Major feature sonrası veya deploy öncesi manuel çağrı. Mid-session eklenen agent'lar registry'ye girmeyebilir; bu durumda `cd /tmp && npm install --no-save playwright` + manuel script de seçenek.
 
+## Pre-Deploy Checklist
+
+Her deploy öncesi aşağıdaki kontrolleri çalıştır:
+
+```bash
+npm run check:babel        # index.html JSX parse
+npm run check:edge         # node --check tüm root edge files
+npm run check:edge-drift   # root *.js == supabase/functions/*/index.ts
+```
+
+Edge function deploy akışı:
+1. `supabase/functions/<fn>/index.ts` dosyasını düzenle (canonical deploy path)
+2. Root `*-edge-function.js` kopyasını da güncelle (sync)
+3. `npm run check:edge-drift` → PASS
+4. `npx supabase functions deploy <fn> --no-verify-jwt`
+
+E2E smoke test (live site):
+```bash
+IL_EMAIL=... IL_PASS=... node e2e/smoke.mjs
+```
+
 ## Test & Doğrulama
 
-- Babel parse sanity check (büyük edit'lerden sonra):
-  ```bash
-  cd /tmp && node -e "
-    const fs=require('fs'); const h=fs.readFileSync('...','utf8');
-    const m=h.match(/<script type=\"text\/babel\">([\s\S]*?)<\/script>/);
-    try{require('@babel/parser').parse(m[1],{sourceType:'module',plugins:['jsx']});console.log('OK');}
-    catch(e){console.log('ERR:',e.message,'line',e.loc?.line);}
-  "
-  ```
+- Babel parse: `npm run check:babel` (proje node_modules kullanır, /tmp gerekmez)
 - Frontend testi: `Cmd+Shift+R` hard-reload sonrası
 - Edge function test: Supabase Dashboard → Edge Functions → function → Test tab, body ile invoke
 

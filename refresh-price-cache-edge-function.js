@@ -23,8 +23,35 @@ const DEFAULT_BATCH = 5;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// Massive.com historical fetch — fetch-prices edge function ile aynı mantık.
-const fetchHistorical = async (ticker, massiveKey) => {
+const YF_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36";
+
+// Yahoo Finance US historical (addIS=false).
+const yfHistoricalUS = async (ticker) => {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=1y&interval=1d`;
+  const r = await fetch(url, { headers: { "User-Agent": YF_UA } });
+  if (!r.ok) throw new Error(`Yahoo HTTP ${r.status}`);
+  const d = await r.json();
+  if (d.chart?.error) throw new Error(d.chart.error.description || "Yahoo chart error");
+  const res = d.chart?.result?.[0];
+  if (!res) throw new Error("Yahoo: result yok");
+  const ts = res.timestamp || [];
+  const closes = res.indicators?.quote?.[0]?.close || [];
+  const bars = [];
+  for (let i = 0; i < ts.length; i++) {
+    if (closes[i] != null) bars.push({ t: ts[i] * 1000, c: closes[i] });
+  }
+  if (bars.length < 2) throw new Error("Yahoo: yetersiz veri");
+  bars.sort((a, b) => a.t - b.t);
+  const n = bars.length, last = bars[n - 1].c;
+  const get = (i) => (i >= 0 && i < n ? bars[i].c : null);
+  const chg = (old) => (old != null ? (last / old - 1) * 100 : null);
+  const p_d1 = get(n - 2), p_w1 = get(n - 6), p_m1 = get(n - 22);
+  const p_m3 = get(n - 66), p_m6 = get(n - 132), p_y1 = get(0);
+  return { price: last, d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1), p_d1, p_w1, p_m1, p_m3, p_m6, p_y1 };
+};
+
+// Massive.com historical — Yahoo başarısız olursa yedek.
+const massiveHistorical = async (ticker, massiveKey) => {
   const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
   const yearAgo = new Date(Date.now() - 366 * 86400000).toISOString().split("T")[0];
   const url = `https://api.massive.com/v2/aggs/ticker/${ticker}/range/1/day/${yearAgo}/${yesterday}?adjusted=true&limit=400&apiKey=${massiveKey}`;
@@ -38,11 +65,18 @@ const fetchHistorical = async (ticker, massiveKey) => {
   const chg = (old) => (old != null ? (last / old - 1) * 100 : null);
   const p_d1 = get(n - 2), p_w1 = get(n - 6), p_m1 = get(n - 22);
   const p_m3 = get(n - 66), p_m6 = get(n - 132), p_y1 = get(0);
-  return {
-    price: last,
-    d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1),
-    p_d1, p_w1, p_m1, p_m3, p_m6, p_y1,
-  };
+  return { price: last, d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1), p_d1, p_w1, p_m1, p_m3, p_m6, p_y1 };
+};
+
+// Yahoo birincil, Massive yedek.
+// Crypto (X:) ve Gold (C:) tickers Yahoo'da desteklenmez → direkt Massive.
+const fetchHistorical = async (ticker, massiveKey) => {
+  if (/^[XCI]:/i.test(ticker)) return massiveHistorical(ticker, massiveKey);
+  try {
+    return await yfHistoricalUS(ticker);
+  } catch (_) {
+    return await massiveHistorical(ticker, massiveKey);
+  }
 };
 
 Deno.serve(async (req) => {

@@ -5,6 +5,16 @@
 *.swp
 *~
 
-# Obsidian (kullanıcı vault index'i)
+# Obsidian
 .obsidian/
-supabase/functions/
+
+# Node
+node_modules/
+
+# Supabase generated
+supabase/.temp/
+
+# Scratch / one-off files (use e2e/ for tracked tests)
+il-*.mjs
+mockup-*.html
+.claude/agents/_test.tmp

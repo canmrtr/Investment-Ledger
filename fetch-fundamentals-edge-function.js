@@ -13,6 +13,8 @@
 // Gerekli secret: FMP_KEY (US için), TWELVEDATA_KEY (ticker-list BIST için)
 // Body: { "ticker": "AAPL" }  veya  { "ticker": "THYAO", "asset_type": "BIST" }
 
+import { createClient } from "npm:@supabase/supabase-js@2";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://canmrtr.github.io",
   "Access-Control-Allow-Headers": "authorization, content-type",
@@ -43,7 +45,7 @@ async function getTickerDb() {
   const now = Date.now();
   if (tickerDbCache && (now - tickerDbCacheAt) < CIK_TTL_MS) return tickerDbCache;
   const r = await fetch("https://www.sec.gov/files/company_tickers.json", {
-    headers: { "User-Agent": SEC_UA }
+    headers: { "User-Agent": SEC_UA }, signal: AbortSignal.timeout(8000)
   });
   if (!r.ok) throw new Error(`SEC ticker map fetch HTTP ${r.status}`);
   const data = await r.json();
@@ -80,7 +82,7 @@ async function getBistList() {
   if (bistListCache && (now - bistListCacheAt) < CIK_TTL_MS) return bistListCache;
   const apiKey = Deno.env.get("TWELVEDATA_KEY");
   if (!apiKey) return [];
-  const r = await fetch(`https://api.twelvedata.com/stocks?exchange=XIST&apikey=${apiKey}`);
+  const r = await fetch(`https://api.twelvedata.com/stocks?exchange=XIST&apikey=${apiKey}`, { signal: AbortSignal.timeout(8000) });
   if (!r.ok) return [];
   const d = await r.json();
   if (!Array.isArray(d.data)) return [];
@@ -608,6 +610,45 @@ Deno.serve(async (req) => {
         bist_count: bistList.length,
         fetched_at: new Date().toISOString()
       });
+    }
+
+    // Mode: sync-ticker-db — ticker_db Supabase tablosunu SEC EDGAR + Twelve Data
+    // ile günceller. pg_cron (haftalık) tarafından CRON_SECRET ile çağrılır.
+    // Frontend artık bu modu değil; doğrudan Supabase SELECT kullanır.
+    if (body.mode === "sync-ticker-db") {
+      const cronSecret = Deno.env.get("CRON_SECRET");
+      if (!cronSecret || cronSecret.length < 16) return json({ error: "CRON_SECRET not configured" }, 500);
+      const auth = req.headers.get("Authorization") || "";
+      const expected = `Bearer ${cronSecret}`;
+      const enc = new TextEncoder();
+      const ab = enc.encode(auth), eb = enc.encode(expected);
+      let mismatch = ab.length !== eb.length ? 1 : 0;
+      const len = Math.max(ab.length, eb.length);
+      for (let i = 0; i < len; i++) mismatch |= (ab[i] ?? 0) ^ (eb[i] ?? 0);
+      if (mismatch !== 0) return json({ error: "unauthorized" }, 401);
+
+      const supaUrl    = Deno.env.get("SUPABASE_URL");
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (!supaUrl || !serviceKey) return json({ error: "supabase secrets eksik" }, 500);
+
+      const supa = createClient(supaUrl, serviceKey, { auth: { persistSession: false } });
+      const [usDb, bistList] = await Promise.all([getTickerDb(), getBistList()]);
+      const now  = new Date().toISOString();
+      const rows = [
+        ...Object.entries(usDb).map(([ticker, info]) => ({ ticker, name: info.name, exchange: "US",   updated_at: now })),
+        ...bistList.map(x => ({ ticker: x.ticker, name: x.name, exchange: "XIST", updated_at: now })),
+      ];
+
+      // Batch upsert (Supabase 1000-row limit)
+      const BATCH = 500;
+      let inserted = 0;
+      for (let i = 0; i < rows.length; i += BATCH) {
+        const { error } = await supa.from("ticker_db").upsert(rows.slice(i, i + BATCH), { onConflict: "ticker" });
+        if (error) throw new Error(`upsert batch ${Math.floor(i/BATCH)}: ${error.message}`);
+        inserted += Math.min(BATCH, rows.length - i);
+      }
+
+      return json({ synced: inserted, us: Object.keys(usDb).length, bist: bistList.length, synced_at: now });
     }
 
     const { ticker, asset_type } = body;

@@ -1,15 +1,21 @@
 #!/usr/bin/env bash
-# PostToolUse hook: Edit/Write/MultiEdit sonrası index.html'in babel/JSX
-# parse edilebilirliğini doğrular. Build step yok — parse fail = canlı sitedeki
-# tüm kullanıcılar için broken page. Hata durumunda exit 2 + stderr ile
-# Claude'a feedback verir, ana akış düzeltir.
+# PostToolUse hook: Edit/Write/MultiEdit sonrası index.html babel/JSX parse kontrolü.
+# Build step yok — parse fail = broken production. Hata → exit 2 (fail closed).
 #
 # Stdin: tool-call JSON. tool_input.file_path okunur; index.html değilse skip.
 
 set -euo pipefail
 
 INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("tool_input",{}).get("file_path",""))' 2>/dev/null || echo "")
+
+# JSON'dan file_path çıkar — node ile (python3 bağımlılığı yok).
+FILE_PATH=$(printf '%s' "$INPUT" | node -e '
+  let d = "";
+  process.stdin.on("data", c => d += c);
+  process.stdin.on("end", () => {
+    try { process.stdout.write(JSON.parse(d)?.tool_input?.file_path || ""); } catch (_) {}
+  });
+' 2>/dev/null || echo "")
 
 # Sadece index.html için çalış
 case "$FILE_PATH" in
@@ -17,16 +23,20 @@ case "$FILE_PATH" in
   *) exit 0 ;;
 esac
 
-# @babel/parser ilk çalıştırmada /tmp'ye lazy install
-if [ ! -d /tmp/node_modules/@babel/parser ]; then
-  (cd /tmp && npm install --no-save --silent @babel/parser >/dev/null 2>&1) || {
-    echo "⚠️  babel-checker: @babel/parser yüklenemedi, parse skip" >&2
-    exit 0
-  }
+# @babel/parser: proje node_modules (npm install) → /tmp → lazy install → fail closed.
+# Fail open değil: parser yoksa exit 2 — parse atlanamaz.
+if [ -d "./node_modules/@babel/parser" ]; then
+  PARSER_PATH="./node_modules"
+elif [ -d "/tmp/node_modules/@babel/parser" ]; then
+  PARSER_PATH="/tmp/node_modules"
+elif (cd /tmp && npm install --no-save --silent @babel/parser >/dev/null 2>&1); then
+  PARSER_PATH="/tmp/node_modules"
+else
+  echo "❌ babel-checker: @babel/parser bulunamadı. Çözüm: proje kökünde 'npm install' çalıştırın." >&2
+  exit 2
 fi
 
-# /tmp'deki node_modules'u resolve için cwd'yi /tmp yap
-NODE_PATH=/tmp/node_modules FILE_PATH="$FILE_PATH" node -e '
+NODE_PATH="$PARSER_PATH" FILE_PATH="$FILE_PATH" node -e '
   const fs = require("fs");
   const path = process.env.FILE_PATH;
   const h = fs.readFileSync(path, "utf8");

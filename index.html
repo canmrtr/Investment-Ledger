@@ -535,7 +535,7 @@ const TICKER_DB_TTL_MS = 86400000;  // 24 saat
 let _tickerDbMem = null;
 const tickerDbCacheGet = () => {
   if (_tickerDbMem) return _tickerDbMem;
-  const c = LS.get("sec_ticker_db_v2", null);
+  const c = LS.get("sec_ticker_db_v3", null);
   if (!c || !c.t) return null;
   if (Date.now() - c.t > TICKER_DB_TTL_MS) return null;
   _tickerDbMem = c.list;
@@ -543,7 +543,7 @@ const tickerDbCacheGet = () => {
 };
 const tickerDbCacheSet = (list) => {
   _tickerDbMem = list;  // her durumda memory'de tut
-  LS.set("sec_ticker_db_v2", { list, t: Date.now() });  // LS try-catch içinde, fail sessiz
+  LS.set("sec_ticker_db_v3", { list, t: Date.now() });  // LS try-catch içinde, fail sessiz
 };
 
 const edgeCall = (fn, body) => fetch(`${SUPA_URL}/functions/v1/${fn}`, {
@@ -2453,20 +2453,24 @@ function SearchTab({pos,txs,openDetail,flash_}){
     if(tickerDb)return;
     setLoading(true);
     // ticker_db tablosunu doğrudan Supabase'den oku (edge function / SEC EDGAR bypass).
-    // Tablo haftalık pg_cron ile sync-ticker-db modu üstünden beslenir.
-    sb.from("ticker_db").select("ticker,name,exchange").limit(15000)
-      .then(({data,error})=>{
-        if(error||!data||data.length===0){
-          // Supabase okuma başarısız veya tablo henüz dolu değilse edge fn fallback
-          return edgeCall("fetch-fundamentals",{mode:"ticker-list"})
-            .then(r=>r.json())
-            .then(d=>{ if(Array.isArray(d.list)){tickerDbCacheSet(d.list);setTickerDb(d.list);} });
-        }
-        tickerDbCacheSet(data);
-        setTickerDb(data);
-      })
-      .catch(e=>flash_("Ticker DB hatası: "+e.message,"err"))
-      .finally(()=>setLoading(false));
+    // PostgREST 1k satır limiti aşmak için paralel sayfalama: 12 × 1000 = 12k kapsam.
+    const PAGE=1000;
+    Promise.all(
+      Array.from({length:12},(_,i)=>
+        sb.from("ticker_db").select("ticker,name,exchange").range(i*PAGE,(i+1)*PAGE-1)
+      )
+    ).then(results=>{
+      const all=results.flatMap(r=>r.data||[]);
+      if(all.length===0){
+        return edgeCall("fetch-fundamentals",{mode:"ticker-list"})
+          .then(r=>r.json())
+          .then(d=>{ if(Array.isArray(d.list)){tickerDbCacheSet(d.list);setTickerDb(d.list);} });
+      }
+      tickerDbCacheSet(all);
+      setTickerDb(all);
+    })
+    .catch(e=>flash_("Ticker DB hatası: "+e.message,"err"))
+    .finally(()=>setLoading(false));
   },[]);
 
   const qTrim=q.trim();
