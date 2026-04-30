@@ -5060,7 +5060,7 @@ function App({session}){
                             {!hide&&<td className="r mono" style={{color:"var(--text2)"}}>{curPrc!=null?mask(cfg.sym+fmt(curPrc*ozF2,2)):"—"}</td>}
                             {!hide&&<td className="r">{p.mv?mask(cfg.sym+fmt(p.mv,0)):"—"}</td>}
                             <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
-                            {hasH&&<td className="r">{(()=>{if(p.periodChgPct==null)return"—";const s=p.periodChgPct>=0?"+":"-";return<><div className={"mono"+pc(p.periodChgPct)} style={{fontWeight:600,fontSize:12,lineHeight:1.25}}>{s}{fmtP(Math.abs(p.periodChgPct))}</div><div className={"mono"+pc(p.periodChgPct)} style={{fontSize:10,opacity:.75}}>{s}{cfg.sym}{fmt(Math.abs(p.periodChgDlr),0)}</div></>;})()}</td>}
+                            {hasH&&<td className="r">{(()=>{if(p.periodChgPct==null)return"—";return<><div className={"mono"+pc(p.periodChgPct)} style={{fontWeight:600,fontSize:12,lineHeight:1.25}}>{fmt(Math.abs(p.periodChgPct),1)}%</div><div className={"mono"+pc(p.periodChgPct)} style={{fontSize:10,opacity:.75}}>{cfg.sym}{fmt(Math.abs(p.periodChgDlr),0)}</div></>;})()}</td>}
                           </tr>
                         );})}
                       </tbody>
@@ -5083,7 +5083,7 @@ function App({session}){
                       const curPrice=prc[p.ticker];
                       const priceStr=curPrice!=null?cfg.sym+fmt(curPrice*ozF,2):"—";
                       const cPct=p.periodChgPct,cDlr=p.periodChgDlr,hasC=cPct!=null;
-                      const pos=hasC&&cPct>=0,sign=pos?"+":"-";
+                      const pos=hasC&&cPct>=0;
                       return(
                         <div key={p.ticker} className="pcr" onClick={()=>openDetail(p.ticker)}>
                           <div className="pcr-left">
@@ -5093,7 +5093,7 @@ function App({session}){
                           <div className="pcr-right">
                             <span className="pcr-mv">{p.mv!=null?mask(cfg.sym+fmt(p.mv,0)):"—"}</span>
                             <span className={"pcr-chg"+(hasC?(pos?" ok":" err"):"")}>
-                              {hide?"••••":hasC?`${sign}${cfg.sym}${fmt(Math.abs(cDlr),0)}  ${sign}${fmtP(Math.abs(cPct))}`:"—"}
+                              {hide?"••••":hasC?`${cfg.sym}${fmt(Math.abs(cDlr),0)}  ${fmt(Math.abs(cPct),1)}%`:"—"}
                             </span>
                           </div>
                         </div>
