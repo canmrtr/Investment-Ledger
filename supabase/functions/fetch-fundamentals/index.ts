@@ -165,7 +165,7 @@ async function fetchEdgar(ticker) {
   if (!cik) return { error: `EDGAR'da ticker bulunamadı: ${ticker}` };
 
   const r = await fetch(`https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`, {
-    headers: { "User-Agent": SEC_UA }
+    headers: { "User-Agent": SEC_UA }, signal: AbortSignal.timeout(10000)
   });
   if (!r.ok) return { error: `EDGAR companyfacts HTTP ${r.status}` };
   const data = await r.json();
@@ -488,15 +488,16 @@ async function fetchFmp(ticker, fmpKey) {
     inc:    `${base}/income-statement?symbol=${ticker}&period=annual&limit=5&apikey=${fmpKey}`,
     bs:     `${base}/balance-sheet-statement?symbol=${ticker}&period=annual&limit=1&apikey=${fmpKey}`,
     cf:     `${base}/cash-flow-statement?symbol=${ticker}&period=annual&limit=1&apikey=${fmpKey}`,
+    grade:  `${base}/grade?symbol=${ticker}&limit=5&apikey=${fmpKey}`,
   };
 
-  const fetchSafe = (u) => fetch(u).then(async r => {
+  const fetchSafe = (u) => fetch(u, { signal: AbortSignal.timeout(8000) }).then(async r => {
     const t = await r.text();
     try { return JSON.parse(t); }
     catch (_) { return { _err: "non-JSON", _status: r.status, _body: t.slice(0, 240) }; }
   }).catch(e => ({ _err: e.message }));
 
-  const [kmR, raR, incR, bsR, cfR] = await Promise.all(Object.values(urls).map(fetchSafe));
+  const [kmR, raR, incR, bsR, cfR, gradeR] = await Promise.all(Object.values(urls).map(fetchSafe));
 
   const km  = Array.isArray(kmR)  && kmR.length  ? kmR[0]  : null;
   const ra  = Array.isArray(raR)  && raR.length  ? raR[0]  : null;
@@ -567,9 +568,19 @@ async function fetchFmp(ticker, fmpKey) {
     netDebtToFcf:   div((totalDebt ?? 0) - (cash ?? 0), fcf),
   };
 
+  const grades = Array.isArray(gradeR)
+    ? gradeR.slice(0, 5).map(g => ({
+        date: g.date?.slice(0, 10) || null,
+        company: (g.gradingCompany || g.company || "").slice(0, 100),
+        rating: (g.newGrade || g.rating || "").slice(0, 50),
+        previousRating: (g.previousGrade || g.previousRating || "").slice(0, 50),
+      })).filter(g => g.date && g.rating)
+    : [];
+
   return {
     ok: true,
     metrics,
+    grades,
     annual: inc.slice(0,5).reverse().map(y=>({
       year: y.calendarYear||y.fiscalYear||y.date?.slice(0,4),
       revenue: y.revenue??null,
@@ -653,6 +664,7 @@ Deno.serve(async (req) => {
 
     const { ticker, asset_type } = body;
     if (!ticker) return json({ error: "ticker required" }, 400);
+    if (!/^[A-Z0-9.\-]{1,12}$/i.test(ticker)) return json({ error: "Geçersiz ticker formatı" }, 400);
 
     // BIST → İş Yatırım MaliTablo (FMP/EDGAR US-only). Bankalar şimdilik kapsam dışı.
     if (asset_type === "BIST") {
@@ -678,6 +690,8 @@ Deno.serve(async (req) => {
         fetched_at: new Date().toISOString(),
         source: "fmp",
         metrics: fmp.metrics,
+        grades: fmp.grades,
+        annual: fmp.annual,
         raw: fmp.raw,
       });
     }

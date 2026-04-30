@@ -1521,6 +1521,28 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
         </div>
       )}
 
+      {/* Analist Tavsiyeleri — sadece US_STOCK + fund.grades */}
+      {effectiveType==="US_STOCK"&&fund?.grades?.length>0&&(
+        <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+          <div className="stitle" style={{marginBottom:10}}>Analist Tavsiyeleri</div>
+          {fund.grades.map((g,i)=>{
+            const r=(g.rating||"").toLowerCase();
+            const isGood=r.includes("buy")||r.includes("outperform")||r.includes("overweight")||r.includes("strong buy");
+            const isBad=r.includes("sell")||r.includes("underperform")||r.includes("underweight")||r.includes("reduce");
+            const clr=isGood?"var(--ok)":isBad?"var(--err)":"var(--warn)";
+            const bg=isGood?"rgba(0,217,126,0.12)":isBad?"rgba(255,51,102,0.12)":"rgba(255,184,0,0.12)";
+            return(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderTop:i>0?"1px solid var(--border)":"none"}}>
+                <span style={{fontSize:11,color:"var(--text3)",minWidth:72,fontFamily:"'DM Mono',monospace",flexShrink:0}}>{fmtDateTR(g.date)}</span>
+                <span style={{flex:1,fontSize:12,color:"var(--text2)",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{g.company}</span>
+                <span style={{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:20,background:bg,color:clr,whiteSpace:"nowrap",flexShrink:0}}>{g.rating}</span>
+              </div>
+            );
+          })}
+          <div style={{fontSize:10,color:"var(--text3)",marginTop:8}}>Kaynak: FMP · Son 5 analist tavsiyesi. ↻ ile yenile.</div>
+        </div>
+      )}
+
       {/* İşlem geçmişi */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
         <div className="stitle" style={{marginBottom:0}}>İşlem Geçmişi · {tickerTxs.length}</div>
