@@ -684,6 +684,7 @@ const IconEyeOff = ()=><svg width="15" height="15" viewBox="0 0 24 24" fill="non
 const NAV_ICONS = {
   dashboard: (s)=><svg width={s} height={s} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>,
   history:   (s)=><svg width={s} height={s} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><line x1="3" y1="4" x2="13" y2="4"/><line x1="3" y1="8" x2="13" y2="8"/><line x1="3" y1="12" x2="13" y2="12"/></svg>,
+  watchlist: (s)=><svg width={s} height={s} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 2h10v12l-5-3-5 3z"/></svg>,
   search:    (s)=><svg width={s} height={s} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><circle cx="7" cy="7" r="5"/><line x1="11" y1="11" x2="14" y2="14"/></svg>,
   analysis:  (s)=><svg width={s} height={s} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"/><path d="M8 2 V8 H14"/></svg>,
   settings:  (s)=><svg width={s} height={s} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="2"/><path d="M8 1.5v1.5 M8 13v1.5 M14.5 8h-1.5 M3 8H1.5 M12.6 3.4l-1.1 1.1 M4.5 11.5l-1.1 1.1 M12.6 12.6l-1.1-1.1 M4.5 4.5L3.4 3.4"/></svg>,
@@ -1114,7 +1115,7 @@ const fmtCompact = (n) => {
   return ""+n;
 };
 
-function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,flash_,loadData,closeDetail,hideAmts,mask,portfolioId}){
+function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,flash_,loadData,closeDetail,hideAmts,mask,portfolioId,inWatchlist,onToggleWatchlist}){
   const [meta,setMeta]=useState(()=>metaCacheGet(ticker));
   const [metaLoading,setMetaLoading]=useState(false);
   const [metaErr,setMetaErr]=useState("");
@@ -1273,6 +1274,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
               {p?.type==="FUND"&&<span className="badge etf">ETF</span>}
               {p?.type==="CRYPTO"&&<span className="badge cry">₿</span>}
               {!p&&<span className="badge etf" data-tip="Portföyünde yok — keşif modu" style={{cursor:"help"}}>YOK</span>}
+              {inWatchlist&&<span className="badge" style={{background:"rgba(102,88,255,0.15)",color:"var(--info)",fontSize:10,padding:"2px 7px"}}>İzleniyor</span>}
             </div>
             <div className="dim" style={{fontSize:13,marginTop:2}}>
               {meta?.name||p?.name||"—"}
@@ -1288,6 +1290,12 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
           )}
         </div>
       </div>
+
+      {onToggleWatchlist&&<div style={{marginBottom:10}}>
+        <button className="btn-sm" style={inWatchlist?{color:"var(--err)",border:"1px solid rgba(255,51,102,0.3)"}:{}} onClick={()=>onToggleWatchlist(ticker)}>
+          {inWatchlist?"− İzlemeden Çıkar":"+ İzlemeye Ekle"}
+        </button>
+      </div>}
 
       {/* Pozisyon özeti — 4 ana kart (sadece held ticker için) */}
       {p&&(
@@ -2464,7 +2472,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
 // ── SearchTab ────────────────────────────────────────────────────
 // Global ticker arama: portföydeki + tüm SEC kayıtlı US hisseler.
 // Sonuca tıklayınca TickerDetailTab açılır (held veya not held).
-function SearchTab({pos,txs,openDetail,flash_}){
+function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist}){
   const [q,setQ]=useState("");
   const [tickerDb,setTickerDb]=useState(()=>tickerDbCacheGet());
   const [loading,setLoading]=useState(false);
@@ -2537,6 +2545,9 @@ function SearchTab({pos,txs,openDetail,flash_}){
         <span style={{flex:1,fontSize:12,color:"var(--text2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name||"—"}</span>
         {ex==="XIST"&&<span className="badge cry" style={{fontSize:9}}>BIST</span>}
         {held&&<span className="badge etf" style={{fontSize:9}}>açık</span>}
+        {!held&&onToggleWatchlist&&<span onClick={e=>{e.stopPropagation();onToggleWatchlist(ticker);}} style={{padding:"2px 7px",borderRadius:5,fontSize:11,fontWeight:500,cursor:"pointer",background:watchlistItems?.some(w=>w.ticker===ticker)?"rgba(102,88,255,0.15)":"rgba(255,255,255,0.06)",color:watchlistItems?.some(w=>w.ticker===ticker)?"var(--info)":"var(--text2)"}}>
+          {watchlistItems?.some(w=>w.ticker===ticker)?"✓ İzleniyor":"+ İzle"}
+        </span>}
         <span style={{color:"var(--text3)",fontSize:14}}>›</span>
       </div>
     );
@@ -4351,6 +4362,56 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   );
 }
 
+// ── WatchlistTab ─────────────────────────────────────────────────
+function WatchlistTab({items,prc,hist,onToggle,openDetail,setTab}){
+  React.useEffect(()=>{
+    // prices are fetched by App's existing pos-change effect; no extra fetch needed
+  },[]);
+  if(!items.length)return(
+    <div className="empty-card" style={{margin:"32px 16px"}}>
+      <b>İzleme listeniz boş</b>
+      <p style={{marginTop:6,marginBottom:14,color:"var(--text2)",fontSize:13}}>Arama sayfasında hisse bulup izlemeye ekleyebilirsiniz.</p>
+      <button className="btn-sm" onClick={()=>setTab("search")}>Ara →</button>
+    </div>
+  );
+  return(
+    <div>
+      <div style={{padding:"12px 16px 4px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <span className="stitle">İzleme Listesi</span>
+        <span className="lbl" style={{color:"var(--text3)"}}>{items.length} hisse</span>
+      </div>
+      <table style={{width:"100%",borderCollapse:"collapse"}}>
+        <thead>
+          <tr style={{borderBottom:"1px solid var(--border)"}}>
+            <th style={{textAlign:"left",padding:"6px 16px",fontSize:11,color:"var(--text3)",fontWeight:500,letterSpacing:"0.04em"}}>HİSSE</th>
+            <th style={{textAlign:"right",padding:"6px 8px",fontSize:11,color:"var(--text3)",fontWeight:500,letterSpacing:"0.04em"}}>FİYAT</th>
+            <th style={{textAlign:"right",padding:"6px 8px",fontSize:11,color:"var(--text3)",fontWeight:500,letterSpacing:"0.04em"}}>GÜN</th>
+            <th style={{width:72}}></th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map(w=>{
+            const price=prc[w.ticker];
+            const d1pct=hist[w.ticker]?.d1;
+            return(
+              <tr key={w.ticker} className="pos-row" onClick={()=>openDetail(w.ticker)}>
+                <td style={{padding:"10px 16px",fontFamily:"var(--mono)",fontWeight:600,fontSize:13}}>{w.ticker}</td>
+                <td style={{textAlign:"right",padding:"10px 8px",fontFamily:"var(--mono)",fontSize:13}}>{price!=null?fmt(price,2):"—"}</td>
+                <td style={{textAlign:"right",padding:"10px 8px",fontFamily:"var(--mono)",fontSize:13,color:d1pct==null?"var(--text3)":d1pct>=0?"var(--ok)":"var(--err)"}}>
+                  {d1pct!=null?fmtP(d1pct):"—"}
+                </td>
+                <td style={{textAlign:"right",padding:"10px 16px 10px 4px"}}>
+                  <button className="btn-xs btn-danger-out" onClick={e=>{e.stopPropagation();onToggle(w.ticker);}}>Çıkar</button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ── Main App ─────────────────────────────────────────────────────
 function App({session}){
   const user=session.user;
@@ -4407,6 +4468,7 @@ function App({session}){
   const [lastFetchAt,setLastFetchAt_]=useState(()=>LS.get("il_last_fetch",null));
   const setLastFetchAt=ts=>{setLastFetchAt_(ts);LS.set("il_last_fetch",ts);};
   const [flash,setFlash]=useState(null);
+  const [watchlistItems,setWatchlistItems]=useState([]);
   const [connTest,setConnTest]=useState(null);  // {ok:bool, status:int, body:str} — Settings → Bağlantı Test çıktısı
 
   const savePrc=(p,d)=>{setPrc_(p);setPdate(d);LS.set("il_prc",{p,d});};
@@ -4455,6 +4517,20 @@ function App({session}){
   const flash_=(msg,t="ok")=>{setFlash({msg,t});setTimeout(()=>setFlash(null),CFG.FLASH_MS);};
   const mask=v=>hide?<span className="mask">••••</span>:v;
 
+  const inWatchlist=t=>watchlistItems.some(w=>w.ticker===t);
+  const toggleWatchlist=async(ticker)=>{
+    if(inWatchlist(ticker)){
+      await sb.from("watchlist").delete().eq("user_id",user.id).eq("ticker",ticker);
+      setWatchlistItems(prev=>prev.filter(w=>w.ticker!==ticker));
+      flash_("İzleme listesinden çıkarıldı","ok");
+    } else {
+      const{data,error}=await sb.from("watchlist").insert({user_id:user.id,ticker}).select().single();
+      if(error){flash_("Eklenemedi","err");return;}
+      setWatchlistItems(prev=>[data,...prev]);
+      flash_("İzleme listesine eklendi","ok");
+    }
+  };
+
   // Async confirm dialog — window.confirm yerine.
   // Kullanım: if(!(await confirm_("Silinsin mi?"))) return;
   const [confirmSt,setConfirmSt]=useState(null);
@@ -4498,17 +4574,19 @@ function App({session}){
 
   const loadData=async()=>{
     setBusy(b=>({...b,d:true}));
-    const[pr,tr,sr,pc,pf,pfls]=await Promise.all([
+    const[pr,tr,sr,pc,pf,pfls,wl]=await Promise.all([
       sb.from("positions").select("*").eq("user_id",user.id),
       sb.from("transactions").select("*").eq("user_id",user.id).order("date",{ascending:false}),
       sb.from("splits").select("*").eq("user_id",user.id),
       sb.from("price_cache").select("*"),
       sb.from("profiles").select("*").eq("user_id",user.id).maybeSingle(),
-      sb.from("portfolios").select("id,name,is_public,privacy_level").eq("user_id",user.id).order("created_at")
+      sb.from("portfolios").select("id,name,is_public,privacy_level").eq("user_id",user.id).order("created_at"),
+      sb.from("watchlist").select("id,ticker,added_at").eq("user_id",user.id).order("added_at",{ascending:false})
     ]);
     if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker,unit:p.unit||null})));
     if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission,notes:t.notes||""})));
     if(sr.data)setSplits(sr.data);
+    if(wl.data)setWatchlistItems(wl.data);
     setProfile(pf?.data||null);
     // Portfolios: validate/set activePortfolioId
     const plist=pfls.data||[];
@@ -4733,7 +4811,7 @@ function App({session}){
   const expTx=()=>dlCSV(txs.map(t=>csvRow([t.date,t.ticker,t.name||"",t.asset_type||"",t.way,t.shares,t.price,t.currency||"USD",t.total||"",t.broker||"",t.commission||0])),"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Total,Broker,Commission",`txs_${today()}.csv`);
   const expPos=()=>dlCSV(pos.map(p=>csvRow([p.ticker,p.name,p.type,p.shares,p.avgCost,p.currency,p.broker])),"Ticker,Name,Type,Shares,AvgCost,Currency,Broker",`pos_${today()}.csv`);
 
-  const TABS=[["dashboard","Dashboard"],["history","İşlemler"],["analysis","Analiz"],["search","Ara"],["add","+ Ekle"],["settings","Ayarlar"]];
+  const TABS=[["dashboard","Dashboard"],["watchlist","Watchlist"],["analysis","Analiz"],["search","Ara"],["add","+ Ekle"],["settings","Ayarlar"]];
 
   if(busy.d&&pos.length===0)return(
     <div style={{padding:"16px 16px 0"}}>
@@ -5155,8 +5233,10 @@ function App({session}){
         <HistoryTab txs={txs} user={user} loadData={loadData} flash_={flash_} confirm_={confirm_} mask={mask} hideAmts={hide} setTab={setTab} openDetail={openDetail} initialSearch={navTicker} onConsume={()=>setNavTicker("")} splits={splits} portfolioId={activePortfolioId}/>
       )}
 
-
-
+      {/* WATCHLIST */}
+      {tab==="watchlist"&&(
+        <WatchlistTab items={watchlistItems} prc={prc} hist={hist} onToggle={toggleWatchlist} openDetail={openDetail} setTab={setTab}/>
+      )}
 
 
       {/* ANALYSIS */}
@@ -5166,7 +5246,7 @@ function App({session}){
 
       {/* SEARCH */}
       {tab==="search"&&(
-        <SearchTab pos={pos} txs={txs} openDetail={openDetail} flash_={flash_}/>
+        <SearchTab pos={pos} txs={txs} openDetail={openDetail} flash_={flash_} watchlistItems={watchlistItems} onToggleWatchlist={toggleWatchlist}/>
       )}
 
       {/* ADD */}
@@ -5180,7 +5260,8 @@ function App({session}){
           ticker={selectedTicker} assetTypeHint={selectedAssetType}
           pos={pos} txs={txs} prc={prc} hist={hist}
           user={user} confirm_={confirm_} flash_={flash_} loadData={loadData}
-          closeDetail={closeDetail} hideAmts={hide} mask={mask} portfolioId={activePortfolioId}/>
+          closeDetail={closeDetail} hideAmts={hide} mask={mask} portfolioId={activePortfolioId}
+          inWatchlist={inWatchlist(selectedTicker||"")} onToggleWatchlist={toggleWatchlist}/>
       )}
 
       {/* PUBLIC PORTFOLIO VIEW — ?portfolio=<uuid> */}
@@ -5356,6 +5437,12 @@ function App({session}){
             <div className="brow">
               <button onClick={expTx}>İşlemler CSV</button>
               <button onClick={expPos}>Pozisyonlar CSV</button>
+            </div>
+          </div>
+          <div className="sg">
+            <label>İşlem Geçmişi</label>
+            <div className="brow">
+              <button onClick={()=>setTab("history")}>Tüm İşlemleri Gör →</button>
             </div>
           </div>
           <AccountSection user={user} profile={profile} flash_={flash_} confirm_={confirm_} onSaved={loadData}/>
