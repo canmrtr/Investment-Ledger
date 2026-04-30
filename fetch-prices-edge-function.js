@@ -35,7 +35,7 @@ async function yfChart(ticker, range = "1y", interval = "1d", addIS = true) {
     ? (/\.[A-Z]+$/i.test(ticker) ? ticker : `${ticker}.IS`)
     : ticker;
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=${range}&interval=${interval}`;
-  const r = await fetch(url, { headers: { "User-Agent": YF_UA } });
+  const r = await fetch(url, { headers: { "User-Agent": YF_UA }, signal: AbortSignal.timeout(8000) });
   if (!r.ok) return { error: `Yahoo HTTP ${r.status}` };
   const d = await r.json();
   if (d.chart?.error) return { error: d.chart.error.description || "Yahoo chart error" };
@@ -135,7 +135,7 @@ async function yfPriceUS(ticker, date) {
 
 async function tdMeta(ticker, apiKey) {
   const url = `https://api.twelvedata.com/stocks?symbol=${ticker}&exchange=XIST&apikey=${apiKey}`;
-  const r = await fetch(url);
+  const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
   if (!r.ok) return { error: `Twelve Data HTTP ${r.status}` };
   const d = await r.json();
   const x = Array.isArray(d.data) ? d.data[0] : null;
@@ -166,7 +166,8 @@ async function mcpInitialize() {
     body: JSON.stringify({
       jsonrpc: "2.0", id: 1, method: "initialize",
       params: { protocolVersion: "2024-11-05", capabilities: {}, clientInfo: { name: "investment-ledger", version: "1.0" } }
-    })
+    }),
+    signal: AbortSignal.timeout(10000),
   });
   const sid = r.headers.get("mcp-session-id");
   if (!sid) throw new Error("MCP session header yok");
@@ -174,7 +175,8 @@ async function mcpInitialize() {
   await fetch(MCP_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "mcp-session-id": sid },
-    body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" })
+    body: JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }),
+    signal: AbortSignal.timeout(5000),
   });
   return sid;
 }
@@ -184,7 +186,8 @@ async function mcpCallTool(toolName, args) {
   const doCall = async (sid) => fetch(MCP_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "mcp-session-id": sid },
-    body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name: toolName, arguments: args } })
+    body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name: toolName, arguments: args } }),
+    signal: AbortSignal.timeout(10000),
   });
   let r = await doCall(mcpSession);
   if (r.status === 401 || r.status === 404) {
@@ -215,7 +218,7 @@ async function mcpProfile(ticker) {
 
 async function massivePrice(ticker, date, apiKey) {
   const url = `https://api.massive.com/v1/open-close/${ticker}/${date}?apiKey=${apiKey}`;
-  const r = await fetch(url);
+  const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
   if (!r.ok) {
     const errText = await r.text();
     return { error: `HTTP ${r.status}`, raw: errText.slice(0, 100) };
@@ -244,7 +247,7 @@ async function massivePrice(ticker, date, apiKey) {
 
 async function massiveHistorical(ticker, from, to, apiKey) {
   const url = `https://api.massive.com/v2/aggs/ticker/${ticker}/range/1/day/${from}/${to}?adjusted=true&limit=400&apiKey=${apiKey}`;
-  const r = await fetch(url);
+  const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
   if (!r.ok) return { error: `massiveHistorical: HTTP ${r.status}` };
   const d = await r.json();
   if (!d.results || d.results.length <= 1) return { error: "massiveHistorical: yetersiz veri" };
@@ -259,7 +262,7 @@ async function massiveHistorical(ticker, from, to, apiKey) {
 
 async function massiveMeta(ticker, apiKey) {
   const url = `https://api.massive.com/v3/reference/tickers/${ticker}?apiKey=${apiKey}`;
-  const r = await fetch(url);
+  const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
   if (!r.ok) {
     const errText = await r.text();
     return { error: `HTTP ${r.status}`, raw: errText.slice(0, 200) };
