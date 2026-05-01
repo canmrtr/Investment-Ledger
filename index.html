@@ -1292,7 +1292,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       </div>
 
       {onToggleWatchlist&&<div style={{marginBottom:10}}>
-        <button className="btn-sm" style={inWatchlist?{color:"var(--err)",border:"1px solid rgba(255,51,102,0.3)"}:{}} onClick={()=>onToggleWatchlist(ticker)}>
+        <button className="btn-sm" style={inWatchlist?{color:"var(--err)",border:"1px solid rgba(255,51,102,0.3)"}:{}} onClick={()=>onToggleWatchlist(ticker,assetTypeHint)}>
           {inWatchlist?"− İzlemeden Çıkar":"+ İzlemeye Ekle"}
         </button>
       </div>}
@@ -2545,7 +2545,7 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist})
         <span style={{flex:1,fontSize:12,color:"var(--text2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name||"—"}</span>
         {ex==="XIST"&&<span className="badge cry" style={{fontSize:9}}>BIST</span>}
         {held&&<span className="badge etf" style={{fontSize:9}}>açık</span>}
-        {!held&&onToggleWatchlist&&<span onClick={e=>{e.stopPropagation();onToggleWatchlist(ticker);}} style={{padding:"2px 7px",borderRadius:5,fontSize:11,fontWeight:500,cursor:"pointer",background:watchlistItems?.some(w=>w.ticker===ticker)?"rgba(102,88,255,0.15)":"rgba(255,255,255,0.06)",color:watchlistItems?.some(w=>w.ticker===ticker)?"var(--info)":"var(--text2)"}}>
+        {!held&&onToggleWatchlist&&<span onClick={e=>{e.stopPropagation();onToggleWatchlist(ticker,at);}} style={{padding:"2px 7px",borderRadius:5,fontSize:11,fontWeight:500,cursor:"pointer",background:watchlistItems?.some(w=>w.ticker===ticker)?"rgba(102,88,255,0.15)":"rgba(255,255,255,0.06)",color:watchlistItems?.some(w=>w.ticker===ticker)?"var(--info)":"var(--text2)"}}>
           {watchlistItems?.some(w=>w.ticker===ticker)?"✓ İzleniyor":"+ İzle"}
         </span>}
         <span style={{color:"var(--text3)",fontSize:14}}>›</span>
@@ -4518,13 +4518,14 @@ function App({session}){
   const mask=v=>hide?<span className="mask">••••</span>:v;
 
   const inWatchlist=t=>watchlistItems.some(w=>w.ticker===t);
-  const toggleWatchlist=async(ticker)=>{
+  const toggleWatchlist=async(ticker,assetType=null)=>{
     if(inWatchlist(ticker)){
       await sb.from("watchlist").delete().eq("user_id",user.id).eq("ticker",ticker);
       setWatchlistItems(prev=>prev.filter(w=>w.ticker!==ticker));
       flash_("İzleme listesinden çıkarıldı","ok");
     } else {
-      const{data,error}=await sb.from("watchlist").insert({user_id:user.id,ticker}).select().single();
+      const row={user_id:user.id,ticker,...(assetType&&{asset_type:assetType})};
+      const{data,error}=await sb.from("watchlist").insert(row).select().single();
       if(error){flash_("Eklenemedi","err");return;}
       setWatchlistItems(prev=>[data,...prev]);
       flash_("İzleme listesine eklendi","ok");
@@ -4661,11 +4662,13 @@ function App({session}){
     return()=>clearInterval(id);
   },[pos.length,lastFetchAt,busy.p,busy.h]);
 
-  // pos yüklendikten sonra cache'te olmayan ticker'lar için arka planda otomatik fetchHist.
-  // USD (Massive) + BIST (Twelve Data) — provider erişimi olan her tür dahil.
+  // pos/watchlist yüklendikten sonra cache'te olmayan ticker'lar için arka planda otomatik fetchHist.
   useEffect(()=>{
-    if(!pos.length||busy.h||busy.p)return;
-    const tickers=pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO").map(p=>p.ticker);
+    if((!pos.length&&!watchlistItems.length)||busy.h||busy.p)return;
+    const posSet=new Set(pos.map(p=>p.ticker));
+    const posTickers=pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO").map(p=>p.ticker);
+    const wlTickers=watchlistItems.filter(w=>!posSet.has(w.ticker)&&(w.asset_type||"US_STOCK")!=="FX").map(w=>w.ticker);
+    const tickers=[...new Set([...posTickers,...wlTickers])];
     const missingPos=tickers.filter(t=>!hist[t]||hist[t].p_y1==null);
     const missingBench=BENCHMARKS.map(b=>b.ticker).filter(t=>!hist[t]||hist[t].p_y1==null);
     const missing=[...new Set([...missingPos,...missingBench])];
@@ -4673,7 +4676,7 @@ function App({session}){
       if(missingPos.length)flash_(`${missingPos.length} ticker için tarihi veri otomatik yükleniyor...`,"ok");
       fetchHist(missing);
     }
-  },[pos]);
+  },[pos,watchlistItems]);
 
   // Derived
   // Per-position raw mantık (her currency kendi sembolüyle render edilen tablolar için)
@@ -4747,14 +4750,18 @@ function App({session}){
 
   const fetchPrices=async()=>{
     setBusy(b=>({...b,p:true}));
-    // Provider erişimi olan tüm pozisyonlar: USD-denominated (Massive) + BIST (Twelve Data)
-    const fetchable=pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO");
+    const posSet=new Set(pos.map(p=>p.ticker));
+    const posFetchable=pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO")
+      .map(p=>({ticker:p.ticker,type:p.type}));
+    const wlFetchable=watchlistItems.filter(w=>!posSet.has(w.ticker)&&(w.asset_type||"US_STOCK")!=="FX")
+      .map(w=>({ticker:w.ticker,type:w.asset_type||"US_STOCK"}));
+    const fetchable=[...posFetchable,...wlFetchable];
     const np={...prc};let cnt=0;const failed=[];
     for(let i=0;i<fetchable.length;i++){
-      const p=fetchable[i],t=p.ticker;
+      const {ticker:t,type:at}=fetchable[i];
       setPprog(`${t} (${i+1}/${fetchable.length})`);
       try{
-        const r=await edgeCall("fetch-prices",{ticker:t,mode:"price",asset_type:p.type});
+        const r=await edgeCall("fetch-prices",{ticker:t,mode:"price",asset_type:at});
         const d=await r.json();
         if(d.result?.price){np[t]=d.result.price;cnt++;}
         else{failed.push(t);DEBUG && console.warn(`[fetchPrices ${t}]`,d.result?.error||d.error||"no price");}
@@ -4773,8 +4780,9 @@ function App({session}){
     setBusy(b=>({...b,h:true}));
     // tickersOverride array of strings ise, asset_type'ı pos'tan lookup et
     const benchTypeMap=Object.fromEntries(BENCHMARKS.map(b=>[b.ticker,b.type]));
+    const wlTypeMap=Object.fromEntries(watchlistItems.filter(w=>w.asset_type).map(w=>[w.ticker,w.asset_type]));
     const fetchable = tickersOverride
-      ? tickersOverride.map(t=>{const p=pos.find(x=>x.ticker===t);return{ticker:t,type:p?.type||benchTypeMap[t]};})
+      ? tickersOverride.map(t=>{const p=pos.find(x=>x.ticker===t);return{ticker:t,type:p?.type||wlTypeMap[t]||benchTypeMap[t]||"US_STOCK"};})
       : pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO").map(p=>({ticker:p.ticker,type:p.type}));
     const nh={...hist};const np={...prc};let cnt=0;const failed=[];
     for(let i=0;i<fetchable.length;i++){
