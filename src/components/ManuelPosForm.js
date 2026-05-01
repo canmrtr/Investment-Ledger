@@ -127,7 +127,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
       unit:form.type==="GOLD"?(form.unit||'oz'):null,
       updated_at:new Date().toISOString(),
       portfolio_id:portfolioId
-    },{onConflict:"user_id,ticker"});
+    },{onConflict:"user_id,portfolio_id,ticker"});
 
     await loadData();
     flash_(`${tk} işlem geçmişine ve pozisyona eklendi ✓`);

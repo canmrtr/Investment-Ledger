@@ -162,29 +162,29 @@ function App({session}){
 
   const loadData=async()=>{
     setBusy(b=>({...b,d:true}));
-    const[pr,tr,sr,pc,pf,pfls,wl]=await Promise.all([
-      sb.from("positions").select("*").eq("user_id",user.id),
-      sb.from("transactions").select("*").eq("user_id",user.id).order("date",{ascending:false}),
+    // Adım 1: portfolios + activePortfolioId belirle
+    const pfls=await sb.from("portfolios").select("id,name,is_public,privacy_level").eq("user_id",user.id).order("created_at");
+    const plist=pfls.data||[];
+    setPortfolios(plist);
+    let pid=localStorage.getItem("il_active_portfolio");
+    const pids=plist.map(p=>p.id);
+    if(!pid||!pids.includes(pid)){pid=plist[0]?.id||null;if(pid)localStorage.setItem("il_active_portfolio",pid);}
+    setActivePortfolioId(pid);
+    if(!pid){setBusy(b=>({...b,d:false}));return;}
+    // Adım 2: portfolio-scoped data paralel çek
+    const[pr,tr,sr,pc,pf,wl]=await Promise.all([
+      sb.from("positions").select("*").eq("user_id",user.id).eq("portfolio_id",pid),
+      sb.from("transactions").select("*").eq("user_id",user.id).eq("portfolio_id",pid).order("date",{ascending:false}),
       sb.from("splits").select("*").eq("user_id",user.id),
       sb.from("price_cache").select("*"),
       sb.from("profiles").select("*").eq("user_id",user.id).maybeSingle(),
-      sb.from("portfolios").select("id,name,is_public,privacy_level").eq("user_id",user.id).order("created_at"),
-      sb.from("watchlist").select("id,ticker,added_at").eq("user_id",user.id).order("added_at",{ascending:false})
+      sb.from("watchlist").select("id,ticker,asset_type,added_at").eq("user_id",user.id).order("added_at",{ascending:false})
     ]);
     if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker,unit:p.unit||null})));
     if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission,notes:t.notes||""})));
     if(sr.data)setSplits(sr.data);
     if(wl.data)setWatchlistItems(wl.data);
     setProfile(pf?.data||null);
-    // Portfolios: validate/set activePortfolioId
-    const plist=pfls.data||[];
-    setPortfolios(plist);
-    if(plist.length){
-      let pid=localStorage.getItem("il_active_portfolio");
-      const pids=plist.map(p=>p.id);
-      if(!pid||!pids.includes(pid)){pid=plist[0].id;localStorage.setItem("il_active_portfolio",pid);}
-      setActivePortfolioId(pid);
-    }
     // Paylaşımlı fiyat cache'ini uygula — LS'teki hist/prc üstüne yazar.
     const cachedSet=new Set((pc.data||[]).map(c=>c.ticker));
     if(pc.data&&pc.data.length){
@@ -212,8 +212,10 @@ function App({session}){
       if(pf.privacy_level==="full"){
         const{data}=await sb.from("positions").select("ticker,name,type,shares,avg_cost,currency").eq("portfolio_id",publicViewId);
         positions=data||[];
+      } else if(pf.privacy_level==="allocation_only"){
+        const{data}=await sb.from("positions").select("ticker,name,type,shares").eq("portfolio_id",publicViewId);
+        positions=data||[];
       }
-      // Owner username
       const{data:owner}=await sb.from("profiles").select("username,display_name,avatar_emoji").eq("user_id",pf.user_id).maybeSingle();
       setPublicViewData({portfolio:pf,positions,owner:owner||{}});
       setTab("publicview");
@@ -862,11 +864,13 @@ function App({session}){
       {/* PUBLIC PORTFOLIO VIEW — ?portfolio=<uuid> */}
       {tab==="publicview"&&publicViewData&&(()=>{
         const{portfolio,positions,owner}=publicViewData;
-        const totalCost=positions.reduce((a,p)=>a+(p.avg_cost||0)*p.shares,0);
+        const isFull=portfolio.privacy_level==="full";
+        const totalVal=isFull
+          ? positions.reduce((a,p)=>a+(p.avg_cost||0)*p.shares,0)
+          : positions.reduce((a,p)=>a+p.shares,0);
         const rows=positions.map(p=>({
           ...p,
-          cost:(p.avg_cost||0)*p.shares,
-          pct:totalCost>0?((p.avg_cost||0)*p.shares/totalCost*100):0,
+          pct:totalVal>0?(isFull?(p.avg_cost||0)*p.shares:p.shares)/totalVal*100:0,
         })).sort((a,b)=>b.pct-a.pct);
         return(
           <div>
@@ -890,13 +894,14 @@ function App({session}){
                 </div>
               </div>
               {/* Pozisyon listesi */}
-              {portfolio.privacy_level!=="full"?(
-                <div className="warn-card">Bu portföy yalnızca özet bilgi paylaşıyor — pozisyon detayları gizli.</div>
-              ):rows.length===0?(
+              {rows.length===0?(
                 <div className="empty-card"><div className="ttl">Bu portföyde pozisyon yok</div></div>
               ):(
                 <div className="card" style={{padding:"14px 16px"}}>
-                  <div className="stitle" style={{marginBottom:12}}>Pozisyonlar <span style={{fontWeight:400,color:"var(--text3)"}}>{rows.length} varlık</span></div>
+                  <div className="stitle" style={{marginBottom:12}}>
+                    {isFull?"Pozisyonlar":"Varlık Dağılımı"}
+                    {" "}<span style={{fontWeight:400,color:"var(--text3)"}}>{rows.length} varlık</span>
+                  </div>
                   {rows.map((p,i)=>(
                     <div key={p.ticker} style={{display:"flex",alignItems:"center",gap:10,padding:"7px 0",borderBottom:i<rows.length-1?"1px solid var(--border)":"none"}}>
                       <span className="tsym" style={{flex:"0 0 70px"}}>{p.ticker}</span>
@@ -925,22 +930,44 @@ function App({session}){
             const portfolio = portfolios.find(p => p.id === activePortfolioId);
             if (!portfolio) return null;
             const isPublic = portfolio.is_public;
+            const privLevel = portfolio.privacy_level || "allocation_only";
             const togglePublic = async () => {
               if (!isPublic) {
                 const ok = await confirm_(
-                  "Portföyünüz herkese açık olacak. Pozisyon listesi (ticker + dağılım) herkes tarafından görülebilir. Devam edilsin mi?",
+                  "Portföyünüz herkese açık olacak. Varsayılan olarak yalnızca varlık dağılımı (ticker + yüzdeler) paylaşılır. Detay paylaşımını aşağıdaki seçenekten değiştirebilirsiniz.",
                   {okLbl:"Herkese Aç", cancelLbl:"İptal", danger:true}
                 );
                 if (!ok) return;
               }
               try {
                 const {error} = await sb.from("portfolios")
-                  .update({is_public: !isPublic, privacy_level: !isPublic ? "full" : "allocation_only"})
+                  .update({is_public: !isPublic, privacy_level: "allocation_only"})
                   .eq("id", activePortfolioId)
                   .eq("user_id", user.id);
                 if (error) throw error;
                 await loadData();
                 flash_(!isPublic ? "Portföy herkese açıldı" : "Portföy gizlendi", "ok");
+              } catch(e) {
+                flash_("Güncelleme başarısız", "err");
+              }
+            };
+            const togglePrivacyLevel = async () => {
+              const toFull = privLevel !== "full";
+              if (toFull) {
+                const ok = await confirm_(
+                  "Maliyet ve adet bilgileri de herkesle paylaşılacak. Emin misiniz?",
+                  {okLbl:"Tam Detay Paylaş", cancelLbl:"İptal", danger:true}
+                );
+                if (!ok) return;
+              }
+              try {
+                const {error} = await sb.from("portfolios")
+                  .update({privacy_level: toFull ? "full" : "allocation_only"})
+                  .eq("id", activePortfolioId)
+                  .eq("user_id", user.id);
+                if (error) throw error;
+                await loadData();
+                flash_(toFull ? "Tam detay paylaşımı açık" : "Sadece dağılım paylaşılıyor", "ok");
               } catch(e) {
                 flash_("Güncelleme başarısız", "err");
               }
@@ -971,6 +998,30 @@ function App({session}){
                     </button>
                   </div>
                 </div>
+                {isPublic&&(
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderTop:"1px solid var(--border)"}}>
+                    <div>
+                      <div style={{fontSize:12,color:"var(--text2)"}}>Detay Paylaşımı</div>
+                      <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>
+                        {privLevel==="full" ? "Adet ve maliyet bilgileri görünür" : "Sadece ticker + yüzde dağılımı görünür"}
+                      </div>
+                    </div>
+                    <div style={{display:"flex",gap:6,flexShrink:0}}>
+                      <button
+                        className={"btn-xs"+(privLevel!=="full"?" on":"")}
+                        style={privLevel!=="full"?{background:"rgba(102,88,255,0.15)",color:"var(--info)",border:"1px solid rgba(102,88,255,0.3)"}:{}}
+                        onClick={privLevel==="full"?togglePrivacyLevel:undefined}
+                        disabled={privLevel!=="full"}
+                      >Sadece Dağılım</button>
+                      <button
+                        className={"btn-xs"+(privLevel==="full"?" on":"")}
+                        style={privLevel==="full"?{background:"rgba(102,88,255,0.15)",color:"var(--info)",border:"1px solid rgba(102,88,255,0.3)"}:{}}
+                        onClick={privLevel!=="full"?togglePrivacyLevel:undefined}
+                        disabled={privLevel==="full"}
+                      >Tam Detay</button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}
