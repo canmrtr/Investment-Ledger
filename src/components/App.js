@@ -56,6 +56,7 @@ function App({session}){
   const [flash,setFlash]=useState(null);
   const [watchlistItems,setWatchlistItems]=useState([]);
   const [connTest,setConnTest]=useState(null);  // {ok:bool, status:int, body:str} — Settings → Bağlantı Test çıktısı
+  const [statusOpen,setStatusOpen]=useState(false);
 
   const savePrc=(p,d)=>{setPrc_(p);setPdate(d);LS.set("il_prc",{p,d});};
   const saveHist=h=>{setHist_(h);LS.set("il_hist",h);};
@@ -916,51 +917,10 @@ function App({session}){
       {/* SETTINGS */}
       {tab==="settings"&&(
         <div>
-          <div className="sg">
-            <label>Görünüm</label>
-            <div className="seg">
-              {[["system","Sistem"],["light","Açık"],["dark","Koyu"]].map(([v,l])=>(
-                <button key={v} className={themeMode===v?"on":""} onClick={()=>setThemeMode(v)}>{l}</button>
-              ))}
-            </div>
-            <div className="hint">Tema tercihi tarayıcıda kaydedilir.</div>
-          </div>
-          <div className="sg">
-            <label>Fiyat & Veri</label>
-            <div className="hint" style={{marginBottom:10}}>Portföyündeki tüm tickerların güncel fiyatları çekilir. Sekme ön plana geldiğinde ve her 30 dakikada bir otomatik yenilenir.</div>
-            {(busy.p||busy.h)
-              ?<div className="dim" style={{fontSize:13,display:"flex",alignItems:"center",gap:8}}><div className="spin" style={{width:14,height:14}}></div><span className="mono">{pprog}</span></div>
-              :<div className="brow">
-                <button onClick={fetchPrices}>↻ Şimdi Güncelle{lastFetchAt&&<span className="dim" style={{fontSize:10,marginLeft:6}}>{fmtAge(lastFetchAt)}</span>}</button>
-                <button onClick={fetchHist}>Tarihi Veri (1G/1H/1A/1Y)</button>
-                <button onClick={async()=>{
-                  setConnTest({loading:true});
-                  try{
-                    const r=await edgeCall("fetch-prices",{ticker:"NVDA",mode:"price"});
-                    const txt=await r.text();
-                    setConnTest({ok:r.ok, status:r.status, body:txt.slice(0,600)});
-                  }catch(e){setConnTest({ok:false, status:"—", body:"HATA: "+e.message});}
-                }} style={{fontSize:11,padding:"5px 10px",color:"var(--warn)",borderColor:"var(--warn)"}}>🔍 Bağlantı Test</button>
-              </div>}
-            <div className="hint">Ticker başına ~8 sn · "Bağlantı Test" ile önce tek ticker dene</div>
-            {connTest&&(
-              <div style={{marginTop:8,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 12px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                  <span className="lbl">Test Sonucu</span>
-                  <button className="btn-xs" onClick={()=>setConnTest(null)}>Kapat</button>
-                </div>
-                {connTest.loading
-                  ?<div className="dim" style={{fontSize:12}}><span className="spin" style={{width:11,height:11,marginRight:6,verticalAlign:"middle"}}></span>İstek gönderiliyor…</div>
-                  :<>
-                    <div style={{fontSize:12,marginBottom:6}}>
-                      <span className={"dot "+(connTest.ok?"ok":"off")}></span>
-                      <span className="mono">HTTP {connTest.status}</span>
-                    </div>
-                    <pre style={{margin:0,fontSize:10,fontFamily:"'DM Mono',monospace",color:"var(--text2)",whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:200,overflow:"auto"}}>{connTest.body}</pre>
-                  </>}
-              </div>
-            )}
-          </div>
+          {/* 1. Hesap */}
+          <AccountSection user={user} profile={profile} flash_={flash_} confirm_={confirm_} onSaved={loadData}/>
+
+          {/* 2. Portföy — conditional */}
           {activePortfolioId && portfolios.length > 0 && (()=>{
             const portfolio = portfolios.find(p => p.id === activePortfolioId);
             if (!portfolio) return null;
@@ -1014,8 +974,59 @@ function App({session}){
               </div>
             );
           })()}
+
+          {/* 3. Görünüm */}
           <div className="sg">
-            <label>Pozisyon Bakımı</label>
+            <label>Görünüm</label>
+            <div className="seg">
+              {[["system","Sistem"],["light","Açık"],["dark","Koyu"]].map(([v,l])=>(
+                <button key={v} className={themeMode===v?"on":""} onClick={()=>setThemeMode(v)}>{l}</button>
+              ))}
+            </div>
+            <div className="hint">Tema tercihi tarayıcıda kaydedilir.</div>
+          </div>
+
+          {/* 4. Fiyat & Veri */}
+          <div className="sg">
+            <label>Fiyat & Veri</label>
+            <div className="hint" style={{marginBottom:10}}>Portföyündeki tüm tickerların güncel fiyatları çekilir. Sekme ön plana geldiğinde ve her 30 dakikada bir otomatik yenilenir.</div>
+            {(busy.p||busy.h)
+              ?<div className="dim" style={{fontSize:13,display:"flex",alignItems:"center",gap:8}}><div className="spin" style={{width:14,height:14}}></div><span className="mono">{pprog}</span></div>
+              :<div className="brow">
+                <button onClick={fetchPrices}>↻ Şimdi Güncelle{lastFetchAt&&<span className="dim" style={{fontSize:10,marginLeft:6}}>{fmtAge(lastFetchAt)}</span>}</button>
+                <button onClick={fetchHist}>Tarihi Veri (1G/1H/1A/1Y)</button>
+                <button onClick={async()=>{
+                  setConnTest({loading:true});
+                  try{
+                    const r=await edgeCall("fetch-prices",{ticker:"NVDA",mode:"price"});
+                    const txt=await r.text();
+                    setConnTest({ok:r.ok, status:r.status, body:txt.slice(0,600)});
+                  }catch(e){setConnTest({ok:false, status:"—", body:"HATA: "+e.message});}
+                }} style={{fontSize:11,padding:"5px 10px",color:"var(--warn)",borderColor:"var(--warn)"}}>🔍 Bağlantı Test</button>
+              </div>}
+            <div className="hint">Ticker başına ~8 sn · "Bağlantı Test" ile önce tek ticker dene</div>
+            {connTest&&(
+              <div style={{marginTop:8,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 12px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <span className="lbl">Test Sonucu</span>
+                  <button className="btn-xs" onClick={()=>setConnTest(null)}>Kapat</button>
+                </div>
+                {connTest.loading
+                  ?<div className="dim" style={{fontSize:12}}><span className="spin" style={{width:11,height:11,marginRight:6,verticalAlign:"middle"}}></span>İstek gönderiliyor…</div>
+                  :<>
+                    <div style={{fontSize:12,marginBottom:6}}>
+                      <span className={"dot "+(connTest.ok?"ok":"off")}></span>
+                      <span className="mono">HTTP {connTest.status}</span>
+                    </div>
+                    <pre style={{margin:0,fontSize:10,fontFamily:"'DM Mono',monospace",color:"var(--text2)",whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:200,overflow:"auto"}}>{connTest.body}</pre>
+                  </>}
+              </div>
+            )}
+          </div>
+
+          {/* 5. Araçlar — Pozisyon Bakımı + Export + İşlem Geçmişi */}
+          <div className="sg">
+            <label>Araçlar</label>
             <div className="brow">
               <button onClick={async()=>{
                 if(!(await confirm_("Tüm pozisyonlar sıfırlanıp işlemlerden yeniden hesaplanacak. Devam edilsin mi?",{okLbl:"Yeniden Hesapla",danger:true})))return;
@@ -1024,45 +1035,51 @@ function App({session}){
                 flash_(`Pozisyonlar yeniden hesaplandı · ${n} pozisyon`);
               }}>♻️ Pozisyonları Yeniden Hesapla</button>
             </div>
-            <div className="hint">Split eklendi/değiştirildiyse basın — tüm işlemler split-aware yeniden hesaplanır.</div>
-          </div>
-          <div className="sg">
-            <label>Export</label>
-            <div className="brow">
+            <div className="hint" style={{marginBottom:10}}>Split eklendi/değiştirildiyse basın — tüm işlemler split-aware yeniden hesaplanır.</div>
+            <div className="brow" style={{marginBottom:10}}>
               <button onClick={expTx}>İşlemler CSV</button>
               <button onClick={expPos}>Pozisyonlar CSV</button>
             </div>
-          </div>
-          <div className="sg">
-            <label>İşlem Geçmişi</label>
             <div className="brow">
-              <button onClick={()=>setTab("history")}>Tüm İşlemleri Gör →</button>
+              <button onClick={()=>setTab("history")}>İşlem Geçmişi →</button>
             </div>
           </div>
-          <AccountSection user={user} profile={profile} flash_={flash_} confirm_={confirm_} onSaved={loadData}/>
-          <div style={{borderTop:"0.5px solid var(--border)",paddingTop:16,marginBottom:16}}>
-            <div className="stitle">Sistem Durumu</div>
-            {[
-              [true,"Supabase","Bağlı · RLS aktif"],
-              [true,"Edge Functions","parse-transaction · fetch-prices"],
-              [hasH,"Tarihi Veri",hasH?Object.keys(hist).length+" ticker":"Yüklenmedi"],
-              [pdate!=="—","Son Fiyat",pdate],
-              [!!fxRates?.USDTRY,"FX Kuru",fxRates?.USDTRY?`1$ ≈ ₺${fmt(fxRates.USDTRY,2)}${fxAt?` · ${Math.round((Date.now()-fxAt)/3600000)}sa önce`:""}`:"Yüklenmedi"],
-              [true,"Pozisyonlar",pos.length+" açık"],
-              [true,"İşlemler",txs.length+" kayıtlı"],
-              [splits.length>0,"Split Kayıtları",splits.length>0?splits.length+" tanımlı":"Yok / okunamıyor"],
-            ].map(([ok,l,v])=>(
-              <div key={l} className="row">
-                <span style={{fontSize:13}}><span className={"dot "+(ok?"ok":"off")}></span>{l}</span>
-                <span className="dim" style={{fontSize:12}}>{v}</span>
+
+          {/* 6. Sistem Durumu — collapsible */}
+          <div className="sg">
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",userSelect:"none"}} onClick={()=>setStatusOpen(o=>!o)}>
+              <label style={{cursor:"pointer",marginBottom:0}}>Sistem Durumu</label>
+              <span style={{fontSize:12,color:"var(--text3)"}}>{statusOpen?"▴":"▾"}</span>
+            </div>
+            {statusOpen&&(
+              <div style={{marginTop:8}}>
+                {[
+                  [true,"Supabase","Bağlı · RLS aktif"],
+                  [true,"Edge Functions","parse-transaction · fetch-prices"],
+                  [hasH,"Tarihi Veri",hasH?Object.keys(hist).length+" ticker":"Yüklenmedi"],
+                  [pdate!=="—","Son Fiyat",pdate],
+                  [!!fxRates?.USDTRY,"FX Kuru",fxRates?.USDTRY?`1$ ≈ ₺${fmt(fxRates.USDTRY,2)}${fxAt?` · ${Math.round((Date.now()-fxAt)/3600000)}sa önce`:""}`:"Yüklenmedi"],
+                  [true,"Pozisyonlar",pos.length+" açık"],
+                  [true,"İşlemler",txs.length+" kayıtlı"],
+                  [splits.length>0,"Split Kayıtları",splits.length>0?splits.length+" tanımlı":"Yok / okunamıyor"],
+                ].map(([ok,l,v])=>(
+                  <div key={l} className="row">
+                    <span style={{fontSize:13}}><span className={"dot "+(ok?"ok":"off")}></span>{l}</span>
+                    <span className="dim" style={{fontSize:12}}>{v}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
-          <button className="danger" onClick={()=>{
-            // Cross-account leak'i önle: privacy mode + cache + portfolio LS key'lerini temizle.
-            ["il_hide","il_prc","il_hist","il_active_portfolio","il_recent_search"].forEach(k=>localStorage.removeItem(k));
-            sb.auth.signOut();
-          }} style={{width:"100%"}}>Çıkış Yap</button>
+
+          {/* 7. Danger zone */}
+          <div style={{borderTop:"1px solid var(--border)",marginTop:8,paddingTop:20,paddingBottom:16}}>
+            <button className="danger" onClick={()=>{
+              // Cross-account leak'i önle: privacy mode + cache + portfolio LS key'lerini temizle.
+              ["il_hide","il_prc","il_hist","il_active_portfolio","il_recent_search"].forEach(k=>localStorage.removeItem(k));
+              sb.auth.signOut();
+            }} style={{width:"100%"}}>Çıkış Yap</button>
+          </div>
         </div>
       )}
       </main>
