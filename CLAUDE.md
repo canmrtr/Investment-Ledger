@@ -4,7 +4,8 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 
 ## Mimari
 
-- **Frontend**: `index.html` — React 18 UMD + Babel Standalone (tarayıcıda JSX). Build adımı yok; CDN script'leri. GitHub Pages deploy (`main` branch root). Live: `https://canmrtr.github.io/Investment-Ledger/`
+- **Frontend**: `index.html` (ince shell: CSS + CDN scripts + `<script src>` etiketleri) + `src/constants.js`, `src/utils.js`, `src/components/*.js` — React 18 UMD + Babel Standalone (tarayıcıda JSX). Build adımı yok; CDN script'leri. GitHub Pages deploy (`main` branch root). Live: `https://canmrtr.github.io/Investment-Ledger/`
+  - **Yerel geliştirme**: Babel standalone external scripts XHR ile yükler — `file://` çalışmaz. `npx serve .` veya `python3 -m http.server 8000` gerekli.
 - **Backend**: Supabase (auth, PostgreSQL, RLS, Edge Functions, pg_cron).
 - **Edge Functions** (hepsi `--no-verify-jwt`):
   - `parse-transaction` — Claude Haiku 4.5, metin/görüntü → `{transactions:[...]}` array
@@ -86,7 +87,7 @@ Kritik pitfall'lar → **`GOTCHAS.md`**
 ## Hooks
 
 `.claude/settings.local.json` `PostToolUse` hook:
-- **`babel-check.sh`** — `index.html` edit sonrası otomatik JSX parse; fail = exit 2. Build adımı yok — broken parse = broken production.
+- **`babel-check.sh`** — `src/*.js` veya `src/components/*.js` edit sonrası ilgili dosyayı otomatik JSX parse eder; fail = exit 2. `index.html` artık inline Babel içermiyor (skip). Build adımı yok — broken parse = broken production.
 
 ## Agent Kuralları
 
@@ -108,7 +109,8 @@ npm run check:edge-drift   # root .js == supabase/functions/*/index.ts eşleşme
 
 Edge fn deploy: `supabase/functions/<fn>/index.ts` düzenle → root `.js` sync → drift check → `npx supabase functions deploy <fn> --no-verify-jwt`
 
-Test: `npm run check:babel` + `Cmd+Shift+R` hard-reload
+Test: `npm run check:babel` (tüm src/*.js dosyalarını parse eder) + `Cmd+Shift+R` hard-reload (GitHub Pages üzerinde)
+Yerel test: `npx serve .` → http://localhost:3000 (Babel standalone XHR için HTTP server gerekli)
 E2E: `IL_EMAIL=... IL_PASS=... node e2e/smoke.mjs`
 
 ## Yol Haritası

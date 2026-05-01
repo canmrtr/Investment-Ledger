@@ -4,6 +4,7 @@
     "playwright": "^1.59.1"
   },
   "scripts": {
+    "start": "npx serve . --listen 8000",
     "check:babel": "node scripts/check-babel.js",
     "check:edge": "bash scripts/check-edge.sh",
     "check:edge-drift": "bash scripts/check-edge-drift.sh",
