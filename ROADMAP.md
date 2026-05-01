@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-04-30** (Sprint 10 tamamlandı: P1 bug bundle, Dashboard blok signed pill, TRY avgCost warn-card, Analist Tavsiyeleri kartı)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-01** (Sprint 10 tamamlandı: P1 bug bundle, Dashboard blok signed pill, TRY avgCost warn-card, Analist Tavsiyeleri kartı. Sprint 10 sonrası: Watchlist MVP tam teslim edildi — `watchlist` tablo + RLS, WatchlistTab, SearchTab CTA, TickerDetailTab badge/buton, asset_type + non-held price fetch. Internal: `src/` refactor 13 dosya, Settings layout yeniden düzenlendi, HistoryTab → Settings altına taşındı.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -62,13 +62,13 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 > Can şu an portföyde olmayan bir hisseyi takip etmek için SearchTab'dan manuel bakıyor. Hedef fiyata ulaştığında haber yok. Bu bölüm "izlemek istiyorum ama henüz almadım" ve "şu fiyata düşerse al" akışlarını kapsar.
 
-- [ ] **Watchlist (İzleme Listesi)** `[M]` `[P2]` — Portföyde olmayan ticker'ları kaydedebilme; SearchTab non-held sonuçlarına "İzlemeye Ekle" butonu; yeni "İzleme" sub-section altında sparkline + temel metrik satırı; pozisyon eklenmeden fiyat takibi. Yeni `watchlist` Supabase tablosu (user_id, ticker, note, added_at). `price_cache` zaten mevcut → anlık fiyat bedava.
-  - [ ] (a) `watchlist` tablosu + RLS migration; sql-writer `[S]`
-  - [ ] (b) SearchTab "İzlemeye Ekle" CTA; Dashboard'da ayrı "İzleme" collapsible blok (BLOCK_TYPES pattern) `[M]`
-  - [ ] (c) TickerDetailTab'da "İzliyorsunuz" badge + "İzlemeden Çıkar" butonu `[S]`
+- [x] ~~**Watchlist (İzleme Listesi)**~~ (2026-04-30 / 2026-05-01) — `watchlist` Supabase tablosu + RLS (migration 004_watchlist.sql + 006_watchlist_asset_type.sql); WatchlistTab bileşeni (fiyat/günlük değişim tablosu, "Çıkar" per row, empty-card CTA); main nav slot 2'ye alındı (İşlemler'in yerini aldı); SearchTab "+ İzle" / "✓ İzleniyor" toggle; TickerDetailTab "İzleniyor" badge + "İzlemeye Ekle"/"İzlemeden Çıkar" butonu; asset_type kolonu + non-held watchlist ticker'ları için price fetching.
+  - [x] (a) `watchlist` tablosu + RLS migration (2026-04-30)
+  - [x] (b) WatchlistTab + SearchTab "İzlemeye Ekle" CTA + asset_type + non-held price fetch (2026-04-30 / 2026-05-01)
+  - [x] (c) TickerDetailTab "İzleniyor" badge + "İzlemeden Çıkar" butonu (2026-04-30)
 
-- [ ] **Hedef Fiyat Bildirimi (Edge Function Alarm)** `[L]` `[P3]` — Kullanıcı ticker için hedef fiyat ve yön (≥ veya ≤) tanımlar; pg_cron job'ı her 6 saatte `price_cache`'i tarar → hedef aşılırsa Supabase `auth.users.email`'e transactional mail (Resend veya Supabase Mailer). `target_prices` tablosu + pg_cron + Resend API key. **Not**: Hedef Fiyat & Değerleme Notu item'ı önce bitmeli (tablo paylaşımı olası).
-  - Bağımlılık: `target_prices` tablosu → "Hedef Fiyat & Değerleme Notu" item'ından alınabilir.
+- [ ] **Hedef Fiyat Bildirimi (Edge Function Alarm)** `[L]` `[P3]` — Kullanıcı ticker için hedef fiyat ve yön (≥ veya ≤) tanımlar; pg_cron job'ı her 6 saatte `price_cache`'i tarar → hedef aşılırsa Supabase `auth.users.email`'e transactional mail (Resend veya Supabase Mailer). `target_prices` tablosu + pg_cron + Resend API key. **Not**: Watchlist tamamlandı; `target_prices` tablosu hâlâ gerekiyor ancak ayrı migration olarak eklenecek. Watchlist bağımlılığı kalktı.
+  - Bağımlılık: `target_prices` tablosu → "Hedef Fiyat & Değerleme Notu" item'ından alınabilir. Watchlist bağımlılığı yok.
 
 ---
 
@@ -518,15 +518,15 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ✅ (2026-04-30) | **Sprint 11 → planlanacak**
+Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ✅ (2026-04-30) | Sprint 10 sonrası Watchlist MVP ✅ (2026-05-01) | **Sprint 11 → planlanacak**
 
-Sprint 10 retro: Milestone A (P1 bug bundle) ve Milestone B (Dashboard blok signed pill) tam teslim edildi. Milestone E (Analist Tavsiyeleri) beklenenin ötesinde teslim edildi: `annual` field fix + ticker format validation + EDGAR timeout güvenlik sertleştirmesi de Sprint 10'a dahil oldu. Milestone D (PWA) önceki sprintte fiilen tamamlanmış çıktı — yeniden açılmadı. Temettü Takvimi (Öncelik 4) Sprint 11'e taşındı.
+Sprint 10 retro: Milestone A (P1 bug bundle) ve Milestone B (Dashboard blok signed pill) tam teslim edildi. Milestone E (Analist Tavsiyeleri) beklenenin ötesinde teslim edildi: `annual` field fix + ticker format validation + EDGAR timeout güvenlik sertleştirmesi de Sprint 10'a dahil oldu. Milestone D (PWA) önceki sprintte fiilen tamamlanmış çıktı — yeniden açılmadı. Sprint 10 kapatıldıktan sonra Watchlist MVP ek iterasyonla 2026-05-01'de tamamlandı (asset_type + non-held price fetch).
 
-**Sprint 11 için Öne Çıkan Adaylar** (2026-04-30 grooming):
+**Sprint 11 için Öne Çıkan Adaylar** (2026-05-01 grooming):
 
-1. **Temettü Takvimi** `[M][P2]` — `fetch-fundamentals` `mode:"dividend-calendar"` dalı + TickerDetailTab "Sonraki Temettü" satırı + HistoryTab "Yaklaşan Temettüler" collapsible. FMP zaten entegre; Sprint 10'dan devredildi.
-2. **PWA — service worker + manifest** `[M][P1]` — `service-worker.js` (offline shell + network-first Supabase) + `manifest.json` + `index.html` head tag. Icon'lar hazır; M1 aşaması kapanır.
-3. **Watchlist (İzleme Listesi)** `[M][P2]` — `watchlist` tablosu + RLS + SearchTab CTA + Dashboard collapsible blok; bir sonraki kapsamlı yeni özellik.
-4. **Social Portfolios Faz 3 — Takip sistemi** `[M][P2]` — `follows` tablosu UI; Faz 2 tamamlandıktan sonra önkoşul karşılanır.
-5. **Sektör-aware fundamental eşikler** `[M][P1]` — tech P/E ≤30, utility ≤15; `sic_description`/`sector` ile profile seçimi; edge fn refactor.
-6. **Aylık Özet Kopyala/Paylaş** `[S][P2]` — `navigator.clipboard.writeText()`; sıfır backend; tek akşam freebie.
+1. **PWA — service worker + manifest** `[M][P1]` — `service-worker.js` (offline shell + network-first Supabase) + `manifest.json` + `index.html` head tag. Icon'lar önceki sprintte hazırlandı; M1 aşaması bu item ile kapanır. En yüksek görünürlük/effort oranı.
+2. **Periyodik agent denetim turu — 3. tur** `[S][P1]` — Sprint 9'dan bu yana 2 sprint atlandı; Watchlist yeni RLS tabloları ekledi (004 + 006 migration). rls-auditor + edge-reviewer odak. En hızlı kapanan P1.
+3. **Temettü Takvimi** `[M][P2]` — `fetch-fundamentals` `mode:"dividend-calendar"` dalı + TickerDetailTab "Sonraki Temettü" satırı + Dashboard/HistoryTab "Bu ay beklenenler". FMP zaten entegre; Sprint 10'dan devredildi. 3 sub-task'ı iyice dilimlenmiş.
+4. **Sektör-aware fundamental eşikler** `[M][P1]` — tech P/E ≤30, utility ≤15; `sic_description`/`sector` ile profile seçimi; fundamental checklist değer doğruluğu için kritik.
+5. **Ağırlıklı Ortalama Portföy P/E** `[S][P2]` — AnalysisTab tek satır KPI; fundamentals cache üzerinden aggregation; yeni fetch yok. Küçük effort, value-investing lens için yüksek anlam.
+6. **Aylık Özet Kopyala/Paylaş** `[S][P2]` — `navigator.clipboard.writeText()`; sıfır backend; tek akşam freebie. Sprint doldurucu olarak ideal.

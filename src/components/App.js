@@ -830,7 +830,7 @@ function App({session}){
 
       {/* WATCHLIST */}
       {tab==="watchlist"&&(
-        <WatchlistTab items={watchlistItems} prc={prc} hist={hist} onToggle={toggleWatchlist} openDetail={openDetail} setTab={setTab}/>
+        <WatchlistTab items={watchlistItems} prc={prc} hist={hist} onToggle={toggleWatchlist} openDetail={openDetail} setTab={setTab} hideAmts={hide} mask={mask}/>
       )}
 
 
@@ -841,7 +841,7 @@ function App({session}){
 
       {/* SEARCH */}
       {tab==="search"&&(
-        <SearchTab pos={pos} txs={txs} openDetail={openDetail} flash_={flash_} watchlistItems={watchlistItems} onToggleWatchlist={toggleWatchlist}/>
+        <SearchTab pos={pos} txs={txs} openDetail={openDetail} flash_={flash_} watchlistItems={watchlistItems} onToggleWatchlist={toggleWatchlist} userId={user?.id}/>
       )}
 
       {/* ADD */}
@@ -1076,7 +1076,7 @@ function App({session}){
           <div style={{borderTop:"1px solid var(--border)",marginTop:8,paddingTop:20,paddingBottom:16}}>
             <button className="danger" onClick={()=>{
               // Cross-account leak'i önle: privacy mode + cache + portfolio LS key'lerini temizle.
-              ["il_hide","il_prc","il_hist","il_active_portfolio","il_recent_search"].forEach(k=>localStorage.removeItem(k));
+              ["il_hide","il_prc","il_hist","il_active_portfolio","il_recent_search",`il_recent_${user?.id}`].forEach(k=>k&&localStorage.removeItem(k));
               sb.auth.signOut();
             }} style={{width:"100%"}}>Çıkış Yap</button>
           </div>

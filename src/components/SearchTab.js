@@ -1,15 +1,16 @@
 // ── SearchTab ────────────────────────────────────────────────────
 // Global ticker arama: portföydeki + tüm SEC kayıtlı US hisseler.
 // Sonuca tıklayınca TickerDetailTab açılır (held veya not held).
-function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist}){
+function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,userId}){
+  const recentKey=userId?`il_recent_${userId}`:"il_recent_search";
   const [q,setQ]=useState("");
   const [tickerDb,setTickerDb]=useState(()=>tickerDbCacheGet());
   const [loading,setLoading]=useState(false);
-  const [recent,setRecent]=useState(()=>LS.get("il_recent_search",[]));
-  const clearRecent=()=>{setRecent([]);LS.set("il_recent_search",[]);};
+  const [recent,setRecent]=useState(()=>LS.get(recentKey,[]));
+  const clearRecent=()=>{setRecent([]);LS.set(recentKey,[]);};
   const handleOpen=(ticker,type)=>{
     const next=[ticker,...recent.filter(t=>t!==ticker)].slice(0,8);
-    setRecent(next);LS.set("il_recent_search",next);
+    setRecent(next);LS.set(recentKey,next);
     openDetail(ticker,type);
   };
 

@@ -1,5 +1,5 @@
 // ── WatchlistTab ─────────────────────────────────────────────────
-function WatchlistTab({items,prc,hist,onToggle,openDetail,setTab}){
+function WatchlistTab({items,prc,hist,onToggle,openDetail,setTab,hideAmts,mask}){
   React.useEffect(()=>{
     // prices are fetched by App's existing pos-change effect; no extra fetch needed
   },[]);
@@ -32,9 +32,9 @@ function WatchlistTab({items,prc,hist,onToggle,openDetail,setTab}){
             return(
               <tr key={w.ticker} className="pos-row" onClick={()=>openDetail(w.ticker)}>
                 <td style={{padding:"10px 16px",fontFamily:"var(--mono)",fontWeight:600,fontSize:13}}>{w.ticker}</td>
-                <td style={{textAlign:"right",padding:"10px 8px",fontFamily:"var(--mono)",fontSize:13}}>{price!=null?fmt(price,2):"—"}</td>
+                <td style={{textAlign:"right",padding:"10px 8px",fontFamily:"var(--mono)",fontSize:13}}>{hideAmts?mask("••••"):(price!=null?fmt(price,2):"—")}</td>
                 <td style={{textAlign:"right",padding:"10px 8px",fontFamily:"var(--mono)",fontSize:13,color:d1pct==null?"var(--text3)":d1pct>=0?"var(--ok)":"var(--err)"}}>
-                  {d1pct!=null?fmtP(d1pct):"—"}
+                  {hideAmts?mask("••••"):(d1pct!=null?fmtP(d1pct):"—")}
                 </td>
                 <td style={{textAlign:"right",padding:"10px 16px 10px 4px"}}>
                   <button className="btn-xs btn-danger-out" onClick={e=>{e.stopPropagation();onToggle(w.ticker);}}>Çıkar</button>

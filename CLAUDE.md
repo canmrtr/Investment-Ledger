@@ -30,14 +30,16 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`, `CRON_SECRET` Bearer header
 ## Tabs & Bileşenler
 
 `Root → Login | App(#shell)`
-- **#topbar**: logo + 5 nav + $/₺ toggle + 👁 hide + İşlem Ekle; 30dk auto-refresh
+- **#topbar**: logo + 6 nav + $/₺ toggle + 👁 hide + İşlem Ekle; 30dk auto-refresh
+- `TABS = [dashboard, watchlist, analysis, search, add, settings]`
 - **Dashboard**: KPI (TR + XIRR), 6 BLOCK_TYPE pozisyon bloğu (başlangıçta kapalı)
-- **HistoryTab**: filtre toolbar, accordion ticker gruplu
+- **WatchlistTab**: fiyat/günlük değişim tablosu, "Çıkar" per row, empty-card CTA; `watchlist` Supabase tablosu (id, user_id, ticker, asset_type, added_at)
 - **AnalysisTab**: Varlık/Bölge Dağılımı, Portföy Sağlık (8 metrik), Komisyon, Kazanan/Kaybeden
-- **SearchTab**: ~11k ticker (US + BIST), portföy + discovery
+- **SearchTab**: ~11k ticker (US + BIST), portföy + discovery; "+ İzle" / "✓ İzleniyor" non-held toggle
 - **AddTab**: 6 asset type picker → text/image/csv/manuel; ConfirmBox + ManuelPosForm
-- **TickerDetailTab**: held + discovery mode; FAB context-aware
-- **Settings**: Fiyat&Veri, Bakım, Export CSV, Account, Durum
+- **TickerDetailTab**: held + discovery mode; "İzleniyor" badge + toggle buton; FAB context-aware
+- **HistoryTab**: filtre toolbar, accordion ticker gruplu — artık ana nav'da yok; Settings → "İşlem Geçmişi" → "Tüm İşlemleri Gör →" ile erişilir
+- **Settings**: İşlem Geçmişi, Fiyat&Veri, Bakım, Export CSV, Account, Durum
 - **#bottom-tabs** (mobile) + **#fab** (mobile, context-aware)
 
 ## Önemli Konvansiyonlar
