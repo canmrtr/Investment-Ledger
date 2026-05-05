@@ -20,6 +20,7 @@ check fetch-prices-edge-function.js          supabase/functions/fetch-prices/ind
 check refresh-price-cache-edge-function.js   supabase/functions/refresh-price-cache/index.ts
 check fetch-fundamentals-edge-function.js    supabase/functions/fetch-fundamentals/index.ts
 check parse-transaction-edge-function.js     supabase/functions/parse-transaction/index.ts
+check sync-splits-edge-function.js           supabase/functions/sync-splits/index.ts
 
 [ $FAILED -eq 0 ] \
   && echo "✅ All edge functions in sync — safe to deploy." \

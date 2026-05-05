@@ -1085,8 +1085,21 @@ function App({session}){
                 await loadData();
                 flash_(`Pozisyonlar yeniden hesaplandı · ${n} pozisyon`);
               }}>♻️ Pozisyonları Yeniden Hesapla</button>
+              <button onClick={async()=>{
+                const tickers=pos.filter(p=>p.type!=="BIST").map(p=>p.ticker);
+                if(!tickers.length){flash_("Senkronize edilecek US/ETF/Kripto pozisyonu yok","err");return;}
+                flash_("Splitler kontrol ediliyor...","ok");
+                const{inserted}=await syncSplits(tickers,activePortfolioId);
+                if(inserted>0){
+                  const n=await rebuildPositions(user.id,activePortfolioId);
+                  await loadData();
+                  flash_(`${inserted} yeni split bulundu · ${n} pozisyon güncellendi`);
+                }else{
+                  flash_("Split verisi güncel, değişiklik yok");
+                }
+              }}>🔄 Splitleri Senkronize Et</button>
             </div>
-            <div className="hint" style={{marginBottom:10}}>Split eklendi/değiştirildiyse basın — tüm işlemler split-aware yeniden hesaplanır.</div>
+            <div className="hint" style={{marginBottom:10}}>Split eklendi/değiştirildiyse basın — tüm işlemler split-aware yeniden hesaplanır. Senkronize Et butonu US/ETF/Kripto için FMP'den otomatik çeker (BIST hariç).</div>
             <div className="brow" style={{marginBottom:10}}>
               <button onClick={expTx}>İşlemler CSV</button>
               <button onClick={expPos}>Pozisyonlar CSV</button>

@@ -83,6 +83,8 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
     }));
     const{error}=await sb.from("transactions").insert(rows);
     if(error){flash_(error.message,"err");return;}
+    const syncTickers=[...new Set(rows.filter(r=>r.asset_type!=="BIST").map(r=>r.ticker))];
+    if(syncTickers.length)await syncSplits(syncTickers,portfolioId);
     await rebuildPositions(user.id,portfolioId);
     await loadData();
     setParsed(null);setTextInput("");setImgFile(null);
@@ -174,7 +176,10 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
       setProgPct(pct);
     }
 
-    setProgStep("Pozisyonlar hesaplanıyor...");setProgPct(75);
+    setProgStep("Splitler senkronize ediliyor...");setProgPct(72);
+    const syncTickers=[...new Set(txInserts.filter(r=>r.asset_type!=="BIST").map(r=>r.ticker))];
+    if(syncTickers.length)await syncSplits(syncTickers,portfolioId);
+    setProgStep("Pozisyonlar hesaplanıyor...");setProgPct(82);
     setProgStep("Supabase güncelleniyor...");setProgPct(90);
     const posCount=await rebuildPositions(user.id,portfolioId);
     await loadData();

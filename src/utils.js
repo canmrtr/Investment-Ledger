@@ -226,6 +226,20 @@ const edgeCallAuth = async (fn, body) => {
   });
 };
 
+// Fetches split history from FMP for non-BIST tickers and upserts into splits table.
+// Called before rebuildPositions so splits are applied in the same cycle.
+// Silently ignores failures — worst case the user still has the old (manual) split data.
+const syncSplits = async (tickers, portfolioId) => {
+  if (!tickers || !tickers.length || !portfolioId) return { inserted: 0, checked: 0 };
+  try {
+    const r = await edgeCallAuth("sync-splits", { tickers, portfolioId });
+    return r.ok ? await r.json() : { inserted: 0, checked: tickers.length };
+  } catch (e) {
+    DEBUG && console.warn("[syncSplits] failed:", e);
+    return { inserted: 0, checked: 0 };
+  }
+};
+
 // ── Return metrics: Total Return & XIRR ──────────────────────────
 // XIRR = düzensiz aralıklı cash flow'ların yıllık getirisi (Excel XIRR).
 // cashflows: [{date: Date, amount: number}] — negatif=yatırım, pozitif=geri dönüş.
