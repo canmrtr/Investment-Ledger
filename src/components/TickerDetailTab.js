@@ -161,6 +161,16 @@ const sanitizeMeta = (data) => {
 };
 const metaCacheSet = (ticker, data) => LS.set(`meta_${ticker}`, { d: sanitizeMeta(data), t: Date.now() });
 
+// Dividend calendar cache — 24 saat TTL
+const DIVCAL_TTL_MS = 24 * 3600000;
+const divCalCacheGet = (ticker) => {
+  const c = LS.get(`il_divcal_${ticker}`, null);
+  if (!c || !c.t) return null;
+  if (Date.now() - c.t > DIVCAL_TTL_MS) return null;
+  return c.d;
+};
+const divCalCacheSet = (ticker, data) => LS.set(`il_divcal_${ticker}`, { d: data, t: Date.now() });
+
 // Fundamental cache (FMP TTM + 5Y) — 7 gün TTL
 const FUND_TTL_MS = 7 * 86400000;
 const fundCacheGet = (ticker) => {
@@ -337,6 +347,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
   const [fundLoading,setFundLoading]=useState(false);
   const [fundErr,setFundErr]=useState("");
   const [fundErrCode,setFundErrCode]=useState("");  // edge function code, ör. "OUT_OF_PLAN"
+  const [divCal,setDivCal]=useState(()=>divCalCacheGet(ticker));
   const [showFullDesc,setShowFullDesc]=useState(false);
   const [showAdd,setShowAdd]=useState(false);
   // FAB context-aware (App'taki +) bu detail tab'ı açtığı için, custom event ile setShowAdd tetikle
@@ -439,6 +450,19 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
     setMetaLoading(false);
   };
   useEffect(()=>{if(!meta)fetchMeta(false);},[ticker,effectiveType]);
+
+  // Dividend calendar — yalnızca held US_STOCK için; BIST'te FMP temettü güvenilir değil
+  useEffect(()=>{
+    if(isBist||!p||divCal!==null)return;
+    edgeCall("fetch-fundamentals",{mode:"dividend-calendar",tickers:[ticker]})
+      .then(r=>r.json())
+      .then(data=>{
+        const items=data?.dividends?.[ticker]||[];
+        setDivCal(items);
+        divCalCacheSet(ticker,items);
+      })
+      .catch(()=>setDivCal([]));
+  },[ticker]);
 
   // Fundamental fetch — US_STOCK (FMP/EDGAR) veya BIST (İş Yatırım MaliTablo).
   const supportsFund = effectiveType==="US_STOCK"||effectiveType==="BIST";
@@ -618,6 +642,14 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
               ["Halka Açılma",meta.list_date?fmtDateTR(meta.list_date):null],
               ["F/K (P/E)",meta.pe_ratio?meta.pe_ratio.toFixed(2):null],
               ["Temettü Verimi",meta.dividend_yield!=null?meta.dividend_yield.toFixed(2)+"%":null],
+              (()=>{
+                if(isBist||!p||!divCal)return null;
+                const todayStr=new Date().toISOString().split("T")[0];
+                const next=divCal.find(d=>d.ex_date>=todayStr);
+                if(!next||next.amount==null)return null;
+                const est=next.amount*(+p.shares);
+                return["Sonraki Temettü",`${fmtDateTR(next.ex_date)} · $${fmt(next.amount,4)}/hisse · Tahmini ${mask("$"+fmt(est,2))}`];
+              })(),
               ["52H Yüksek",meta.week_52_high?sym+fmt(meta.week_52_high,2):null],
               ["52H Düşük",meta.week_52_low?sym+fmt(meta.week_52_low,2):null],
               // extractDomain malformed URL'de null döner; "null ↗" basmamak için
