@@ -580,6 +580,29 @@ function App({session}){
                 <button className="pri" onClick={fetchFxRates}>Şimdi çek</button>
               </div>
             )}
+            {/* Nudge kartları — KPI üstünde, max 2; fiyat yoksa gösterme */}
+            {Object.keys(prc).length>0&&(()=>{
+              const now=Date.now();
+              const dismiss=(id)=>{
+                const next={...nudgeDismissed,[id]:now+7*24*60*60*1000};
+                setNudgeDismissed(next);
+                LS.set('il_nudge_dismissed',next);
+              };
+              const activeNudges=computeNudges(allDisp,txs,annualRate)
+                .filter(n=>!nudgeDismissed[n.id]||nudgeDismissed[n.id]<now)
+                .slice(0,2);
+              if(!activeNudges.length)return null;
+              return activeNudges.map(n=>(
+                <div key={n.id} className="warn-card" style={{alignItems:'center'}}>
+                  <div className="wc-sub" style={{flex:1}}>{n.message}</div>
+                  <button
+                    style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 0 0 12px',flexShrink:0}}
+                    onClick={()=>dismiss(n.id)}
+                    aria-label="Kapat"
+                  >×</button>
+                </div>
+              ));
+            })()}
             {/* Summary cards. Maliyet/MV period-bağımsız; TR period'a göre.
                 XIRR sadece ≥1Y periyotlarda anlamlı — kısa periyotta "—" + hint.
                 Tüm değerler displayCur ($ veya ₺) — TRY/EUR pozisyonlar fxRates ile convert. */}
