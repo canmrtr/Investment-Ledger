@@ -1,5 +1,5 @@
 // ── HistoryTab ───────────────────────────────────────────────────
-function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,openDetail,initialSearch,onConsume,splits,portfolioId}){
+function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,openDetail,initialSearch,onConsume,splits,portfolioId,pos,displayCur,fxRates}){
   const [open,setOpen]=useState(()=>initialSearch?{[initialSearch.toUpperCase()]:true}:{});
   const [editId,setEditId]=useState(null);
   const [editForm,setEditForm]=useState({});
@@ -7,6 +7,36 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,open
   const [search,setSearch]=useState(initialSearch||"");
   const [wayF,setWayF]=useState("all");
   const [dateF,setDateF]=useState("all");
+  const [divCalMap,setDivCalMap]=useState({});
+  const [divSecOpen,setDivSecOpen]=useState(true);
+  useEffect(()=>{
+    if(!pos||!pos.length)return;
+    const heldUS=pos.filter(p=>p.type==="US_STOCK"&&(+p.shares||0)>0).map(p=>p.ticker);
+    if(!heldUS.length)return;
+    const now=Date.now();
+    const cached={};
+    const toFetch=[];
+    heldUS.forEach(tk=>{
+      const c=LS.get(`il_divcal_${tk}`,null);
+      if(c&&c.t&&(now-c.t)<24*3600000){cached[tk]=c.d;}
+      else toFetch.push(tk);
+    });
+    setDivCalMap(m=>({...m,...cached}));
+    if(!toFetch.length)return;
+    edgeCall("fetch-fundamentals",{mode:"dividend-calendar",tickers:toFetch})
+      .then(r=>r.json())
+      .then(data=>{
+        if(!data?.dividends)return;
+        const fresh={};
+        toFetch.forEach(tk=>{
+          const items=data.dividends[tk]||[];
+          fresh[tk]=items;
+          LS.set(`il_divcal_${tk}`,{d:items,t:Date.now()});
+        });
+        setDivCalMap(m=>({...m,...fresh}));
+      })
+      .catch(()=>{});
+  },[]);
   useEffect(()=>{if(initialSearch&&onConsume)onConsume();},[]);
 
   const filtered=txs.filter(t=>{
@@ -62,6 +92,63 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,open
 
   return(
     <div>
+      {/* Yaklaşan Temettüler — önümüzdeki 30 gün içinde ex-date'i olan held US tickers */}
+      {(()=>{
+        if(!pos||!pos.length)return null;
+        const today=new Date().toISOString().split("T")[0];
+        const in30=new Date(Date.now()+30*86400000).toISOString().split("T")[0];
+        const dSym=displaySym(displayCur||"USD");
+        const rows=[];
+        pos.filter(p=>p.type==="US_STOCK"&&(+p.shares||0)>0).forEach(p=>{
+          const cal=divCalMap[p.ticker]||[];
+          cal.filter(d=>d.ex_date>=today&&d.ex_date<=in30&&d.amount!=null).forEach(d=>{
+            const rawEst=d.amount*(+p.shares);
+            const est=convert(rawEst,"USD",displayCur||"USD",fxRates)??rawEst;
+            rows.push({ticker:p.ticker,ex_date:d.ex_date,pay_date:d.pay_date,est,sym:dSym});
+          });
+        });
+        if(!rows.length)return null;
+        rows.sort((a,b)=>a.ex_date.localeCompare(b.ex_date));
+        const total=rows.reduce((a,r)=>a+r.est,0);
+        return(
+          <div className="card" style={{marginBottom:14,padding:0,overflow:"hidden"}}>
+            <div
+              onClick={()=>setDivSecOpen(o=>!o)}
+              style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",cursor:"pointer"}}
+            >
+              <div className="stitle" style={{marginBottom:0}}>Yaklaşan Temettüler</div>
+              <span style={{fontSize:11,color:"var(--text3)"}}>{divSecOpen?"▲":"▼"}</span>
+            </div>
+            {divSecOpen&&(
+              <div style={{padding:"0 14px 12px"}}>
+                <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                  <thead>
+                    <tr style={{color:"var(--text3)"}}>
+                      <th style={{textAlign:"left",paddingBottom:6,fontWeight:500}}>Ticker</th>
+                      <th style={{textAlign:"left",paddingBottom:6,fontWeight:500}}>Ex-Date</th>
+                      <th style={{textAlign:"left",paddingBottom:6,fontWeight:500}}>Ödeme</th>
+                      <th style={{textAlign:"right",paddingBottom:6,fontWeight:500}}>Tahmini</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r,i)=>(
+                      <tr key={i} style={{borderTop:"0.5px solid var(--border)"}}>
+                        <td style={{padding:"5px 0",fontFamily:"var(--mono)",fontWeight:600,color:"var(--text)"}}>{r.ticker}</td>
+                        <td style={{padding:"5px 0",color:"var(--text2)"}}>{fmtDateTR(r.ex_date)}</td>
+                        <td style={{padding:"5px 0",color:"var(--text3)"}}>{r.pay_date?fmtDateTR(r.pay_date):"—"}</td>
+                        <td style={{padding:"5px 0",textAlign:"right",color:"var(--ok)",fontFamily:"var(--mono)"}}>{mask(r.sym+fmt(r.est,2))}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{marginTop:8,fontSize:11,color:"var(--text2)",textAlign:"right"}}>
+                  Bu ay beklenen toplam: {mask(dSym+fmt(total,2))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
       {/* Filter toolbar */}
       <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
         <input className="finp sm" value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Ticker veya şirket..." style={{flex:"1 1 160px",minWidth:140}}/>
