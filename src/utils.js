@@ -355,6 +355,15 @@ const rebuildPositions = async (userId, portfolioId = null) => {
 // transactions: raw txs dizisi — {way, date, ...}
 // annualRate: xirr sonucu (şimdilik rezerv, gelecek kurallar için)
 // Returns: [{id, priority, message, actionTab}] sorted by priority asc
+const TYPE_LABELS = {
+  US_STOCK: 'ABD hisselerinden',
+  BIST: 'BIST hisselerinden',
+  CRYPTO: 'kripto varlıklardan',
+  GOLD: 'altından',
+  FUND: 'fonlardan',
+  FX: 'dövizden'
+};
+
 const computeNudges = (positions, transactions, annualRate) => {
   if (!positions || positions.length === 0) return [];
   const nudges = [];
@@ -365,7 +374,7 @@ const computeNudges = (positions, transactions, annualRate) => {
   const totalMV = positions.reduce((a, p) => a + (p.mv ?? p.cost ?? 0), 0);
   if (hasMV && totalMV > 0) {
     for (const p of positions) {
-      const mv = p.mv ?? p.cost ?? 0;
+      const mv = p.mv;
       const pct = (mv / totalMV) * 100;
       if (pct > 35) {
         nudges.push({
@@ -379,7 +388,7 @@ const computeNudges = (positions, transactions, annualRate) => {
   }
 
   // P1: İnaktivite — son BUY'dan >90 gün
-  const buys = transactions.filter(t => t.way === 'BUY');
+  const buys = (transactions || []).filter(t => t.way === 'BUY');
   if (buys.length > 0) {
     const lastBuyDate = buys.reduce((max, t) => t.date > max ? t.date : max, '');
     const daysSince = Math.floor((Date.now() - new Date(lastBuyDate).getTime()) / 86400000);
@@ -396,14 +405,6 @@ const computeNudges = (positions, transactions, annualRate) => {
   // P1: Çeşitlendirme — yalnızca 1 asset_type
   const types = [...new Set(positions.map(p => p.type).filter(Boolean))];
   if (types.length === 1) {
-    const TYPE_LABELS = {
-      US_STOCK: 'ABD hisselerinden',
-      BIST: 'BIST hisselerinden',
-      CRYPTO: 'kripto varlıklardan',
-      GOLD: 'altından',
-      FUND: 'fonlardan',
-      FX: 'dövizden'
-    };
     const label = TYPE_LABELS[types[0]] || types[0];
     nudges.push({
       id: 'diversification',
