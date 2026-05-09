@@ -662,6 +662,36 @@ Deno.serve(async (req) => {
       return json({ synced: inserted, us: Object.keys(usDb).length, bist: bistList.length, synced_at: now });
     }
 
+    // Mode: dividend-calendar — held ticker'lar için FMP'den sonraki temettü verisi.
+    // Body: { mode: "dividend-calendar", tickers: ["AAPL", "MSFT"] }
+    if (body.mode === "dividend-calendar") {
+      const tickers: string[] = Array.isArray(body.tickers) ? body.tickers.slice(0, 20) : [];
+      if (tickers.length === 0) return json({ error: "tickers array required" }, 400);
+      const fmpKey = Deno.env.get("FMP_KEY");
+      if (!fmpKey) return json({ error: "FMP_KEY secret eksik" }, 500);
+      const today = new Date().toISOString().split("T")[0];
+      const results: Record<string, Array<{ex_date: string; pay_date: string|null; amount: number|null; currency: string}>> = {};
+      await Promise.all(tickers.map(async (tk: string) => {
+        try {
+          const url = `https://financialmodelingprep.com/stable/stock/dividends?symbol=${encodeURIComponent(tk)}&limit=5&apikey=${fmpKey}`;
+          const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+          if (!r.ok) { results[tk] = []; return; }
+          const raw = await r.json();
+          // FMP stable/stock/dividends: düz array veya {historical:[...]} wrapper
+          const arr: any[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.historical) ? raw.historical : []);
+          const future = arr.filter((d: any) => d.date >= today);
+          const past   = arr.filter((d: any) => d.date <  today).slice(0, 1);
+          results[tk] = [...future, ...past].map((d: any) => ({
+            ex_date:  d.date,
+            pay_date: d.paymentDate || null,
+            amount:   d.dividend ?? d.adjDividend ?? null,
+            currency: "USD",
+          }));
+        } catch { results[tk] = []; }
+      }));
+      return json({ dividends: results });
+    }
+
     const { ticker, asset_type } = body;
     if (!ticker) return json({ error: "ticker required" }, 400);
     if (!/^[A-Z0-9.\-]{1,12}$/i.test(ticker)) return json({ error: "Geçersiz ticker formatı" }, 400);
