@@ -350,6 +350,72 @@ const rebuildPositions = async (userId, portfolioId = null) => {
   return np.length;
 };
 
+// ── Akıllı Nudge kuralları ────────────────────────────────────────
+// positions: allDisp dizisi — {ticker, name, type, mv, cost, ...}
+// transactions: raw txs dizisi — {way, date, ...}
+// annualRate: xirr sonucu (şimdilik rezerv, gelecek kurallar için)
+// Returns: [{id, priority, message, actionTab}] sorted by priority asc
+const computeNudges = (positions, transactions, annualRate) => {
+  if (!positions || positions.length === 0) return [];
+  const nudges = [];
+
+  // P0: Konsantrasyon — tek pozisyon >%35
+  // hasMV: tüm pozisyonlarda fiyat verisi mevcut olduğunda çalış
+  const hasMV = positions.every(p => p.mv != null);
+  const totalMV = positions.reduce((a, p) => a + (p.mv ?? p.cost ?? 0), 0);
+  if (hasMV && totalMV > 0) {
+    for (const p of positions) {
+      const mv = p.mv ?? p.cost ?? 0;
+      const pct = (mv / totalMV) * 100;
+      if (pct > 35) {
+        nudges.push({
+          id: `concentration_${p.ticker}`,
+          priority: 0,
+          message: `${p.ticker} pozisyonun portföyün %${Math.round(pct)}'ini oluşturuyor`,
+          actionTab: 'analysis'
+        });
+      }
+    }
+  }
+
+  // P1: İnaktivite — son BUY'dan >90 gün
+  const buys = transactions.filter(t => t.way === 'BUY');
+  if (buys.length > 0) {
+    const lastBuyDate = buys.reduce((max, t) => t.date > max ? t.date : max, '');
+    const daysSince = Math.floor((Date.now() - new Date(lastBuyDate).getTime()) / 86400000);
+    if (daysSince > 90) {
+      nudges.push({
+        id: 'inactivity',
+        priority: 1,
+        message: `${daysSince} gündür yeni işlem yok`,
+        actionTab: 'add'
+      });
+    }
+  }
+
+  // P1: Çeşitlendirme — yalnızca 1 asset_type
+  const types = [...new Set(positions.map(p => p.type).filter(Boolean))];
+  if (types.length === 1) {
+    const TYPE_LABELS = {
+      US_STOCK: 'ABD hisselerinden',
+      BIST: 'BIST hisselerinden',
+      CRYPTO: 'kripto varlıklardan',
+      GOLD: 'altından',
+      FUND: 'fonlardan',
+      FX: 'dövizden'
+    };
+    const label = TYPE_LABELS[types[0]] || types[0];
+    nudges.push({
+      id: 'diversification',
+      priority: 1,
+      message: `Portföyün tamamı ${label} oluşuyor`,
+      actionTab: 'search'
+    });
+  }
+
+  return nudges.sort((a, b) => a.priority - b.priority);
+};
+
 // Icons
 const IconEye    = ()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="12" rx="11" ry="8"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>;
 const IconEyeOff = ()=><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3l18 18"/><path d="M10.5 10.7a3 3 0 0 0 3.8 3.8"/><path d="M6.1 6.3A10.9 10.9 0 0 0 1 12s4 8 11 8a10.7 10.7 0 0 0 5.9-1.9"/><path d="M9.4 4.4A10.5 10.5 0 0 1 12 4c7 0 11 8 11 8a18 18 0 0 1-2.7 3.8"/></svg>;
