@@ -699,6 +699,11 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           </div>
         );
       })()}
+      {/* ── Bölüm başlığı: Performans & Getiri ─────────────────── */}
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"8px 4px 6px"}}>
+        <span style={{fontFamily:"var(--font-display)",fontSize:13,color:"var(--text2)",letterSpacing:"0.04em",whiteSpace:"nowrap"}}>Performans &amp; Getiri</span>
+        <div style={{flex:1,height:1,background:"var(--border)"}}/>
+      </div>
       {/* ── Kart: Aylık Özet ─────────────────────────────────────── */}
       {(()=>{
         const months   = prevMonths(12);
@@ -874,6 +879,11 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           </div>
         );
       })()}
+      {/* ── Bölüm başlığı: Dağılım ──────────────────────────────── */}
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"16px 4px 6px"}}>
+        <span style={{fontFamily:"var(--font-display)",fontSize:13,color:"var(--text2)",letterSpacing:"0.04em",whiteSpace:"nowrap"}}>Dağılım</span>
+        <div style={{flex:1,height:1,background:"var(--border)"}}/>
+      </div>
       {/* Varlık dağılımı — stacked bar */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -978,6 +988,11 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
         )}
       </div>
 
+      {/* ── Bölüm başlığı: Fundamentals ─────────────────────────── */}
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"16px 4px 6px"}}>
+        <span style={{fontFamily:"var(--font-display)",fontSize:13,color:"var(--text2)",letterSpacing:"0.04em",whiteSpace:"nowrap"}}>Fundamentals</span>
+        <div style={{flex:1,height:1,background:"var(--border)"}}/>
+      </div>
       {/* Portföy Sağlık Tablosu — kapalı özet (3 rozet) + collapsible detay tablosu */}
       {healthEligible.length>0 && (() => {
         // Aggregate sayım: tüm healthFiltered ticker'ların 8 metrikinde good/neutral/bad toplam.
@@ -1028,6 +1043,64 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                   {below ? `S&P 500 (${sp500ref}x) altında` : `S&P 500 (${sp500ref}x) üstünde`}
                 </span>
                 <span style={{fontSize:10,color:"var(--text3)"}}>{included} pozisyon dahil{missing>0?`, ${missing} veri yok`:""}</span>
+              </div>
+            );
+          })()}
+
+          {/* Portföy seviyesi sonuç cümleleri — her zaman görünür */}
+          {(()=>{
+            // Ağırlıklı ortalama hesapla: her pozisyon için piyasa değeri ağırlığı
+            const metricKeys = [
+              { key:"liabToEquity",     label:"Borçlanma seviyesi",  good:"sağlıklı",   warn:"orta",        bad:"yüksek",      threshGood:0.80,  threshOk:2.00,  dir:"low",  unit:"x",   thresh:"eşik 0.80x" },
+              { key:"netMargin",        label:"Kârlılık",            good:"güçlü",      warn:"orta",        bad:"zayıf",       threshGood:0.10,  threshOk:0.05,  dir:"high", unit:"pct", thresh:"eşik %10"   },
+              { key:"revenueGrowth5Y",  label:"Gelir büyümesi",      good:"güçlü",      warn:"ılımlı",      bad:"yavaş",       threshGood:0.10,  threshOk:0.05,  dir:"high", unit:"pct", thresh:"eşik %10"   },
+              { key:"roe",              label:"Özkaynak verimliliği", good:"yüksek",     warn:"orta",        bad:"düşük",       threshGood:0.15,  threshOk:0.08,  dir:"high", unit:"pct", thresh:"eşik %15"   },
+              { key:"operatingMargin",  label:"Operasyonel kârlılık", good:"güçlü",      warn:"orta",        bad:"zayıf",       threshGood:0.15,  threshOk:0.08,  dir:"high", unit:"pct", thresh:"eşik %15"   },
+              { key:"netDebtToFcf",     label:"Borç/Nakit akışı",    good:"kontrollü",  warn:"izlenmeli",   bad:"yüksek",      threshGood:2.00,  threshOk:5.00,  dir:"low",  unit:"x",   thresh:"eşik 2.0x"  },
+            ];
+            const sentences = metricKeys.map(mk => {
+              let wSum=0, wTotal=0, count=0;
+              healthFiltered.forEach(p => {
+                const v = fundCache[p.ticker]?.metrics?.[mk.key];
+                const mv = mvDisp(p);
+                if (v != null && isFinite(v) && mv > 0) {
+                  // netDebtToFcf negatif = net cash → 0 olarak say (çok iyi)
+                  const adjV = (mk.key === "netDebtToFcf" && v < 0) ? 0 : v;
+                  wSum += adjV * mv;
+                  wTotal += mv;
+                  count++;
+                }
+              });
+              if (count === 0 || wTotal === 0) return null;
+              const avg = wSum / wTotal;
+              // Skor belirle
+              let signal;
+              if (mk.key === "netDebtToFcf" && avg <= 0) {
+                signal = "good";
+              } else if (mk.dir === "high") {
+                signal = avg >= mk.threshGood ? "good" : avg >= mk.threshOk ? "neutral" : "bad";
+              } else {
+                signal = avg <= mk.threshGood ? "good" : avg <= mk.threshOk ? "neutral" : "bad";
+              }
+              const adj = signal === "good" ? mk.good : signal === "neutral" ? mk.warn : mk.bad;
+              const icon = signal === "good" ? "🟢" : signal === "neutral" ? "🟡" : "🔴";
+              // Tooltip: ham değer + eşik
+              const rawStr = mk.unit === "pct" ? `%${(avg*100).toFixed(1)}` : `${avg.toFixed(2)}x`;
+              const tip = `Ağırlıklı ort. ${mk.label.toLowerCase()}: ${rawStr} — ${mk.thresh}`;
+              return { icon, label: mk.label, adj, tip, signal };
+            }).filter(Boolean);
+            if (sentences.length === 0) return null;
+            return (
+              <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:6}}>
+                {sentences.map((s, i) => (
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)"}}
+                    data-tip={s.tip}>
+                    <span style={{fontSize:13}}>{s.icon}</span>
+                    <span><strong style={{color:"var(--text)",fontWeight:500}}>{s.label}</strong>
+                      {" "}<span style={{color: s.signal==="good"?"var(--ok)":s.signal==="neutral"?"var(--warn)":"var(--err)"}}>{s.adj}</span>
+                    </span>
+                  </div>
+                ))}
               </div>
             );
           })()}
@@ -1248,6 +1321,11 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
         })()}
       </div>
 
+      {/* ── Bölüm başlığı: Risk Değerlendirmesi ─────────────────── */}
+      <div style={{display:"flex",alignItems:"center",gap:10,padding:"16px 4px 6px"}}>
+        <span style={{fontFamily:"var(--font-display)",fontSize:13,color:"var(--text2)",letterSpacing:"0.04em",whiteSpace:"nowrap"}}>Risk Değerlendirmesi</span>
+        <div style={{flex:1,height:1,background:"var(--border)"}}/>
+      </div>
       {/* Konsantrasyon Risk Göstergesi — top3 ağırlık + HHI */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
         <div className="stitle" style={{marginBottom:12}}>Konsantrasyon Riski</div>
