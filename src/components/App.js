@@ -58,6 +58,7 @@ function App({session}){
   const [connTest,setConnTest]=useState(null);  // {ok:bool, status:int, body:str} — Settings → Bağlantı Test çıktısı
   const [statusOpen,setStatusOpen]=useState(false);
   const [nudgeDismissed,setNudgeDismissed]=useState(()=>LS.get('il_nudge_dismissed',{}));
+  const [healthRedCount,setHealthRedCount]=useState(null);
 
   const savePrc=(p,d)=>{setPrc_(p);setPdate(d);LS.set("il_prc",{p,d});};
   const saveHist=h=>{setHist_(h);LS.set("il_hist",h);};
@@ -589,13 +590,22 @@ function App({session}){
                 setNudgeDismissed(next);
                 LS.set('il_nudge_dismissed',next);
               };
-              const activeNudges=computeNudges(allDisp,txs,annualRate)
+              const activeNudges=computeNudges(allDisp,txs,healthRedCount,annualRate,displayCur)
                 .filter(n=>!nudgeDismissed[n.id]||nudgeDismissed[n.id]<now)
                 .slice(0,2);
               if(!activeNudges.length)return null;
               return activeNudges.map(n=>(
                 <div key={n.id} className="warn-card" style={{alignItems:'center'}}>
                   <div className="wc-sub" style={{flex:1}}>{n.message}</div>
+                  {n.actionCard&&(
+                    <button
+                      style={{background:'none',border:'none',color:'var(--info)',cursor:'pointer',fontSize:12,padding:'0 8px',flexShrink:0,whiteSpace:'nowrap'}}
+                      onClick={()=>{
+                        setTab(n.actionTab);
+                        setTimeout(()=>document.querySelector(`[data-card="${n.actionCard}"]`)?.scrollIntoView({behavior:'smooth',block:'start'}),150);
+                      }}
+                    >Analiz'e Git →</button>
+                  )}
                   <button
                     style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 0 0 12px',flexShrink:0}}
                     onClick={()=>dismiss(n.id)}
@@ -863,7 +873,7 @@ function App({session}){
 
       {/* ANALYSIS */}
       {tab==="analysis"&&(
-        <AnalysisTab pos={pos} txs={txs} splits={splits} prc={prc} hist={hist} hide={hide} mask={mask} setTab={setTab} displayCur={displayCur} fxRates={fxRates} openDetail={openDetail}/>
+        <AnalysisTab pos={pos} txs={txs} splits={splits} prc={prc} hist={hist} hide={hide} mask={mask} setTab={setTab} displayCur={displayCur} fxRates={fxRates} openDetail={openDetail} onHealthSummary={setHealthRedCount}/>
       )}
 
       {/* SEARCH */}
