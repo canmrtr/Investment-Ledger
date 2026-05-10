@@ -645,7 +645,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
               // extractDomain malformed URL'de null döner; "null ↗" basmamak için
               // homepage_url ham değil parse-edilebilir doğrulamayla geçer
               ["Web",meta.homepage_url&&extractDomain(meta.homepage_url)?meta.homepage_url:null],
-            ].filter(([,v])=>v);
+            ].filter(Boolean).filter(([,v])=>v);
             return(
               <div>
                 <div className="kv" style={{marginBottom:meta.description?12:0}}>

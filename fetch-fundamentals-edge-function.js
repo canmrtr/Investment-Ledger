@@ -825,13 +825,13 @@ Deno.serve(async (req) => {
             if (fmp.ok) {
               await upsertFundCache(t, at || "US_STOCK", fmp.metrics ?? null, fmp.annual ?? null, fmp.grades ?? null, "fmp");
               refreshed++;
-            } else if (fmp.isOutOfPlan) {
+            } else {
               const edgar = await fetchEdgar(t);
               if (!edgar.error) {
                 await upsertFundCache(t, at || "US_STOCK", edgar.metrics ?? null, null, null, "edgar");
                 refreshed++;
               } else { failed++; }
-            } else { failed++; }
+            }
           }
         } catch (e) { console.warn("[refresh-fund-cache]", t, e); failed++; }
         if (i < stale.length - 1) await new Promise(r => setTimeout(r, 800));
@@ -876,31 +876,23 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 2) FMP "Special Endpoint" 402 → EDGAR fallback (US listed olmalı)
-    if (fmp.isOutOfPlan) {
-      const edgar = await fetchEdgar(ticker);
-      if (!edgar.error) {
-        upsertFundCache(ticker, asset_type || "US_STOCK", edgar.metrics ?? null, null, null, "edgar");
-        return json({
-          ticker,
-          fetched_at: new Date().toISOString(),
-          source: "edgar",
-          metrics: edgar.metrics,
-          raw: edgar.raw,
-        });
-      }
-      // EDGAR de fail oldu — out-of-plan code'u FE warn-card için stable işaret
+    // 2) FMP fail → EDGAR fallback (tüm hata türleri: 402/429/boş veri/network)
+    const edgar = await fetchEdgar(ticker);
+    if (!edgar.error) {
+      upsertFundCache(ticker, asset_type || "US_STOCK", edgar.metrics ?? null, null, null, "edgar");
       return json({
-        code: "OUT_OF_PLAN",
-        error: `FMP plan kapsam dışı; EDGAR fallback de başarısız: ${edgar.error}`,
-        fmpRaw: fmp.raw,
-      }, 422);
+        ticker,
+        fetched_at: new Date().toISOString(),
+        source: "edgar",
+        metrics: edgar.metrics,
+        raw: edgar.raw,
+      });
     }
-
-    // 3) FMP başka sebepten fail (network, geçersiz ticker, vb.)
+    // EDGAR de fail — kalıcı kapsam dışı vs geçici hata ayırt et
     return json({
-      error: "FMP'den veri alınamadı (ticker geçersiz veya plan kapsam dışı olabilir)",
-      raw: fmp.raw,
+      code: fmp.isOutOfPlan ? "OUT_OF_PLAN" : "FETCH_FAILED",
+      error: `FMP/EDGAR veri alınamadı: ${edgar.error}`,
+      fmpRaw: fmp.raw,
     }, 422);
 
   } catch (err) {
