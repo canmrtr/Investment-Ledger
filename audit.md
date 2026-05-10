@@ -2,7 +2,7 @@
 
 ## Follow-up Audit
 
-Date: 2026-05-10
+Date: 2026-05-10 | **All findings resolved: 2026-05-10**
 
 Scope: Static review of the current working tree for the React/Supabase app, focused on ledger correctness, public-sharing privacy, Edge Function exposure, and mutation error handling. No production database state was inspected.
 
@@ -12,6 +12,18 @@ Scope: Static review of the current working tree for the React/Supabase app, foc
 - Manual position upsert conflict target appears fixed: `ManuelPosForm` now uses `onConflict:"user_id,portfolio_id,ticker"`.
 - Watchlist `asset_type` selection appears fixed: `loadData` now selects `id,ticker,asset_type,added_at`.
 - Public-sharing behavior was changed to default to `allocation_only`, but a deeper data-layer exposure remains. See the new high-severity finding below.
+
+### Resolution (2026-05-10)
+
+All findings below were resolved in the same session via migrations 011–012, src/ edits, and edge function update:
+
+| Finding | Resolution |
+|---------|-----------|
+| High: `allocation_only` column exposure | `012_public_allocation_rpc.sql`: SECURITY DEFINER `get_allocation_only_positions(uuid)` returns only `{ticker,name,type,pct}`; `positions_allocation_read` RLS policy dropped |
+| High: `rebuildPositions` not transactional | `011_rebuild_positions_atomic.sql`: PL/pgSQL RPC wraps DELETE+INSERT atomically; `src/utils.js` calls `sb.rpc()` instead of separate round-trips; callers check `null` return on error |
+| Medium: ManuelPosForm partial ledger | `src/components/ManuelPosForm.js`: `savePos` now routes through `rebuildPositions` (was direct upsert, error ignored); `delPos` now deletes transactions + rebuilds (was position-row-only delete) |
+| Medium: `fetch-prices` unauthenticated | JWT validation added to `supabase/functions/fetch-prices/index.ts`; all frontend callers use new `edgePriceCall()` auth wrapper; `edgeCallAuth` anon fallback removed |
+| Medium: allocation pct uses raw shares | Resolved by `get_allocation_only_positions` RPC: cost-basis pct (`avg_cost*shares`) computed server-side, not raw share counts |
 
 ### Findings
 

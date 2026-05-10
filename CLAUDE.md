@@ -34,6 +34,11 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 `fund_cache`: frontend read-only (anon+authenticated); tüm write `fetch-fundamentals` service_role üstünden.
 pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly` — `30 3 * * 0` (Pazar 03:30 UTC); her ikisi de `CRON_SECRET` Bearer header.
 
+**DB RPC'leri** (`sb.rpc(...)`):
+- `rebuild_positions_atomic(p_user_id, p_portfolio_id, p_positions jsonb)` — `SECURITY INVOKER`; pozisyon DELETE+INSERT atomik tek transaction'da; `src/utils.js:rebuildPositions` tarafından çağrılır; `null` döner → hata.
+- `get_allocation_only_positions(p_portfolio_id uuid)` — `SECURITY DEFINER`; `is_public+allocation_only` portföyler için `{ticker,name,type,pct}` döner; `avg_cost`/`shares`/`broker` hiçbir zaman döndürülmez; `authenticated` + `anon` grant'li.
+- `increment_parse_calls(user_id)` — parse rate limit (20/gün), `SECURITY DEFINER`.
+
 ## Tabs & Bileşenler
 
 `Root → Login | App(#shell)`
@@ -74,6 +79,15 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 - `.theme-logo-dark`/`.theme-logo-light` — `[data-theme="light"]` ile otomatik logo geçişi; `.delta-pos`/`.delta-neg` — yeşil/kırmızı delta badge sınıfları
 - **`.pie-row`**: `flex:"0 0 70px"` ($) + `flex:"0 0 56px"` (%) sabit basis; label `flex:1,minWidth:0`. `minWidth` yetmez, truncate/ellipsis ekleme.
 - **`.fbar`**: `overflow-x:auto; scrollbar-width:none`; `.fbar .mtab`: `flex:0 0 auto; white-space:nowrap`. Wrapper'da `flexWrap:wrap` kullanma.
+
+### Edge çağrı yardımcıları
+- `edgeCall(fn, body)` — anon key ile çağırır; `fetch-prices` için **kullanma**.
+- `edgeCallAuth(fn, body)` — kullanıcı JWT'si ile çağırır; session yoksa yerel `401 Response` döner (anon fallback yok).
+- `edgePriceCall(body)` — `edgeCallAuth("fetch-prices", body)` kısayolu; tüm `fetch-prices` çağrıları bu yardımcıyı kullanmalı.
+
+### ManuelPosForm davranışı
+- `savePos`: tx insert → `rebuildPositions` (atomik RPC) → `loadData`. Manuel upsert yok.
+- `delPos`: tüm transaction'ları sil → `rebuildPositions` → `loadData`. Sadece position row'u silmez; confirm dialog `danger:true`.
 
 ### CFG sabitleri
 `RATE_LIMIT_MS=7500`, `DUST_THRESHOLD=0.0001`, `CSV_BATCH_SIZE=50`, `FLASH_MS=3500`

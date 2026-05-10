@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-10** (Sprint 11 devam ediyor: Temettü Takvimi (2a/2b/2c), Nudge Kartları (4a/4b) teslim edildi. Fund cache backend tamamlandı: `fund_cache` Supabase tablosu + pg_cron haftalık refresh + AnalysisTab otomatik fetch — kullanıcı artık "Eksikleri Çek" butonuna basmak zorunda değil.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-10** (Sprint 12 aktif: Audit Fixes bundle teslim edildi — High #1+#2 + Medium #1+#2+#3 kapatıldı; migrations 011+012 apply bekliyor, fetch-prices deploy bekliyor.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -200,6 +200,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 - [ ] **Kişisel Yatırım Notu** `[M]` `[P2]` — Ticker bazında "neden aldım / çıkış stratejim / öğrenilen ders" serbest metin; tarih sıralı liste. Yeni `notes` Supabase tablosu (user_id, ticker nullable, date, content).
 - [ ] **Portföy Zaman Çizelgesi (Timeline)** `[M]` `[P3]` — Tüm BUY/SELL kronolojik vertical timeline; isteğe bağlı piyasa olayı ekleme. `transactions` tablosu yeterli.
+- [ ] **Yaklaşan Etkinlikler Merkezi** `[M]` `[P2]` — Dashboard veya ayrı kompakt panelde önümüzdeki 30/90 gün için temettü, bilanço, DCA hatırlatıcısı ve hedef fiyat alarmı olaylarını tek kronolojik listede gösterir. Veri kaynakları ayrı backlog item'larından gelir: Temettü Takvimi, Kazanç Takvimi, DCA Planı ve Hedef Fiyat Bildirimi. İlk sürüm read-only timeline; sonraki sürümde "tamamlandı / ertele / alarma git" aksiyonları eklenebilir.
 - [ ] **Hedef Fiyat & Değerleme Notu** `[M]` `[P2]` — Kullanıcı tanımlı hedef fiyat + kısa not; "THYAO hedef ₺380 — %17 uzakta". Yeni `target_prices` Supabase tablosu.
 - [ ] **FIRE / Hedef Portföy Büyüklüğü Takibi** `[M]` `[P2]` — Kullanıcı hedef büyüklük (ör. $500.000) girer; mevcut portföy değeri + ortalama XIRR ile "hedefe X yıl kaldı" hesabı; progres bar. `profiles` tablosuna `goal_amount` + `goal_currency` kolonu gerekir. Günlük açılışta motivasyon metriki; dashboard widget olarak da ilerleyebilir.
 
@@ -400,7 +401,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 - [x] ~~**Periyodik agent denetim turu — ilk tur**~~ (2026-04-27) — client-security-auditor + edge-reviewer; 15 bulgu; Sprint 4 backlog'a eklendi.
 - [x] ~~**Periyodik agent denetim turu — 2. tur**~~ (2026-04-29, Sprint 7) — rls-auditor + client-security-auditor + edge-reviewer paralel; 3 kritik bulgu (parse-transaction sunucu auth, RLS portfolio_id subquery, activities cross-portfolio insert); tüm bulgular `002_rls_fixes.sql` + parse-transaction rewrite ile kapatıldı. Sonraki tur: Sprint 9.
-- [ ] **Periyodik agent denetim turu — 3. tur** `[S]` `[P1]` — Sprint 9 sonu kalite kapısı; odak: watchlist RLS (004+006 migration, başka kullanıcının watchlist'i okunabilir mi?); follows/portfolio_activities RLS (Faz 2 önkoşulu); edge-reviewer: fetch-fundamentals (grade endpoint, annual field), refresh-price-cache (auto-split), split auto-sync son commit; client-security-auditor: WatchlistTab XSS. **Sprint 11 scope.**
+- [x] ~~**Periyodik agent denetim turu — 3. tur**~~ (2026-05-10, Sprint 11) — rls-auditor (watchlist 004+006, follows, portfolio_activities), edge-reviewer (grade endpoint, auto-split), client-security-auditor (WatchlistTab XSS). Tamamlandı.
 
 ## Ölçeklenme & Mass Kullanım
 
@@ -426,6 +427,21 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [ ] **Frankfurter API fallback** `[S]` `[P2]` — ücretsiz, SLA yok. Kesintide tüm kullanıcılar "FX kuru yok" warn-card görür. Fallback: ECB doğrudan XML feed (`sdw-wsrest.ecb.europa.eu`). Şu an yeterli ama çok kullanıcıda SLA gerekebilir.
 - [ ] **İş Yatırım MaliTablo resmi olmayan endpoint izleme** `[S]` `[P2]` — browser-style header gerektiren unofficial endpoint; anti-bot değişikliğinde BIST fundamentals sessizce kırılır. Response boş/HTML gelince kullanıcıya açık hata göster (şu an silent fail).
 - [ ] **Fundamental data Supabase cache** `[M]` `[P2]` — şu an LS yeterli (7 gün TTL); kullanıcı sayısı arttıkça her kullanıcı aynı AAPL fundamentalını ayrı ayrı çekiyor. Merkezi `fundamental_cache` tablosu + 7 gün TTL ile FMP/EDGAR call'larını birleştir.
+
+---
+
+## Going Live / Custom Domain
+
+> **Amaç**: GitHub Pages üzerindeki mevcut `https://canmrtr.github.io/Investment-Ledger/` yayını custom domain'e taşımak. Bu bölüm kararları ve yapılacak işleri kaydeder; uygulama kodu bu madde seçilene kadar değiştirilmez.
+
+- [ ] **Canonical domain kararı** `[S]` `[P1]` — Tek bir ana URL seç: apex (`https://portfoi.com`) veya `www` (`https://www.portfoi.com`). Öneri: `www` canonical + apex redirect; karar verildikten sonra tüm app, docs, Supabase ve test referansları aynı canonical URL'ye çekilir.
+- [ ] **GitHub Pages custom domain ayarı** `[S]` `[P1]` — Repo `Settings → Pages → Custom domain` alanına domain ekle; root `CNAME` dosyası domain'i içermeli. GitHub'ın domain doğrulama akışını tamamla ve HTTPS kullanılabilir olunca `Enforce HTTPS` aç.
+- [ ] **DNS kayıtları** `[S]` `[P1]` — Apex kullanılacaksa `A` kayıtları GitHub Pages IP'lerine (`185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`) yönlenir. `www` kullanılacaksa `CNAME www → canmrtr.github.io` eklenir. Wildcard DNS (`*.domain`) kullanılmaz; takeover riski yaratır.
+- [ ] **Root-path migration** `[S]` `[P1]` — Custom domain root'ta çalışacağı için `/Investment-Ledger/` prefix'leri kaldırılır: `index.html` PWA linkleri, service worker register path'i, `manifest.json` `start_url/scope/icons`, `service-worker.js` shell cache ve fallback path'leri `/` tabanlı olur.
+- [ ] **Supabase Edge Function CORS güncellemesi** `[S]` `[P1]` — `Access-Control-Allow-Origin: https://canmrtr.github.io` hardcode'u yeni canonical domain'e taşınır. Geçiş döneminde eski + yeni domain gerekiyorsa tek string yerine allowlist origin kontrolü kullanılır.
+- [ ] **Supabase Auth URL ayarları** `[S]` `[P1]` — Supabase Dashboard'da Site URL ve izinli redirect URL'leri yeni canonical domain'e göre güncellenir. Şu an email/password akışı kullanılıyor; ileride magic link/OAuth eklenirse bu ayar bloklayıcı olur.
+- [ ] **Eski URL geçiş politikası** `[S]` `[P2]` — `canmrtr.github.io/Investment-Ledger/` yayını bir süre çalışır mı yoksa direkt custom domain'e mi yönlenir karar ver. CORS allowlist ve PWA cache davranışı bu karara göre ayarlanır.
+- [ ] **Smoke test ve dokümantasyon güncellemesi** `[S]` `[P2]` — `e2e/smoke.mjs`, `CLAUDE.md`, `GOTCHAS.md`, brand kit ve deploy notlarındaki eski URL referansları canonical domain'e taşınır. DoD: yeni domain'de login, fiyat güncelleme, edge function çağrıları, PWA manifest, service worker ve public portfolio share URL doğrulanır.
 
 ---
 
@@ -582,7 +598,7 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ✅ (2026-04-30) | Sprint 10 sonrası Watchlist MVP ✅ (2026-05-01) | **Sprint 11 → aktif (2026-05-09 → 2026-05-23)**
+Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ✅ (2026-04-30) | Sprint 10 sonrası Watchlist MVP ✅ (2026-05-01) | Sprint 11 ✅ (2026-05-10) | **Sprint 12 → aktif**
 
 Sprint 10 retro: Milestone A (P1 bug bundle) ve Milestone B (Dashboard blok signed pill) tam teslim edildi. Milestone E (Analist Tavsiyeleri) beklenenin ötesinde teslim edildi: `annual` field fix + ticker format validation + EDGAR timeout güvenlik sertleştirmesi de Sprint 10'a dahil oldu. Milestone C (Temettü Takvimi) capacity nedeniyle teslim edilmedi — Sprint 11'e devredildi. Sprint 10 kapatıldıktan sonra Watchlist MVP ek iterasyonla 2026-05-01'de tamamlandı (asset_type + non-held price fetch). PWA (manifest.json + service-worker.js + index.html) önceki çalışmada fiilen tamamlanmış bulundu; Sprint 11 grooming'inde doğrulandı ve tamamlandı olarak işaretlendi.
 
@@ -592,7 +608,12 @@ Sprint 10 retro: Milestone A (P1 bug bundle) ve Milestone B (Dashboard blok sign
 2. **Temettü Takvimi** `[M][P2]` — `fetch-fundamentals` `mode:"dividend-calendar"` dalı (2a) + TickerDetailTab "Sonraki Temettü" satırı (2b) + HistoryTab "Yaklaşan Temettüler" collapsible bölümü (2c). FMP entegre, yeni key yok. Sprint 10'dan devredildi.
 3. **Akıllı Nudge Kartları — (a)+(b)** `[M][P2]` — `computeNudges()` pure fonksiyon (konsantrasyon >%35, inaktivite >90 gün, tek asset_type) + Dashboard warn-card render + LS dismiss 7 gün. (c) alt-task Sprint 12'ye ertelendi.
 
-**Sprint 12 için Öne Çıkan Adaylar**:
+**Sprint 12 Scope** (2026-05-10):
+
+1. **Audit Fixes bundle** ✅ — High #1 (`allocation_only` kolon sızıntısı → `get_allocation_only_positions` SECURITY DEFINER RPC + `positions_allocation_read` policy kaldırıldı), High #2 (`rebuildPositions` atomik değil → `rebuild_positions_atomic` PL/pgSQL RPC), Medium #1 (ManuelPosForm kısmi ledger → `rebuildPositions` yolundan geçiyor; `delPos` artık transaction'ları da siliyor), Medium #2 (`fetch-prices` JWT zorunlu + `edgePriceCall` wrapper), Medium #3 (raw shares pct → cost-basis RPC).
+   - **Bekleyen**: `supabase/migrations/011` + `012` Supabase SQL Editor'da apply edilmeli; `npx supabase functions deploy fetch-prices --no-verify-jwt` çalıştırılmalı.
+
+**Sprint 13 için Öne Çıkan Adaylar**:
 
 1. **Akıllı Nudge (c)** — sağlık skoru + XIRR kuralları + AnalysisTab scroll aksiyonu
 2. **Kullanıcı tanımlı fundamental eşikler — Settings formu** — sektör-aware eşikler Sprint 11'de tamamlandıktan sonra UI katmanı `[M][P2]`
