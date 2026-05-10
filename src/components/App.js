@@ -11,7 +11,11 @@ function App({session}){
   // Default "dashboard" (geri-uyumluluk). Search/History/Analiz'den çağıran taraf kendi tab'ını geçer.
   const openDetail=(tk,assetType,fromTab)=>{
     setSelectedTicker(tk);
-    setSelectedAssetType(assetType||null);
+    const resolvedType=assetType
+      ||pos.find(p=>p.ticker===tk)?.type
+      ||watchlistItems.find(w=>w.ticker===tk)?.asset_type
+      ||null;
+    setSelectedAssetType(resolvedType);
     setSelectedFromTab(fromTab||tab||"dashboard");
     setTab("detail");
   };
