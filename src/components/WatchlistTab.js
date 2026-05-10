@@ -37,7 +37,7 @@ function WatchlistTab({items,prc,hist,onToggle,openDetail,setTab,hideAmts,mask})
                   {hideAmts?mask("••••"):(d1pct!=null?fmtP(d1pct):"—")}
                 </td>
                 <td style={{textAlign:"right",padding:"10px 16px 10px 4px"}}>
-                  <button className="btn-xs btn-danger-out" onClick={e=>{e.stopPropagation();onToggle(w.ticker);}}>Çıkar</button>
+                  <button className="btn-xs btn-danger-out" onClick={async e=>{e.stopPropagation();if(await confirm_(`${w.ticker} izleme listesinden çıkarılsın mı?`,{okLbl:"Çıkar",danger:true}))onToggle(w.ticker);}}>Çıkar</button>
                 </td>
               </tr>
             );

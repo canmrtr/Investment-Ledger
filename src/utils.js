@@ -67,6 +67,27 @@ const fxCacheGet = () => {
   return c;
 };
 const fxCacheSet = (rates) => LS.set("il_fx", { rates, t: Date.now() });
+
+// Fundamental cache (FMP TTM + 5Y + grades) — 24 saat TTL.
+// AnalysisTab health/resilience tabloları + TickerDetailTab + App.js eager fetch paylaşır.
+const FUND_TTL_MS = 86400000;
+const fundCacheGet = (ticker) => {
+  const c = LS.get(`fund_${ticker}`, null);
+  if (!c || !c.t) return null;
+  if (Date.now() - c.t > FUND_TTL_MS) return null;
+  return c.d;
+};
+const fundCacheSet = (ticker, data) => LS.set(`fund_${ticker}`, { d: data, t: Date.now() });
+// LS'teki en eski fund cache zamanı (status satırı için "son X sa önce")
+const fundCacheOldestTs = (tickers) => {
+  let oldest = null;
+  for (const t of tickers) {
+    const c = LS.get(`fund_${t}`, null);
+    if (c?.t && (oldest == null || c.t < oldest)) oldest = c.t;
+  }
+  return oldest;
+};
+
 const displaySym = (cur) => cur==="TRY" ? "₺" : cur==="EUR" ? "€" : "$";
 // from/to currency arasında çeviri. Aynıysa as-is. fxRates eksikse null döner (caller fallback).
 const convert = (amount, from, to, fxRates) => {

@@ -171,16 +171,6 @@ const divCalCacheGet = (ticker) => {
 };
 const divCalCacheSet = (ticker, data) => LS.set(`il_divcal_${ticker}`, { d: data, t: Date.now() });
 
-// Fundamental cache (FMP TTM + 5Y) — 7 gün TTL
-const FUND_TTL_MS = 7 * 86400000;
-const fundCacheGet = (ticker) => {
-  const c = LS.get(`fund_${ticker}`, null);
-  if (!c || !c.t) return null;
-  if (Date.now() - c.t > FUND_TTL_MS) return null;
-  return c.d;
-};
-const fundCacheSet = (ticker, data) => LS.set(`fund_${ticker}`, { d: data, t: Date.now() });
-
 // Value-investing checklist eşikleri.
 // dir: "high"=büyük iyi, "low"=küçük iyi. Örn. ROE yüksek, P/E düşük olsun.
 const FUND_THRESHOLDS = {

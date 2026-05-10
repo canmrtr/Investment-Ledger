@@ -11,21 +11,28 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
   - `parse-transaction` — Claude Haiku 4.5, metin/görüntü → `{transactions:[...]}` array
   - `fetch-prices` — Massive (US/FX/Crypto/GOLD), Yahoo (BIST price/hist), Twelve Data + borsa-mcp (BIST meta)
   - `refresh-price-cache` — pg_cron 6h, stale-first batch
-  - `fetch-fundamentals` — FMP + EDGAR (US); İş Yatırım (BIST); 21 metrik + annual + grades; `mode:"ticker-list"` → ~11k ticker DB
+  - `fetch-fundamentals` — FMP + EDGAR (US); İş Yatırım (BIST); 21 metrik + annual + grades; `mode:"ticker-list"` → ~11k ticker DB; `mode:"refresh-fund-cache"` → pg_cron haftalık stale refresh; `mode:"etf-country"` → FMP country-weightings (planlı)
+- **PWA**: `manifest.json` + `service-worker.js` (root); `index.html`'de SW kayıt; icon-192/512.png mevcut.
 - **Secrets** (`Deno.env.get`): `MASSIVE_KEY`, `FMP_KEY`, `TWELVEDATA_KEY`, `ANTHROPIC_KEY`
 
 ## Supabase Şeması
 
 | Tablo | Scope | İçerik |
 |-------|-------|--------|
-| `positions` | user (RLS) | ticker, name, type, shares, avg_cost, currency, broker, unit (altın birimi: oz/g/quarter/half/full/republic) |
-| `transactions` | user (RLS) | BUY/SELL/DIV kayıtları; `way` CHECK `ANY(ARRAY['BUY','SELL','DIV'])` |
-| `splits` | user (RLS) | ticker, split_date, ratio |
+| `positions` | user (RLS) | ticker, name, type, shares, avg_cost, currency, broker, unit (altın birimi: oz/g/quarter/half/full/republic), **portfolio_id FK** |
+| `transactions` | user (RLS) | BUY/SELL/DIV kayıtları; `way` CHECK `ANY(ARRAY['BUY','SELL','DIV'])`; **portfolio_id FK** |
+| `splits` | user (RLS) | ticker, split_date, ratio; **portfolio_id FK** |
 | `profiles` | user (RLS, public read) | user_id PK, username, display_name, parse_calls_today/date (20/gün limit, `increment_parse_calls` RPC ile) |
 | `price_cache` | paylaşımlı (service_role write only) | ticker PK, price + d1/w1/m1/y1 + p_d1…p_y1 + updated_at |
+| `portfolios` | user (RLS) | id PK, user_id FK, name, privacy_level; "Ana Portföy" backfill migration uygulandı |
+| `watchlist` | user (RLS) | id PK, user_id FK, ticker, asset_type, added_at |
+| `follows` | user (RLS) | follower_id + followee_id FK; Social Faz 1 altyapısı |
+| `portfolio_activities` | user (RLS) | portfolio_id FK, activity_type, payload; Social Faz 1 altyapısı |
+| `fund_cache` | paylaşımlı (service_role write only) | ticker PK, asset_type, metrics/annual/grades jsonb, source, updated_at |
 
 `price_cache`: frontend read-only; tüm write `fetch-prices` service_role üstünden.
-pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`, `CRON_SECRET` Bearer header.
+`fund_cache`: frontend read-only (anon+authenticated); tüm write `fetch-fundamentals` service_role üstünden.
+pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly` — `30 3 * * 0` (Pazar 03:30 UTC); her ikisi de `CRON_SECRET` Bearer header.
 
 ## Tabs & Bileşenler
 
@@ -34,7 +41,7 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`, `CRON_SECRET` Bearer header
 - `TABS = [dashboard, watchlist, analysis, search, add, settings]`
 - **Dashboard**: KPI (TR + XIRR), 6 BLOCK_TYPE pozisyon bloğu (başlangıçta kapalı)
 - **WatchlistTab**: fiyat/günlük değişim tablosu, "Çıkar" per row, empty-card CTA; `watchlist` Supabase tablosu (id, user_id, ticker, asset_type, added_at)
-- **AnalysisTab**: Varlık/Bölge Dağılımı, Portföy Sağlık (8 metrik), Komisyon, Kazanan/Kaybeden
+- **AnalysisTab**: Varlık/Bölge/Sektör Dağılımı (pie, collapsible), Portföy Sağlık (8 metrik, lazy-fetch), Komisyon (broker×yıl), Kazanan/Kaybeden, Konsantrasyon Riski, Break-Even Analizi, Potansiyel Kayıp Simülasyonu, Dönem Bazlı Getiri (benchmark), FX Risk, 6 Aylık Performans, Temettü Özeti; global asset-type filtre (.fbar)
 - **SearchTab**: ~11k ticker (US + BIST), portföy + discovery; "+ İzle" / "✓ İzleniyor" non-held toggle
 - **AddTab**: 6 asset type picker → text/image/csv/manuel; ConfirmBox + ManuelPosForm
 - **TickerDetailTab**: held + discovery mode; "İzleniyor" badge + toggle buton; FAB context-aware

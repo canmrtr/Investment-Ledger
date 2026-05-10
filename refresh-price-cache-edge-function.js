@@ -28,7 +28,7 @@ const YF_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.3
 // Yahoo Finance US historical (addIS=false).
 const yfHistoricalUS = async (ticker) => {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ticker)}?range=1y&interval=1d`;
-  const r = await fetch(url, { headers: { "User-Agent": YF_UA } });
+  const r = await fetch(url, { headers: { "User-Agent": YF_UA }, signal: AbortSignal.timeout(8000) });
   if (!r.ok) throw new Error(`Yahoo HTTP ${r.status}`);
   const d = await r.json();
   if (d.chart?.error) throw new Error(d.chart.error.description || "Yahoo chart error");
@@ -55,7 +55,7 @@ const massiveHistorical = async (ticker, massiveKey) => {
   const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
   const yearAgo = new Date(Date.now() - 366 * 86400000).toISOString().split("T")[0];
   const url = `https://api.massive.com/v2/aggs/ticker/${ticker}/range/1/day/${yearAgo}/${yesterday}?adjusted=true&limit=400&apiKey=${massiveKey}`;
-  const r = await fetch(url);
+  const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const d = await r.json();
   if (!d.results || d.results.length < 2) throw new Error("insufficient data");
@@ -77,6 +77,28 @@ const fetchHistorical = async (ticker, massiveKey) => {
   } catch (_) {
     return await massiveHistorical(ticker, massiveKey);
   }
+};
+
+// Pozisyon tipine göre ticker'ı API formatına normalize et.
+// Sonuç `fetchHistorical`'a gönderilir; price_cache'e OrijinalTicker ile yazılır.
+const normalizeTicker = (ticker, type) => {
+  if (type === "CRYPTO") {
+    if (/^[XC]:/i.test(ticker)) return ticker.toUpperCase();
+    // Base: split quote-pair separators, strip non-alphanum, then strip common quote suffixes.
+    const base = ticker.toUpperCase().split(/[-_/]/)[0].replace(/[^A-Z0-9]/g, "");
+    const stripped = base.replace(/(USDT?|USDC|BUSD|EUR|BTC|ETH)$/, "") || base;
+    if (!stripped) throw new Error(`CRYPTO ticker "${ticker}" formatı geçersiz`);
+    return `X:${stripped}USD`;
+  }
+  if (type === "GOLD") {
+    if (/^[XC]:/i.test(ticker)) return ticker.toUpperCase();
+    const upper = ticker.toUpperCase().replace(/Ü/g, "U").replace(/Ş/g, "S").replace(/[^A-Z]/g, "");
+    const goldMap = { XAU:"XAU", ALTIN:"XAU", GOLD:"XAU", XAG:"XAG", GUMUS:"XAG", SILVER:"XAG", XPT:"XPT", PLATIN:"XPT", PLATINUM:"XPT", XPD:"XPD", PALADYUM:"XPD", PALLADIUM:"XPD" };
+    const sym = goldMap[upper];
+    if (!sym) throw new Error(`GOLD ticker "${ticker}" goldMap'te bulunamadı`);
+    return `C:${sym}USD`;
+  }
+  return ticker;
 };
 
 Deno.serve(async (req) => {
@@ -124,12 +146,18 @@ Deno.serve(async (req) => {
     const supa = createClient(supaUrl, serviceKey, { auth: { persistSession: false } });
 
     // 1) Tüm user'ların USD pozisyonlarından unique ticker listesi (RLS bypass)
+    // `type` da alıyoruz — CRYPTO/GOLD tickers Massive formatına normalize etmek için gerekli.
     const { data: posList, error: posErr } = await supa
       .from("positions")
-      .select("ticker")
+      .select("ticker, type")
       .eq("currency", "USD");
     if (posErr) throw new Error("positions read failed: " + posErr.message);
-    const allTickers = [...new Set((posList || []).map((p) => p.ticker))];
+    // ticker → type haritası (ilk occurrence kazanır — aynı ticker farklı portföyde olabilir)
+    const tickerTypes = {};
+    for (const p of (posList || [])) {
+      if (!tickerTypes[p.ticker]) tickerTypes[p.ticker] = p.type;
+    }
+    const allTickers = Object.keys(tickerTypes);
 
     if (allTickers.length === 0) {
       return new Response(
@@ -157,7 +185,8 @@ Deno.serve(async (req) => {
     for (let i = 0; i < batch.length; i++) {
       const t = batch[i];
       try {
-        const data = await fetchHistorical(t, massiveKey);
+        const apiTicker = normalizeTicker(t, tickerTypes[t]);
+        const data = await fetchHistorical(apiTicker, massiveKey);
         const { error: upErr } = await supa.from("price_cache").upsert(
           { ticker: t, ...data, updated_at: new Date().toISOString() },
           { onConflict: "ticker" }
