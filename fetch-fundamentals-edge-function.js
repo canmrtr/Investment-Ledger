@@ -6,9 +6,9 @@
 //   - BIST → İş Yatırım MaliTablo (XI_29 industrial; bankalar henüz desteklenmiyor)
 //   - default/US_STOCK/FUND →
 //       1. FMP dener (popüler S&P 500 → en zengin metrikler dahil PE/PS)
-//       2. FMP "Special Endpoint" 402 ile fail olursa, SEC EDGAR'a düşer
-//          (ücretsiz, sınırsız, NOW/MNSO/NNOX gibi tüm SEC dosyalayıcılarını kapsar)
-//       3. EDGAR mode'da PE/PS şu an null (price + shares gerektirir, ileride)
+//       2. FMP fail → SEC EDGAR (ücretsiz; 402/429/boş array dahil tüm FMP hataları)
+//       3. EDGAR fail → Türk ADR mapping: ERELY→EREGL gibi, İş Yatırım'dan BIST verisi
+//       4. EDGAR mode'da PE/PS null (price + shares gerektirir, ileride)
 //
 // Gerekli secret: FMP_KEY (US için), TWELVEDATA_KEY (ticker-list BIST için)
 // Body: { "ticker": "AAPL" }  veya  { "ticker": "THYAO", "asset_type": "BIST" }
@@ -19,6 +19,15 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "https://canmrtr.github.io",
   "Access-Control-Allow-Headers": "authorization, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+// Türk şirketi ADR'larının OTC ticker'ı → BIST ticker eşlemesi.
+// FMP+EDGAR ikisi de başarısız olduğunda İş Yatırım'dan BIST verisi çekmek için kullanılır.
+const TURKISH_ADR_MAP: Record<string, string> = {
+  "ERELY": "EREGL",   // Ereğli Demir Çelik
+  "TKCHY": "THYAO",   // Türk Hava Yolları
+  "BKESY": "BIMAS",   // BIM Birleşik Mağazalar
+  // Bankalar (AKBNK vb.) İş Yatırım XI_29 desteklemiyor — bu map'e ekleme.
 };
 
 // Service role client — fund_cache write için. Sadece SUPABASE_URL + SERVICE_ROLE_KEY
@@ -817,7 +826,7 @@ Deno.serve(async (req) => {
           if (at === "BIST") {
             const bist = await fetchBist(t);
             if (!bist.error) {
-              await upsertFundCache(t, "BIST", bist.metrics ?? null, bist.raw?.annual ?? null, null, "isyatirim");
+              await upsertFundCache(t, "BIST", bist.metrics ?? null, bist.annual ?? null, null, "isyatirim");
               refreshed++;
             } else { failed++; }
           } else if (fmpKey) {
@@ -830,7 +839,16 @@ Deno.serve(async (req) => {
               if (!edgar.error) {
                 await upsertFundCache(t, at || "US_STOCK", edgar.metrics ?? null, null, null, "edgar");
                 refreshed++;
-              } else { failed++; }
+              } else {
+                const bistT = TURKISH_ADR_MAP[t.toUpperCase()];
+                if (bistT) {
+                  const bist = await fetchBist(bistT);
+                  if (!bist.error) {
+                    await upsertFundCache(t, at || "US_STOCK", bist.metrics ?? null, bist.annual ?? null, null, "isyatirim_adr");
+                    refreshed++;
+                  } else { failed++; }
+                } else { failed++; }
+              }
             }
           }
         } catch (e) { console.warn("[refresh-fund-cache]", t, e); failed++; }
@@ -848,7 +866,7 @@ Deno.serve(async (req) => {
     if (asset_type === "BIST") {
       const bist = await fetchBist(ticker);
       if (bist.error) return json({ error: bist.error }, 422);
-      upsertFundCache(ticker, "BIST", bist.metrics ?? null, bist.raw?.annual ?? null, null, "isyatirim");
+      upsertFundCache(ticker, "BIST", bist.metrics ?? null, bist.annual ?? null, null, "isyatirim");
       return json({
         ticker,
         fetched_at: new Date().toISOString(),
@@ -888,7 +906,25 @@ Deno.serve(async (req) => {
         raw: edgar.raw,
       });
     }
-    // EDGAR de fail — kalıcı kapsam dışı vs geçici hata ayırt et
+    // 3) Türk ADR mapping: ERELY→EREGL gibi, İş Yatırım'dan BIST verisi
+    const bistTicker = TURKISH_ADR_MAP[ticker.toUpperCase()];
+    if (bistTicker) {
+      const bist = await fetchBist(bistTicker);
+      if (!bist.error) {
+        upsertFundCache(ticker, asset_type || "US_STOCK", bist.metrics ?? null, bist.annual ?? null, null, "isyatirim_adr");
+        return json({
+          ticker,
+          fetched_at: new Date().toISOString(),
+          source: "isyatirim_adr",
+          bist_ticker: bistTicker,
+          metrics: bist.metrics,
+          annual: bist.annual ?? null,
+          raw: bist.raw,
+        });
+      }
+    }
+
+    // Tüm kaynaklar başarısız — kalıcı kapsam dışı vs geçici hata ayırt et
     return json({
       code: fmp.isOutOfPlan ? "OUT_OF_PLAN" : "FETCH_FAILED",
       error: `FMP/EDGAR veri alınamadı: ${edgar.error}`,
