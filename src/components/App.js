@@ -1224,6 +1224,14 @@ function App({session}){
           </div>
         </div>
       )}
+      {tab==="rehber"&&(
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:"60vh",gap:12,textAlign:"center",padding:24}}>
+          <span style={{fontSize:36}}>📖</span>
+          <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>Rehber</div>
+          <div style={{fontSize:11,fontWeight:600,color:"var(--info)",letterSpacing:"0.08em",textTransform:"uppercase"}}>Çok Yakında</div>
+          <div style={{fontSize:13,color:"var(--text3)",maxWidth:280,lineHeight:1.6}}>Yatırım temelleri, portföy yönetimi ve kişisel finans rehberi burada olacak.</div>
+        </div>
+      )}
       </main>
 
       <nav id="bottom-tabs">
@@ -1240,7 +1248,7 @@ function App({session}){
           else if(tab==="search"){const el=document.querySelector('[data-test="search-input"]')||document.querySelector('input[type="text"]');if(el){el.focus();el.scrollIntoView({behavior:"smooth",block:"center"});}}
           else{setTab("add");}
         }}
-        style={tab==="settings"?{display:"none"}:{}}><IconPlus/></button>
+        style={(tab==="settings"||tab==="rehber")?{display:"none"}:{}}><IconPlus/></button>
 
       {/* Confirm modal */}
       {confirmSt&&(
