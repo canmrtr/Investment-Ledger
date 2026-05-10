@@ -402,7 +402,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
         }
         // Supabase veya localStorage'da olmayan ticker'lar için auto-fetch tetikle
         if(!autoFetchGuard.current){
-          const stillMissing=tickers.filter(t=>!fetched.has(t)&&!fundCacheGet(t)?.metrics);
+          const stillMissing=tickers.filter(t=>!fetched.has(t)&&!fundCacheGet(t)?.metrics&&!fundCacheGet(t)?.unavailable);
           if(stillMissing.length){autoFetchGuard.current=true;setFundAutoFetchPending(true);}
         }
       });
@@ -507,6 +507,11 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           next[p.ticker]=d;
           fundCacheSet(p.ticker,d);
           setFundCache({...next});  // her başarıda UI tazele
+        } else if(d?.code==="OUT_OF_PLAN"||(!r.ok&&!d?.metrics)){
+          const sentinel={metrics:null,unavailable:true};
+          next[p.ticker]=sentinel;
+          fundCacheSet(p.ticker,sentinel);
+          setFundCache({...next});
         }
       }catch(e){DEBUG && console.warn(`[health ${p.ticker}]`,e);}
       if(i<targets.length-1) await new Promise(r=>setTimeout(r,800));
