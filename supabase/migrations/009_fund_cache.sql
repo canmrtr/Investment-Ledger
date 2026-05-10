@@ -18,6 +18,7 @@ comment on table fund_cache is 'Shared fundamental data cache. Written by fetch-
 alter table fund_cache enable row level security;
 
 -- Herkes okuyabilir (price_cache ile aynı)
+drop policy if exists "fund_cache public read" on fund_cache;
 create policy "fund_cache public read"
   on fund_cache for select
   to anon, authenticated
