@@ -1,0 +1,69 @@
+# Tamamlananlar — Tarihsel Arşiv
+
+> Sprint 1–12 tamamlanan özellikler. Canlı ROADMAP.md'den taşındı (2026-05-10).
+
+- [x] ~~**Pie chart**~~ (2026-04-24) — varlık türlerine göre dağılım, cost/market toggle.
+- [x] ~~**Account ekranı**~~ (2026-04-25) — Settings içi; username, display_name, profil formu.
+- [x] ~~**Hisse detay sayfası (TickerDetailTab)**~~ (2026-04-25) — held + non-held discovery; pozisyon kartları, tx list, meta, fundamental checklist, "+ Ekle" CTA.
+- [x] ~~**Fundamental edge function (US)**~~ (2026-04-25) — FMP `/stable/` 21 metrik + SEC EDGAR fallback; LS cache 7 gün.
+- [x] ~~**SEC EDGAR fallback**~~ (2026-04-25) — FMP 402 → EDGAR companyfacts; 19/21 metrik, P/E+P/S null.
+- [x] ~~**BIST entegrasyonu Faz 1-5a**~~ (2026-04-25) — Yahoo Finance price/historical; Twelve Data /stocks ~636 ticker; borsa-mcp get_profile; currency-aware display; manuel ekleme + search + non-held discovery.
+- [x] ~~**BIST Faz 5b: fundamentals checklist**~~ (2026-04-25) — İş Yatırım MaliTablo XI_29 mapping; 5Y CAGR; 19/21 metrik; source:"isyatirim" rozet; banka early-exit; 6h server cache.
+- [x] ~~**Global ticker arama (SearchTab)**~~ (2026-04-25) — SEC EDGAR ~10.348 US + Twelve Data ~636 BIST; LS cache 24h; prefix+ad match; non-held discovery.
+- [x] ~~**Asset type picker (AddTab)**~~ (2026-04-25) — 6-kart picker; ManuelPosForm prefillType; BIST→TRY otomatik; clean remount.
+- [x] ~~**Mikro UX bundle**~~ (2026-04-25) — input maxLength, web row null guard, OUT_OF_PLAN warn-card, useEffect deps.
+- [x] ~~**Kontrast + pie alignment polish**~~ (2026-04-25) — text2 #b8b8b8 + weight 500; pie row flex 0 0 70/56px.
+- [x] ~~**Analiz Tab**~~ (2026-04-25/26, Sprint 1+2) — yeni "Analiz" sekmesi; 4 kart: Varlık filtreli, Bölge heuristik, Komisyon broker×yıl, Win/Loss.
+- [x] ~~**FX conversion + global currency toggle**~~ (2026-04-26) — topbar `$ ₺` segmented; Frankfurter API; `convert()` USD↔TRY↔EUR; Dashboard KPI+Sparkline+Pie+Analiz convert.
+- [x] ~~**UI Quick Wins + Navigation + Hardening**~~ (2026-04-26) — title→data-tip; confirm modal danger; fromTab navigation; FAB context-aware; CDN SRI pin; sanitizeMeta 5KB cap.
+- [x] ~~**Crypto MVP**~~ (2026-04-26) — edge fn CRYPTO normalize; chip picker 12 popüler kripto; Dashboard filter.
+- [x] ~~**Gold MVP (ons & USD)**~~ (2026-04-26) — edge fn GOLD normalize; COMMODITY_SYMBOLS chip picker; Dashboard filter.
+- [x] ~~**Portföy Sağlık Tablosu**~~ (2026-04-26) — Analiz Tab 5. kart; 8 metrik renk pill; sticky ticker + scroll; "Eksikleri Çek" CTA.
+- [x] ~~**Komisyon kartı collapsible**~~ (2026-04-26) — KPI üstte sabit + Detay ▾; breakdown sadece açıkken render.
+- [x] ~~**Dashboard varlık türü gruplaması**~~ (2026-04-26) — BLOCK_TYPES config 6 type-bazlı blok; natural currency sembolü.
+- [x] ~~**ManuelPosForm priceNote inline uyarı**~~ (2026-04-26) — tarih için veri yoksa persistent sarı warn-card.
+- [x] ~~**signOut LS temizliği + DEBUG gating + safeUrl**~~ (2026-04-25/26) — privacy/cache LS temizliği; external link rel.
+- [x] ~~**Sprint 3: Veri girişi güvenilirliği + TR Altın birimleri MVP**~~ (2026-04-27) — ondalık adet bug fix; form inline validation; TR altın birimleri MVP; 30dk auto-refresh; CORS lockdown.
+- [x] ~~**Periyodik agent denetim turu — ilk tur**~~ (2026-04-27) — 15 bulgu; kritik 10 item Sprint 4 backlog'a.
+- [x] ~~**Sprint 4: Güvenlik hızlı kazanımlar + UX**~~ (2026-04-27) — refresh-price-cache CRON_SECRET; NaN guard; CSV skip; Dashboard P&L% azalan; Konsantrasyon Riski kartı.
+- [x] ~~**Sprint 5: price_cache write-lock + benchmark karşılaştırması**~~ (2026-04-27) — price_cache RLS write kaldırıldı; BENCHMARKS constant; Dashboard benchmark getiri.
+- [x] ~~**Sprint 5 devam: Parse rate limiting + Sektör Dağılımı**~~ (2026-04-27) — `edgeCallAuth` JWT-verified; `increment_parse_calls` RPC; 20 parse/gün; AnalysisTab Sektör Dağılımı.
+- [x] ~~**Global varlık türü filtresi (multi-select)**~~ (2026-04-27) — `dashTypeFilter`/`activeTypes` chip bar; `.fbar` yatay scroll; tüm hesaplamalar `filteredPos`/`filteredTxs` üzerinden.
+- [x] ~~**Kripto/non-BIST market value konversiyon bug**~~ (2026-04-27) — `mvDisp`/`allDisp` priceCur fix; `rebuildPositions` currency normalizer.
+- [x] ~~**Sprint 6 Milestone A+B: Analiz Tab tamamlama + bug fix**~~ (2026-04-29) — Sektör auto-fetch + fallback etiket; Break-Even Analizi (kart 7); Potansiyel Kayıp Simülasyonu (kart 8).
+- [x] ~~**Social Portfolios Faz 1 — Multi-portfolio altyapısı**~~ (2026-04-29) — DB: `portfolios`, `follows`, `portfolio_activities`; `portfolio_id` FK; backfill migration; RLS; frontend prop threading.
+- [x] ~~**Sprint 7: Güvenlik sertleştirme**~~ (2026-04-29) — parse-transaction JWT doğrulama; `002_rls_fixes.sql`; fetch-prices ticker regex; edge fn CORS.
+- [x] ~~**Dividend (DIV) işlem takibi**~~ (2026-04-29) — `transactions.way:"DIV"` CHECK; Dashboard Total Return + XIRR; HistoryTab DIV badge; TickerDetailTab Temettü Geliri kartı.
+- [x] ~~**Risk Dashboard — 3 AnalysisTab kartı**~~ (2026-04-29) — Dönem Bazlı Getiri; FX Risk; 6 Aylık Performans.
+- [x] ~~**Sprint 8: Temettü Getiri Projeksiyonu + UX polish**~~ (2026-04-29) — AnalysisTab Temettü Özeti kartı; AddTxInline "Not" alanı; maxLength guard.
+- [x] ~~**AnalysisTab pie kartları stacked + collapsible**~~ (2026-04-29) — Varlık/Bölge/Sektör Dağılımı: pie 140×140 + legend; ▴/▾ toggle.
+- [x] ~~**Dashboard ETF/₿ rozetleri kaldırıldı**~~ (2026-04-29)
+- [x] ~~**Sprint 10: P1 bug bundle + Dashboard blok signed pill + TRY avgCost warn-card + Analist Tavsiyeleri**~~ (2026-04-30) — `costDisp` fix; `displaySym` düzeltmesi; signed pill; `fetch-fundamentals` grades + annual; TickerDetailTab Analist Tavsiyeleri kartı.
+- [x] ~~**Watchlist (İzleme Listesi)**~~ (2026-04-30/05-01) — `watchlist` tablosu + RLS; WatchlistTab; SearchTab "+ İzle"; TickerDetailTab "İzleniyor" badge.
+- [x] ~~**TR altın birimleri MVP**~~ (2026-04-27) — `positions.unit` migration; `GOLD_UNITS` oz-eq tablo; 6-chip birim picker; Dashboard back-conversion.
+- [x] ~~**Dividend (temettü) tracking**~~ (2026-04-29) — `transactions.way:"DIV"` CHECK; XIRR cashflow; AnalysisTab Temettü Özeti kartı.
+- [x] ~~**Dashboard + Analiz global varlık türü filtresi (multi-select)**~~ (2026-04-27) — chip bar; tüm hesaplamalar filtreye göre.
+- [x] ~~**Dashboard KPI 4→3 kart kompakt hibrit**~~ (2026-04-26) — Piyasa Değeri (büyük) + Maliyet (ikincil); `.g3` grid.
+- [x] ~~**Dashboard'dan Varlık Dağılımı pie'ı kaldır**~~ (2026-04-26)
+- [x] ~~**Bölge Dağılımı emoji bayrakları kaldır**~~ (2026-04-26)
+- [x] ~~**AnalysisTab dağılım kartları: sadece yüzde**~~ (2026-04-29)
+- [x] ~~**Varlık Dağılımı ticker drill-down**~~ (2026-04-29) — ▸/▾ toggle; expand'ta her ticker değer + type-içi %.
+- [x] ~~**Dashboard: Blok başlık sırası — pill önce, tutar sonra**~~ (2026-04-29) — Alt-B accent-line design.
+- [x] ~~**Dashboard: Blok bazında dönem getirisi**~~ (2026-04-30 Sprint 10) — signed `+/-` pill; `blockStartMv`.
+- [x] ~~**Tarihsel fundamental trend**~~ (2026-04-26) — 5Y gelir/net kâr SVG bar chart (TrendMiniChart).
+- [x] ~~**Fundamental data Supabase cache**~~ (2026-05-10) — `fund_cache` tablosu; pg_cron `refresh-fund-cache-weekly`; AnalysisTab mount'ta Supabase'den okur.
+- [x] ~~**Benchmark karşılaştırması**~~ (2026-04-27 Sprint 5) — portföy vs SPY + XU100; BENCHMARKS constant.
+- [x] ~~**Analist Derecelendirme Geçmişi**~~ (2026-04-30 Sprint 10) — FMP `/stable/grade`; TickerDetailTab Buy/Hold/Sell pill.
+- [x] ~~**Konsantrasyon Risk Göstergesi**~~ (2026-04-27 Sprint 4) — Top 3 + HHI + renk pill.
+- [x] ~~**Sektör Dağılımı**~~ (2026-04-27 Sprint 5) — SIC/borsa-mcp; pie + legend; SECTOR_COLORS.
+- [x] ~~**Dönem Bazlı Getiri Karşılaştırması**~~ (2026-04-29) — 3 yeni AnalysisTab kartı: Dönem Bazlı Getiri, FX Risk, 6 Aylık Performans.
+- [x] ~~**Başa Baş (Break-Even) Analizi**~~ (2026-04-29) — komisyon dahil breakEven; distPct %.
+- [x] ~~**Volatilite / Drawdown Analizi**~~ (2026-04-29) — `price_cache.p_d1/w1/m1/y1` bazlı ağırlıklı portföy volatilitesi.
+- [x] ~~**Kur Riski Göstergesi**~~ (2026-04-29) — USD/EUR/TRY exposure bar + USDTRY +10% simülasyon.
+- [x] ~~**Temettü Getiri Projeksiyonu**~~ (2026-04-29) — TickerDetailTab + AnalysisTab Temettü Özeti kartı.
+- [x] ~~**Potansiyel Kayıp (Max Pain) Simülasyonu**~~ (2026-04-29) — %10/20/30 senaryo yatay bar.
+- [x] ~~**Sağlık Tablosu: filter chip + CTA kapalı modda gizlensin**~~ (2026-04-26)
+- [x] ~~**Varlık Dağılımı kartına Maliyet/Piyasa toggle**~~ (2026-04-26)
+- [x] ~~**AnalysisTab FX yok warn-card**~~ (2026-04-26)
+- [x] ~~**Akıllı Nudge Kartları (a): `computeNudges()` + konsantrasyon + inaktivite kuralları**~~ (2026-05-10, Sprint 11)
+- [x] ~~**Akıllı Nudge Kartları (b): Dashboard render + dismiss (LS 7 gün)**~~ (2026-05-10, Sprint 11)

@@ -1,0 +1,9 @@
+[      59ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/Investment-Ledger/manifest.json:0
+[      59ms] [ERROR] Manifest fetch from http://localhost:3000/Investment-Ledger/manifest.json failed, code 404 @ http://localhost:3000/:0
+[     967ms] [WARNING] You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/ @ https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js:0
+[    1077ms] [ERROR] A bad HTTP response code (404) was received when fetching the script. @ :0
+[    2102ms] [WARNING] [SW] TypeError: Failed to register a ServiceWorker for scope ('http://localhost:3000/Investment-Ledger/') with script ('http://localhost:3000/Investment-Ledger/service-worker.js'): A bad HTTP response code (404) was received when fetching the script. @ http://localhost:3000/:314
+[    2103ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/Investment-Ledger/manifest.json:0
+[    2103ms] [ERROR] Manifest fetch from http://localhost:3000/Investment-Ledger/manifest.json failed, code 404 @ http://localhost:3000/:0
+[    2525ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ http://localhost:3000/:0
+[    2632ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:3000/:0

@@ -1,0 +1,4 @@
+[      81ms] [WARNING] You are using the in-browser Babel transformer. Be sure to precompile your scripts for production - https://babeljs.io/docs/setup/ @ https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js:0
+[      82ms] [WARNING] [SW] InvalidStateError: Failed to register a ServiceWorker: The document is in an invalid state. @ https://canmrtr.github.io/Investment-Ledger/:314
+[    1567ms] [WARNING] <meta name="apple-mobile-web-app-capable" content="yes"> is deprecated. Please include <meta name="mobile-web-app-capable" content="yes"> @ https://canmrtr.github.io/Investment-Ledger/:0
+[    5107ms] [WARNING] @supabase/gotrue-js: Lock "lock:sb-jfetubcilmuthpddkodg-auth-token" was not released within 5000ms. This may indicate an orphaned lock from a component unmount (e.g., React Strict Mode). Forcefully acquiring the lock to recover. @ https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.104.1/dist/umd/supabase.js:20
