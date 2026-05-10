@@ -104,7 +104,7 @@ Sticky pos.3 nav (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar).
 
 4. **Kazanan/Kaybeden Trade** — BUY+SELL bağımsız, split-adjusted. `adj = tx.price / factorAt(ticker, date)`. BUY win: `currentPrice > adj_buy`. SELL win: `currentPrice < adj_sell`. Stacked bar, noPrice tx atlanır.
 
-5. **Portföy Sağlık Tablosu** — 8 metrik renk pill (P/E, ROE, Net/Op Marj, Gelir/Kâr 5Y, Borç/Özk, NetBorç/FCF) + ağırlıklı F/K KPI. Default kapalı + 🟢/🟡/🔴 rozet + Detay ▾. "Eksikleri Çek" CTA.
+5. **Portföy Sağlık Tablosu** — Default kapalı görünüm: 🟢/🟡/🔴 toplam rozet + ağırlıklı F/K KPI (vs S&P 500 22x) + 6 portföy seviyesi sonuç cümlesi (MV-weighted; "🟢 Borçlanma seviyesi sağlıklı" / "🟡 Kârlılık orta" formatında, ham değer + eşik tooltip'te). Detay ▾ açar: 8 metrik renk pill tablo (P/E, ROE, Net/Op Marj, Gelir/Kâr 5Y, Borç/Özk, NetBorç/FCF) + Skor kolonu. "Eksikleri Çek" CTA. Asset-type filtre (US/BIST/Hepsi) cümleleri ve tabloyu birlikte filtreler. (Sprint 14 A-1)
 
 6. **Konsantrasyon Riski** — Top 3 ağırlık + renk pill (>60% kırmızı / 40-60% sarı). HHI basit (Σwi²×10000). Frontend hesabı.
 
@@ -125,6 +125,8 @@ Sticky pos.3 nav (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar).
 14. ~~**CAGR Tablosu**~~ — Kaldırıldı (2026-04-29). "İşlem tarihi yok" hatası; transactions BUY kaydından firstBuyDate okunamıyordu.
 
 15. **Dayanıklılık Skoru** — liabToEquity + fcfMargin + operatingMargin → 1-10 puan, renk pill.
+
+**AnalysisTab bölüm başlıkları** (Sprint 14 B-1): 4 ince ayırıcı header — `Performans & Getiri`, `Dağılım`, `Fundamentals`, `Risk Değerlendirmesi`. Mevcut kart sırası değiştirilmedi; `DM Serif Display 13px / --text2 / 0.04em letter-spacing` + yatay border line.
 
 ---
 

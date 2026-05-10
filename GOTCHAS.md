@@ -19,7 +19,8 @@
 - **`periodChange` sanity check**: `cur/base < 0.05` → null (USD/TRY mix yakalanır).
 - **TRY avgCost mismatch**: `currency="USD"` ama avg_cost TRY cinsindeyse wrapPos/periodChange yanlış hesaplar — kullanıcı USD fiyatıyla düzeltmeli.
 - **JSX ternary IIFE**: orphaned `)` metin nodu bırakmamaya dikkat — babel check koş.
-- **localStorage scope**: `il_hide/il_prc/il_hist` user-agnostic; signOut'ta temizlenir. `fund_*/meta_*/sec_ticker_db` public data, user-bound değil.
+- **localStorage scope**: `il_hide/il_prc/il_hist/il_active_portfolio/il_recent_${user.id}` user-agnostic veya user-suffix'li; **her** signOut handler'ında (Settings + hamburger) temizlenmeli — biri eksikse cross-user cache leak. `fund_*/meta_*/sec_ticker_db` public data, user-bound değil.
+- **Component prop drilling — `confirm_`/`flash_`**: `confirm_` ve `flash_` App.js'in iç closure'ları, **global değil**. Alt component'e prop olarak geçilmeli; eksikse babel parse temiz görünür ama runtime'da `ReferenceError`. Yeni component eklerken WatchlistTab pattern'ini takip et.
 - CSV round-trip: virgül/tırnaklı alanlar için `csvEsc()` — "Apple, Inc" aksi halde parçalanır.
 - Edge fn useEffect auto-fetch: `busy.h/p` guard korunmalı.
 - XIRR `<1Y` yanıltıcı — UI bilinçli gizliyor.
@@ -29,6 +30,8 @@
 - **`.pie-row` kolon hizalama**: `flex:"0 0 70px"` ($) + `flex:"0 0 56px"` (%) sabit basis. `minWidth` yetmez — content > minWidth'te kayar. Label: `flex:1, minWidth:0`; truncate/ellipsis ekleme → "Hi…/ET…" regression.
 - **`.fbar` filter chip bar**: wrapper'da `flexWrap:"wrap"` kullanma. `.fbar`: `overflow-x:auto; scrollbar-width:none`. `.fbar .mtab`: `flex:0 0 auto; white-space:nowrap`.
 - **iOS Safari auto-zoom**: `font-size < 16px` input focus'ta zoom yapar. `max-width:640px` altında `input/textarea/select { font-size: 16px }`.
+- **Mobil autofocus**: `<input autoFocus>` mobilde klavyeyi otomatik açar (istenmeyen UX). `useRef` + `useEffect` ile `if (!('ontouchstart' in window)) ref.current.focus()` koşullu kullan.
+- **Theme-aware img display**: `.theme-logo-dark`/`.theme-logo-light` gibi tema-koşullu img class'ları için CSS rule MUTLAKA tanımlı olmalı (`display:none` + `[data-theme="light"]` selector). Yoksa iki img üst üste render olur — silent failure, babel parse temiz görünür.
 - `data-tip` kullan — native `title` tooltip Chrome/Safari'de 1-2 sn gecikmeli.
 - **BIST `fmtD`**: hardcoded `$` döner — BIST için `fmtSign(n, sym)` kullan.
 - **Yahoo Finance**: BIST ticker `THYAO.IS` formatı edge fn'de yapılır; frontend ham ticker geçer.
@@ -37,3 +40,8 @@
 ## Agent
 
 - **test-runner write yetkisi**: `Write` toollu — "DO NOT modify any source files. Report only." talimatını explicit ver.
+
+## Deploy
+
+- **Service Worker cache version**: `service-worker.js` içindeki `CACHE = 'il-shell-vN'` shell asset değişikliğinde (HTML/manifest) **bump edilmeli**. Aksi halde mevcut kullanıcılarda eski shell cache'lenir, yeni deploy görünmez. Sadece `.js`/`.css` değişiklikleri network-first → version bump gerekmez.
+- **Edge fn env var deploy sırası**: Yeni `Deno.env.get(...)` eklediysen ÖNCE `npx supabase secrets set KEY=value`, SONRA `npx supabase functions deploy <fn>`. Aksi halde fn fallback'e düşer (genelde sessiz).

@@ -42,17 +42,18 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 ## Tabs & Bileşenler
 
 `Root → Login | App(#shell)`
-- **#topbar**: logo + 6 nav + $/₺ toggle + 👁 hide + İşlem Ekle; 30dk auto-refresh
-- `TABS = [dashboard, watchlist, analysis, search, add, settings]`
+- **#topbar**: hamburger menü (profil + settings + signOut, kullanıcı-scope LS keys signOut'tan önce temizlenir) + 6 nav + $/₺ toggle + 👁 hide + İşlem Ekle; 30dk auto-refresh
+- `TABS = [["dashboard","Dashboard"],["watchlist","Watchlist"],["analysis","Analiz"],["search","Ara"],["add","+ Ekle"],["rehber","Rehber"]]` — Settings ana nav'dan çıktı, hamburger içinden açılır
 - **Dashboard**: KPI (TR + XIRR), 6 BLOCK_TYPE pozisyon bloğu (başlangıçta kapalı)
-- **WatchlistTab**: fiyat/günlük değişim tablosu, "Çıkar" per row, empty-card CTA; `watchlist` Supabase tablosu (id, user_id, ticker, asset_type, added_at)
-- **AnalysisTab**: Varlık/Bölge/Sektör Dağılımı (pie, collapsible), Portföy Sağlık (8 metrik, lazy-fetch), Komisyon (broker×yıl), Kazanan/Kaybeden, Konsantrasyon Riski, Break-Even Analizi, Potansiyel Kayıp Simülasyonu, Dönem Bazlı Getiri (benchmark), FX Risk, 6 Aylık Performans, Temettü Özeti; global asset-type filtre (.fbar)
-- **SearchTab**: ~11k ticker (US + BIST), portföy + discovery; "+ İzle" / "✓ İzleniyor" non-held toggle
+- **WatchlistTab**: fiyat/günlük değişim tablosu, "Çıkar" per row (async `confirm_` prop'u App'ten gelir), empty-card CTA; `watchlist` Supabase tablosu (id, user_id, ticker, asset_type, added_at)
+- **AnalysisTab**: 4 bölüm başlığı (Performans & Getiri / Dağılım / Fundamentals / Risk Değerlendirmesi); Varlık/Bölge/Sektör Dağılımı (pie, collapsible); **Portföy Sağlık** (Portföy F/K KPI + 6 portföy seviyesi sonuç cümlesi "🟢 Borçlanma seviyesi sağlıklı" + "Detay ▾" toggle ile 8 metrik dense tablo, lazy-fetch); Komisyon (broker×yıl), Kazanan/Kaybeden, Konsantrasyon Riski, Break-Even, Potansiyel Kayıp, Dönem Bazlı Getiri (benchmark), FX Risk, 6 Aylık Performans, Temettü Özeti; global asset-type filtre (.fbar)
+- **SearchTab**: ~11k ticker (US + BIST); autofocus sadece desktop'ta (`!('ontouchstart' in window)`); portföy + discovery; "+ İzle" / "✓ İzleniyor" non-held toggle
 - **AddTab**: 6 asset type picker → text/image/csv/manuel; ConfirmBox + ManuelPosForm
 - **TickerDetailTab**: held + discovery mode; "İzleniyor" badge + toggle buton; FAB context-aware
-- **HistoryTab**: filtre toolbar, accordion ticker gruplu — artık ana nav'da yok; Settings → "İşlem Geçmişi" → "Tüm İşlemleri Gör →" ile erişilir
-- **Settings**: İşlem Geçmişi, Fiyat&Veri, Bakım, Export CSV, Account, Durum
-- **#bottom-tabs** (mobile) + **#fab** (mobile, context-aware)
+- **HistoryTab**: filtre toolbar, accordion ticker gruplu — ana nav'da yok; Settings → "İşlem Geçmişi" → "Tüm İşlemleri Gör →"
+- **Rehber** (yeni, hamburger nav): coming soon placeholder — yatırım temelleri + portföy yönetimi rehberi
+- **Settings** (hamburger menüden açılır): İşlem Geçmişi, Fiyat&Veri, Bakım, Export CSV, Account, Durum
+- **#bottom-tabs** (mobile) + **#fab** (mobile, context-aware; rehber sekmesinde gizli)
 
 ## Önemli Konvansiyonlar
 

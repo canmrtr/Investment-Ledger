@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-10** (Sprint 13 tamamlandı: Akıllı Nudge (c) + Aylık Özet Kopyala + ETF Bölge Dağılımı + İş Yatırım timeout + Brand Kit token migrasyonu teslim edildi. Sprint 14 planlanıyor.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-10** (Sprint 14 tamamlandı: Login Linear logo + UX Quick Fixes + Denetim Turu 4 + Portföy F/K dokümante + Brand-fit A-1+B-1 + 2 P1 audit fix (LS leak + SEC env). Sprint 15 planlanıyor: 4 P1 audit + Item 5 ertelenen alt-task'lar (A-2/A-3/B-2) + 9 P2.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -603,6 +603,7 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 - [ ] **Formülleri ekrandan kaldır** `[S]` `[P1]` — "HHI= Σ(ağırlık²) × 10000" (`AnalysisTab.js:1290`) ve "Skor: Yük./Özk <0.5 (+2), FCF Marjı >10% (+2), Op. Marjı >15% (+2) → 1–10" (`AnalysisTab.js:1943`) ve "FUND_THRESHOLDS'tan" (`AnalysisTab.js:1126`) metinleri kaldırılmalı. Sonuç göster, hesabı gösterme. "HHI nedir?" tooltip hâlâ kalabilir.
 - [ ] **Boş durum metinlerini kullanıcı diline çevir** `[S]` `[P2]` — `"snap. yok"` → `"Veri henüz oluşmadı"` (`AnalysisTab.js:743`); `"Bilinmiyor"` sektör → `"Henüz sınıflandırılmadı"`; `"Tüm işlemlerin güncel fiyatı eksik (ticker artık takipte değil)"` → `"Bu işlemler için güncel fiyat bulunamadı"`.
 - [ ] **"Potansiyel Kayıp Simülasyonu" → "Senaryo Analizi" veya "Stres Testi" olarak yeniden adlandır** `[S]` `[P2]` — Korkutucu framing, "empowering" tone ile çelişiyor. Başlık değişikliği + renk nötrleştirme (`AnalysisTab.js:1371`).
+- [ ] **Potansiyel Kayıp Simülasyonu — altın pozisyonlarını hesaptan çıkar veya başlığı düzelt** `[S]` `[P2]` — "Piyasa −%10/20/30" senaryosu şu anda altın (GOLD tipi) pozisyonlarını da kapsıyor; oysa altın "piyasa" değil emtia. İki seçenek: (a) `totalMV` hesabında `type !== 'GOLD'` filtresi ekle + "Hisse & Fon Değeri" alt başlığını göster, (b) başlığı "Portföy −%10/20/30" olarak değiştir ve altın dahil olduğunu footnote ile belirt. `AnalysisTab.js` Potansiyel Kayıp bölümü.
 - [ ] **Başa Baş "Uzaklık" kolonuna tooltip ekle** `[S]` `[P2]` — `"Uzaklık"` ne anlama geliyor bilinmiyor. `data-tip="Güncel fiyatın başa baş noktasına yüzde uzaklığı. Pozitif = kâr bölgesinde."` yeterli (`AnalysisTab.js:1333`).
 
 ### Orta Vade (1-2 sprint)
@@ -746,7 +747,9 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ✅ (2026-04-30) | Sprint 10 sonrası Watchlist MVP ✅ (2026-05-01) | Sprint 11 ✅ (2026-05-10) | Sprint 12 ✅ (2026-05-10) | Sprint 13 ✅ (2026-05-10) | **Sprint 14 → aktif (2026-05-10)**
+Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ✅ (2026-04-30) | Sprint 10 sonrası Watchlist MVP ✅ (2026-05-01) | Sprint 11 ✅ (2026-05-10) | Sprint 12 ✅ (2026-05-10) | Sprint 13 ✅ (2026-05-10) | Sprint 14 ✅ (2026-05-10) | **Sprint 15 → planlanıyor**
+
+Sprint 14 retro: 5 sprint item + 2 audit P1 fix toplam 7 commit'te teslim. Item 5 (Brand-fit Sadeleştirme) A-1 + B-1 yapıldı, A-2/A-3/B-2 (BreakEven bağlam, FX Risk cümle, Komisyon/Konsantrasyon birim) Sprint 15'e ötelendi — kapasite trade-off. Item 4 (Ağırlıklı Ortalama Portföy P/E) sürpriz: AnalysisTab'da zaten implementtaydı, sadece dokümante edildi. Denetim Turu 4 (Item 3) 1 P0 (temiz, doğrulandı) + 5 P1 + 9 P2 bulgu üretti. SEC contact email + hamburger LS leak P1'leri sprint içinde fix edildi (sprint scope ~%30 büyüdü ama kapsama uyuldu). Tüm commit'lerde babel + edge syntax + drift checks geçti.
 
 Sprint 13 retro: Akıllı Nudge (c) + Aylık Özet Kopyala/Paylaş + ETF Bölge Dağılımı + İş Yatırım fetch timeout + **Brand Kit token migrasyonu** teslim edildi. Brand Kit: `src/styles/tokens.css` oluşturuldu (tüm category/badge/component tokenlar); `TYPE_COLORS` + AnalysisTab renk dizileri brand kit paletine güncellendi; hardcoded `fontFamily` stringlari (26 yer) `var(--font-*)` CSS variable'larına dönüştürüldü; `portfoi-brand-kit.md` Apply Checklist 11/11 ✅.
 
@@ -760,18 +763,49 @@ Sprint 13 retro: Akıllı Nudge (c) + Aylık Özet Kopyala/Paylaş + ETF Bölge 
 
 ---
 
-**Sprint 14 Scope** (2026-05-10 → 2026-05-23, aktif):
+**Sprint 14 Scope** (2026-05-10, tamamlandı):
 
-1. **Login logo swap → Linear varyant** `[XS][P1]` — `Logo/Linear Dark.png` + `Logo/Linear Light.png`; `src/components/Login.js` kırık `logo-full-dark.png` referansı düzeltilir; CLAUDE.md "Logo dosyaları" notu güncellenir. Dark + light tema'da doğru görsel.
-2. **UX Audit Quick Fixes (Grup H)** `[S][P1]` — Watchlist `confirm_` crash; login logo touch target; Search mobil autofocus. Düşük effort, yüksek güvenilirlik etkisi.
-3. **Periyodik Agent Denetim Turu — 4. tur** `[S][P1]` — rls-auditor + client-security-auditor + edge-reviewer + opsiyonel test-runner. Sprint 11 sonrası eklenenler kapsama giriyor: ETF entegrasyonu, `rebuild_positions_atomic`, `get_allocation_only_positions`, `fund_cache` cron.
-4. **Ağırlıklı Ortalama Portföy P/E** `[S][P2]` — `fund_cache` zaten dolu; aggregation + Dashboard/AnalysisTab widget. Sıfır yeni API çağrısı.
-5. **Brand-fit Analiz Sadeleştirme (Grup A+B)** `[M][P1]` — AnalysisTab'daki ham rakam/jargon → sonuç cümlesi; Portföy Sağlık, BreakEven, FX Risk kartları. Sprint 14'te en ağır item; kapasiteyi en çok bu tüketir.
+1. ~~**Login logo swap → Linear varyant**~~ ✅ — `Logo/linear-dark.png` + `Logo/linear-light.png` (kebab-case rename); `src/components/Login.js` src güncellendi; CLAUDE.md Logo notu yenilendi; theme-logo CSS bug (iki logo üst üste) keşfedildi ve düzeltildi.
+2. ~~**UX Audit Quick Fixes (Grup H)**~~ ✅ — H-1 Watchlist `confirm_` prop wiring (App.js'ten geçiriliyor; ReferenceError düzeltildi); H-2 logo touch target ≥44px (Linear logo 240×240 zaten yeterli) + theme switch CSS; H-3 SearchTab `autoFocus` → conditional ref (`!('ontouchstart' in window)`).
+3. ~~**Periyodik Agent Denetim Turu — 4. tur**~~ ✅ — 1 P0 (DOĞRULANDI temiz) + 5 P1 + 9 P2 bulgu kayıt altına alındı; bkz. "Denetim Turu 4 Bulguları" bölümü.
+4. ~~**Ağırlıklı Ortalama Portföy P/E**~~ ✅ — Mevcut implementasyon AnalysisTab Portföy Sağlık kartında bulundu (önceki sprintten); CLAUDE.md'ye dokümante edildi.
+5. ~~**Brand-fit Analiz Sadeleştirme (Grup A+B)**~~ ⚠️ **PARTIAL** — A-1 (Portföy Sağlık 6 portföy seviyesi sonuç cümlesi: "Borçlanma seviyesi sağlıklı" formatı, MV-weighted) + B-1 (4 bölüm başlığı: Performans & Getiri / Dağılım / Fundamentals / Risk Değerlendirmesi) yapıldı. **A-2/A-3/B-2 Sprint 15'e ötelendi** (kapasite trade-off — sprint planında not edilen).
 
-**Sprint 15 backlog (out-of-scope)**:
+**Sprint 14 ek (audit-driven, sprint içi eklenen)**:
 
+6. ~~**Hamburger signOut LS clear**~~ ✅ (P1) — Settings handler ile aynı user-scope LS keys (`il_prc`, `il_hist`, `il_hide`, `il_active_portfolio`, `il_recent_${user.id}`) signOut'tan önce silinir; cross-user cache leak kapatıldı.
+7. ~~**SEC_UA email → env var**~~ ✅ (P1) — `Deno.env.get("SEC_CONTACT_EMAIL")`; Supabase secret eklendi; `fetch-fundamentals` deploy edildi.
+
+---
+
+**Sprint 15 backlog (öncelikli — Sprint 14 audit + ertelenen scope)**:
+
+P1 (audit Tur 4):
+- **`fetch-fundamentals` ticker-list/divcal/etf-country/default modlarında auth eksikliği** `[M][P1]` — handler başına JWT doğrulama; sadece CRON_SECRET modları bypass.
+- **`fetch-prices` JWT auth try/catch dışında** `[S][P1]` — `getUser` exception fırlatırsa Response'suz çıkar.
+- **`refresh-price-cache` BIST type + USD currency edge case** `[S][P1]` — yanlış venue routing.
+
+Item 5 ertelenen (Brand-fit Sadeleştirme devam):
+- **A-2 BreakEven bağlam cümlesi** `[S][P1]` — "Bu fiyatın %12 üzerinde satış yapman gerekiyor".
+- **A-3 FX Risk kartı cümlesi** `[S][P1]` — "Portföyünün %62'si dolar kuru riskine açık".
+- **B-2 Komisyon + Konsantrasyon birim/bağlam** `[S][P2]` — "₺1,240 / yıl — getirinin %0.8'i"; "en büyük 3 pozisyon portföyün %67'sini oluşturuyor".
+
+Önceki backlog (P2):
 - **Kullanıcı tanımlı fundamental eşikler** `[M][P2]` — plan dosyası hazır; Settings form UI gerekiyor.
 - **Social Portfolios Faz 2** `[M][P2]` — `UserProfileModal` + `is_public` toggle + RLS read policy.
 - **Piyasa Dayanıklılık Skoru** `[M][P2]` — `resilienceScore()` + AnalysisTab kart; fundamentals cache'e bağımlı.
+- **Grup C — Watchlist niyet + hedef fiyat notu** `[M][P2]` — Sprint 14 Grup H ile dokunuldu ama Grup C ayrı epik.
+- **Temettü Takvimi** `[M][P2]` — FMP endpoint hazır.
+
+Audit P2 (denetim bulgularından, file:line ref bkz. "Tur 4 Denetim Bulguları"):
+- SRI hash (`html2canvas@1.4.1`)
+- `watchlist` policy `FOR ALL` → ayrı INSERT/SELECT/DELETE
+- `parse-transaction` raw error leak
+- `fetch-fundamentals` `bist.raw?.annual` → `bist.annual` bug
+- `dividend-calendar` ticker validation
+- `fetch-prices` historical upsert silent fail (warn ekle)
+- `price_snapshots` policy `TO anon, authenticated` okunabilirlik
+- LS keys user-scope iyileştirmesi
+- `edgeCallAuth` `getSession` → `getUser` defense-in-depth
 
 > **Yeni eklenenler (2026-05-09)**: "Grup Portföyleri (Faz 5)" → Sosyal & Kişiselleştirme bölümüne eklendi `[L][P3]`; Faz 2+3 tamamlanmadan scope'a girmez. "Akıllı Nudge Kartları" → yeni "Akıllı Öneriler & Nudge Sistemi" bölümüne eklendi `[M][P2]`; Sprint 11 scope'una alındı. "Haftalık AI Portföy Özeti" aynı bölümde `[M][P3]` ile backlog'a eklendi. **2026-05-10**: Login logo swap (Linear varyant) Sprint 14'e eklendi `[XS][P1]`.

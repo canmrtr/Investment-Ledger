@@ -177,4 +177,23 @@ Sprint sonu başarı sinyalleri:
 
 ## Retro Alanı
 
-_(Sprint 14 tamamlandığında doldurulacak.)_
+**Tamamlanma**: 2026-05-10 (tek session, ~3.5 saat).
+
+**Teslim**: 5 sprint item + 2 audit-driven P1 fix = 7 commit (`c17ca40..e48a85a`), tek push, GitHub Pages auto-deploy.
+
+**Ne iyi gitti**:
+- Linear logo swap sırasında mevcut `theme-logo-dark/light` CSS'inin **hiç tanımlı olmadığı** keşfedildi (login'de iki logo üst üste render oluyordu). Item 1 kapsamında bonus fix.
+- Item 4 (Portföy F/K widget) AnalysisTab'da zaten implementtaymış — sıfır effort, sadece dokümante.
+- Audit Tur 4 paralel 3 agent ile (`rls-auditor` + `client-security-auditor` + `edge-reviewer`) verimli koştu; P0 hemen Supabase MCP ile doğrulandı (temiz çıktı).
+- 2 P1 audit (LS leak + SEC email) sprint içine alındı; hızlı edge deploy + scope'u patlatmadan teslim.
+
+**Trade-off'lar**:
+- Item 5 A-2/A-3/B-2 Sprint 15'e ötelendi — kapasite sınırı (sprint planında zaten not edilmişti). A-1 + B-1 brand-fit'in en yüksek ROI'si idi.
+- Audit'ten gelen 4 diğer P1 (fetch-fundamentals auth, fetch-prices try/catch, BIST USD edge case) Sprint 15'in başına yerleştirildi — edge deploy + scope büyümesi nedeniyle bu sprintte değil.
+
+**Çıkarılan dersler**:
+- CLAUDE.md "Logo dosyaları" notu ile `Login.js` arasındaki referans drift'i kontrol edilmiyordu — gelecekte file-existence guard eklenebilir.
+- WatchlistTab gibi alt component'lere `confirm_` props passing eksikse babel parse yakalayamıyor — runtime'da çöküyor; e2e smoke testi watchlist çıkar akışını da kapsamalı.
+- Audit findings'ı ROADMAP'e file:line referansıyla yazmak Sprint 15 planlamada %10x hız kazandırdı.
+
+**Sprint 15'e devir**: 4 P1 audit + Item 5 ertelenen (A-2/A-3/B-2) + 9 P2 + önceki backlog. Detaylı liste `ROADMAP.md → Sprint 15 backlog`.
