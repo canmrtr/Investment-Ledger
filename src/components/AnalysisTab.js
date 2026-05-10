@@ -207,12 +207,18 @@ const REGION_OF = {
   FX:"fx",
 };
 const REGION_META = {
-  us:     {label:"US",              color:"#30d158"},
-  tr:     {label:"Türkiye",         color:"#bf5af2"},
-  crypto: {label:"Global · Kripto",  color:"#ff9f0a"},
-  emtia:  {label:"Global · Emtia",   color:"#ffd60a"},
-  fx:     {label:"Döviz",            color:"#8e8e93"},
+  us:          { label: "US",                color: "#30d158" },
+  tr:          { label: "Türkiye",            color: "#bf5af2" },
+  eu:          { label: "Avrupa",             color: "#3B82F6" },
+  "asia-pac":  { label: "Asya-Pasifik",       color: "#06B6D4" },
+  em:          { label: "Gelişen Piyasalar",  color: "#D97706" },
+  other:       { label: "Diğer",              color: "#6B7280" },
+  crypto:      { label: "Global · Kripto",    color: "#ff9f0a" },
+  emtia:       { label: "Global · Emtia",     color: "#ffd60a" },
+  fx:          { label: "Döviz",              color: "#8e8e93" },
 };
+
+const ETF_CW_TTL = 90 * 24 * 60 * 60 * 1000;
 
 // Currency symbol helper
 const sym_ = (cur) => cur==="TRY" ? "₺" : cur==="EUR" ? "€" : "$";
@@ -263,6 +269,17 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   const [resilienceOpen,setResilienceOpen]=useState(false);
   const [assetPieOpen,setAssetPieOpen]=useState(true);
   const [regionPieOpen,setRegionPieOpen]=useState(true);
+  const [etfCw, setEtfCw] = useState(() => {
+    const cache = {};
+    pos.filter(p => p.type === "FUND" && p.currency !== "TRY").forEach(p => {
+      const stored = LS.get(`il_etf_cw_${p.ticker.toUpperCase()}`, null);
+      if (stored?.ts && (Date.now() - stored.ts) < ETF_CW_TTL && stored.weights) {
+        cache[p.ticker] = stored.weights;
+      }
+    });
+    return cache;
+  });
+  const [etfCwBusy, setEtfCwBusy] = useState(false);
   const [sectorPieOpen,setSectorPieOpen]=useState(true);
   const [sectorMetaBusy,setSectorMetaBusy]=useState(false);
   const [sectorMetaTick,setSectorMetaTick]=useState(0); // inc to force re-render after meta fetch
@@ -289,6 +306,37 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       setSectorMetaTick(t=>t+1);
     })();
   },[]);
+  useEffect(() => {
+    const fundTickers = pos
+      .filter(p => p.type === "FUND" && p.currency !== "TRY")
+      .map(p => p.ticker);
+    if (fundTickers.length === 0) return;
+    const missing = fundTickers.filter(tk => !etfCw[tk]);
+    if (missing.length === 0) return;
+    setEtfCwBusy(true);
+    (async () => {
+      try {
+        const r = await edgeCallAuth("fetch-fundamentals", { mode: "etf-country", tickers: missing.slice(0, 10) });
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!data?.weights) return;
+        setEtfCw(prev => {
+          const next = { ...prev };
+          Object.entries(data.weights).forEach(([tk, w]) => {
+            if (w && Object.keys(w).length > 0) {
+              next[tk] = w;
+              LS.set(`il_etf_cw_${tk.toUpperCase()}`, { weights: w, ts: Date.now() });
+            }
+          });
+          return next;
+        });
+      } catch (e) {
+        DEBUG && console.warn("[etf-country]", e);
+      } finally {
+        setEtfCwBusy(false);
+      }
+    })();
+  }, []);
   // Aktif tip filtresi — global chip bar
   const atAll = BLOCK_TYPES.filter(cfg=>pos.some(p=>p.type===cfg.type)).map(cfg=>cfg.type);
   const filteredPos = activeTypes.length >= atAll.length ? pos : pos.filter(p=>activeTypes.includes(p.type));
