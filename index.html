@@ -3,30 +3,31 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-  <title>Investment Ledger</title>
-  <meta name="theme-color" content="#6658ff"/>
+  <title>Portfoi</title>
+  <meta name="theme-color" content="#C9A84C"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="Ledger"/>
+  <meta name="apple-mobile-web-app-title" content="Portfoi"/>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>"/>
   <link rel="apple-touch-icon" href="/Investment-Ledger/icon-192.png"/>
   <link rel="manifest" href="/Investment-Ledger/manifest.json"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
     :root{
       --bg:#000000;--bg2:#0c0c0c;--bg3:#141414;--bg4:#1c1c1c;
-      --border:rgba(255,255,255,0.06);--border2:rgba(102,88,255,0.28);
+      --border:rgba(255,255,255,0.06);--border2:rgba(201,168,76,0.28);
       --text:#f0ede8;--text2:#b8b8b8;--text3:#888888;
-      --ok:#00d97e;--err:#ff3366;--info:#6658ff;--warn:#ffb800;
+      --ok:#00d97e;--err:#ff3366;--info:#C9A84C;--warn:#ffb800;
       --r:10px;--rl:16px;
+      --font-display:'DM Serif Display',serif;--font-body:'DM Sans',sans-serif;--font-numeric:'DM Mono',monospace;
     }
     [data-theme="light"]{
       --bg:#ffffff;--bg2:#f5f5f5;--bg3:#ebebeb;--bg4:#e0e0e0;
-      --border:rgba(0,0,0,0.08);--border2:rgba(82,72,212,0.28);
+      --border:rgba(0,0,0,0.08);--border2:rgba(201,168,76,0.28);
       --text:#1a1a1a;--text2:#4a4a4a;--text3:#808080;
-      --info:#5248d4;
+      --info:#8A6A1F;
       --ok:#00a65a;--err:#e0003c;--warn:#c47d00;
       --topbar-bg:rgba(255,255,255,0.90);
     }
@@ -41,12 +42,12 @@
     .topbar-nav{display:flex;align-items:center;gap:4px;flex:1;}
     .topbar-nav .tab{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:transparent;border:none;border-radius:8px;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;cursor:pointer;white-space:nowrap;transition:color .12s,background .12s;}
     .topbar-nav .tab:hover{color:var(--text);}
-    .topbar-nav .tab.on{background:rgba(102,88,255,0.12);color:var(--text);font-weight:500;}
+    .topbar-nav .tab.on{background:rgba(201,168,76,0.12);color:var(--text);font-weight:500;}
     .topbar-right{display:flex;align-items:center;gap:8px;margin-left:auto;}
     .cur-seg{display:inline-flex;align-items:center;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:2px;gap:2px;}
     .cur-seg button{background:transparent;border:none;color:var(--text2);padding:4px 9px;font-family:'DM Mono',monospace;font-size:13px;font-weight:500;cursor:pointer;border-radius:6px;line-height:1;transition:background .12s,color .12s;min-width:26px;}
     .cur-seg button:hover{color:var(--text);}
-    .cur-seg button.on{background:rgba(102,88,255,0.18);color:var(--text);}
+    .cur-seg button.on{background:rgba(201,168,76,0.18);color:var(--text);}
     /* AddTab tip picker — CSS hover (önceki inline DOM mutation anti-pattern'i değiştirdi) */
     .pick-card{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;cursor:pointer;text-align:left;color:var(--text);transition:border-color .15s,background .15s;}
     .pick-card:hover{border-color:var(--info);background:var(--bg4);}
@@ -66,8 +67,8 @@
     #bottom-tabs{display:none;position:fixed;bottom:0;left:0;right:0;height:60px;background:var(--bg2);border-top:1px solid var(--border);z-index:100;}
     #bottom-tabs .btab{flex:1;height:100%;background:transparent;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:400;transition:color .12s;}
     #bottom-tabs .btab.on{color:var(--info);font-weight:500;}
-    #fab{display:none;position:fixed;bottom:76px;right:20px;width:54px;height:54px;border-radius:50%;background:var(--info);border:none;color:#fff;box-shadow:0 6px 20px rgba(102,88,255,0.45);z-index:101;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s,box-shadow .12s;}
-    #fab:hover{transform:scale(1.05);box-shadow:0 8px 28px rgba(102,88,255,0.55);}
+    #fab{display:none;position:fixed;bottom:76px;right:20px;width:54px;height:54px;border-radius:50%;background:var(--info);border:none;color:#0D1117;box-shadow:0 6px 20px rgba(201,168,76,0.45);z-index:101;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s,box-shadow .12s;}
+    #fab:hover{transform:scale(1.05);box-shadow:0 8px 28px rgba(201,168,76,0.55);}
     #fab:active{transform:scale(0.96);}
     @media (max-width:640px){
       .topbar-nav{display:none;}
@@ -99,7 +100,7 @@
     th.l{text-align:left;}th.r{text-align:right;}
     td{padding:10px 12px;border-bottom:1px solid var(--border);font-size:12px;font-family:'DM Mono','Fira Code',monospace;font-variant-numeric:tabular-nums;}
     td.l{text-align:left;font-family:inherit;}td.r{text-align:right;}
-    .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px;}
+    .card{background:var(--bg2);border:1px solid rgba(201,168,76,0.12);border-radius:var(--rl);padding:12px 14px;}
     .lbl{font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;}
     .mono{font-family:'DM Mono','Fira Code',monospace;}
     .ok{color:var(--ok);}.err{color:var(--err);}.dim{color:var(--text2);}
@@ -115,7 +116,9 @@
     .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
     .stitle{font-size:10px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
     .badge{display:inline-flex;align-items:center;font-family:'DM Mono',monospace;font-size:9px;font-weight:500;padding:3px 7px;border-radius:6px;letter-spacing:.05em;border:1px solid transparent;margin-left:3px;}
-    .badge.etf{background:rgba(102,88,255,0.12);color:var(--info);border-color:rgba(102,88,255,0.28);}
+    .badge.etf{background:rgba(201,168,76,0.12);color:var(--info);border-color:rgba(201,168,76,0.28);}
+    .delta-pos{background:rgba(34,197,94,0.15);color:var(--ok);padding:2px 6px;border-radius:5px;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;}
+    .delta-neg{background:rgba(239,68,68,0.15);color:var(--err);padding:2px 6px;border-radius:5px;font-family:'DM Mono',monospace;font-size:11px;font-weight:500;}
     .badge.cry{background:rgba(255,184,0,0.10);color:var(--warn);border-color:rgba(255,184,0,0.20);}
     .badge.split{background:rgba(255,184,0,0.10);color:var(--warn);border-color:rgba(255,184,0,0.20);cursor:help;}
     .cbox{background:var(--bg2);border:0.5px solid var(--border2);border-radius:var(--rl);padding:15px;margin-bottom:14px;}

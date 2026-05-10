@@ -502,7 +502,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
               {p?.type==="FUND"&&<span className="badge etf">ETF</span>}
               {p?.type==="CRYPTO"&&<span className="badge cry">₿</span>}
               {!p&&<span className="badge etf" data-tip="Portföyünde yok — keşif modu" style={{cursor:"help"}}>YOK</span>}
-              {inWatchlist&&<span className="badge" style={{background:"rgba(102,88,255,0.15)",color:"var(--info)",fontSize:10,padding:"2px 7px"}}>İzleniyor</span>}
+              {inWatchlist&&<span className="badge" style={{background:"rgba(201,168,76,0.15)",color:"var(--info)",fontSize:10,padding:"2px 7px"}}>İzleniyor</span>}
             </div>
             <div className="dim" style={{fontSize:13,marginTop:2}}>
               {meta?.name||p?.name||"—"}

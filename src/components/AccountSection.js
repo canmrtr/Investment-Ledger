@@ -106,7 +106,7 @@ function AccountSection({user,profile,flash_,confirm_,onSaved}){
                 <button key={e} onClick={()=>setAvatarVal(e)}
                   style={{
                     width:36,height:36,borderRadius:8,border:`2px solid ${avatarVal===e?"var(--info)":"transparent"}`,
-                    background:avatarVal===e?"rgba(102,88,255,0.15)":"var(--bg4)",
+                    background:avatarVal===e?"rgba(201,168,76,0.15)":"var(--bg4)",
                     fontSize:18,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"
                   }}>{e}</button>
               ))}

@@ -21,8 +21,8 @@ function Login(){
   return(
     <div className="login-wrap">
       <div className="login-box">
-        <div className="login-logo">IL</div>
-        <div className="login-title">Investment Ledger</div>
+        <div className="login-logo">P</div>
+        <div className="login-title">Portfoi</div>
         <div className="login-sub">Kişisel yatırım takibi</div>
         <div className="login-field">
           <label>E-posta</label>

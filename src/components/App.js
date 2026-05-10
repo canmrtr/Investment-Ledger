@@ -430,8 +430,8 @@ function App({session}){
     <div id="shell">
       <header id="topbar">
         <div className="topbar-left">
-          <div className="logo-mark" aria-label="Investment Ledger">IL</div>
-          <span className="logo-text">Investment Ledger</span>
+          <div className="logo-mark" aria-label="Portfoi">P</div>
+          <span className="logo-text">Portfoi</span>
         </div>
         <nav className="topbar-nav">
           {TABS.filter(([id])=>id!=="add").map(([id,lbl])=>(
@@ -619,7 +619,7 @@ function App({session}){
                         <button className={displayCur==="TRY"?"on":""} onClick={()=>setDisplayCur("TRY")} aria-label="TRY göster">₺</button>
                       </div>
                     </div>
-                    <div className="mono" style={{fontSize:16,fontWeight:600}}>{mask(dSym+fmt(tM))}</div>
+                    <div style={{fontSize:32,fontWeight:400,fontFamily:"'DM Serif Display',serif",letterSpacing:"-0.02em",lineHeight:1.1}}>{mask(dSym+fmt(tM))}</div>
                     <div style={{marginTop:8,paddingTop:7,borderTop:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
                       <span className="lbl" style={{marginBottom:0}}>Maliyet</span>
                       <span className="mono dim" style={{fontSize:12}}>{mask(dSym+fmt(tC))}</span>
@@ -1033,13 +1033,13 @@ function App({session}){
                     <div style={{display:"flex",gap:6,flexShrink:0}}>
                       <button
                         className={"btn-xs"+(privLevel!=="full"?" on":"")}
-                        style={privLevel!=="full"?{background:"rgba(102,88,255,0.15)",color:"var(--info)",border:"1px solid rgba(102,88,255,0.3)"}:{}}
+                        style={privLevel!=="full"?{background:"rgba(201,168,76,0.15)",color:"var(--info)",border:"1px solid rgba(201,168,76,0.3)"}:{}}
                         onClick={privLevel==="full"?togglePrivacyLevel:undefined}
                         disabled={privLevel!=="full"}
                       >Sadece Dağılım</button>
                       <button
                         className={"btn-xs"+(privLevel==="full"?" on":"")}
-                        style={privLevel==="full"?{background:"rgba(102,88,255,0.15)",color:"var(--info)",border:"1px solid rgba(102,88,255,0.3)"}:{}}
+                        style={privLevel==="full"?{background:"rgba(201,168,76,0.15)",color:"var(--info)",border:"1px solid rgba(201,168,76,0.3)"}:{}}
                         onClick={privLevel!=="full"?togglePrivacyLevel:undefined}
                         disabled={privLevel==="full"}
                       >Tam Detay</button>

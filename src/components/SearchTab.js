@@ -75,7 +75,7 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
         <span style={{flex:1,fontSize:12,color:"var(--text2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name||"—"}</span>
         {ex==="XIST"&&<span className="badge cry" style={{fontSize:9}}>BIST</span>}
         {held&&<span className="badge etf" style={{fontSize:9}}>açık</span>}
-        {!held&&onToggleWatchlist&&<span onClick={e=>{e.stopPropagation();onToggleWatchlist(ticker,at);}} style={{padding:"2px 7px",borderRadius:5,fontSize:11,fontWeight:500,cursor:"pointer",background:watchlistItems?.some(w=>w.ticker===ticker)?"rgba(102,88,255,0.15)":"rgba(255,255,255,0.06)",color:watchlistItems?.some(w=>w.ticker===ticker)?"var(--info)":"var(--text2)"}}>
+        {!held&&onToggleWatchlist&&<span onClick={e=>{e.stopPropagation();onToggleWatchlist(ticker,at);}} style={{padding:"2px 7px",borderRadius:5,fontSize:11,fontWeight:500,cursor:"pointer",background:watchlistItems?.some(w=>w.ticker===ticker)?"rgba(201,168,76,0.15)":"rgba(255,255,255,0.06)",color:watchlistItems?.some(w=>w.ticker===ticker)?"var(--info)":"var(--text2)"}}>
           {watchlistItems?.some(w=>w.ticker===ticker)?"✓ İzleniyor":"+ İzle"}
         </span>}
         <span style={{color:"var(--text3)",fontSize:14}}>›</span>

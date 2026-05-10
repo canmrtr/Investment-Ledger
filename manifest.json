@@ -1,12 +1,12 @@
 {
-  "name": "Investment Ledger",
-  "short_name": "IL",
-  "description": "Kişisel yatırım takip uygulaması",
+  "name": "Portfoi",
+  "short_name": "Portfoi",
+  "description": "Portföyün, cebinde.",
   "start_url": "/Investment-Ledger/",
   "scope": "/Investment-Ledger/",
   "display": "standalone",
   "background_color": "#000000",
-  "theme_color": "#6658ff",
+  "theme_color": "#C9A84C",
   "lang": "tr",
   "icons": [
     {
