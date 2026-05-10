@@ -20,11 +20,11 @@ function Login(){
 
   return(
     <div className="login-wrap">
+      <div style={{textAlign:"center",marginBottom:28}}>
+        <img src="Logo/logo-full-dark.png" className="theme-logo theme-logo-dark" alt="Portfoi" style={{height:100,width:"auto"}}/>
+        <img src="Logo/logo-full-light.png" className="theme-logo theme-logo-light" alt="Portfoi" style={{height:100,width:"auto"}}/>
+      </div>
       <div className="login-box">
-        <div style={{textAlign:"center",marginBottom:20}}>
-          <img src="Logo/logo-full-dark.png" className="theme-logo theme-logo-dark" alt="Portfoi" style={{height:80,width:"auto"}}/>
-          <img src="Logo/logo-full-light.png" className="theme-logo theme-logo-light" alt="Portfoi" style={{height:80,width:"auto"}}/>
-        </div>
         <div className="login-field">
           <label>E-posta</label>
           <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="ornek@mail.com" onKeyDown={e=>e.key==="Enter"&&submit()}/>
