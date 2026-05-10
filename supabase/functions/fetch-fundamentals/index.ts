@@ -727,6 +727,58 @@ Deno.serve(async (req) => {
       return json({ dividends: results });
     }
 
+    // Mode: etf-country — FMP ETF ülke ağırlıkları. Frontend 90 gün LS cache'ler.
+    // Body: { mode: "etf-country", tickers: ["VT", "VWO"] }
+    if (body.mode === "etf-country") {
+      const tickers: string[] = Array.isArray(body.tickers) ? body.tickers.slice(0, 10) : [];
+      if (tickers.length === 0) return json({ error: "tickers array required" }, 400);
+      const fmpKey = Deno.env.get("FMP_KEY");
+      if (!fmpKey) return json({ error: "FMP_KEY secret eksik" }, 500);
+
+      const COUNTRY_REGION: Record<string, string> = {
+        "United States": "us",
+        "United Kingdom": "eu", "Germany": "eu", "France": "eu", "Switzerland": "eu",
+        "Netherlands": "eu", "Sweden": "eu", "Denmark": "eu", "Norway": "eu",
+        "Finland": "eu", "Belgium": "eu", "Italy": "eu", "Spain": "eu",
+        "Austria": "eu", "Portugal": "eu", "Ireland": "eu", "Luxembourg": "eu",
+        "Poland": "eu", "Czech Republic": "eu", "Hungary": "eu", "Greece": "eu",
+        "Romania": "eu", "Slovakia": "eu", "Estonia": "eu", "Latvia": "eu",
+        "Lithuania": "eu",
+        "Japan": "asia-pac", "China": "asia-pac", "Australia": "asia-pac",
+        "South Korea": "asia-pac", "Taiwan": "asia-pac", "Hong Kong": "asia-pac",
+        "Singapore": "asia-pac", "India": "asia-pac", "New Zealand": "asia-pac",
+        "Indonesia": "asia-pac", "Thailand": "asia-pac", "Malaysia": "asia-pac",
+        "Philippines": "asia-pac", "Vietnam": "asia-pac", "Pakistan": "asia-pac",
+        "Brazil": "em", "Mexico": "em", "South Africa": "em", "Saudi Arabia": "em",
+        "United Arab Emirates": "em", "Qatar": "em", "Kuwait": "em", "Turkey": "em",
+        "Russia": "em", "Egypt": "em", "Colombia": "em", "Chile": "em",
+        "Peru": "em", "Argentina": "em", "Nigeria": "em", "Morocco": "em", "Kenya": "em",
+      };
+
+      const weights: Record<string, Record<string, number>> = {};
+      await Promise.all(
+        tickers
+          .filter((t: string) => /^[A-Z0-9.\-]{1,12}$/i.test(t))
+          .map(async (tk: string) => {
+            try {
+              const url = `https://financialmodelingprep.com/stable/etf/country-weightings?symbol=${encodeURIComponent(tk)}&apikey=${fmpKey}`;
+              const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
+              if (!r.ok) { weights[tk] = {}; return; }
+              const raw = await r.json();
+              const arr: Array<{ country: string; weightPercentage: string }> = Array.isArray(raw) ? raw : [];
+              if (arr.length === 0) { weights[tk] = {}; return; }
+              const buckets: Record<string, number> = {};
+              for (const row of arr) {
+                const bucket = COUNTRY_REGION[row.country] ?? "other";
+                buckets[bucket] = (buckets[bucket] ?? 0) + (parseFloat(row.weightPercentage) || 0);
+              }
+              weights[tk] = buckets;
+            } catch { weights[tk] = {}; }
+          })
+      );
+      return json({ weights });
+    }
+
     // Mode: refresh-fund-cache — fund_cache tablosundaki stale ticker'ları yenile.
     // pg_cron (haftalık) CRON_SECRET ile çağırır. Her run max 60 ticker, 800ms aralık.
     if (body.mode === "refresh-fund-cache") {
