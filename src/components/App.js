@@ -54,6 +54,7 @@ function App({session}){
   const [lastFetchAt,setLastFetchAt_]=useState(()=>LS.get("il_last_fetch",null));
   const setLastFetchAt=ts=>{setLastFetchAt_(ts);LS.set("il_last_fetch",ts);};
   const [flash,setFlash]=useState(null);
+  const [menuOpen,setMenuOpen]=useState(false);
   const [watchlistItems,setWatchlistItems]=useState([]);
   const [connTest,setConnTest]=useState(null);  // {ok:bool, status:int, body:str} — Settings → Bağlantı Test çıktısı
   const [statusOpen,setStatusOpen]=useState(false);
@@ -411,7 +412,7 @@ function App({session}){
   const expTx=()=>dlCSV(txs.map(t=>csvRow([t.date,t.ticker,t.name||"",t.asset_type||"",t.way,t.shares,t.price,t.currency||"USD",t.total||"",t.broker||"",t.commission||0])),"Date,Ticker,Name,Type,Way,Shares,Price,Currency,Total,Broker,Commission",`txs_${today()}.csv`);
   const expPos=()=>dlCSV(pos.map(p=>csvRow([p.ticker,p.name,p.type,p.shares,p.avgCost,p.currency,p.broker])),"Ticker,Name,Type,Shares,AvgCost,Currency,Broker",`pos_${today()}.csv`);
 
-  const TABS=[["dashboard","Dashboard"],["watchlist","Watchlist"],["analysis","Analiz"],["search","Ara"],["add","+ Ekle"],["settings","Ayarlar"]];
+  const TABS=[["dashboard","Dashboard"],["watchlist","Watchlist"],["analysis","Analiz"],["search","Ara"],["add","+ Ekle"],["rehber","Rehber"]];
 
   if(busy.d&&pos.length===0)return(
     <div style={{padding:"16px 16px 0"}}>
