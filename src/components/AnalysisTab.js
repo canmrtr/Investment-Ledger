@@ -238,6 +238,15 @@ const buildSlicesPath = (sliceArr, CX, CY, R) => {
 };
 
 function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRates,openDetail}){
+  // Aylık Özet state
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [snapshots, setSnapshots]           = useState({});
+  const [snapshotsBusy, setSnapshotsBusy]   = useState(false);
+  const shareCardRef                         = useRef(null);
+  const [html2canvasReady, setHtml2canvasReady] = useState(false);
   const [assetDistMode,setAssetDistMode]=useState("mv"); // "cost" | "mv"
   const [expandedAssetType,setExpandedAssetType]=useState(null);
   const [activeTypes,setActiveTypes]=useState(()=>BLOCK_TYPES.filter(cfg=>pos.some(p=>p.type===cfg.type)).map(cfg=>cfg.type));
@@ -350,6 +359,31 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
         }
       });
   },[pos]);
+
+  // price_snapshots fetch — mount'ta bir kez yükle
+  useEffect(() => {
+    setSnapshotsBusy(true);
+    sb.from('price_snapshots')
+      .select('ticker, snapshot_date, price')
+      .then(({ data }) => {
+        if (data) {
+          const map = {};
+          data.forEach(r => { map[`${r.ticker}_${r.snapshot_date}`] = +r.price; });
+          setSnapshots(map);
+        }
+        setSnapshotsBusy(false);
+      });
+  }, []);
+
+  // html2canvas hazır mı?
+  useEffect(() => {
+    if (window.html2canvas) { setHtml2canvasReady(true); return; }
+    const t = setInterval(() => {
+      if (window.html2canvas) { setHtml2canvasReady(true); clearInterval(t); }
+    }, 300);
+    return () => clearInterval(t);
+  }, []);
+
   // Sağlık tablosu için 8 kritik metrik (default; tüm 21 metrik FUND_THRESHOLDS'ta)
   const HEALTH_METRICS=[
     ["pe",                "P/E",          "x"],
