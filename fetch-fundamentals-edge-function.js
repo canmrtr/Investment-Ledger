@@ -57,7 +57,7 @@ const upsertFundCache = async (
 };
 
 // SEC ToS: tüm istekler User-Agent header gerektirir, contact info zorunlu.
-const SEC_UA = "Investment-Ledger app canmerter85@gmail.com";
+const SEC_UA = `Investment-Ledger app ${Deno.env.get("SEC_CONTACT_EMAIL") ?? "noreply@example.com"}`;
 
 // CAGR helper — start/end + years
 const cagr = (start, end, years) => {
