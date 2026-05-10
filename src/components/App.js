@@ -464,7 +464,10 @@ function App({session}){
                 {NAV_ICONS.settings(14)}Ayarlar
               </button>
               <div className="ham-divider"/>
-              <button className="ham-menu-row danger" onClick={()=>sb.auth.signOut()}>
+              <button className="ham-menu-row danger" onClick={()=>{
+                ["il_hide","il_prc","il_hist","il_active_portfolio","il_recent_search",`il_recent_${user?.id}`].forEach(k=>k&&localStorage.removeItem(k));
+                sb.auth.signOut();
+              }}>
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M6 8h7M10 5l3 3-3 3"/><path d="M10 3H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h6"/></svg>
                 Çıkış Yap
               </button>
@@ -906,7 +909,7 @@ function App({session}){
 
       {/* WATCHLIST */}
       {tab==="watchlist"&&(
-        <WatchlistTab items={watchlistItems} prc={prc} hist={hist} onToggle={toggleWatchlist} openDetail={openDetail} setTab={setTab} hideAmts={hide} mask={mask}/>
+        <WatchlistTab items={watchlistItems} prc={prc} hist={hist} onToggle={toggleWatchlist} openDetail={openDetail} setTab={setTab} hideAmts={hide} mask={mask} confirm_={confirm_}/>
       )}
 
 

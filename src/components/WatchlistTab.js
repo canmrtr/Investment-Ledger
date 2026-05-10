@@ -1,5 +1,5 @@
 // ── WatchlistTab ─────────────────────────────────────────────────
-function WatchlistTab({items,prc,hist,onToggle,openDetail,setTab,hideAmts,mask}){
+function WatchlistTab({items,prc,hist,onToggle,openDetail,setTab,hideAmts,mask,confirm_}){
   React.useEffect(()=>{
     // prices are fetched by App's existing pos-change effect; no extra fetch needed
   },[]);
@@ -30,7 +30,7 @@ function WatchlistTab({items,prc,hist,onToggle,openDetail,setTab,hideAmts,mask})
             const price=prc[w.ticker];
             const d1pct=hist[w.ticker]?.d1;
             return(
-              <tr key={w.ticker} className="pos-row" onClick={()=>openDetail(w.ticker)}>
+              <tr key={w.ticker} className="pos-row" onClick={()=>openDetail(w.ticker,w.asset_type)}>
                 <td style={{padding:"10px 16px",fontFamily:"var(--mono)",fontWeight:600,fontSize:13}}>{w.ticker}</td>
                 <td style={{textAlign:"right",padding:"10px 8px",fontFamily:"var(--mono)",fontSize:13}}>{hideAmts?mask("••••"):(price!=null?fmt(price,2):"—")}</td>
                 <td style={{textAlign:"right",padding:"10px 8px",fontFamily:"var(--mono)",fontSize:13,color:d1pct==null?"var(--text3)":d1pct>=0?"var(--ok)":"var(--err)"}}>

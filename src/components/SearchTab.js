@@ -7,6 +7,11 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
   const [tickerDb,setTickerDb]=useState(()=>tickerDbCacheGet());
   const [loading,setLoading]=useState(false);
   const [recent,setRecent]=useState(()=>LS.get(recentKey,[]));
+  const inputRef=React.useRef(null);
+  React.useEffect(()=>{
+    // Mobilde otomatik klavye açılmasın — sadece masaüstünde focus.
+    if(typeof window!=="undefined"&&!("ontouchstart" in window))inputRef.current?.focus();
+  },[]);
   const clearRecent=()=>{setRecent([]);LS.set(recentKey,[]);};
   const handleOpen=(ticker,type)=>{
     const next=[ticker,...recent.filter(t=>t!==ticker)].slice(0,8);
@@ -85,7 +90,7 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
 
   return(
     <div>
-      <input type="text" autoFocus value={q} onChange={e=>setQ(e.target.value)}
+      <input type="text" ref={inputRef} value={q} onChange={e=>setQ(e.target.value)}
         placeholder="🔍 Ticker (AAPL) veya şirket adı (Apple)…"
         maxLength={64} data-test="search-input"
         style={{marginBottom:14}}/>
