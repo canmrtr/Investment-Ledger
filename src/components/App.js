@@ -55,6 +55,14 @@ function App({session}){
   const setLastFetchAt=ts=>{setLastFetchAt_(ts);LS.set("il_last_fetch",ts);};
   const [flash,setFlash]=useState(null);
   const [menuOpen,setMenuOpen]=useState(false);
+  useEffect(()=>{
+    if(!menuOpen)return;
+    const close=e=>{
+      if(!e.target.closest('.ham-menu')&&!e.target.closest('.hamburger-btn'))setMenuOpen(false);
+    };
+    document.addEventListener("mousedown",close);
+    return()=>document.removeEventListener("mousedown",close);
+  },[menuOpen]);
   const [watchlistItems,setWatchlistItems]=useState([]);
   const [connTest,setConnTest]=useState(null);  // {ok:bool, status:int, body:str} — Settings → Bağlantı Test çıktısı
   const [statusOpen,setStatusOpen]=useState(false);
@@ -432,9 +440,36 @@ function App({session}){
   return(
     <div id="shell">
       <header id="topbar">
-        <div className="topbar-left">
-          <img src="Logo/logo-mark-dark.png" className="theme-logo theme-logo-dark" alt="Portfoi"/>
-          <img src="Logo/logo-mark-light.png" className="theme-logo theme-logo-light" alt="Portfoi"/>
+        <div className="topbar-left" style={{position:"relative"}}>
+          <button
+            className={"hamburger-btn"+(menuOpen?" open":"")}
+            onClick={()=>setMenuOpen(o=>!o)}
+            aria-label="Menü"
+            aria-expanded={menuOpen}
+          >
+            <span/><span/><span/>
+          </button>
+          {menuOpen&&(
+            <div className="ham-menu">
+              <div className="ham-menu-profile">
+                <div className="ham-menu-avatar">
+                  {(profile?.display_name||user.email||"?")[0].toUpperCase()}
+                </div>
+                <div>
+                  <div style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>{profile?.display_name||"Kullanıcı"}</div>
+                  <div style={{fontSize:11,color:"var(--text3)"}}>{user.email}</div>
+                </div>
+              </div>
+              <button className="ham-menu-row" onClick={()=>{setTab("settings");setMenuOpen(false);}}>
+                {NAV_ICONS.settings(14)}Ayarlar
+              </button>
+              <div className="ham-divider"/>
+              <button className="ham-menu-row danger" onClick={()=>sb.auth.signOut()}>
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M6 8h7M10 5l3 3-3 3"/><path d="M10 3H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h6"/></svg>
+                Çıkış Yap
+              </button>
+            </div>
+          )}
         </div>
         <nav className="topbar-nav">
           {TABS.filter(([id])=>id!=="add").map(([id,lbl])=>(
