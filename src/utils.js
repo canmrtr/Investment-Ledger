@@ -313,14 +313,12 @@ const buildCashflows = (txs, todayMV) => {
 // ratio'su birikimli olarak uygulanır (shares × factor). Toplam cost
 // aynı kalır, shares artar → avg_cost otomatik düşer.
 const rebuildPositions = async (userId, portfolioId = null) => {
-  // portfolioId yoksa DB'den kullanıcının ilk portföyünü al.
-  // Gelecekte: aktif portföy switcher'dan gelir; şimdilik fallback yeterli.
   let pid = portfolioId;
   if (!pid) {
     const {data:pf} = await sb.from("portfolios").select("id").eq("user_id",userId).order("created_at").limit(1).maybeSingle();
     pid = pf?.id || null;
   }
-  if (!pid) { DEBUG && console.warn("[rebuildPositions] no portfolio for user",userId); return 0; }
+  if (!pid) { DEBUG && console.warn("[rebuildPositions] no portfolio for user",userId); return null; }
 
   const [txRes,splitRes] = await Promise.all([
     sb.from("transactions").select("*").eq("user_id",userId).eq("portfolio_id",pid).order("date"),
@@ -338,8 +336,6 @@ const rebuildPositions = async (userId, portfolioId = null) => {
   const pm = {};
   for (const t of all) {
     if (!pm[t.ticker]) {
-      // Normalize currency per asset type: BIST→TRY, all others→USD.
-      // Prevents AI-parse errors (e.g. BTC stored as TRY) from hiding positions.
       const normCur = t.asset_type==="BIST" ? "TRY" : (t.currency==="EUR" ? "EUR" : "USD");
       pm[t.ticker] = {ticker:t.ticker,name:t.name,type:t.asset_type,shares:0,cost:0,currency:normCur,broker:t.broker};
     }
@@ -347,7 +343,7 @@ const rebuildPositions = async (userId, portfolioId = null) => {
     const f = factorFor(t.ticker, t.date);
     const adjShares = +t.shares * f;
     if (t.way === "BUY") {
-      p.cost += +t.shares * +t.price;   // total unchanged by split
+      p.cost += +t.shares * +t.price;
       p.shares += adjShares;
     } else if (t.way === "SELL" && p.shares > 0) {
       const avg = p.cost / p.shares;
@@ -356,18 +352,28 @@ const rebuildPositions = async (userId, portfolioId = null) => {
       p.shares -= qty;
     }
   }
-  // unit kolonu transaction'da yok; delete öncesi mevcut pozisyonlardan snapshot al.
+
   const snapRes = await sb.from("positions").select("ticker,unit").eq("user_id",userId).eq("portfolio_id",pid);
   const unitMap = Object.fromEntries((snapRes.data||[]).map(p=>[p.ticker,p.unit||null]));
-  await sb.from("positions").delete().eq("user_id",userId).eq("portfolio_id",pid);
+
   const np = Object.values(pm).filter(p => p.shares > CFG.DUST_THRESHOLD).map(p => ({
-    user_id: userId, portfolio_id: pid, ticker: p.ticker, name: p.name, type: p.type,
+    ticker: p.ticker, name: p.name, type: p.type,
     shares: +p.shares.toFixed(6), avg_cost: +(p.cost/p.shares).toFixed(6),
     currency: p.currency, broker: p.broker,
     unit: unitMap[p.ticker] ?? null,
     updated_at: new Date().toISOString()
   }));
-  if (np.length) await sb.from("positions").insert(np);
+
+  const { error } = await sb.rpc("rebuild_positions_atomic", {
+    p_user_id: userId,
+    p_portfolio_id: pid,
+    p_positions: np
+  });
+
+  if (error) {
+    DEBUG && console.warn("[rebuildPositions] RPC error:", error);
+    return null;
+  }
   return np.length;
 };
 
