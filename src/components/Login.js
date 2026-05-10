@@ -21,8 +21,8 @@ function Login(){
   return(
     <div className="login-wrap">
       <div style={{textAlign:"center",marginBottom:28}}>
-        <img src="Logo/logo-full-dark.png" className="theme-logo theme-logo-dark" alt="Portfoi" style={{height:240,width:"auto"}}/>
-        <img src="Logo/logo-full-light.png" className="theme-logo theme-logo-light" alt="Portfoi" style={{height:240,width:"auto"}}/>
+        <img src="Logo/linear-dark.png" className="theme-logo theme-logo-dark" alt="Portfoi" style={{height:240,width:"auto"}}/>
+        <img src="Logo/linear-light.png" className="theme-logo theme-logo-light" alt="Portfoi" style={{height:240,width:"auto"}}/>
       </div>
       <div className="login-box">
         <div className="login-field">

@@ -168,6 +168,10 @@
     .login-field{margin-bottom:12px;}
     .login-field label{display:block;font-size:11px;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;}
     .login-field input{height:44px;box-sizing:border-box;}
+    /* Theme-aware logo (auto-switch via [data-theme="light"]) */
+    .theme-logo-light{display:none;}
+    [data-theme="light"] .theme-logo-dark{display:none;}
+    [data-theme="light"] .theme-logo-light{display:inline-block;}
     /* Mode tabs in Add */
     .mtab{flex:1;min-width:70px;font-size:12px;}
     .mtab.sm{flex:0 0 auto;min-width:auto;padding:3px 9px;font-size:11px;}
