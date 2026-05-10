@@ -18,3 +18,4 @@ supabase/.temp/
 il-*.mjs
 mockup-*.html
 .claude/agents/_test.tmp
+.superpowers/
