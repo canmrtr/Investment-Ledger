@@ -119,6 +119,8 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   const [fundBusy,setFundBusy]=useState(false);
   const [fundProg,setFundProg]=useState("");
   const [healthFilter,setHealthFilter]=useState("all"); // all | US_STOCK | BIST
+  const [fundAutoFetchPending,setFundAutoFetchPending]=useState(false);
+  const autoFetchGuard=useRef(false);
   // pos değişince veya eager fetch yeni veri yazınca (fundEagerVer) LS'ten senkronla
   useEffect(()=>{
     // 1) localStorage fast-path
@@ -143,17 +145,25 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       .select("ticker, asset_type, metrics, annual, grades")
       .in("ticker",tickers)
       .then(({data,error})=>{
-        if(error||!data?.length)return;
-        setFundCache(prev=>{
-          const next={...prev};
-          data.forEach(row=>{
-            if(!row.metrics)return;
-            const d={metrics:row.metrics,annual:row.annual??null,grades:row.grades??null};
-            next[row.ticker]=d;
-            fundCacheSet(row.ticker,d);
+        const fetched=new Set();
+        if(!error&&data?.length){
+          setFundCache(prev=>{
+            const next={...prev};
+            data.forEach(row=>{
+              if(!row.metrics)return;
+              const d={metrics:row.metrics,annual:row.annual??null,grades:row.grades??null};
+              next[row.ticker]=d;
+              fundCacheSet(row.ticker,d);
+              fetched.add(row.ticker);
+            });
+            return next;
           });
-          return next;
-        });
+        }
+        // Supabase veya localStorage'da olmayan ticker'lar için auto-fetch tetikle
+        if(!autoFetchGuard.current){
+          const stillMissing=tickers.filter(t=>!fetched.has(t)&&!fundCacheGet(t)?.metrics);
+          if(stillMissing.length){autoFetchGuard.current=true;setFundAutoFetchPending(true);}
+        }
       });
   },[pos]);
   // Sağlık tablosu için 8 kritik metrik (default; tüm 21 metrik FUND_THRESHOLDS'ta)
@@ -225,6 +235,12 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
     setFundBusy(false);
     setFundProg("");
   };
+  // Supabase read sonrası hâlâ eksik ticker varsa otomatik çek (kullanıcı müdahalesi gerekmez)
+  useEffect(()=>{
+    if(!fundAutoFetchPending||fundBusy)return;
+    setFundAutoFetchPending(false);
+    fetchAllFund(false);
+  },[fundAutoFetchPending]);
   // "son X sa önce" status için en eski fund cache timestamp'i (eligible ticker'lar arası)
   const fundOldestTs = (() => {
     const tickers = [...new Set([...healthEligible, ...resilienceEligible].map(p=>p.ticker))];
