@@ -126,8 +126,9 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
   };
 
   const delPos=async(tk)=>{
-    if(!(await confirm_(`${tk} pozisyonu silinsin mi?`,{okLbl:"Sil"})))return;
-    await sb.from("positions").delete().eq("user_id",user.id).eq("ticker",tk).eq("portfolio_id",portfolioId);
+    if(!(await confirm_(`${tk} pozisyonu ve tüm işlem geçmişi silinsin mi?`,{okLbl:"Sil",danger:true})))return;
+    await sb.from("transactions").delete().eq("user_id",user.id).eq("ticker",tk).eq("portfolio_id",portfolioId);
+    await rebuildPositions(user.id,portfolioId);
     await loadData();flash_(`${tk} silindi`);
   };
 

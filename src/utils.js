@@ -239,10 +239,10 @@ const edgeCall = (fn, body) => fetch(`${SUPA_URL}/functions/v1/${fn}`, {
 // parse-transaction için: gerçek kullanıcı JWT'si ile çağır (rate limit doğrulama için).
 const edgeCallAuth = async (fn, body) => {
   const { data: { session: sess } } = await sb.auth.getSession();
-  const token = sess?.access_token || SUPA_ANON;
+  if (!sess?.access_token) return new Response(JSON.stringify({error:"Oturum sona erdi"}),{status:401});
   return fetch(`${SUPA_URL}/functions/v1/${fn}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${sess.access_token}` },
     body: JSON.stringify(body),
   });
 };
