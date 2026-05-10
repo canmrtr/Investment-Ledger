@@ -39,14 +39,14 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     const sym = displaySym(form.currency);
     try{
       // Önce date-spesifik dene; hafta sonu / tatil 403 verirse latest close'a fallback.
-      const r=await edgeCall("fetch-prices",{ticker:upper,mode:"price",date:useDate,asset_type:at});
+      const r=await edgePriceCall({ticker:upper,mode:"price",date:useDate,asset_type:at});
       const d=await r.json();
       let price=d.result?.price;
       let fallback=false;
       let fallbackDate=null;
       if(!price){
         DEBUG && console.warn(`[fetchPrice ${upper}] date fail`,d.result?.error||d.error);
-        const r2=await edgeCall("fetch-prices",{ticker:upper,mode:"price",asset_type:at});
+        const r2=await edgePriceCall({ticker:upper,mode:"price",asset_type:at});
         const d2=await r2.json();
         if(d2.result?.price){
           price=d2.result.price;

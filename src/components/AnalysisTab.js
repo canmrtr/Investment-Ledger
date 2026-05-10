@@ -86,7 +86,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       for(let i=0;i<missing.length;i++){
         const p=missing[i];
         try{
-          const r=await edgeCall("fetch-prices",{ticker:p.ticker,mode:"meta",asset_type:p.type});
+          const r=await edgePriceCall({ticker:p.ticker,mode:"meta",asset_type:p.type});
           const d=await r.json();
           if(r.ok&&d&&typeof d==="object")metaCacheSet(p.ticker,d);
         }catch(e){DEBUG&&console.warn("[sector auto-meta]",p.ticker,e);}
@@ -1017,7 +1017,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           for (let i = 0; i < metaMissingPos.length; i++) {
             const p = metaMissingPos[i];
             try {
-              const r = await edgeCall("fetch-prices", {ticker: p.ticker, mode: "meta", asset_type: p.type});
+              const r = await edgePriceCall({ticker: p.ticker, mode: "meta", asset_type: p.type});
               const d = await r.json();
               if (r.ok && d && typeof d === "object") {
                 metaCacheSet(p.ticker, d);

@@ -352,7 +352,7 @@ function App({session}){
       const {ticker:t,type:at}=fetchable[i];
       setPprog(`${t} (${i+1}/${fetchable.length})`);
       try{
-        const r=await edgeCall("fetch-prices",{ticker:t,mode:"price",asset_type:at});
+        const r=await edgePriceCall({ticker:t,mode:"price",asset_type:at});
         const d=await r.json();
         if(d.result?.price){np[t]=d.result.price;cnt++;}
         else{failed.push(t);DEBUG && console.warn(`[fetchPrices ${t}]`,d.result?.error||d.error||"no price");}
@@ -380,7 +380,7 @@ function App({session}){
       const {ticker:t,type:at}=fetchable[i];
       setPprog(`${t} tarihi (${i+1}/${fetchable.length})`);
       try{
-        const r=await edgeCall("fetch-prices",{ticker:t,mode:"historical",asset_type:at});
+        const r=await edgePriceCall({ticker:t,mode:"historical",asset_type:at});
         const d=await r.json();
         const v=d.result;
         if(v?.price){
@@ -1076,7 +1076,7 @@ function App({session}){
                 <button onClick={async()=>{
                   setConnTest({loading:true});
                   try{
-                    const r=await edgeCall("fetch-prices",{ticker:"NVDA",mode:"price"});
+                    const r=await edgePriceCall({ticker:"NVDA",mode:"price"});
                     const txt=await r.text();
                     setConnTest({ok:r.ok, status:r.status, body:txt.slice(0,600)});
                   }catch(e){setConnTest({ok:false, status:"—", body:"HATA: "+e.message});}

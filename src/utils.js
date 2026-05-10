@@ -130,7 +130,7 @@ const enrichParseWithPrice = async (d) => {
   const ticker = String(d.ticker).toUpperCase();
   const tryFetch = async (body) => {
     try {
-      const r = await edgeCall("fetch-prices", body);
+      const r = await edgePriceCall(body);
       const j = await r.json();
       return j?.result?.price || null;
     } catch (_) { return null; }
@@ -246,6 +246,7 @@ const edgeCallAuth = async (fn, body) => {
     body: JSON.stringify(body),
   });
 };
+const edgePriceCall = (body) => edgeCallAuth("fetch-prices", body);
 
 // Fetches split history from FMP for non-BIST tickers and upserts into splits table.
 // Called before rebuildPositions so splits are applied in the same cycle.

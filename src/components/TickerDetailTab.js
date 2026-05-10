@@ -388,7 +388,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
   useEffect(()=>{
     if(p)return;
     // Non-held için live price fetch — assetTypeHint BIST ise Yahoo, yoksa Massive
-    edgeCall("fetch-prices",{ticker,mode:"price",asset_type:effectiveType})
+    edgePriceCall({ticker,mode:"price",asset_type:effectiveType})
       .then(r=>r.json())
       .then(d=>{if(d?.result?.price)setLivePrice(d.result.price);})
       .catch(()=>{});
@@ -427,7 +427,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
     }
     setMetaLoading(true);setMetaErr("");
     try{
-      const r=await edgeCall("fetch-prices",{ticker,mode:"meta",asset_type:effectiveType});
+      const r=await edgePriceCall({ticker,mode:"meta",asset_type:effectiveType});
       const d=await r.json();
       if(d.result&&!d.result.error){
         const safe=sanitizeMeta(d.result);
