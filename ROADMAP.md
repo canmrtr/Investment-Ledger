@@ -672,7 +672,7 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 **Amaç**: Temel akışların güvenilir ve erişilebilir olması.
 
 - **H1. Watchlist remove crash** — `confirm_` prop threading. UX audit high finding; küçük ama kritik.
-- **H2. Login UX** — logo centering, mobile primary button 44px, autocomplete attributes, error/success flash.
+- ~~**H2. Login UX**~~ ✅ **DONE (2026-05-10)** — logo kart dışına taşındı (240px, ortalı, arka plan rengi eşleştirildi), kart sadece form alanlarını içeriyor, input/buton 44px, autocomplete attrs, styled error/success banner.
 - **H3. A11y semantics** — nav aria-label, accordion `aria-expanded`, clickable div → button semantics.
 - **H4. Input/list correctness** — ManuelPosForm tüm currency pozisyonlarını listelesin; EUR sort; negatif format; font family düzeltmeleri.
 
