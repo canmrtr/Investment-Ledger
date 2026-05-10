@@ -187,16 +187,16 @@ async function downloadOrShareCard(ref, monthLbl) {
 // Filter chip "Genel" → asset type breakdown; spesifik tip → o tipteki ticker breakdown.
 // Sektör dağılımı renk paleti — 10 distinct renk + fallback gri (bilinmiyor)
 const SECTOR_COLORS = [
-  "#30d158","#0a84ff","#ff9f0a","#bf5af2","#ffd60a",
-  "#ff453a","#5e5ce6","#64d2ff","#ac8e68","#ff6b6b",
+  "#8B5CF6","#3B82F6","#06B6D4","#F97316","#C9A84C",
+  "#10B981","#D97706","#EF4444","#A78BFA","#60A5FA",
 ];
-const SECTOR_UNKNOWN_COLOR = "#8e8e93";
+const SECTOR_UNKNOWN_COLOR = "#6B7280";
 const TYPE_LABEL_SHORT = {
   all:"Genel", US_STOCK:"US Hisse", BIST:"BIST", FUND:"ETF/Fon",
   CRYPTO:"Kripto", GOLD:"Altın", FX:"Döviz"
 };
 // Ticker-level pie için palet — TYPE_COLORS sadece 6 entry; bir tip'in altında 6+ ticker olunca distinct renk gerek
-const TICKER_PIE_COLORS = ["#30d158","#0a84ff","#ff9f0a","#bf5af2","#ffd60a","#ff453a","#5e5ce6","#64d2ff","#ac8e68","#7dd3fc","#a78bfa","#f472b6"];
+const TICKER_PIE_COLORS = ["#8B5CF6","#3B82F6","#06B6D4","#F97316","#C9A84C","#10B981","#D97706","#EF4444","#A78BFA","#60A5FA","#34D399","#FB923C"];
 
 // Region heuristic — type → region key. ETF underlying holdings (MCHI=Çin gibi)
 // için ileride per-ticker override gerekebilir; şu an asset_type → region.
@@ -207,15 +207,15 @@ const REGION_OF = {
   FX:"fx",
 };
 const REGION_META = {
-  us:          { label: "US",                color: "#30d158" },
-  tr:          { label: "Türkiye",            color: "#bf5af2" },
+  us:          { label: "US",                color: "#8B5CF6" },
+  tr:          { label: "Türkiye",            color: "#F97316" },
   eu:          { label: "Avrupa",             color: "#3B82F6" },
   "asia-pac":  { label: "Asya-Pasifik",       color: "#06B6D4" },
   em:          { label: "Gelişen Piyasalar",  color: "#D97706" },
   other:       { label: "Diğer",              color: "#6B7280" },
-  crypto:      { label: "Global · Kripto",    color: "#ff9f0a" },
-  emtia:       { label: "Global · Emtia",     color: "#ffd60a" },
-  fx:          { label: "Döviz",              color: "#8e8e93" },
+  crypto:      { label: "Global · Kripto",    color: "#06B6D4" },
+  emtia:       { label: "Global · Emtia",     color: "#C9A84C" },
+  fx:          { label: "Döviz",              color: "#10B981" },
 };
 
 const ETF_CW_TTL = 90 * 24 * 60 * 60 * 1000;
