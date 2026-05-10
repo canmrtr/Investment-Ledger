@@ -430,8 +430,8 @@ function App({session}){
     <div id="shell">
       <header id="topbar">
         <div className="topbar-left">
-          <img src="Logo/1.png" className="theme-logo theme-logo-dark" alt="Portfoi"/>
-          <img src="Logo/2.png" className="theme-logo theme-logo-light" alt="Portfoi"/>
+          <img src="Logo/logo-mark-dark.png" className="theme-logo theme-logo-dark" alt="Portfoi"/>
+          <img src="Logo/logo-mark-light.png" className="theme-logo theme-logo-light" alt="Portfoi"/>
         </div>
         <nav className="topbar-nav">
           {TABS.filter(([id])=>id!=="add").map(([id,lbl])=>(
