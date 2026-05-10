@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-10** (Sprint 14 tamamlandı: Login Linear logo + UX Quick Fixes + Denetim Turu 4 + Portföy F/K dokümante + Brand-fit A-1+B-1 + 2 P1 audit fix (LS leak + SEC env). Sprint 15 planlanıyor: 3 P1 audit (edge) + Item 5 ertelenen alt-task'lar (A-2/A-3/B-2) + 1 P1 veri hatası + 9 P2 audit.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-10** (Sprint 14 tamamlandı: Login Linear logo + UX Quick Fixes + Denetim Turu 4 + Portföy F/K dokümante + Brand-fit A-1+B-1 + 2 P1 audit fix (LS leak + SEC env). Sprint 15 planlanıyor: 3 P1 audit (edge) + Item 5 ertelenen alt-task'lar (A-2/A-3/B-2) + 1 P1 veri hatası + 9 P2 audit.) **2026-05-10 ek**: Türk ADR fundamentals fix (ERELY→EREGL mapping, `adr_bist_map` Supabase tablosu, `bist.annual` path fix) tamamlandı.
 
 **Grooming notu (2026-05-10)**: Backlog gözden geçirildi. `get_allocation_only_positions` multi-currency (P1), `"Tam Detay"` UI/veri uyumsuzluğu (P1) ve `computePeriod` DIV eksikliği (P1) Sprint 15'in ilk bölümüne alındı — P0 olmasa da aktif kullanımda yanlış veri gösterir. Sprint 15'te toplam ~3 P1 edge security + 3 P1 veri doğruluğu + 3 A-2/A-3/B-2 brand-fit. Kapasite aşımı riski var; Can'ın önceliğine göre bölünebilir. Anlamsızlaşan/birleşen item yok; yapı korunuyor.
 
@@ -35,6 +35,8 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 - [ ] **Hedef Fiyat Bildirimi (Edge Function Alarm)** `[L]` `[P3]` — Kullanıcı ticker için hedef fiyat ve yön (≥ veya ≤) tanımlar; pg_cron job'ı her 6 saatte `price_cache`'i tarar → hedef aşılırsa Supabase `auth.users.email`'e transactional mail (Resend veya Supabase Mailer). `target_prices` tablosu + pg_cron + Resend API key. **Not**: Watchlist tamamlandı; `target_prices` tablosu hâlâ gerekiyor ancak ayrı migration olarak eklenecek. Watchlist bağımlılığı kalktı.
   - Bağımlılık: `target_prices` tablosu → "Hedef Fiyat & Değerleme Notu" item'ından alınabilir. Watchlist bağımlılığı yok.
+
+- [ ] **Watchlist kriter özeti** `[S]` `[P2]` — Watchlist ekranında, izleme listesindeki her hisse için TickerDetailTab'daki değer yatırımı checklist özetini satırda göster: `7/21 kriter ✓` formatı. Veri varsa cache'ten okunur; veri yoksa satırda `—` veya "Henüz çekilmedi" gösterilir, otomatik yeni API çağrısı yapılmaz. Hedef: Watchlist'te sadece fiyat/günlük değişim değil, temel kalite sinyali de tek bakışta görülsün.
 
 ---
 

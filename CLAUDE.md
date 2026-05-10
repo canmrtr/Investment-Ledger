@@ -29,9 +29,11 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 | `follows` | user (RLS) | follower_id + followee_id FK; Social Faz 1 altyapısı |
 | `portfolio_activities` | user (RLS) | portfolio_id FK, activity_type, payload; Social Faz 1 altyapısı |
 | `fund_cache` | paylaşımlı (service_role write only) | ticker PK, asset_type, metrics/annual/grades jsonb, source, updated_at |
+| `adr_bist_map` | paylaşımlı (public read, service_role write) | adr_ticker PK, bist_ticker, name; OTC ADR→BIST eşlemesi; `fetch-fundamentals` 1h TTL ile cache'ler; yeni satır Supabase Dashboard'dan eklenir, deploy gerekmez |
 
 `price_cache`: frontend read-only; tüm write `fetch-prices` service_role üstünden.
 `fund_cache`: frontend read-only (anon+authenticated); tüm write `fetch-fundamentals` service_role üstünden.
+`adr_bist_map`: frontend read-only; dashboard veya edge fn service_role ile yazılır.
 pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly` — `30 3 * * 0` (Pazar 03:30 UTC); her ikisi de `CRON_SECRET` Bearer header.
 
 **DB RPC'leri** (`sb.rpc(...)`):
