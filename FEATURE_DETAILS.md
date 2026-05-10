@@ -1,4 +1,4 @@
-# Investment Ledger — Özellik Detayları
+# Portfoi — Özellik Detayları
 
 Bu dosya CLAUDE.md'nin referans verdiği implementasyon detaylarını içerir.
 Sekme/provider üzerinde çalışırken okuyun.

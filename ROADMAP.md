@@ -435,11 +435,11 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 ### Aşama M1 — PWA (Hemen Uygulanabilir)
 
-- [x] ~~**Progressive Web App (PWA) hazırlığı**~~ (2026-05-09) — `manifest.json` (name/short_name/start_url/display:standalone/theme_color:#6658ff/icons 192+512) + `service-worker.js` (install:offline shell precache; activate:eski cache temizleme; fetch:network-first Supabase/CDN, cache-first shell) + `index.html` head tag'leri (`<link rel="manifest">`, `<meta name="theme-color">`, `<meta name="apple-mobile-web-app-capable">`, SW kayıt kodu). Tüm dosyalar repo'da doğrulandı; M1 aşaması tamamlandı.
+- [x] ~~**Progressive Web App (PWA) hazırlığı**~~ (2026-05-09) — `manifest.json` (name/short_name/start_url/display:standalone/theme_color:#C9A84C/icons 192+512) + `service-worker.js` (install:offline shell precache; activate:eski cache temizleme; fetch:network-first Supabase/CDN, cache-first shell) + `index.html` head tag'leri (`<link rel="manifest">`, `<meta name="theme-color">`, `<meta name="apple-mobile-web-app-capable">`, SW kayıt kodu). Tüm dosyalar repo'da doğrulandı; M1 aşaması tamamlandı.
   - [x] (a) `manifest.json` (2026-05-09)
   - [x] (b) `service-worker.js` (2026-05-09)
   - [x] (c) `index.html` head + SW kayıt (2026-05-09)
-- [x] ~~**PWA ikonları**~~ (2026-04-29) — `icon-192.png` + `icon-512.png` brand purple (#6658ff) solid PNG; geçerli PNG format (deflate). Splash screen `theme_color` manifest'te zaten `#6658ff`.
+- [x] ~~**PWA ikonları**~~ (2026-04-29) — `icon-192.png` + `icon-512.png` solid PNG; geçerli PNG format (deflate). Splash screen `theme_color` manifest'te `#C9A84C` (Portfoi Gold).
 
 ### Aşama M2 — Build Sistemi Geçişi (Mobil Uygulama Önkoşulu)
 
@@ -535,7 +535,7 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ### Tasarım Tutarsızlığı — Renk Çakışması
 
-- [ ] **`CUR_COLORS` `TYPE_COLORS` ile çakışıyor** `[S]` `[P2]` — AnalysisTab Kur Riski ~satır 3989: `USD:"#0a84ff"` (FUND rengi) ve `TRY:"var(--info)"` (#6658ff, brand mor). `USD` için `TYPE_COLORS.US_STOCK` (#30d158 yeşil), `TRY` için `TYPE_COLORS.BIST` (#bf5af2 mor) daha semantik. Kasıtlıysa yorum ekle.
+- [ ] **`CUR_COLORS` `TYPE_COLORS` ile çakışıyor** `[S]` `[P2]` — AnalysisTab Kur Riski ~satır 3989: `USD:"#0a84ff"` (FUND rengi) ve `TRY:"var(--info)"` (#C9A84C, Portfoi Gold). `USD` için `TYPE_COLORS.US_STOCK` (#30d158 yeşil), `TRY` için `TYPE_COLORS.BIST` (#bf5af2 mor) daha semantik. Kasıtlıysa yorum ekle.
 
 ### Boş Durum (Empty State) Tutarsızlığı
 

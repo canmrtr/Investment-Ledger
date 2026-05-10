@@ -1,4 +1,4 @@
-# Investment Ledger
+# Portfoi
 
 Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 
@@ -53,9 +53,9 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 
 ### Tasarım sistemi
 - **Tema**: yalnız dark.
-- **Renk tokenleri**: `--bg #000` / `--bg2 #0c0c0c` / `--bg3 #141414` / `--bg4 #1c1c1c`; `--text #f0ede8`, `--text2 #b8b8b8`, `--text3 #888888`; `--info #6658ff`, `--ok #00d97e`, `--err #ff3366`, `--warn #ffb800`; `--border rgba(255,255,255,0.06)` 1px solid.
-- **Font**: `DM Sans` (body 300-700) + `DM Mono` (sayılar/ticker). `.lbl`/`.stitle`/`.kk`: 10px uppercase `font-weight:500`.
-- **Aktif sekme**: pill `rgba(102,88,255,0.12)`, alt çizgi yok. **FAB**: 54px, `var(--info)`, `bottom:76px`.
+- **Renk tokenleri**: `--bg #000` / `--bg2 #0c0c0c` / `--bg3 #141414` / `--bg4 #1c1c1c`; `--text #f0ede8`, `--text2 #b8b8b8`, `--text3 #888888`; `--info #C9A84C` (Portfoi Gold), `--ok #00d97e`, `--err #ff3366`, `--warn #ffb800`; `--border rgba(255,255,255,0.06)` 1px solid; `--border2 rgba(201,168,76,0.28)`.
+- **Font**: `DM Serif Display` (hero sayılar/başlıklar) + `DM Sans` (body 300-700) + `DM Mono` (sayılar/ticker). `--font-display`/`--font-body`/`--font-numeric` CSS değişkenleri. `.lbl`/`.stitle`/`.kk`: 10px uppercase `font-weight:500`.
+- **Aktif sekme**: pill `rgba(201,168,76,0.12)`, alt çizgi yok. **FAB**: 54px, `var(--info)` (gold), `bottom:76px`. **Dashboard hero**: Piyasa Değeri değeri 32px `DM Serif Display`.
 
 ### Para & formatlama
 - `displaySym(cur)`: USD→`$`, TRY→`₺`, EUR→`€`
