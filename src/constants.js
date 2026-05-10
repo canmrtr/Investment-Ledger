@@ -23,12 +23,12 @@ const {useState,useEffect,useRef} = React;
 const TL = {US_STOCK:"Hisse",FUND:"ETF/Fon",CRYPTO:"Kripto",BIST:"BIST",GOLD:"Altın",FX:"Döviz"};
 // Pie chart slice + legend renkleri. Sabit — dashboard yeniden açıldığında değişmez.
 const TYPE_COLORS = {
-  US_STOCK: "#30d158",  // yeşil (iOS system green)
-  FUND:     "#0a84ff",  // mavi (iOS system blue)
-  CRYPTO:   "#ff9f0a",  // turuncu
-  BIST:     "#bf5af2",  // mor
-  GOLD:     "#ffd60a",  // sarı
-  FX:       "#8e8e93",  // gri
+  US_STOCK: "#8B5CF6",  // brand kit: --category-us-stock
+  FUND:     "#3B82F6",  // brand kit: --category-etf
+  CRYPTO:   "#06B6D4",  // brand kit: --category-crypto
+  BIST:     "#F97316",  // brand kit: --category-bist
+  GOLD:     "#C9A84C",  // brand kit: --category-gold
+  FX:       "#10B981",  // brand kit: --category-fx
 };
 const LS = {
   get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
