@@ -24,6 +24,9 @@
 - CSV round-trip: virgül/tırnaklı alanlar için `csvEsc()` — "Apple, Inc" aksi halde parçalanır.
 - Edge fn useEffect auto-fetch: `busy.h/p` guard korunmalı.
 - XIRR `<1Y` yanıltıcı — UI bilinçli gizliyor.
+- **`openDetail` asset_type gap**: `openDetail` resolves type from `pos` → `watchlistItems` when caller omits it. But old watchlist rows may have `asset_type=NULL` in DB, and HistoryTab explicitly passes `undefined`. If a BIST ticker still gets HTTP 404 on meta, check the `watchlist` row's `asset_type` column in Supabase.
+- **`effectiveType` fallback = silent wrong API**: `effectiveType = p?.type || assetTypeHint || "US_STOCK"` in TickerDetailTab — if both are null, a BIST ticker hits Massive API (US stock provider) → HTTP 404 on company info/meta. Always trace the type chain before debugging 404s in TickerDetailTab.
+- **fund_cache out-of-plan sentinel**: Non-US/non-EDGAR tickers (e.g. NNOX — Israeli, MNSO — Chinese) return 422 with no `metrics` from `fetch-fundamentals`. Stored as `{metrics:null,unavailable:true}` sentinel. `stillMissing` check excludes `?.unavailable`; without this, "Eksikleri Çek" retries forever with no effect.
 
 ## CSS / Layout
 
