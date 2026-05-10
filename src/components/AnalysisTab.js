@@ -937,7 +937,10 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       {/* Bölge Dağılımı — stacked bar */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div className="stitle" style={{marginBottom:0}}>Bölge Dağılımı</div>
+          <div className="stitle" style={{marginBottom:0}}>
+            Bölge Dağılımı
+            {etfCwBusy && <span style={{color:"var(--text3)",fontSize:11,marginLeft:6,fontWeight:400}}>Yükleniyor…</span>}
+          </div>
           <button className="btn-xs" onClick={()=>setRegionPieOpen(o=>!o)}>{regionPieOpen?"▴":"▾"}</button>
         </div>
         {regionSlices.arr.length > 0 && (
@@ -967,7 +970,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                   <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
                 </div>
                 <div style={{fontSize:10,color:"var(--text3)",marginTop:10,lineHeight:1.5}}>
-                  Heuristik: US_STOCK/FUND→US, BIST→Türkiye, CRYPTO→Global·Kripto, GOLD→Global·Emtia, FX→Döviz. ETF içerikleri (MCHI=Çin gibi) ileride.
+                  ETF/Fon pozisyonları için gerçek ülke dağılımı kullanılır (FMP, 90 gün cache). TEFAS/TRY fonlar ve bilinmeyen ETF'ler için US heuristiği geçerli.
                 </div>
               </>
             )}
