@@ -610,8 +610,7 @@ Sprint 10 retro: Milestone A (P1 bug bundle) ve Milestone B (Dashboard blok sign
 
 **Sprint 12 Scope** (2026-05-10):
 
-1. **Audit Fixes bundle** ✅ — High #1 (`allocation_only` kolon sızıntısı → `get_allocation_only_positions` SECURITY DEFINER RPC + `positions_allocation_read` policy kaldırıldı), High #2 (`rebuildPositions` atomik değil → `rebuild_positions_atomic` PL/pgSQL RPC), Medium #1 (ManuelPosForm kısmi ledger → `rebuildPositions` yolundan geçiyor; `delPos` artık transaction'ları da siliyor), Medium #2 (`fetch-prices` JWT zorunlu + `edgePriceCall` wrapper), Medium #3 (raw shares pct → cost-basis RPC).
-   - **Bekleyen**: `supabase/migrations/011` + `012` Supabase SQL Editor'da apply edilmeli; `npx supabase functions deploy fetch-prices --no-verify-jwt` çalıştırılmalı.
+1. **Audit Fixes bundle** ✅ — High #1 (`allocation_only` kolon sızıntısı → `get_allocation_only_positions` SECURITY DEFINER RPC + `positions_allocation_read` policy kaldırıldı), High #2 (`rebuildPositions` atomik değil → `rebuild_positions_atomic` PL/pgSQL RPC), Medium #1 (ManuelPosForm kısmi ledger → `rebuildPositions` yolundan geçiyor; `delPos` artık transaction'ları da siliyor), Medium #2 (`fetch-prices` JWT zorunlu + `edgePriceCall` wrapper), Medium #3 (raw shares pct → cost-basis RPC). Migrations 011+012 apply edildi; `fetch-prices` deploy edildi.
 
 **Sprint 13 için Öne Çıkan Adaylar**:
 
