@@ -24,12 +24,12 @@ AnalysisTab Bölge Dağılımı kartı şu an her FUND pozisyonunu `"us"` bucket
 
 Mevcut bucket'lara (`us`, `tr`, `crypto`, `emtia`, `fx`) eklenir:
 
-| Bucket | Label | Renk |
-|--------|-------|------|
-| `eu` | Avrupa | `#0a84ff` |
-| `asia-pac` | Asya-Pasifik | `#ff9f0a` |
-| `em` | Gelişen Piyasalar | `#ff453a` |
-| `other` | Diğer | `#636366` |
+| Bucket | Label | Renk | Brand Kit Kaynağı |
+|--------|-------|------|-------------------|
+| `eu` | Avrupa | `#3B82F6` | `--category-etf` (Blue) |
+| `asia-pac` | Asya-Pasifik | `#06B6D4` | `--category-crypto` (Cyan) |
+| `em` | Gelişen Piyasalar | `#D97706` | `--category-commodity` (Amber) |
+| `other` | Diğer | `#6B7280` | `--color-text-secondary` (Slate) |
 
 ### COUNTRY_REGION Haritası
 
