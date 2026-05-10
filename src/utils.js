@@ -456,7 +456,7 @@ const computeNudges = (positions, transactions, healthRedCount, annualRate, disp
 
   // P1: XIRR — enflasyon altı getiri
   const xirrNum = annualRate != null ? Number(annualRate) : NaN;
-  if (!isNaN(xirrNum) && xirrNum !== 0) {
+  if (!isNaN(xirrNum)) {
     const threshold = displayCur === 'TRY' ? 0.40 : 0.05;
     if (xirrNum < threshold) {
       nudges.push({
