@@ -602,7 +602,10 @@ function App({session}){
                       style={{background:'none',border:'none',color:'var(--info)',cursor:'pointer',fontSize:12,padding:'0 8px',flexShrink:0,whiteSpace:'nowrap'}}
                       onClick={()=>{
                         setTab(n.actionTab);
-                        setTimeout(()=>document.querySelector(`[data-card="${n.actionCard}"]`)?.scrollIntoView({behavior:'smooth',block:'start'}),150);
+                        setTimeout(()=>{
+                          const el=document.querySelector(`[data-card="${n.actionCard}"]`);
+                          if(el)window.scrollTo({top:el.offsetTop-68,behavior:'smooth'});
+                        },400);
                       }}
                     >Analiz'e Git →</button>
                   )}
