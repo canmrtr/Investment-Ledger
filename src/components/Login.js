@@ -27,11 +27,11 @@ function Login(){
       <div className="login-box">
         <div className="login-field">
           <label>E-posta</label>
-          <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="ornek@mail.com" onKeyDown={e=>e.key==="Enter"&&submit()}/>
+          <input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="ornek@mail.com" onKeyDown={e=>e.key==="Enter"&&submit()}/>
         </div>
         <div className="login-field">
           <label>Şifre</label>
-          <input type="password" value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&submit()}/>
+          <input type="password" autoComplete={isReg?"new-password":"current-password"} value={pw} onChange={e=>setPw(e.target.value)} placeholder="••••••••" onKeyDown={e=>e.key==="Enter"&&submit()}/>
         </div>
         {errMsg&&<div style={{fontSize:12,color:"var(--err)",marginTop:8}}>{errMsg}</div>}
         {okMsg&&<div style={{fontSize:12,color:"var(--ok)",marginTop:8}}>{okMsg}</div>}
