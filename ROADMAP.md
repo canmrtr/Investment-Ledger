@@ -46,6 +46,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 
 - [x] ~~**TR altın birimleri MVP**~~ (2026-04-27) — `positions.unit` migration + `GOLD_UNITS` oz-eq tablo (oz/g/quarter/half/full/republic; gram ağırlık + saflık) + birim picker 6 chip + oz-eq `savePos` + Dashboard back-conversion display. USD/ons geriye uyumlu (unit=null → factor=1).
 - [x] ~~**Dividend (temettü) tracking**~~ (2026-04-29) — `transactions.way:"DIV"` CHECK kısıtı (003_div_way.sql); Dashboard Total Return + XIRR cashflow entegrasyonu; HistoryTab DIV satırı + grup net pozitif; CSV allowlist; TickerDetailTab temettü geliri kartı + tahmini yıllık + maliyete/cari getiri %. AnalysisTab Temettü Özeti kartı (toplam + portföy verimi + top-5 bar).
+- [ ] **AI parse temettü desteği (DIV way)** `[S]` `[P1]` — `parse-transaction` sistem promptu AI çıktısını `way:"BUY|SELL"` ile kısıtlıyor; Türkçe temettü ifadelerini içeren doğal dil girişleri BUY/SELL hatası ya da başarısız doğrulama ile sonuçlanıyor. Düzeltme: parser sözleşmesini `BUY|SELL|DIV` olarak güncelle, Türkçe temettü örnekleri ekle ve insert öncesinde parsed `way` değerlerini istemci tarafında doğrula. Referans: `supabase/functions/parse-transaction/index.ts:94`; `src/components/AddTab.js:134`.
 - [ ] **TR altın işçilik premium göstergesi** `[M]` `[P2]` — Reşat/Ata birimi ekleme; Dashboard "5 çeyrek · ₺12,000/ad · Spot saf ₺55,000 · Premium %9" render; ödenen fiyat − spot saf fark hesabı.
 - [ ] **BIST P/S metriği** `[S]` `[P2]` — borsa-mcp `meta.market_cap` / `latestRevenue` ile derive; frontend veya edge function 2. call.
 - [ ] **BIST bankalar fundamentals** `[L]` `[P2]` — UFRS grubu Roman numeral itemCode mapping; `ISY_KNOWN_BANKS` set'i kaldır. (Bankalar şu an early-exit ile bloklu.)
@@ -105,6 +106,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [x] ~~**Analist Derecelendirme Geçmişi**~~ (2026-04-30 Sprint 10) — FMP `/stable/grade?symbol=X&limit=5` parallel fetch; `grades:[{date,company,rating,previousRating}]` response'a eklendi; `annual` field de FMP response'a dahil edildi (TrendMiniChart için); ticker format regex + EDGAR AbortSignal.timeout + grade field string cap (security); TickerDetailTab "Analist Tavsiyeleri" kartı (US_STOCK only, Buy/Hold/Sell renk pill).
 - [ ] **DCF Hızlı Değerleme** `[M]` `[P3]` — FMP `/stable/discounted-cash-flow` endpoint'i; "Bugünkü adil değer: $145, şu an $132 — %9 ucuz" satırı. FMP free tier'da mevcut. TickerDetailTab fundamental bölümünde alt satır. Value-investing araç olarak doğrudan hedefle örtüşür. Önemli uyarı: DCF varsayıma dayalı; UI'da "tahmini" etiketi zorunlu.
 - [ ] **Snowflake Skor (Çok Boyutlu)** `[L]` `[P3]` — Simply Wall St'in 5-boyut skoru (Değer, Büyüme, Kalite, Borç, Temettü) benzeri; `FUND_THRESHOLDS` + fundamentals cache üstünden her boyuta 0-20 puan; 5-dilimli radar/pentagon SVG. Tamamen frontend hesabı, yeni fetch yok. Büyük UI işi; önce diğer fundamentals tamamlanmalı.
+- [ ] **Fundamental checklist gruplarını Investment-Guide'a hizala** `[S]` `[P2]` — `TickerDetailTab.js:218 FUND_GROUPS` 7 başlığı (Büyüme, Kâr Marjları, Verimlilik, Gider Disiplini, Bilanço Sağlığı, Sermaye Yatırımı, Değerleme) `Investment-Guide.md` Part 5'in 5 başlığına (Income Quality, Cash Flow Strength, Balance Sheet Health, Returns on Capital, Valuation) eşitlenecek. **Eşikler aynen kalır (UI esastır)** — sadece grup yapısı + başlık değişir. İki concrete değişiklik: (a) `fcfMargin` "Kâr Marjları" yerine "Cash Flow Strength" grubuna taşınır; CapEx üçlüsü ile aynı grupta birleşir, (b) Büyüme + Kâr Marjları + Gider Disiplini → tek "Income Quality" grubunda toplanır. P/S metriği guide'da yok; UI'da kalsın ama "Valuation" altında. Period notu: `earningsGrowth5Y` guide "3yr avg" istiyor, UI 5Y CAGR — etiket netleştirilebilir ama veri akışı değişmez.
 
 ## Analiz Tab — Yeni Özellikler
 
@@ -341,6 +343,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 ## UI Polish
 
 - [x] ~~**Asset type ikonları: emoji → custom SVG**~~ (2026-04-26) — `ASSET_ICONS` + `COMMODITY_ICONS` top-level map; stroke="currentColor"; AddTab picker, ManuelPosForm chip render güncellendi.
+- [ ] **İşlem türü kart ikonları yeniden ele alınacak** `[S]` `[P1]` — AddTab "Hangi tür işlem ekliyorsun?" seçim kartlarındaki US Hisse / BIST / ETF-Fon / Kripto / Altın / Döviz ikonları marka diliyle tam örtüşmüyor. Görsel referans: 2026-05-10 ekran görüntüsü. İkon seti yeniden adreslenecek; her asset type için daha ayırt edici, finans bağlamı net ve brand kit ile uyumlu SVG/logo yaklaşımı seçilecek. AddTab picker ve ilgili manual/confirm chip kullanımları birlikte kontrol edilmeli.
 - [x] ~~**Dark/Light tema desteği**~~ (2026-04-26) — `[data-theme="light"]` CSS tokens; `applyTheme()` + `matchMedia` sistem tercihi; Settings "Görünüm" 3-button segmented (Sistem/Açık/Koyu); LS `il_theme` persist.
 
 ## Bug & UX Backlog
@@ -363,11 +366,37 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 - [x] ~~**İş Yatırım fetch timeout**~~ (Sprint 13 öncesi mevcut) — `fetch-fundamentals` `isyFetch` fonksiyonunda `AbortSignal.timeout(8000)` zaten mevcuttu; Sprint 13 denetiminde onaylandı.
 - [x] ~~**Sektör Dağılımı "Bilinmiyor" bug fix**~~ (2026-04-29) — AnalysisTab mount useEffect ile auto-fetch; CRYPTO→"Kripto", GOLD→"Emtia", FX→"Döviz", FUND→"ETF / Fon" tip bazlı fallback. US_STOCK/BIST meta çekilene kadar "Bilinmiyor" kalır (kaçınılmaz).
 
+### Denetim Turu 4 Bulguları (2026-05-10) — P0 Temiz, P1–P2 Backlog
+
+> P0 doğrulandı — temiz: `positions_allocation_read` policy DB'de YOK; migration 012 başarıyla uygulanmış. Aktif olan sadece `positions_select_own` + `positions_public_read` (yalnızca `privacy_level='full'` + `is_public=true`). Aksiyon gerekmez.
+>
+> Tasarım kararı (kayıt): `get_allocation_only_positions` anon EXECUTE kasıtlı; sosyal discovery için yalnızca `{ticker,name,type,pct}` döner — `avg_cost`/`shares`/`broker` hiçbir zaman açığa çıkmaz.
+
+**P1 — Can onayına sunulacak (Sprint 14 veya Sprint 15):**
+
+- [ ] **Hamburger signOut LocalStorage sızıntısı** `[S]` `[P1]` — `src/components/App.js:467` hamburger signOut sadece Supabase oturumunu kapatıyor; `il_prc`, `il_hist`, `il_hide`, `il_active_portfolio`, `il_recent_${user.id}` LS key'leri temizlenmiyor. Settings signOut (L1221) tüm key'leri temizliyor — hamburger da aynı şekilde yapmalı. Kullanıcı geçişlerinde veri sızması riski.
+- [ ] **`fetch-fundamentals` auth eksikliği — ticker-list/dividend-calendar/etf-country/default modları** `[S]` `[P1]` — Bu modlarda JWT doğrulaması yok; anon kullanıcı ~11k ticker çekebiliyor ve Twelve Data/FMP kotası boşaltılabilir. `CRON_SECRET` koruması yalnızca `refresh-fund-cache`/`sync-ticker-db` dallarında. Düzeltme: tüm modlarda `Authorization` header'dan `getUser` ile kimlik doğrula; cron modları `CRON_SECRET` ile kalır. Referans: `fetch-fundamentals-edge-function.js`.
+- [ ] **`fetch-fundamentals:60` SEC_UA hardcoded email** `[S]` `[P1]` — `canmerter85@gmail.com` EDGAR User-Agent string'inde hardcoded. `Deno.env.get("SEC_CONTACT_EMAIL")` ile env variable'a taşı; secret `SEC_CONTACT_EMAIL` olarak Supabase Dashboard'a ekle. Referans: `fetch-fundamentals-edge-function.js:60`.
+- [ ] **`fetch-prices:302-312` JWT auth try/catch dışında** `[S]` `[P1]` — `getUser()` çağrısı try/catch bloğunun dışında; exception fırlatırsa fonksiyon `Response` döndürmeden çıkıyor, edge runtime 500 üretiyor. try/catch içine al veya `?.` güvenli çağrı yap. Referans: `fetch-prices-edge-function.js:302-312`.
+- [ ] **`refresh-price-cache:148-153` BIST type+USD currency edge case** `[S]` `[P1]` — BIST tipi ama `currency=USD` olan pozisyonlar yanlış venue'ya route ediliyor (Yahoo yerine Massive). Type-first routing kontrolü ekle; `asset_type=BIST` her zaman Yahoo'ya gitsin. Referans: `refresh-price-cache-edge-function.js:148-153`.
+
+**P2 — Sprint 15 backlog:**
+
+- [ ] **CSP/SRI: `html2canvas` integrity hash eksik** `[S]` `[P2]` — `index.html:291` `html2canvas@1.4.1` CDN script'i `integrity=` attribute olmadan yükleniyor. SRI hash ekle veya kendi asset'ine al. Referans: `index.html:291`.
+- [ ] **`watchlist_own` policy `FOR ALL` — UPDATE riski** `[S]` `[P2]` — DB'de aktif `watchlist_own` policy `FOR ALL` olarak tanımlanmış; `ticker` sütunu UPDATE edilebilir (istenmiyor). `FOR INSERT`, `FOR SELECT`, `FOR DELETE` olarak üç ayrı policy'ye böl. Referans: `supabase/migrations/`.
+- [ ] **`parse-transaction:136-138` hata yanıtında kullanıcı girdisi sızıyor** `[S]` `[P2]` — Hata response'u `raw.slice(0,500)` ile ham Claude çıktısını dışa açıyor; kullanıcı girdisi (hassas finansal bilgi) log/client'a sızabilir. Hata mesajını generic yap; `raw` sadece sunucu loguna yaz. Referans: `parse-transaction-edge-function.js:136-138`.
+- [ ] **`fetch-fundamentals:820-821` `bist.raw?.annual` → `bist.annual` olmalı** `[S]` `[P2]` — `bist.raw?.annual` her zaman `undefined` döndürüyor; fund_cache'e BIST annual verisi `null` yazılıyor. `bist.annual` olarak düzelt. Referans: `fetch-fundamentals-edge-function.js:820-821`.
+- [ ] **`fetch-fundamentals:703-728` dividend-calendar mode ticker validation yok** `[S]` `[P2]` — `dividend-calendar` modunda gelen `ticker` parametresi doğrulanmıyor; injection riski. Allowlist regex veya uzunluk+karakter kontrolü ekle. Referans: `fetch-fundamentals-edge-function.js:703-728`.
+- [ ] **`fetch-prices:453-467` historical upsert hatası sessizce yutuluyor** `[S]` `[P2]` — Supabase upsert hatası `console.error` bile çağrılmadan sessizce yok sayılıyor; fiyat geçmişi eksik kalabiliyor. En azından `console.error` ekle; opsiyonel olarak retry. Referans: `fetch-prices-edge-function.js:453-467`.
+- [ ] **`price_snapshots` policy `TO anon, authenticated` eksik** `[S]` `[P2]` — Policy tanımında role kısıtlaması yok; okunabilirlik açısından `TO anon, authenticated` açıkça belirtilmeli (davranış aynı kalır, dokümantasyon netleşir).
+- [ ] **LS key'leri user-scope değil — signOut temizliği genişletilmeli** `[S]` `[P2]` — `il_prc`, `il_hist`, `il_hide` vb. user-specific prefix taşımıyor. Uzun vadeli düzeltme: key'lere `user.id` prefix'i ekle. Kısa vadeli: signOut'ta tüm `il_` prefix'li key'leri temizle. (Hamburger P1 fix'inin genişletilmiş versiyonu.)
+
 ## Güvenlik & Süreç
 
 - [x] ~~**Periyodik agent denetim turu — ilk tur**~~ (2026-04-27) — client-security-auditor + edge-reviewer; 15 bulgu; Sprint 4 backlog'a eklendi.
 - [x] ~~**Periyodik agent denetim turu — 2. tur**~~ (2026-04-29, Sprint 7) — rls-auditor + client-security-auditor + edge-reviewer paralel; 3 kritik bulgu (parse-transaction sunucu auth, RLS portfolio_id subquery, activities cross-portfolio insert); tüm bulgular `002_rls_fixes.sql` + parse-transaction rewrite ile kapatıldı. Sonraki tur: Sprint 9.
 - [x] ~~**Periyodik agent denetim turu — 3. tur**~~ (2026-05-10, Sprint 11) — rls-auditor (watchlist 004+006, follows, portfolio_activities), edge-reviewer (grade endpoint, auto-split), client-security-auditor (WatchlistTab XSS). Tamamlandı.
+- [x] ~~**Periyodik agent denetim turu — 4. tur**~~ (2026-05-10) — Statik kod incelemesi: portföy paylaşım gizliliği, dönüş hesapları, temettü akışı, edge function tutarlılığı. 5 bulgu (1 High, 3 Medium, 1 Low); tümü ROADMAP backlog'a taşındı. `npm run check:babel/edge/drift` geçti.
 
 ## Ölçeklenme & Mass Kullanım
 
@@ -467,6 +496,7 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 ### Grup 2 — Bildirim/Feedback (P1)
 
 - [x] ~~**AddTab CSV import skip count**~~ (2026-04-26) — geçersiz satırlar için `flash_("X işlem alındı, Y satır atlandı")` gösterimi eklendi.
+- [ ] **AI parse kaydetme: insert öncesi `way` istemci doğrulaması eksik** `[S]` `[P2]` — CSV import `BUY|SELL|DIV` normalize/filtre ediyor; AI parse kaydetme yalnızca sayısal `shares`/`price` kontrolü yapıp `way`'i doğrudan insert ediyor. Geçersiz AI çıktısı, kullanıcı onayladıktan sonra Supabase constraint hatası fırlatıyor. Düzeltme: `saveTx`'e `way`/`asset_type`/tarih/para birimi doğrulaması ekle; `ConfirmBox`'ta satır bazlı hata göster. Referans: `src/components/AddTab.js:73,79`.
 - [x] ~~**cur-seg dokunma hedefi mobile**~~ (2026-04-26) — mobile media query 44px AA dokunma hedefi.
 - [x] ~~**Period buton wrap dar ekran**~~ (2026-04-29) — `.fbar` scrollable container, `flex:"0 0 auto" padding:"5px 14px"`. 320px'de artık yatay kaydırma ile çalışıyor.
 - [x] ~~**↻ Güncelle progress mobile**~~ (2026-04-26) — otomatik güncelleme (30dk interval + visibility API) + Settings'e taşındı; `.mprog` mobil progress strip eklendi.
@@ -498,6 +528,9 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 - [x] ~~**`costDisp` `p.avg_cost` → `p.avgCost`**~~ (2026-04-30 Sprint 10) — AnalysisTab `costDisp` helper `p.avg_cost` kullanıyordu; `pos` state'i `avgCost` camelCase map'lediği için Maliyet dağılımı pie'ı hep 0 dönüyordu. `p.avgCost` ile düzeltildi.
 - [x] ~~**ManuelPosForm + HistoryTab edit form `$` hardcode**~~ (2026-04-30 Sprint 10) — ManuelPosForm önizleme "Maliyet: $X" ve HistoryTab edit form "Toplam: $X" EUR pozisyonlarda yanlış sembol gösteriyordu. `displaySym(form.currency)` / `displaySym(editForm.currency)` ile düzeltildi.
+- [ ] **`get_allocation_only_positions` çoklu-para birimi sorunu** `[M]` `[P1]` — RPC, pozisyon maliyet bazlarını döviz dönüşümü yapmadan doğrudan topluyor; USD hisseler + TRY BIST varlıkları karıştırılınca "allocation-only" public portföy yüzdeleri yanıltıcı oluyor. Düzeltme: `price_cache` + FX kuru ile piyasa değerini tek para birimine normalize et; fiyat/FX eksikse view'u açıkça "maliyet bazı" olarak etiketle ve para birimi karıştırmayı önle. Referans: `supabase/migrations/012_public_allocation_rpc.sql:36`; `src/components/App.js:226,982`.
+- [ ] **"Tam Detay" portföy paylaşımı: UI ≠ veri katmanı** `[S]` `[P1]` — Settings "Tam Detay" seçeneğinin "Adet ve maliyet bilgileri görünür" yapacağını söylüyor; ancak public portföy render'ı `privacy_level` ne olursa olsun yalnızca ticker/isim/yüzde bar gösteriyor. Düzeltme: `privacy_level === "full"` için açık tablo render ekle, ya da seçeneği kaldır ve banner/kopyayı gerçek davranışla eşleştir. Referans: `src/components/App.js:944,960,982,1082`.
+- [ ] **Dönem getirisi ve dönem XIRR temettüyü içermiyor** `[S]` `[P1]` — `computePeriod` yalnızca BUY/SELL işlemlerini dahil ediyor; seçilen dönem içindeki DIV işlemleri hem dönem toplam getirisine hem de dönem XIRR'e yansımıyor. Max dönem `totalDivs` ile doğru hesaplıyor. Düzeltme: `tr`'ye dönem temettülerini ekle; dönem XIRR döngüsünde DIV'ları pozitif nakit akışı olarak push et. Referans: `src/components/App.js:326-327,583,591-592`; `src/utils.js:304`.
 
 ### Tasarım Tutarsızlığı — Kart Padding
 
@@ -713,7 +746,7 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ✅ (2026-04-30) | Sprint 10 sonrası Watchlist MVP ✅ (2026-05-01) | Sprint 11 ✅ (2026-05-10) | Sprint 12 ✅ (2026-05-10) | Sprint 13 ✅ (2026-05-10) | **Sprint 14 → aktif**
+Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ✅ (2026-04-30) | Sprint 10 sonrası Watchlist MVP ✅ (2026-05-01) | Sprint 11 ✅ (2026-05-10) | Sprint 12 ✅ (2026-05-10) | Sprint 13 ✅ (2026-05-10) | **Sprint 14 → aktif (2026-05-10)**
 
 Sprint 13 retro: Akıllı Nudge (c) + Aylık Özet Kopyala/Paylaş + ETF Bölge Dağılımı + İş Yatırım fetch timeout + **Brand Kit token migrasyonu** teslim edildi. Brand Kit: `src/styles/tokens.css` oluşturuldu (tüm category/badge/component tokenlar); `TYPE_COLORS` + AnalysisTab renk dizileri brand kit paletine güncellendi; hardcoded `fontFamily` stringlari (26 yer) `var(--font-*)` CSS variable'larına dönüştürüldü; `portfoi-brand-kit.md` Apply Checklist 11/11 ✅.
 
@@ -725,11 +758,20 @@ Sprint 13 retro: Akıllı Nudge (c) + Aylık Özet Kopyala/Paylaş + ETF Bölge 
 4. ~~**İş Yatırım fetch timeout**~~ ✅ — `AbortSignal.timeout(8000)` isyatirim call'larına.
 5. ~~**Brand Kit token migrasyonu**~~ ✅ — `src/styles/tokens.css`; TYPE_COLORS + AnalysisTab renk dizileri; `var(--font-*)` migration.
 
-**Sprint 14 için Öne Çıkan Adaylar**:
+---
 
-1. **Grup A + B: Brand-fit analiz sadeleştirme** `[M/L][P1]` — jargon temizliği, sonuç cümleleri, formül temizliği, AnalysisTab Özet/Detay veya en azından bölüm başlıkları. Hedef kullanıcı uyumu için Social/ek metriklerden önce.
-2. **Grup H: UX audit quick fixes** `[S/M][P1]` — Watchlist `confirm_` crash, login logo/touch target, Search mobile autofocus, accordion semantics. Düşük effort, yüksek güvenilirlik etkisi.
-3. **Grup C: Watchlist niyet + hedef fiyat notu** `[M][P2]` — Hedef Fiyat & Değerleme Notu ile Watchlist row'larını birleştir; alarm backend'i sonraki sprint olabilir.
-4. **Periyodik agent denetim turu — 4. tur** `[S][P1]` — Sprint 11'den bu yana 3 sprint geçiyor; ETF entegrasyonu + yeni RPC'ler kapsamına giriyor.
+**Sprint 14 Scope** (2026-05-10 → 2026-05-23, aktif):
 
-> **Yeni eklenenler (2026-05-09)**: "Grup Portföyleri (Faz 5)" → Sosyal & Kişiselleştirme bölümüne eklendi `[L][P3]`; Faz 2+3 tamamlanmadan scope'a girmez (Sprint 13+ hedef). "Akıllı Nudge Kartları" → yeni "Akıllı Öneriler & Nudge Sistemi" bölümüne eklendi `[M][P2]`; Sprint 11 scope'una alındı. "Haftalık AI Portföy Özeti" aynı bölümde `[M][P3]` ile backlog'a eklendi.
+1. **Login logo swap → Linear varyant** `[XS][P1]` — `Logo/Linear Dark.png` + `Logo/Linear Light.png`; `src/components/Login.js` kırık `logo-full-dark.png` referansı düzeltilir; CLAUDE.md "Logo dosyaları" notu güncellenir. Dark + light tema'da doğru görsel.
+2. **UX Audit Quick Fixes (Grup H)** `[S][P1]` — Watchlist `confirm_` crash; login logo touch target; Search mobil autofocus. Düşük effort, yüksek güvenilirlik etkisi.
+3. **Periyodik Agent Denetim Turu — 4. tur** `[S][P1]` — rls-auditor + client-security-auditor + edge-reviewer + opsiyonel test-runner. Sprint 11 sonrası eklenenler kapsama giriyor: ETF entegrasyonu, `rebuild_positions_atomic`, `get_allocation_only_positions`, `fund_cache` cron.
+4. **Ağırlıklı Ortalama Portföy P/E** `[S][P2]` — `fund_cache` zaten dolu; aggregation + Dashboard/AnalysisTab widget. Sıfır yeni API çağrısı.
+5. **Brand-fit Analiz Sadeleştirme (Grup A+B)** `[M][P1]` — AnalysisTab'daki ham rakam/jargon → sonuç cümlesi; Portföy Sağlık, BreakEven, FX Risk kartları. Sprint 14'te en ağır item; kapasiteyi en çok bu tüketir.
+
+**Sprint 15 backlog (out-of-scope)**:
+
+- **Kullanıcı tanımlı fundamental eşikler** `[M][P2]` — plan dosyası hazır; Settings form UI gerekiyor.
+- **Social Portfolios Faz 2** `[M][P2]` — `UserProfileModal` + `is_public` toggle + RLS read policy.
+- **Piyasa Dayanıklılık Skoru** `[M][P2]` — `resilienceScore()` + AnalysisTab kart; fundamentals cache'e bağımlı.
+
+> **Yeni eklenenler (2026-05-09)**: "Grup Portföyleri (Faz 5)" → Sosyal & Kişiselleştirme bölümüne eklendi `[L][P3]`; Faz 2+3 tamamlanmadan scope'a girmez. "Akıllı Nudge Kartları" → yeni "Akıllı Öneriler & Nudge Sistemi" bölümüne eklendi `[M][P2]`; Sprint 11 scope'una alındı. "Haftalık AI Portföy Özeti" aynı bölümde `[M][P3]` ile backlog'a eklendi. **2026-05-10**: Login logo swap (Linear varyant) Sprint 14'e eklendi `[XS][P1]`.

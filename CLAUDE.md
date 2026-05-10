@@ -24,7 +24,7 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 | `splits` | user (RLS) | ticker, split_date, ratio; **portfolio_id FK** |
 | `profiles` | user (RLS, public read) | user_id PK, username, display_name, parse_calls_today/date (20/gün limit, `increment_parse_calls` RPC ile) |
 | `price_cache` | paylaşımlı (service_role write only) | ticker PK, price + d1/w1/m1/y1 + p_d1…p_y1 + updated_at |
-| `portfolios` | user (RLS) | id PK, user_id FK, name, privacy_level; "Ana Portföy" backfill migration uygulandı |
+| `portfolios` | user (RLS) | id PK, user_id FK, name, privacy_level (`full` \| `allocation_only`; `private` değer geçersiz); "Ana Portföy" backfill migration uygulandı |
 | `watchlist` | user (RLS) | id PK, user_id FK, ticker, asset_type, added_at |
 | `follows` | user (RLS) | follower_id + followee_id FK; Social Faz 1 altyapısı |
 | `portfolio_activities` | user (RLS) | portfolio_id FK, activity_type, payload; Social Faz 1 altyapısı |
@@ -63,7 +63,7 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 - **Font**: `DM Serif Display` (hero sayılar/başlıklar) + `DM Sans` (body 300-700) + `DM Mono` (sayılar/ticker). `--font-display`/`--font-body`/`--font-numeric` CSS değişkenleri. `.lbl`/`.stitle`/`.kk`: 10px uppercase `font-weight:500`.
 - **Aktif sekme**: pill `rgba(201,168,76,0.12)`, alt çizgi yok. **FAB**: 54px, `var(--info)` (gold), `bottom:76px`. **Dashboard hero**: Piyasa Değeri değeri 32px `var(--font-display)`.
 - **Kod içi font kullanımı**: inline style'larda hardcoded font string yok — `fontFamily:"var(--font-display)"` / `fontFamily:"var(--font-numeric)"` kullan.
-- **Logo dosyaları** (`Logo/` dizini): `logo-mark-dark.png` + `logo-mark-light.png` (sadece ikon) — topbar'da 32px; `logo-full-dark.png` + `logo-full-light.png` (ikon + wordmark + tagline) — login'de 240px (kart dışında üstte, ortalı; `.login-wrap` arka planı `var(--bg2)`). CSS `.theme-logo-dark`/`.theme-logo-light` sınıfları `[data-theme="light"]` selector ile otomatik geçiş yapar — JS gerekmez. `.logo-mark`/`.logo-text` ve `.login-logo`/`.login-title` kullanılmıyor artık.
+- **Logo dosyaları** (`Logo/` dizini): **Topbar** logo kullanmıyor (hamburger menü). **Login**: `linear-dark.png` + `linear-light.png` (Linear varyant — ikon + wordmark + tagline; 2000×2000) — kart dışında üstte, ortalı, 240px height; `.login-wrap` arka planı `var(--bg2)`. CSS `.theme-logo-dark`/`.theme-logo-light` sınıfları `[data-theme="light"]` selector ile otomatik geçiş yapar — JS gerekmez. Diğer alternatifler (`Logo Dark/Light.png`, `Full Name Dark/Light.png`) dizinde duruyor ama referanslı değil. `.logo-mark`/`.logo-text` ve `.login-logo`/`.login-title` kullanılmıyor.
 
 ### Para & formatlama
 - `displaySym(cur)`: USD→`$`, TRY→`₺`, EUR→`€`
