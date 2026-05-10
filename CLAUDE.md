@@ -57,7 +57,7 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 - **Light tema** (`portfoi-brand-kit.md` Section 7): `--bg #F5F3EE` (Arctic, beyaz değil) / `--text #0D1117` (Midnight, wordmark rengi) / `--info #8A6A1F` (Gold Muted) / `--topbar-bg rgba(245,243,238,0.90)`. İkon ve border gold her iki temada aynı kalır.
 - **Font**: `DM Serif Display` (hero sayılar/başlıklar) + `DM Sans` (body 300-700) + `DM Mono` (sayılar/ticker). `--font-display`/`--font-body`/`--font-numeric` CSS değişkenleri. `.lbl`/`.stitle`/`.kk`: 10px uppercase `font-weight:500`.
 - **Aktif sekme**: pill `rgba(201,168,76,0.12)`, alt çizgi yok. **FAB**: 54px, `var(--info)` (gold), `bottom:76px`. **Dashboard hero**: Piyasa Değeri değeri 32px `DM Serif Display`.
-- **Logo**: `Logo/1.png` (dark tema) + `Logo/2.png` (light tema) — tam logo (ikon + wordmark + tagline). Topbar'da 32px, Login'de 80px yükseklik. CSS `.theme-logo-dark`/`.theme-logo-light` sınıfları `[data-theme="light"]` selector ile otomatik geçiş yapar — JS gerekmez. `.logo-mark`/`.logo-text` ve `.login-logo`/`.login-title` kullanılmıyor artık.
+- **Logo dosyaları** (`Logo/` dizini): `logo-mark-dark.png` + `logo-mark-light.png` (sadece ikon) — topbar'da 32px; `logo-full-dark.png` + `logo-full-light.png` (ikon + wordmark + tagline) — login'de 80px. CSS `.theme-logo-dark`/`.theme-logo-light` sınıfları `[data-theme="light"]` selector ile otomatik geçiş yapar — JS gerekmez. `.logo-mark`/`.logo-text` ve `.login-logo`/`.login-title` kullanılmıyor artık.
 
 ### Para & formatlama
 - `displaySym(cur)`: USD→`$`, TRY→`₺`, EUR→`€`
