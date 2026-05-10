@@ -758,8 +758,8 @@ Deno.serve(async (req) => {
       const weights: Record<string, Record<string, number>> = {};
       await Promise.all(
         tickers
-          .filter((t: string) => /^[A-Z0-9.\-]{1,12}$/i.test(t))
           .map(async (tk: string) => {
+            if (!/^[A-Z0-9.\-]{1,12}$/i.test(tk)) { weights[tk] = {}; return; }
             try {
               const url = `https://financialmodelingprep.com/stable/etf/country-weightings?symbol=${encodeURIComponent(tk)}&apikey=${fmpKey}`;
               const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
