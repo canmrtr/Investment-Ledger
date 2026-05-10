@@ -625,6 +625,181 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           </div>
         );
       })()}
+      {/* ── Kart: Aylık Özet ─────────────────────────────────────── */}
+      {(()=>{
+        const months   = prevMonths(12);
+        const mLabel   = monthLabel(selectedMonth);
+        const metrics  = calcMonthlyMetrics({ ym: selectedMonth, pos, txs, prc, hist, snapshots, cnv });
+        const { monthReturn, isApprox, totalMV, dividends, netInvested, bestPos, worstPos, ytd, benchmarks, allocation } = metrics;
+        const fmtPct   = r => r != null ? `${r >= 0 ? '+' : ''}${r.toFixed(1)}%` : '—';
+        const fmtAmt   = v => `${dSym}${fmt(Math.abs(v),0)}`;
+        return (
+          <div className="card" style={{marginBottom:14,padding:"16px 18px"}}>
+            {/* Başlık + ay seçici */}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+              <div className="stitle">Aylık Özet</div>
+              <select
+                value={selectedMonth}
+                onChange={e=>setSelectedMonth(e.target.value)}
+                style={{background:"var(--bg4)",border:"1px solid var(--border2)",color:"var(--text)",
+                        borderRadius:8,padding:"5px 10px",fontSize:12,fontFamily:"inherit"}}
+              >
+                {months.map(mo=>(
+                  <option key={mo.value} value={mo.value}>{mo.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 2×2 metrik grid */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+              <div style={{background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
+                <div className="lbl">Portföy Değeri</div>
+                <div style={{fontFamily:"DM Mono,monospace",fontSize:15,fontWeight:700,marginTop:4,color:"var(--info)"}}>
+                  {hide ? mask() : fmtAmt(totalMV)}
+                </div>
+              </div>
+              <div style={{background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
+                <div className="lbl">Aylık Getiri {isApprox&&<span style={{color:"var(--text3)"}}>~</span>}</div>
+                <div style={{fontFamily:"DM Mono,monospace",fontSize:15,fontWeight:700,marginTop:4,
+                             color:monthReturn==null?"var(--text3)":monthReturn>=0?"var(--ok)":"var(--err)"}}>
+                  {monthReturn!=null ? fmtPct(monthReturn) : '—'}
+                </div>
+              </div>
+              <div style={{background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
+                <div className="lbl">YTD {ytd==null&&<span style={{fontSize:9,color:"var(--text3)"}}>snap. yok</span>}</div>
+                <div style={{fontFamily:"DM Mono,monospace",fontSize:15,fontWeight:700,marginTop:4,
+                             color:ytd==null?"var(--text3)":ytd>=0?"var(--ok)":"var(--err)"}}>
+                  {ytd!=null ? fmtPct(ytd) : '—'}
+                </div>
+              </div>
+              <div style={{background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
+                <div className="lbl">Temettü</div>
+                <div style={{fontFamily:"DM Mono,monospace",fontSize:15,fontWeight:700,marginTop:4,color:"var(--info)"}}>
+                  {hide ? mask() : fmtAmt(dividends)}
+                </div>
+              </div>
+            </div>
+
+            {/* Benchmark */}
+            <div className="lbl" style={{marginBottom:6}}>Benchmark</div>
+            {[
+              {label:"Portföy", ret: monthReturn, approx: isApprox},
+              {label:"SPY",     ret: benchmarks.spy},
+              {label:"XU100",   ret: benchmarks.xu100},
+            ].map(row=>(
+              <div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                                          padding:"5px 0",borderTop:"1px solid var(--border)"}}>
+                <span style={{fontSize:12,color:"var(--text2)",fontWeight:500}}>{row.label}</span>
+                <span style={{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:700,
+                              color:row.ret==null?"var(--text3)":row.ret>=0?"var(--ok)":"var(--err)"}}>
+                  {row.approx&&row.ret!=null?"~":""}{fmtPct(row.ret)}
+                </span>
+              </div>
+            ))}
+
+            {/* Best / worst */}
+            <div style={{display:"flex",gap:10,marginTop:12}}>
+              {[
+                {lbl:"En İyi",  pos:bestPos,  color:"var(--ok)"},
+                {lbl:"En Kötü", pos:worstPos, color:"var(--err)"},
+              ].map(({lbl,pos:p,color})=>(
+                <div key={lbl} style={{flex:1,background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
+                  <div className="lbl" style={{color,marginBottom:5}}>{lbl}</div>
+                  {p ? (
+                    <>
+                      <div style={{fontFamily:"DM Mono,monospace",fontSize:13,fontWeight:700}}>{p.ticker}</div>
+                      <div style={{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:600,color}}>{fmtPct(p.ret)}</div>
+                    </>
+                  ) : <div style={{fontSize:11,color:"var(--text3)"}}>—</div>}
+                </div>
+              ))}
+            </div>
+
+            {/* Net yatırım + dağılım */}
+            <div style={{marginTop:12,display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--text2)"}}>
+              <span>Net Yatırım</span>
+              <span style={{fontFamily:"DM Mono,monospace",fontWeight:600,
+                            color:netInvested>=0?"var(--ok)":"var(--err)"}}>
+                {hide ? mask() : `${netInvested>=0?'+':''}${fmtAmt(Math.abs(netInvested))}`}
+              </span>
+            </div>
+            <div style={{marginTop:6,fontSize:11,color:"var(--text3)",lineHeight:1.6}}>
+              <span className="lbl">Dağılım </span>
+              {Object.entries(allocation).filter(([,v])=>v>=1).sort((a,b)=>b[1]-a[1])
+                .map(([k,v])=>`${k} %${v.toFixed(0)}`).join(' · ')}
+            </div>
+
+            {isApprox&&(
+              <div style={{marginTop:8,fontSize:10,color:"var(--text3)"}}>
+                ~ Getiri yaklaşık (30 günlük rolling) — snapshot henüz yok.
+              </div>
+            )}
+
+            {/* Aksiyon butonları */}
+            <div style={{display:"flex",gap:8,marginTop:14}}>
+              <button
+                className="btn-sm"
+                style={{flex:1,border:"1px solid var(--border2)",color:"var(--info)",background:"transparent"}}
+                onClick={async()=>{
+                  const txt = buildSummaryText({ metrics, monthLbl: mLabel, dSym });
+                  await navigator.clipboard.writeText(txt);
+                  flash_("Metin kopyalandı","ok");
+                }}
+              >📋 Metni Kopyala</button>
+              {html2canvasReady&&(
+                <button
+                  className="btn-sm"
+                  style={{flex:1,background:"rgba(201,168,76,0.12)",border:"1px solid var(--border2)",color:"var(--info)"}}
+                  onClick={()=>downloadOrShareCard(shareCardRef, mLabel)}
+                >🖼 Kart İndir</button>
+              )}
+            </div>
+
+            {/* Paylaşım kartı (PNG hedefi) */}
+            <div ref={shareCardRef} style={{
+              marginTop:16,
+              background:"linear-gradient(145deg,#0c0c0c 0%,#141414 100%)",
+              border:"1px solid rgba(201,168,76,0.28)",
+              borderRadius:16,padding:20,
+            }}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+                <div style={{width:32,height:32,background:"rgba(201,168,76,0.15)",borderRadius:8,
+                             display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>📊</div>
+                <div>
+                  <div style={{fontSize:14,fontWeight:700,color:"var(--text)"}}>Portföy Özeti</div>
+                  <div style={{fontSize:11,color:"var(--text3)"}}>{mLabel} · Portfoi</div>
+                </div>
+              </div>
+              <div style={{textAlign:"center",padding:"12px 0",borderBottom:"1px solid var(--border)",marginBottom:12}}>
+                <div style={{fontFamily:"DM Mono,monospace",fontSize:28,fontWeight:700,
+                             color:monthReturn==null?"var(--text3)":monthReturn>=0?"var(--ok)":"var(--err)"}}>
+                  {isApprox?"~":""}{fmtPct(monthReturn)}
+                </div>
+                <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>
+                  Aylık Getiri · {hide?mask():fmtAmt(totalMV)} toplam değer
+                </div>
+              </div>
+              {[
+                {label:"YTD",    val: ytd!=null?fmtPct(ytd):"—",  color: ytd!=null?(ytd>=0?"var(--ok)":"var(--err)"):"var(--text3)"},
+                {label:"vs SPY", val: benchmarks.spy!=null&&monthReturn!=null
+                  ? `${(monthReturn-benchmarks.spy)>=0?'+':''}${(monthReturn-benchmarks.spy).toFixed(1)}%`
+                  : "—",        color: benchmarks.spy!=null&&monthReturn!=null?(monthReturn>=benchmarks.spy?"var(--ok)":"var(--err)"):"var(--text3)"},
+                {label:"En iyi", val: bestPos?`${bestPos.ticker} ${fmtPct(bestPos.ret)}`:"—", color:"var(--text)"},
+                {label:"Temettü",val: hide?mask():fmtAmt(dividends), color:"var(--info)"},
+              ].map(row=>(
+                <div key={row.label} style={{display:"flex",justifyContent:"space-between",
+                                            padding:"4px 0",fontSize:12}}>
+                  <span style={{color:"var(--text3)"}}>{row.label}</span>
+                  <span style={{color:row.color,fontFamily:"DM Mono,monospace",fontWeight:600}}>{row.val}</span>
+                </div>
+              ))}
+              <div style={{marginTop:12,textAlign:"center",fontSize:10,color:"rgba(201,168,76,0.5)",letterSpacing:.5}}>
+                Portfoi · canmrtr.github.io/Investment-Ledger
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {/* Varlık dağılımı — stacked bar */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
