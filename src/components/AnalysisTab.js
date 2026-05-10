@@ -584,16 +584,29 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   const regionSlices = (() => {
     const byRegion = {};
     filteredPos.forEach(p => {
-      const region = REGION_OF[p.type] || "fx";
       const mv = mvDisp(p);
-      if (mv > 0) byRegion[region] = (byRegion[region] || 0) + mv;
+      if (mv <= 0) return;
+      if (p.type === "FUND" && p.currency !== "TRY") {
+        const cw = etfCw[p.ticker];
+        if (cw && Object.keys(cw).length > 0) {
+          const total = Object.values(cw).reduce((a, v) => a + v, 0);
+          if (total > 0) {
+            Object.entries(cw).forEach(([bucket, pct]) => {
+              byRegion[bucket] = (byRegion[bucket] || 0) + mv * (pct / total);
+            });
+            return;
+          }
+        }
+      }
+      const region = REGION_OF[p.type] || "fx";
+      byRegion[region] = (byRegion[region] || 0) + mv;
     });
-    const total = Object.values(byRegion).reduce((a,v)=>a+v,0);
-    const arr = Object.entries(byRegion).map(([key,value]) => ({
+    const total = Object.values(byRegion).reduce((a, v) => a + v, 0);
+    const arr = Object.entries(byRegion).map(([key, value]) => ({
       key, label: REGION_META[key]?.label || key, value, color: REGION_META[key]?.color || "#666"
-    })).sort((a,b)=>b.value-a.value);
-    arr.forEach(s => s.frac = total > 0 ? s.value/total : 0);
-    return {arr, total};
+    })).sort((a, b) => b.value - a.value);
+    arr.forEach(s => s.frac = total > 0 ? s.value / total : 0);
+    return { arr, total };
   })();
 
   // Komisyon — filtreli tx'ler display cur'a convert; KPI/broker/year tek tutar.
