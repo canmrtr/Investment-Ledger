@@ -21,6 +21,41 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Service role client — fund_cache write için. Sadece SUPABASE_URL + SERVICE_ROLE_KEY
+// inject edilmişse oluşturulur.
+const getServiceClient = () => {
+  const url = Deno.env.get("SUPABASE_URL");
+  const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false } });
+};
+
+// fund_cache'e ticker verisini upsert et. Fire-and-forget: hata sessiz pas.
+const upsertFundCache = async (
+  ticker: string,
+  asset_type: string,
+  metrics: Record<string, unknown> | null,
+  annual: unknown[] | null,
+  grades: unknown[] | null,
+  source: string,
+) => {
+  try {
+    const supa = getServiceClient();
+    if (!supa) return;
+    await supa.from("fund_cache").upsert({
+      ticker,
+      asset_type,
+      metrics,
+      annual,
+      grades,
+      source,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "ticker" });
+  } catch (e) {
+    console.warn("[fund_cache upsert]", ticker, e);
+  }
+};
+
 // SEC ToS: tüm istekler User-Agent header gerektirir, contact info zorunlu.
 const SEC_UA = "Investment-Ledger app canmerter85@gmail.com";
 
@@ -692,6 +727,66 @@ Deno.serve(async (req) => {
       return json({ dividends: results });
     }
 
+    // Mode: refresh-fund-cache — fund_cache tablosundaki stale ticker'ları yenile.
+    // pg_cron (haftalık) CRON_SECRET ile çağırır. Her run max 60 ticker, 800ms aralık.
+    if (body.mode === "refresh-fund-cache") {
+      const cronSecret = Deno.env.get("CRON_SECRET");
+      if (!cronSecret || cronSecret.length < 16) return json({ error: "CRON_SECRET not configured" }, 500);
+      const auth = req.headers.get("Authorization") || "";
+      const expected = `Bearer ${cronSecret}`;
+      const enc = new TextEncoder();
+      const ab = enc.encode(auth), eb = enc.encode(expected);
+      let mismatch = ab.length !== eb.length ? 1 : 0;
+      const len = Math.max(ab.length, eb.length);
+      for (let i = 0; i < len; i++) mismatch |= (ab[i] ?? 0) ^ (eb[i] ?? 0);
+      if (mismatch !== 0) return json({ error: "unauthorized" }, 401);
+
+      const supa = getServiceClient();
+      if (!supa) return json({ error: "supabase secrets eksik" }, 500);
+
+      // 7 günden eski ticker'ları al, max 60
+      const cutoff = new Date(Date.now() - 7 * 86400000).toISOString();
+      const { data: stale, error: qErr } = await supa
+        .from("fund_cache")
+        .select("ticker, asset_type")
+        .lt("updated_at", cutoff)
+        .limit(60);
+
+      if (qErr) return json({ error: qErr.message }, 500);
+      if (!stale?.length) return json({ refreshed: 0, failed: 0, note: "all fresh" });
+
+      const fmpKey = Deno.env.get("FMP_KEY");
+      let refreshed = 0, failed = 0;
+
+      for (let i = 0; i < stale.length; i++) {
+        const { ticker: t, asset_type: at } = stale[i];
+        try {
+          if (at === "BIST") {
+            const bist = await fetchBist(t);
+            if (!bist.error) {
+              await upsertFundCache(t, "BIST", bist.metrics ?? null, bist.raw?.annual ?? null, null, "isyatirim");
+              refreshed++;
+            } else { failed++; }
+          } else if (fmpKey) {
+            const fmp = await fetchFmp(t, fmpKey);
+            if (fmp.ok) {
+              await upsertFundCache(t, at || "US_STOCK", fmp.metrics ?? null, fmp.annual ?? null, fmp.grades ?? null, "fmp");
+              refreshed++;
+            } else if (fmp.isOutOfPlan) {
+              const edgar = await fetchEdgar(t);
+              if (!edgar.error) {
+                await upsertFundCache(t, at || "US_STOCK", edgar.metrics ?? null, null, null, "edgar");
+                refreshed++;
+              } else { failed++; }
+            } else { failed++; }
+          }
+        } catch { failed++; }
+        if (i < stale.length - 1) await new Promise(r => setTimeout(r, 800));
+      }
+
+      return json({ refreshed, failed, total: stale.length, cutoff });
+    }
+
     const { ticker, asset_type } = body;
     if (!ticker) return json({ error: "ticker required" }, 400);
     if (!/^[A-Z0-9.\-]{1,12}$/i.test(ticker)) return json({ error: "Geçersiz ticker formatı" }, 400);
@@ -700,6 +795,7 @@ Deno.serve(async (req) => {
     if (asset_type === "BIST") {
       const bist = await fetchBist(ticker);
       if (bist.error) return json({ error: bist.error }, 422);
+      upsertFundCache(ticker, "BIST", bist.metrics ?? null, bist.raw?.annual ?? null, null, "isyatirim");
       return json({
         ticker,
         fetched_at: new Date().toISOString(),
@@ -715,6 +811,7 @@ Deno.serve(async (req) => {
     // 1) FMP dene
     const fmp = await fetchFmp(ticker, fmpKey);
     if (fmp.ok) {
+      upsertFundCache(ticker, asset_type || "US_STOCK", fmp.metrics ?? null, fmp.annual ?? null, fmp.grades ?? null, "fmp");
       return json({
         ticker,
         fetched_at: new Date().toISOString(),
@@ -730,6 +827,7 @@ Deno.serve(async (req) => {
     if (fmp.isOutOfPlan) {
       const edgar = await fetchEdgar(ticker);
       if (!edgar.error) {
+        upsertFundCache(ticker, asset_type || "US_STOCK", edgar.metrics ?? null, null, null, "edgar");
         return json({
           ticker,
           fetched_at: new Date().toISOString(),
