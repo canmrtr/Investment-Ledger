@@ -21,14 +21,29 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Türk şirketi ADR'larının OTC ticker'ı → BIST ticker eşlemesi.
-// FMP+EDGAR ikisi de başarısız olduğunda İş Yatırım'dan BIST verisi çekmek için kullanılır.
-const TURKISH_ADR_MAP: Record<string, string> = {
-  "ERELY": "EREGL",   // Ereğli Demir Çelik
-  "TKCHY": "THYAO",   // Türk Hava Yolları
-  "BKESY": "BIMAS",   // BIM Birleşik Mağazalar
-  // Bankalar (AKBNK vb.) İş Yatırım XI_29 desteklemiyor — bu map'e ekleme.
-};
+// ADR→BIST map — Supabase adr_bist_map tablosundan cache'lenir (1 saat TTL).
+// Yeni eşleşme eklemek için Supabase dashboard → Table Editor → adr_bist_map.
+let adrMapCache: Record<string, string> | null = null;
+let adrMapCacheAt = 0;
+const ADR_MAP_TTL_MS = 60 * 60 * 1000;
+
+async function getAdrMap(): Promise<Record<string, string>> {
+  const now = Date.now();
+  if (adrMapCache && (now - adrMapCacheAt) < ADR_MAP_TTL_MS) return adrMapCache;
+  const supa = getServiceClient();
+  if (!supa) return adrMapCache ?? {};
+  const { data, error } = await supa.from("adr_bist_map").select("adr_ticker, bist_ticker");
+  if (error || !data) return adrMapCache ?? {};
+  const map: Record<string, string> = {};
+  for (const row of data) {
+    if (row.adr_ticker && row.bist_ticker) {
+      map[row.adr_ticker.toUpperCase()] = row.bist_ticker.toUpperCase();
+    }
+  }
+  adrMapCache = map;
+  adrMapCacheAt = now;
+  return map;
+}
 
 // Service role client — fund_cache write için. Sadece SUPABASE_URL + SERVICE_ROLE_KEY
 // inject edilmişse oluşturulur.
@@ -818,6 +833,7 @@ Deno.serve(async (req) => {
       if (!stale?.length) return json({ refreshed: 0, failed: 0, note: "all fresh" });
 
       const fmpKey = Deno.env.get("FMP_KEY");
+      const adrMap = await getAdrMap();
       let refreshed = 0, failed = 0;
 
       for (let i = 0; i < stale.length; i++) {
@@ -840,7 +856,7 @@ Deno.serve(async (req) => {
                 await upsertFundCache(t, at || "US_STOCK", edgar.metrics ?? null, null, null, "edgar");
                 refreshed++;
               } else {
-                const bistT = TURKISH_ADR_MAP[t.toUpperCase()];
+                const bistT = adrMap[t.toUpperCase()];
                 if (bistT) {
                   const bist = await fetchBist(bistT);
                   if (!bist.error) {
@@ -906,8 +922,8 @@ Deno.serve(async (req) => {
         raw: edgar.raw,
       });
     }
-    // 3) Türk ADR mapping: ERELY→EREGL gibi, İş Yatırım'dan BIST verisi
-    const bistTicker = TURKISH_ADR_MAP[ticker.toUpperCase()];
+    // 3) Türk ADR mapping: ERELY→EREGL gibi, İş Yatırım'dan BIST verisi (adr_bist_map tablosu)
+    const bistTicker = (await getAdrMap())[ticker.toUpperCase()];
     if (bistTicker) {
       const bist = await fetchBist(bistTicker);
       if (!bist.error) {
