@@ -381,8 +381,10 @@ const rebuildPositions = async (userId, portfolioId = null) => {
 // ── Akıllı Nudge kuralları ────────────────────────────────────────
 // positions: allDisp dizisi — {ticker, name, type, mv, cost, ...}
 // transactions: raw txs dizisi — {way, date, ...}
-// annualRate: xirr sonucu (şimdilik rezerv, gelecek kurallar için)
-// Returns: [{id, priority, message, actionTab}] sorted by priority asc
+// healthRedCount: AnalysisTab'dan gelen kırmızı metrik sayısı (number|null)
+// annualRate: xirr sonucu (number|null|NaN)
+// displayCur: "USD"|"TRY"
+// Returns: [{id, priority, message, actionTab, actionCard?}] sorted by priority asc
 const TYPE_LABELS = {
   US_STOCK: 'ABD hisselerinden',
   BIST: 'BIST hisselerinden',
@@ -392,12 +394,11 @@ const TYPE_LABELS = {
   FX: 'dövizden'
 };
 
-const computeNudges = (positions, transactions, annualRate) => {
+const computeNudges = (positions, transactions, healthRedCount, annualRate, displayCur) => {
   if (!positions || positions.length === 0) return [];
   const nudges = [];
 
   // P0: Konsantrasyon — tek pozisyon >%35
-  // hasMV: tüm pozisyonlarda fiyat verisi mevcut olduğunda çalış
   const hasMV = positions.every(p => p.mv != null);
   const totalMV = positions.reduce((a, p) => a + (p.mv ?? p.cost ?? 0), 0);
   if (hasMV && totalMV > 0) {
@@ -440,6 +441,31 @@ const computeNudges = (positions, transactions, annualRate) => {
       message: `Portföyün tamamı ${label} oluşuyor`,
       actionTab: 'search'
     });
+  }
+
+  // P1: Sağlık skoru — 3+ kırmızı metrik
+  if (healthRedCount != null && healthRedCount >= 3) {
+    nudges.push({
+      id: 'health_score',
+      priority: 1,
+      message: `${healthRedCount} metrikte zayıf sağlık göstergesi var`,
+      actionTab: 'analysis',
+      actionCard: 'health'
+    });
+  }
+
+  // P1: XIRR — enflasyon altı getiri
+  const xirrNum = annualRate != null ? Number(annualRate) : NaN;
+  if (!isNaN(xirrNum) && xirrNum !== 0) {
+    const threshold = displayCur === 'TRY' ? 0.40 : 0.05;
+    if (xirrNum < threshold) {
+      nudges.push({
+        id: 'xirr_low',
+        priority: 1,
+        message: 'Portföy getirisi enflasyonun altında kalıyor olabilir (tahmini)',
+        actionTab: 'analysis'
+      });
+    }
   }
 
   return nudges.sort((a, b) => a.priority - b.priority);
