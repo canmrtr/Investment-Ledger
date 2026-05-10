@@ -216,7 +216,7 @@ function App({session}){
       } else if(pf.privacy_level==="allocation_only"){
         const{data,error}=await sb.rpc("get_allocation_only_positions",{p_portfolio_id:publicViewId});
         if(error||data?.error){flash_("Portföy yüklenemedi","err");setPublicViewId(null);return;}
-        positions=Array.isArray(data)?data:[];
+        positions=Array.isArray(data)?data:[];  // guard against null/unexpected shape from RPC
       }
       const{data:owner}=await sb.from("profiles").select("username,display_name,avatar_emoji").eq("user_id",pf.user_id).maybeSingle();
       setPublicViewData({portfolio:pf,positions,owner:owner||{}});
