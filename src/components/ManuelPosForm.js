@@ -116,18 +116,8 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     const{error:te}=await sb.from("transactions").insert(tx);
     if(te){flash_(te.message,"err");setSaving(false);return;}
 
-    // Pozisyonu güncelle
-    const ex=pos.find(x=>x.ticker===tk);
-    const ns=(ex?.shares||0)+sh;
-    const na=((ex?.shares||0)*(ex?.avgCost||0)+sh*pr)/ns;
-    await sb.from("positions").upsert({
-      user_id:user.id,ticker:tk,name:nm,type:form.type,
-      shares:+ns.toFixed(6),avg_cost:+na.toFixed(6),
-      currency:form.currency,broker:form.broker||"",
-      unit:form.type==="GOLD"?(form.unit||'oz'):null,
-      updated_at:new Date().toISOString(),
-      portfolio_id:portfolioId
-    },{onConflict:"user_id,portfolio_id,ticker"});
+    const rebuilt=await rebuildPositions(user.id,portfolioId);
+    if(rebuilt===null){flash_("Pozisyon güncellenemedi","err");setSaving(false);return;}
 
     await loadData();
     flash_(`${tk} işlem geçmişine ve pozisyona eklendi ✓`);
