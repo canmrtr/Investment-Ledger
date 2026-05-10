@@ -1107,7 +1107,8 @@ function App({session}){
                 if(!(await confirm_("Tüm pozisyonlar sıfırlanıp işlemlerden yeniden hesaplanacak. Devam edilsin mi?",{okLbl:"Yeniden Hesapla",danger:true})))return;
                 const n=await rebuildPositions(user.id,activePortfolioId);
                 await loadData();
-                flash_(`Pozisyonlar yeniden hesaplandı · ${n} pozisyon`);
+                if(n===null){flash_("Pozisyonlar güncellenemedi","err");}
+                else{flash_(`Pozisyonlar yeniden hesaplandı · ${n} pozisyon`);}
               }}>♻️ Pozisyonları Yeniden Hesapla</button>
               <button onClick={async()=>{
                 const tickers=pos.filter(p=>p.type!=="BIST").map(p=>p.ticker);
@@ -1117,7 +1118,8 @@ function App({session}){
                 if(inserted>0){
                   const n=await rebuildPositions(user.id,activePortfolioId);
                   await loadData();
-                  flash_(`${inserted} yeni split bulundu · ${n} pozisyon güncellendi`);
+                  if(n===null){flash_("Pozisyonlar güncellenemedi","err");}
+                  else{flash_(`${inserted} yeni split bulundu · ${n} pozisyon güncellendi`);}
                 }else{
                   flash_("Split verisi güncel, değişiklik yok");
                 }

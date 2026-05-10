@@ -24,7 +24,7 @@ BEGIN
   DELETE FROM positions
   WHERE user_id = p_user_id AND portfolio_id = p_portfolio_id;
 
-  IF jsonb_array_length(p_positions) > 0 THEN
+  IF p_positions IS NOT NULL AND jsonb_array_length(p_positions) > 0 THEN
     INSERT INTO positions (
       user_id, portfolio_id, ticker, name, type,
       shares, avg_cost, currency, broker, unit, updated_at

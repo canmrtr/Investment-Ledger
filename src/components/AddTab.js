@@ -184,7 +184,8 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
     const posCount=await rebuildPositions(user.id,portfolioId);
     await loadData();
 
-    setProgStep(`✓ ${ok} işlem · ${posCount} pozisyon aktarıldı`+(csvExtraSkip>0?` · ${csvExtraSkip} satır atlandı`:""));
+    if(posCount===null){flash_("Pozisyonlar güncellenemedi","err");}
+    else{setProgStep(`✓ ${ok} işlem · ${posCount} pozisyon aktarıldı`+(csvExtraSkip>0?` · ${csvExtraSkip} satır atlandı`:""));}
     setProgPct(100);setProgDone(true);setCsvBusy(false);
     setTimeout(()=>{setCsvText("");setCsvRows([]);setProgStep("");setProgPct(0);setProgDone(false);},CFG.CSV_PROGRESS_MS);
   };
