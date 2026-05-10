@@ -1,4 +1,4 @@
-const CACHE = 'il-shell-v1';
+const CACHE = 'il-shell-v2';
 const SHELL = [
   '/Investment-Ledger/',
   '/Investment-Ledger/index.html',
@@ -37,7 +37,21 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Shell assets — cache-first, fall back to network
+  // JS/CSS source files — network-first so code changes are picked up immediately
+  if (url.pathname.match(/\.(js|css)$/)) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok && e.request.method === 'GET') {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Shell assets (HTML, manifest) — cache-first, fall back to network
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
