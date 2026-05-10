@@ -633,7 +633,7 @@ function App({session}){
                         <button className={displayCur==="TRY"?"on":""} onClick={()=>setDisplayCur("TRY")} aria-label="TRY göster">₺</button>
                       </div>
                     </div>
-                    <div style={{fontSize:32,fontWeight:400,fontFamily:"'DM Serif Display',serif",letterSpacing:"-0.02em",lineHeight:1.1}}>{mask(dSym+fmt(tM))}</div>
+                    <div style={{fontSize:32,fontWeight:400,fontFamily:"var(--font-display)",letterSpacing:"-0.02em",lineHeight:1.1}}>{mask(dSym+fmt(tM))}</div>
                     <div style={{marginTop:8,paddingTop:7,borderTop:"1px solid var(--border)",display:"flex",justifyContent:"space-between",alignItems:"baseline"}}>
                       <span className="lbl" style={{marginBottom:0}}>Maliyet</span>
                       <span className="mono dim" style={{fontSize:12}}>{mask(dSym+fmt(tC))}</span>
@@ -744,7 +744,7 @@ function App({session}){
                       {missingPriceCount>0&&blockDeltaPct!=null&&(
                         <span style={{fontSize:10,color:"var(--text3)"}} data-tip={`${missingPriceCount} ticker için ${sel.lbl} fiyatı eksik`}>{missingPriceCount} eksik</span>
                       )}
-                      {!hide&&<span style={{fontSize:15,fontWeight:500,fontFamily:"'DM Mono','Fira Code',monospace",color:"var(--text)"}}>{mask(cfg.sym+fmt(totMv,0))}</span>}
+                      {!hide&&<span style={{fontSize:15,fontWeight:500,fontFamily:"var(--font-numeric)",color:"var(--text)"}}>{mask(cfg.sym+fmt(totMv,0))}</span>}
                       <span style={{fontSize:11,color:"var(--text3)"}}>{isOpen?"▾":"▸"}</span>
                     </div>
                   </div>
@@ -1109,7 +1109,7 @@ function App({session}){
                       <span className={"dot "+(connTest.ok?"ok":"off")}></span>
                       <span className="mono">HTTP {connTest.status}</span>
                     </div>
-                    <pre style={{margin:0,fontSize:10,fontFamily:"'DM Mono',monospace",color:"var(--text2)",whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:200,overflow:"auto"}}>{connTest.body}</pre>
+                    <pre style={{margin:0,fontSize:10,fontFamily:"var(--font-numeric)",color:"var(--text2)",whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:200,overflow:"auto"}}>{connTest.body}</pre>
                   </>}
               </div>
             )}

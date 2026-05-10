@@ -728,27 +728,27 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
               <div style={{background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
                 <div className="lbl">Portföy Değeri</div>
-                <div style={{fontFamily:"DM Mono,monospace",fontSize:15,fontWeight:700,marginTop:4,color:"var(--info)"}}>
+                <div style={{fontFamily:"var(--font-numeric)",fontSize:15,fontWeight:700,marginTop:4,color:"var(--info)"}}>
                   {hide ? mask() : fmtAmt(totalMV)}
                 </div>
               </div>
               <div style={{background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
                 <div className="lbl">Aylık Getiri {isApprox&&<span style={{color:"var(--text3)"}}>~</span>}</div>
-                <div style={{fontFamily:"DM Mono,monospace",fontSize:15,fontWeight:700,marginTop:4,
+                <div style={{fontFamily:"var(--font-numeric)",fontSize:15,fontWeight:700,marginTop:4,
                              color:monthReturn==null?"var(--text3)":monthReturn>=0?"var(--ok)":"var(--err)"}}>
                   {monthReturn!=null ? fmtPct(monthReturn) : '—'}
                 </div>
               </div>
               <div style={{background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
                 <div className="lbl">YTD {ytd==null&&<span style={{fontSize:9,color:"var(--text3)"}}>snap. yok</span>}</div>
-                <div style={{fontFamily:"DM Mono,monospace",fontSize:15,fontWeight:700,marginTop:4,
+                <div style={{fontFamily:"var(--font-numeric)",fontSize:15,fontWeight:700,marginTop:4,
                              color:ytd==null?"var(--text3)":ytd>=0?"var(--ok)":"var(--err)"}}>
                   {ytd!=null ? fmtPct(ytd) : '—'}
                 </div>
               </div>
               <div style={{background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
                 <div className="lbl">Temettü</div>
-                <div style={{fontFamily:"DM Mono,monospace",fontSize:15,fontWeight:700,marginTop:4,color:"var(--info)"}}>
+                <div style={{fontFamily:"var(--font-numeric)",fontSize:15,fontWeight:700,marginTop:4,color:"var(--info)"}}>
                   {hide ? mask() : fmtAmt(dividends)}
                 </div>
               </div>
@@ -764,7 +764,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
               <div key={row.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
                                           padding:"5px 0",borderTop:"1px solid var(--border)"}}>
                 <span style={{fontSize:12,color:"var(--text2)",fontWeight:500}}>{row.label}</span>
-                <span style={{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:700,
+                <span style={{fontFamily:"var(--font-numeric)",fontSize:12,fontWeight:700,
                               color:row.ret==null?"var(--text3)":row.ret>=0?"var(--ok)":"var(--err)"}}>
                   {row.approx&&row.ret!=null?"~":""}{fmtPct(row.ret)}
                 </span>
@@ -781,8 +781,8 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                   <div className="lbl" style={{color,marginBottom:5}}>{lbl}</div>
                   {p ? (
                     <>
-                      <div style={{fontFamily:"DM Mono,monospace",fontSize:13,fontWeight:700}}>{p.ticker}</div>
-                      <div style={{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:600,color}}>{fmtPct(p.ret)}</div>
+                      <div style={{fontFamily:"var(--font-numeric)",fontSize:13,fontWeight:700}}>{p.ticker}</div>
+                      <div style={{fontFamily:"var(--font-numeric)",fontSize:12,fontWeight:600,color}}>{fmtPct(p.ret)}</div>
                     </>
                   ) : <div style={{fontSize:11,color:"var(--text3)"}}>—</div>}
                 </div>
@@ -792,7 +792,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
             {/* Net yatırım + dağılım */}
             <div style={{marginTop:12,display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--text2)"}}>
               <span>Net Yatırım</span>
-              <span style={{fontFamily:"DM Mono,monospace",fontWeight:600,
+              <span style={{fontFamily:"var(--font-numeric)",fontWeight:600,
                             color:netInvested>=0?"var(--ok)":"var(--err)"}}>
                 {hide ? mask() : `${netInvested>=0?'+':''}${fmtAmt(Math.abs(netInvested))}`}
               </span>
@@ -845,7 +845,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                 </div>
               </div>
               <div style={{textAlign:"center",padding:"12px 0",borderBottom:"1px solid var(--border)",marginBottom:12}}>
-                <div style={{fontFamily:"DM Mono,monospace",fontSize:28,fontWeight:700,
+                <div style={{fontFamily:"var(--font-numeric)",fontSize:28,fontWeight:700,
                              color:monthReturn==null?"var(--text3)":monthReturn>=0?"var(--ok)":"var(--err)"}}>
                   {isApprox?"~":""}{fmtPct(monthReturn)}
                 </div>
@@ -864,7 +864,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                 <div key={row.label} style={{display:"flex",justifyContent:"space-between",
                                             padding:"4px 0",fontSize:12}}>
                   <span style={{color:"var(--text3)"}}>{row.label}</span>
-                  <span style={{color:row.color,fontFamily:"DM Mono,monospace",fontWeight:600}}>{row.val}</span>
+                  <span style={{color:row.color,fontFamily:"var(--font-numeric)",fontWeight:600}}>{row.val}</span>
                 </div>
               ))}
               <div style={{marginTop:12,textAlign:"center",fontSize:10,color:"rgba(201,168,76,0.5)",letterSpacing:.5}}>
@@ -916,7 +916,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                     {isExpanded&&typePos.map(({p,v})=>(
                       <div key={p.ticker} className="pie-row" onClick={()=>openDetail(p.ticker)} style={{paddingLeft:20,cursor:"pointer",opacity:.85}}>
                         <span style={{width:6,height:6,borderRadius:"50%",background:s.color,flexShrink:0,marginRight:2}}></span>
-                        <span style={{flex:1,minWidth:0,fontSize:11}}><span style={{fontFamily:"'DM Mono',monospace",fontWeight:500}}>{p.ticker}</span><span style={{color:"var(--text3)",marginLeft:5,fontSize:10}}>{p.name}</span></span>
+                        <span style={{flex:1,minWidth:0,fontSize:11}}><span style={{fontFamily:"var(--font-numeric)",fontWeight:500}}>{p.ticker}</span><span style={{color:"var(--text3)",marginLeft:5,fontSize:10}}>{p.name}</span></span>
                         <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{s.value>0?(v/s.value*100).toFixed(1):"—"}%</span>
                       </div>
                     ))}
@@ -1176,7 +1176,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                   const pct = (sum / maxYearSum) * 100;
                   return (
                     <div key={year} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0"}}>
-                      <span style={{flex:"0 0 50px",fontFamily:"'DM Mono',monospace",fontSize:12}}>{year}</span>
+                      <span style={{flex:"0 0 50px",fontFamily:"var(--font-numeric)",fontSize:12}}>{year}</span>
                       <div style={{flex:1,height:6,background:"var(--bg3)",borderRadius:3,overflow:"hidden"}}>
                         <div style={{width:pct+"%",height:"100%",background:"var(--info)",opacity:.6}}/>
                       </div>
@@ -1337,18 +1337,18 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                     {sorted.map(r => (
                       <tr key={r.ticker} className="pos-row" onClick={() => openDetail(r.ticker, r.type, "analysis")}
                         style={{cursor:"pointer"}}>
-                        <td style={{padding:"5px 8px 5px 0",fontWeight:600,fontFamily:"'DM Mono',monospace"}}>
+                        <td style={{padding:"5px 8px 5px 0",fontWeight:600,fontFamily:"var(--font-numeric)"}}>
                           {r.ticker}
                         </td>
-                        <td style={{padding:"5px 8px 5px 0",textAlign:"right",fontFamily:"'DM Mono',monospace"}}>
+                        <td style={{padding:"5px 8px 5px 0",textAlign:"right",fontFamily:"var(--font-numeric)"}}>
                           {r.breakEven != null ? mask(r.sym + fmt(r.breakEven, 2)) : <span className="dim">—</span>}
                         </td>
-                        <td style={{padding:"5px 8px 5px 0",textAlign:"right",fontFamily:"'DM Mono',monospace"}}>
+                        <td style={{padding:"5px 8px 5px 0",textAlign:"right",fontFamily:"var(--font-numeric)"}}>
                           {r.curPrice != null
                             ? mask(r.sym + fmt(r.curPrice, 2))
                             : <span style={{fontSize:10,color:"var(--text3)"}}>Fiyat yok</span>}
                         </td>
-                        <td style={{padding:"5px 0 5px 0",textAlign:"right",fontFamily:"'DM Mono',monospace"}}>
+                        <td style={{padding:"5px 0 5px 0",textAlign:"right",fontFamily:"var(--font-numeric)"}}>
                           {r.distPct != null
                             ? <span className={r.distPct > 0 ? "ok" : "err"} style={{fontWeight:600}}>
                                 {fmtP(r.distPct)}
@@ -1591,7 +1591,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           ? React.createElement("span",{className:"dim",style:{color:"var(--text3)"}},"—")
           : React.createElement("span",{
               className: r>=0?"ok":"err",
-              style:{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:600}
+              style:{fontFamily:"var(--font-numeric)",fontSize:12,fontWeight:600}
             },(r>=0?"+":"")+r.toFixed(2)+"%");
         return (
           <div className="card" style={{marginBottom:14,padding:"16px 18px"}}>
@@ -1795,7 +1795,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
               <div className="stitle">6 Aylık Performans</div>
               {portf6m!=null&&(
-                <span className={portf6m>=0?"ok":"err"} style={{fontFamily:"DM Mono,monospace",fontSize:13,fontWeight:700}}>
+                <span className={portf6m>=0?"ok":"err"} style={{fontFamily:"var(--font-numeric)",fontSize:13,fontWeight:700}}>
                   {portf6m>=0?"+":""}{portf6m.toFixed(2)}%
                 </span>
               )}
@@ -1809,8 +1809,8 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                   <div className="lbl" style={{marginBottom:8,color:"var(--ok)"}}>En İyi</div>
                   {gainers.slice(0,3).map(p=>(
                     <div key={p.ticker} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}}>
-                      <span style={{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:600,color:"var(--text)"}}>{p.ticker}</span>
-                      <span className="ok" style={{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:700}}>+{p.ret.toFixed(1)}%</span>
+                      <span style={{fontFamily:"var(--font-numeric)",fontSize:12,fontWeight:600,color:"var(--text)"}}>{p.ticker}</span>
+                      <span className="ok" style={{fontFamily:"var(--font-numeric)",fontSize:12,fontWeight:700}}>+{p.ret.toFixed(1)}%</span>
                     </div>
                   ))}
                   {gainers.length===0&&<div className="dim" style={{fontSize:11}}>—</div>}
@@ -1819,8 +1819,8 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                   <div className="lbl" style={{marginBottom:8,color:"var(--err)"}}>En Kötü</div>
                   {losers.slice(-3).reverse().map(p=>(
                     <div key={p.ticker} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7}}>
-                      <span style={{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:600,color:"var(--text)"}}>{p.ticker}</span>
-                      <span className="err" style={{fontFamily:"DM Mono,monospace",fontSize:12,fontWeight:700}}>{p.ret.toFixed(1)}%</span>
+                      <span style={{fontFamily:"var(--font-numeric)",fontSize:12,fontWeight:600,color:"var(--text)"}}>{p.ticker}</span>
+                      <span className="err" style={{fontFamily:"var(--font-numeric)",fontSize:12,fontWeight:700}}>{p.ret.toFixed(1)}%</span>
                     </div>
                   ))}
                   {losers.length===0&&<div className="dim" style={{fontSize:11}}>—</div>}
@@ -1926,7 +1926,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                         return (
                           <div key={p.ticker} style={{display:"flex",alignItems:"center",gap:10,padding:"5px 0"}}
                             className="pos-row" onClick={()=>openDetail(p.ticker,p.type,"analysis")}>
-                            <span style={{flex:"0 0 70px",fontSize:12,fontFamily:"'DM Mono',monospace"}}>
+                            <span style={{flex:"0 0 70px",fontSize:12,fontFamily:"var(--font-numeric)"}}>
                               {p.ticker}
                               {p.type==="BIST" && <span style={{fontSize:9,color:"var(--text3)",marginLeft:4}}>BIST</span>}
                             </span>
