@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-10** (Sprint 13 tamamlandı: Akıllı Nudge (c) + Aylık Özet Kopyala + ETF Bölge Dağılımı + İş Yatırım timeout teslim edildi. Sprint 14 planlanıyor.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-10** (Sprint 13 tamamlandı: Akıllı Nudge (c) + Aylık Özet Kopyala + ETF Bölge Dağılımı + İş Yatırım timeout + Brand Kit token migrasyonu teslim edildi. Sprint 14 planlanıyor.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -254,6 +254,7 @@ Bu uygulama üç aşamalı bir yörüngede büyüyor:
 ## Öğrenme & Eğitim
 
 - [ ] **Investment Basics modülü** `[L]` `[P2]` — uygulama içi temel finansal okuryazarlık; bileşik faiz, çeşitlendirme, risk-return, DCA, P/E açıklamaları. Kart serisi veya "lesson" formatı. Yeni kullanıcı onboarding ile entegre olabilir. Can'ın kararıyla sonraya ertelendi.
+- [ ] **Bağlamsal Mikro Öğrenme Katmanı** `[M]` `[P1]` — Brand kit hedef kitlesi uzman olmayan meraklı kullanıcı olduğu için temel kavramlar ayrı "ders" modülüne ertelenmeden ekran içinde açıklanmalı. Tooltip'e gömülü jargon yerine kısa inline cümleler: "F/K: şirket kârına göre fiyatı", "XIRR: para giriş/çıkış zamanını dikkate alan yıllık getiri", "Çeşitlendirme: paran tek yere yığılmasın". Mevcut Investment Basics modülünün hafif ve daha acil sürümü; Dashboard, AnalysisTab ve TickerDetailTab'da öncelikli uygulanır.
 
 ## Gamification & Başarı Sistemi
 
@@ -550,6 +551,155 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 - [ ] **`today` değişkeni üst-seviye fonksiyonu gölgeliyor** `[S]` `[P3]` — ~satır 4195 CAGR bileşeninde `const today = new Date().toISOString()...` (string) tanımlanıyor; üst seviyede `const today = ()=>new Date()...` (fonksiyon) var. `todayStr` olarak adlandır.
 - [ ] **PublicView çift padding** `[S]` `[P3]` — ~satır 5235: `<div style={{padding:"16px 16px 80px"}}>` `<main id="app-main">` içinde render oluyor; `app-main` zaten `padding:24px 20px 60px`. Alt padding ~140px'e ulaşıyor. Outer padding kaldır veya `app-main` padding'ini PublicView'da sıfırla.
 
+## AnalysisTab UX Geri Bildirimi — Can'ın Hedef Kitle İncelemesi
+
+> 2026-05-10 tarihli iki turlu inceleme. Brand kit hedef kitlesi: "Paranın nerede olduğunu görmek isteyen herkes. Uzman olman gerekmiyor — meraklı olman yeterli." Tone taahhüdü: Intelligent Simplicity — no jargon, empowering. Aşağıdaki maddeler bu taahhütle çelişen noktalar ve öneriler.
+
+### Hedef Kitle Fit Değerlendirmesi (Brand Kit Eşlemesi)
+
+- **Mevcut güçlü uyum**: Dashboard, AddTab doğal dil/görüntü/CSV/manual giriş, Watchlist, Search discovery ve temel TickerDetail akışı hedef kullanıcıya iyi uyuyor. Bunlar "paranın nerede olduğunu gör" ihtiyacını düşük sürtünmeyle karşılıyor.
+- **Ana risk**: AnalysisTab ve fundamental yüzeyler "meraklı kullanıcı"dan "finans bilen power-user"a kayıyor. XIRR, HHI, P/E/P/S, ROE, FCF, CAGR, benchmark, break-even gibi metrikler değerli; fakat default yüzeyde açıklamasız yan yana geldiğinde brand promise ile çelişiyor.
+- **Ürün yönü kararı**: Geliştirme önceliği yeni metrik eklemekten çok "yorum katmanı" eklemeye kaymalı. Her karmaşık metrik için önce kullanıcı cümlesi, sonra detay: "Risk yüksek çünkü ilk 3 pozisyon portföyün %62'si" → detayda HHI.
+- **Öncelik değerlendirmesi**: Notes, hedef fiyat notu, nudge kartları, portföy snapshots ve aylık/haftalık özetler hedef kullanıcıya Social Portfolios/Follows/Groups'tan daha yakın değer sağlar. Social backlog kalır, fakat Sprint 12-13 adaylarında kişisel anlama/yorumlama işleri öne alınmalı.
+- **Konumlandırma**: Portfoi "analysis terminal" gibi değil, "akıllı finansal not defteri" gibi hissettirmeli. Advanced metrikler korunur; default deneyim sade özet + anlaşılır aksiyon cümlesi olur.
+
+### Quick Win (1-2 gün)
+
+- [ ] **Finans jargonunu Türkçe kullanıcı diline çevir** `[S]` `[P1]` — Brand voice "no Wall Street terminology". Default UI'da `Total Return` → `Toplam Getiri`, `Benchmark` → `Karşılaştırma`, `Realized` → `Gerçekleşen`, `Unrealized` → `Kağıt üstündeki`, `Trade` → `İşlem`, `XIRR` → `Yıllık Getiri` (alt açıklamada XIRR), `P/E/P/S` → `F/K/F/S`. Kısaltmalar detay/tooltip içinde kalabilir.
+- [ ] **Karmaşık kartlara önce sonuç cümlesi ekle** `[S]` `[P1]` — Sağlık, Konsantrasyon, Kur Riski, Dayanıklılık, Başa Baş ve Fundamental checklist kartları metrik tablosundan önce tek sade sonuç göstermeli: "Portföyün tek hisseye fazla yoğunlaşmış", "Kur riskin ağırlıklı USD", "Bu şirket kârlı büyüyor ama değerleme pahalı". Mevcut nudge copy pattern'i yeniden kullanılabilir.
+- [ ] **Formülleri ekrandan kaldır** `[S]` `[P1]` — "HHI= Σ(ağırlık²) × 10000" (`AnalysisTab.js:1290`) ve "Skor: Yük./Özk <0.5 (+2), FCF Marjı >10% (+2), Op. Marjı >15% (+2) → 1–10" (`AnalysisTab.js:1943`) ve "FUND_THRESHOLDS'tan" (`AnalysisTab.js:1126`) metinleri kaldırılmalı. Sonuç göster, hesabı gösterme. "HHI nedir?" tooltip hâlâ kalabilir.
+- [ ] **Boş durum metinlerini kullanıcı diline çevir** `[S]` `[P2]` — `"snap. yok"` → `"Veri henüz oluşmadı"` (`AnalysisTab.js:743`); `"Bilinmiyor"` sektör → `"Henüz sınıflandırılmadı"`; `"Tüm işlemlerin güncel fiyatı eksik (ticker artık takipte değil)"` → `"Bu işlemler için güncel fiyat bulunamadı"`.
+- [ ] **"Potansiyel Kayıp Simülasyonu" → "Senaryo Analizi" veya "Stres Testi" olarak yeniden adlandır** `[S]` `[P2]` — Korkutucu framing, "empowering" tone ile çelişiyor. Başlık değişikliği + renk nötrleştirme (`AnalysisTab.js:1371`).
+- [ ] **Başa Baş "Uzaklık" kolonuna tooltip ekle** `[S]` `[P2]` — `"Uzaklık"` ne anlama geliyor bilinmiyor. `data-tip="Güncel fiyatın başa baş noktasına yüzde uzaklığı. Pozitif = kâr bölgesinde."` yeterli (`AnalysisTab.js:1333`).
+
+### Orta Vade (1-2 sprint)
+
+- [ ] **AnalysisTab Özet / Detay iki katmana bölünsün** `[L]` `[P2]` — 15 kart tek kaydırma listesi, hiç grup yok; bunaltıcı. **Özet (default):** Aylık Özet, Varlık Dağılımı, Bölge Dağılımı, Sektör Dağılımı, 6 Aylık Performans, Kur Riski. **Detay (toggle ile):** Portföy Sağlık Tablosu, Konsantrasyon Riski / HHI, Başa Baş, Kazanan/Kaybeden, Piyasa Dayanıklılığı, Dönem Bazlı Getiri. Üstte "Özet / Detay" chip toggle — `.seg` pattern kullanılabilir.
+- [ ] **Toplam Komisyon kartını Analiz sekmesinden taşı** `[S]` `[P2]` — Analiz ortasında kaybolmuş. Settings → İşlem Geçmişi altı veya ayrı "Maliyet Özeti" bölümü daha anlamlı.
+- [ ] **Kazanan/Kaybeden Trade — sadeleştir veya Detay katmanına taşı** `[S]` `[P2]` — "Trade", "split-adjusted", noPrice sayım uyarıları hedef kullanıcıyı aşıyor. Terminoloji sadeleştirilmeli; kart Detay katmanına taşınırsa öncelik düşer.
+- [ ] **Sağlık Tablosu 🟢🟡🔴 sayılarına inline açıklama ekle** `[S]` `[P2]` — Tooltip touch'ta çalışmıyor; `"7 sağlıklı · 3 orta · 2 dikkat"` formatı sayı yerine daha okunabilir (`AnalysisTab.js:1001-1007`).
+- [ ] **Konsantrasyon Riski — HHI sonucu yerine trafik ışığı + cümle** `[S]` `[P2]` — "Konsantrasyon: Yüksek" pill ve "İlk 3 pozisyonun %62'si oluşturuyor" cümlesi yeterli; HHI sayısı Detay katmanına veya tooltip'e taşı.
+- [ ] **Fundamental Checklist'i "şirket özeti + detay" modeline çevir** `[M]` `[P2]` — TickerDetailTab'da "Fundamental · Değer Yatırımı Checklist" hedef kullanıcı için önce plain-language özet vermeli: "Kârlılık güçlü · Borç makul · Değerleme pahalı". Ardından mevcut metrik grupları detay olarak kalır. Bu item mevcut Fundamental Ratio/Health işlerinin UX katmanı olarak değerlendirilir; yeni provider gerektirmez.
+- [ ] **Watchlist'e niyet katmanı ekle** `[M]` `[P2]` — Watchlist fiyat/günlük değişim dışında "neden izliyorum?" sorusunu yanıtlamalı. Mevcut "Hedef Fiyat & Değerleme Notu" ve "Hedef Fiyat Bildirimi" item'larıyla birleştir: row'da hedef fiyat, uzaklık ve kısa not gösterimi. Bu hedef kullanıcıya sadece piyasa takibi değil karar hafızası sağlar.
+
+### Uzun Vade (sprint 14+)
+
+- [ ] **Dashboard açılış deneyimi — en az 1 blok default açık** `[S]` `[P3]` — Başlangıçta tüm bloklar kapalı; "paranın nerede olduğunu görmek" için 6 tıklama gerekiyor. En büyük varlık bloğu veya toplam değer bloğu default açık gelebilir (`App.js:50`).
+- [ ] **AnalysisTab kart sıralaması yeniden düzenle** `[M]` `[P3]` — Mevcut sıra: Komisyon kart Sektör dağılımından önce çıkıyor; dağılım kartları birbirinden kopuk. Mantıksal gruplandırma (Dağılım → Performans → Risk → Gelir) zorunlu.
+- [ ] **Social backlog önceliğini kişisel anlama işleri sonrasına çek** `[S]` `[P3]` — Public portfolios/follows/groups özellikleri platform vizyonu için kalır; fakat brand kit hedef kullanıcısı için önce Notes, Target Price, Nudges, Snapshots, Aylık Özet ve mikro öğrenme tamamlanmalı. Sprint seçimi yaparken Social Faz 2+ ancak bu kişisel anlamlandırma katmanı oturduktan sonra öne alınır.
+
+---
+
+## Gruplanmış Backlog / Grooming Index
+
+> Bu bölüm dağınık backlog maddelerini sprint planlama için kümeler. Üstteki eski bölümler detay ve tarihçe olarak kalır; yeni sprint seçimi bu gruplardan yapılır. Aynı işi anlatan maddeler tek epik altında birleştirilir, alt maddeler ilgili eski satırlara referans sayılır.
+
+### Grup A — Brand Fit, Jargon Temizliği ve Anlaşılır Analiz `[P1]`
+
+**Amaç**: Portfoi'yi "analysis terminal" yerine "akıllı finansal not defteri" gibi hissettirmek. Hedef kullanıcı uzman değil; metrikten önce yorum görmeli.
+
+- **A1. Finans jargonunu Türkçe kullanıcı diline çevir** — `Total Return`, `Benchmark`, `Realized`, `Unrealized`, `Trade`, `XIRR`, `P/E/P/S` default UI'da sadeleştirilir. İlgili maddeler: "Finans jargonunu Türkçe kullanıcı diline çevir", "Türkçe/İngilizce term sözlüğü".
+- **A2. Karmaşık kartlara sonuç cümlesi ekle** — Sağlık, Konsantrasyon, Kur Riski, Dayanıklılık, Başa Baş ve Fundamental checklist önce sade sonuç gösterir; metrik tablo detayda kalır. İlgili maddeler: "Karmaşık kartlara önce sonuç cümlesi ekle", "Konsantrasyon Riski — HHI sonucu yerine trafik ışığı + cümle", "Fundamental Checklist'i şirket özeti + detay modeline çevir".
+- **A3. Ekrandaki formül ve teknik metinleri azalt** — HHI formülü, skor formülleri, `FUND_THRESHOLDS`, `snap. yok` gibi ifadeler kullanıcı diline taşınır. İlgili maddeler: "Formülleri ekrandan kaldır", "Boş durum metinlerini kullanıcı diline çevir".
+- **A4. Bağlamsal mikro öğrenme** — F/K, XIRR, çeşitlendirme, risk gibi kavramlar tooltip'e gömülmeden kısa inline açıklanır. İlgili madde: "Bağlamsal Mikro Öğrenme Katmanı"; geniş versiyon: "Investment Basics modülü".
+
+**Değerlendirme**: Sprint 14 için Social/Fundamental yeni metriklerden önce gelmeli. Effort düşük-orta; brand promise'e etkisi yüksek.
+
+### Grup B — AnalysisTab Bilgi Mimarisi ve Görsel Hiyerarşi `[P1/P2]`
+
+**Amaç**: 15 kartlık analiz yüzeyini hedef kullanıcı için taranabilir hale getirmek.
+
+- **B1. Özet / Detay katmanı** — Default AnalysisTab sade özet; detay metrikleri toggle altında. İlgili maddeler: "AnalysisTab Özet / Detay iki katmana bölünsün", "AnalysisTab 15 kart bölüm başlıkları yok", "AnalysisTab kart sıralaması yeniden düzenle".
+- **B2. Kartları mantıksal gruplara ayır** — Dağılım, Risk, Getiri, Gelir, Şirket Sağlığı. İlgili maddeler: "Görsel Hiyerarşi", "Collapsible kural belgesi eksik".
+- **B3. Daha az korkutucu risk dili** — "Potansiyel Kayıp Simülasyonu" → "Senaryo Analizi" / "Stres Testi"; renk ve copy daha nötr. İlgili madde: ilgili rename task.
+- **B4. İkincil kartları doğru yüzeye taşı** — Toplam Komisyon ve Kazanan/Kaybeden İşlem detay katmanına, geçmiş/maliyet bağlamına veya Settings altına alınır.
+
+**Değerlendirme**: A grubu ile birlikte ele alınmalı; tek başına görsel refactor değil, hedef kullanıcı uyumu işi.
+
+### Grup C — Karar Hafızası, Watchlist ve Hatırlatıcılar `[P2]`
+
+**Amaç**: Kullanıcının "neden izliyorum / ne zaman aksiyon alacağım?" sorusunu saklamak.
+
+- **C1. Watchlist niyet katmanı** — Watchlist row'larında hedef fiyat, uzaklık ve kısa not. İlgili maddeler: "Watchlist'e niyet katmanı ekle", "Hedef Fiyat & Değerleme Notu".
+- **C2. Hedef fiyat alarmı** — `target_prices` + cron/email alarm. İlgili madde: "Hedef Fiyat Bildirimi".
+- **C3. Yaklaşan etkinlikler merkezi** — Temettü, bilanço, DCA ve hedef alarmı tek kronolojik yüzeyde. İlgili maddeler: "Yaklaşan Etkinlikler Merkezi", "Temettü Takvimi", "Kazanç Takvimi", "DCA Planı".
+- **C4. Kişisel yatırım notları** — Ticker bazında neden aldım / çıkış stratejisi / öğrenilen ders. İlgili madde: "Kişisel Yatırım Notu".
+
+**Değerlendirme**: Brand fit yüksek. Target-price note + watchlist UI birlikte planlanmalı; alarm backend'i ayrı sprint olabilir.
+
+### Grup D — Portföy Geçmişi, Raporlama ve Muhasebe `[P2/P3]`
+
+**Amaç**: Kullanıcının zaman içindeki ilerlemeyi ve kapanmış işlemleri anlaması.
+
+- **D1. Portfolio snapshots** — Gerçek tarihsel MV, sparkline ve weekly/monthly delta için temel tablo. İlgili maddeler: "Portföy Değer Geçmişi", "Haftalık Portföy Özeti E-postası", "Haftalık AI Portföy Özeti".
+- **D2. Paylaşılabilir özetler** — Aylık kopyala/paylaş, yıllık PDF, haftalık e-posta. İlgili maddeler: "Aylık Performans Özetini Kopyala / Paylaş", "Yıllık Portföy Raporu", weekly digest maddeleri.
+- **D3. Realized P&L ve vergi/muhasebe** — Satılan pozisyon özeti, vergi yılı, FIFO/LIFO, elde tutma süresi. İlgili maddeler: "Satılan Pozisyonların Realized P&L Özeti", "Vergi Yılı Özeti", "FIFO / LIFO", "Ortalama Elde Tutma Süresi".
+
+**Değerlendirme**: Snapshots birçok raporlama işinin önkoşulu; önce D1, sonra D2/D3.
+
+### Grup E — Fundamental ve Risk Analizi Derinleştirme `[P2/P3]`
+
+**Amaç**: Yeni metrikleri eklemek, ancak A/B gruplarındaki sade yorum katmanı oturduktan sonra.
+
+- **E1. Fundamental veri kalitesi** — EDGAR P/E/P/S, BIST P/S, BIST bankalar, sector-aware eşikler, custom thresholds, FMP rate guard.
+- **E2. Şirket/portföy kalite skorları** — Ağırlıklı Portföy F/K, Piyasa Dayanıklılığı, Snowflake Skor, DCF, Peer sektör karşılaştırması, Fundamental Ratio Trendi.
+- **E3. Davranışsal ve performans analizleri** — 52W giriş kalitesi, DCA etkinliği, giriş zamanlaması, streak, beta, likidite, tax-loss fırsatı.
+
+**Değerlendirme**: Kullanıcı değeri yüksek ama jargon riski yüksek; default UI'a eklenmeden önce A2 sonucu cümlesi kuralı uygulanmalı.
+
+### Grup F — Varlık Tipi ve Veri Kaynağı Genişletme `[P2/P3]`
+
+**Amaç**: Yeni asset class ve provider desteği.
+
+- **F1. Yeni varlık tipleri** — Vadeli mevduat, Eurobond/Tahvil, kripto staking, altın işçilik premium.
+- **F2. Provider blokajları ve normalizasyon** — TEFAS WAF, FX/GOLD ham ticker normalize, BIST price-cache TRY-aware, stale fiyat uyarısı, otomatik split tespiti, İş Yatırım timeout.
+- **F3. ETF/fon kapsamı** — ETF country weights tamamlandı; TEFAS tarafı bloker çözülürse FUND kapsamı genişler.
+
+**Değerlendirme**: F2 güvenilirlik işleri feature genişletmeden önce; F1 sırayla ve manuel giriş MVP mantığıyla.
+
+### Grup G — Görselleştirme ve Etkileşim Polish `[P2/P3]`
+
+**Amaç**: Mevcut veriyi daha okunur ve mobilde daha rahat hale getirmek.
+
+- **G1. Grafik etkileşimi** — Sparkline hover, pie segment selection, broker dağılımı, stacked bar dönüşümü.
+- **G2. Dashboard ergonomisi** — varlık türü filtre bar sticky, en az bir blok default açık, history toolbar `.fbar`, search autofocus mobile fix.
+- **G3. Görsel tutarlılık** — card padding token, spinner standartları, loading metni, `.stitle` spacing, boş durum standardı, renk çakışmaları.
+
+**Değerlendirme**: A/B'deki bilgi mimarisi işleriyle çakışan polish maddeleri aynı sprintte yapılmalı; ayrı ayrı küçük refactor olarak da alınabilir.
+
+### Grup H — Erişilebilirlik, Form UX ve Kritik Küçük Buglar `[P1/P2]`
+
+**Amaç**: Temel akışların güvenilir ve erişilebilir olması.
+
+- **H1. Watchlist remove crash** — `confirm_` prop threading. UX audit high finding; küçük ama kritik.
+- **H2. Login UX** — logo centering, mobile primary button 44px, autocomplete attributes, error/success flash.
+- **H3. A11y semantics** — nav aria-label, accordion `aria-expanded`, clickable div → button semantics.
+- **H4. Input/list correctness** — ManuelPosForm tüm currency pozisyonlarını listelesin; EUR sort; negatif format; font family düzeltmeleri.
+
+**Değerlendirme**: Sprint içine "audit fixes" olarak alınabilir; H1/H2 en düşük effort-yüksek etki işleri.
+
+### Grup I — Go Live, Build Sistemi ve Mobil Platform `[P1/P2]`
+
+**Amaç**: Domain, production deploy ve native yolunu temizlemek.
+
+- **I1. Custom domain going live** — canonical domain, GitHub Pages DNS/CNAME, root-path migration, Supabase CORS/Auth URL, smoke test/docs.
+- **I2. Build sistemi** — Vite + JSX, env variables, offline-capable SW, TypeScript opt-in.
+- **I3. Native wrapper** — Capacitor, deep link/OAuth, push notifications, app store metadata, hesap silme.
+
+**Değerlendirme**: Custom domain yapılacaksa I1 tek sprintlik P1; Vite öncesi root-path migration dikkatli yapılmalı.
+
+### Grup J — Social, Public Portfolios ve Gamification `[P3]`
+
+**Amaç**: Platform vizyonu; kişisel anlama katmanı oturduktan sonra.
+
+- **J1. Public/social portfolios** — Social Faz 2, follow sistemi, activity feed, groups.
+- **J2. Gamification** — yatırımcı rozetleri ve başarı sistemi.
+- **J3. Public privacy polish** — public view padding/copy/visibility UX ve RLS doğrulama.
+
+**Değerlendirme**: Orta vadede değerli, fakat brand-fit değerlendirmesine göre A/C/D gruplarından sonra seçilmeli.
+
+---
+
 ## Açık Sorular
 
 - Provider seçimleri ücretsiz mi? Daily rate limit ne? (Massive, FMP free tier sınırı)
@@ -563,23 +713,23 @@ Gruplu öncelik sırasına göre — büyük sprint'lere entegre edilir:
 
 ## Sonraki Adım
 
-Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ✅ (2026-04-30) | Sprint 10 sonrası Watchlist MVP ✅ (2026-05-01) | Sprint 11 ✅ (2026-05-10) | Sprint 12 ✅ (2026-05-10) | **Sprint 13 → aktif**
+Sprint 4 ✅ | Sprint 5 ✅ | Sprint 6 ✅ | Sprint 7 ✅ | Sprint 8 ✅ | Sprint 9 ✅ | Sprint 10 ✅ (2026-04-30) | Sprint 10 sonrası Watchlist MVP ✅ (2026-05-01) | Sprint 11 ✅ (2026-05-10) | Sprint 12 ✅ (2026-05-10) | Sprint 13 ✅ (2026-05-10) | **Sprint 14 → aktif**
 
-Sprint 12 retro: Tek milestone olarak Audit Fixes bundle tam teslim edildi — kısa tutuldu (güvenlik düzeltmelerinde rollback alanı bırakılmak istendi). High #1 (avg_cost/shares/broker sızıntısı → SECURITY DEFINER RPC), High #2 (rebuildPositions artık atomik), Medium #1 (ManuelPosForm + delPos), Medium #2 (fetch-prices JWT), Medium #3 (raw shares pct) kapatıldı. Migrations 011+012 apply edildi, fetch-prices deploy edildi.
+Sprint 13 retro: Akıllı Nudge (c) + Aylık Özet Kopyala/Paylaş + ETF Bölge Dağılımı + İş Yatırım fetch timeout + **Brand Kit token migrasyonu** teslim edildi. Brand Kit: `src/styles/tokens.css` oluşturuldu (tüm category/badge/component tokenlar); `TYPE_COLORS` + AnalysisTab renk dizileri brand kit paletine güncellendi; hardcoded `fontFamily` stringlari (26 yer) `var(--font-*)` CSS variable'larına dönüştürüldü; `portfoi-brand-kit.md` Apply Checklist 11/11 ✅.
 
-**Sprint 13 Scope** (2026-05-11 → 2026-05-24):
+**Sprint 13 Scope** (2026-05-10, tamamlandı):
 
-1. **Akıllı Nudge (c)** `[S][P2]` — sağlık skoru (3+ kırmızı metrik) + XIRR vs enflasyon eşiği kuralları + AnalysisTab Portföy Sağlık kartına scroll aksiyonu. Sprint 11'den devredilen son alt-task.
-2. **Aylık Özet Kopyala/Paylaş** `[S][P2]` — `navigator.clipboard.writeText()`; sıfır backend; mevcut Dashboard state'inden metin üretimi. Uzun süredir bekleyen freebie.
-3. **ETF Bölge Dağılımı** `[M][P2]` — FMP country-weightings; `fetch-fundamentals` `mode:"etf-country"` dalı; 90 gün LS cache; Bölge Dağılımı pie güncellenir; plan dosyası mevcut.
-4. **İş Yatırım fetch timeout** `[S][P2]` — `AbortSignal.timeout(8000)` isyatirim call'larına; edge fn asılı kalma güvenlik düzeltmesi.
+1. ~~**Akıllı Nudge (c)**~~ ✅ — sağlık skoru (3+ kırmızı metrik) + XIRR vs enflasyon eşiği kuralları + AnalysisTab Portföy Sağlık kartına scroll aksiyonu.
+2. ~~**Aylık Özet Kopyala/Paylaş**~~ ✅ — `navigator.clipboard.writeText()`; sıfır backend; mevcut Dashboard state'inden metin üretimi.
+3. ~~**ETF Bölge Dağılımı**~~ ✅ — FMP country-weightings; `fetch-fundamentals` `mode:"etf-country"` dalı; 90 gün LS cache; Bölge Dağılımı pie.
+4. ~~**İş Yatırım fetch timeout**~~ ✅ — `AbortSignal.timeout(8000)` isyatirim call'larına.
+5. ~~**Brand Kit token migrasyonu**~~ ✅ — `src/styles/tokens.css`; TYPE_COLORS + AnalysisTab renk dizileri; `var(--font-*)` migration.
 
 **Sprint 14 için Öne Çıkan Adaylar**:
 
-1. **Kullanıcı tanımlı fundamental eşikler — Settings formu** `[M][P2]` — plan dosyası hazır; Settings form UI gerekiyor.
-2. **Social Portfolios Faz 2** `[M][P2]` — `UserProfileModal` + `is_public` toggle + RLS read policy; Faz 1 altyapısı hazır.
-3. **Ağırlıklı Ortalama Portföy P/E** `[S][P2]` — fundamentals cache aggregation; freebie; "Portföyünüzün ortalama F/K'sı X" satırı.
-4. **Piyasa Dayanıklılık Skoru** `[M][P2]` — `resilienceScore()` + AnalysisTab yeni kart; fundamentals cache üzerinden.
-5. **Periyodik agent denetim turu — 4. tur** `[S][P1]` — Sprint 11'den bu yana 3 sprint geçiyor; ETF entegrasyonu + yeni RPC'ler kapsamına giriyor.
+1. **Grup A + B: Brand-fit analiz sadeleştirme** `[M/L][P1]` — jargon temizliği, sonuç cümleleri, formül temizliği, AnalysisTab Özet/Detay veya en azından bölüm başlıkları. Hedef kullanıcı uyumu için Social/ek metriklerden önce.
+2. **Grup H: UX audit quick fixes** `[S/M][P1]` — Watchlist `confirm_` crash, login logo/touch target, Search mobile autofocus, accordion semantics. Düşük effort, yüksek güvenilirlik etkisi.
+3. **Grup C: Watchlist niyet + hedef fiyat notu** `[M][P2]` — Hedef Fiyat & Değerleme Notu ile Watchlist row'larını birleştir; alarm backend'i sonraki sprint olabilir.
+4. **Periyodik agent denetim turu — 4. tur** `[S][P1]` — Sprint 11'den bu yana 3 sprint geçiyor; ETF entegrasyonu + yeni RPC'ler kapsamına giriyor.
 
 > **Yeni eklenenler (2026-05-09)**: "Grup Portföyleri (Faz 5)" → Sosyal & Kişiselleştirme bölümüne eklendi `[L][P3]`; Faz 2+3 tamamlanmadan scope'a girmez (Sprint 13+ hedef). "Akıllı Nudge Kartları" → yeni "Akıllı Öneriler & Nudge Sistemi" bölümüne eklendi `[M][P2]`; Sprint 11 scope'una alındı. "Haftalık AI Portföy Özeti" aynı bölümde `[M][P3]` ile backlog'a eklendi.

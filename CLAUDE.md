@@ -61,7 +61,8 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 - **Dark renk tokenleri**: `--bg #000` / `--bg2 #0c0c0c` / `--bg3 #141414` / `--bg4 #1c1c1c`; `--text #f0ede8`, `--text2 #b8b8b8`, `--text3 #888888`; `--info #C9A84C` (Portfoi Gold), `--ok #00d97e`, `--err #ff3366`, `--warn #ffb800`; `--border rgba(255,255,255,0.06)` 1px solid; `--border2 rgba(201,168,76,0.28)`.
 - **Light tema** (`portfoi-brand-kit.md` Section 7): `--bg #F5F3EE` (Arctic, beyaz değil) / `--text #0D1117` (Midnight, wordmark rengi) / `--info #8A6A1F` (Gold Muted) / `--topbar-bg rgba(245,243,238,0.90)`. İkon ve border gold her iki temada aynı kalır.
 - **Font**: `DM Serif Display` (hero sayılar/başlıklar) + `DM Sans` (body 300-700) + `DM Mono` (sayılar/ticker). `--font-display`/`--font-body`/`--font-numeric` CSS değişkenleri. `.lbl`/`.stitle`/`.kk`: 10px uppercase `font-weight:500`.
-- **Aktif sekme**: pill `rgba(201,168,76,0.12)`, alt çizgi yok. **FAB**: 54px, `var(--info)` (gold), `bottom:76px`. **Dashboard hero**: Piyasa Değeri değeri 32px `DM Serif Display`.
+- **Aktif sekme**: pill `rgba(201,168,76,0.12)`, alt çizgi yok. **FAB**: 54px, `var(--info)` (gold), `bottom:76px`. **Dashboard hero**: Piyasa Değeri değeri 32px `var(--font-display)`.
+- **Kod içi font kullanımı**: inline style'larda hardcoded font string yok — `fontFamily:"var(--font-display)"` / `fontFamily:"var(--font-numeric)"` kullan.
 - **Logo dosyaları** (`Logo/` dizini): `logo-mark-dark.png` + `logo-mark-light.png` (sadece ikon) — topbar'da 32px; `logo-full-dark.png` + `logo-full-light.png` (ikon + wordmark + tagline) — login'de 80px. CSS `.theme-logo-dark`/`.theme-logo-light` sınıfları `[data-theme="light"]` selector ile otomatik geçiş yapar — JS gerekmez. `.logo-mark`/`.logo-text` ve `.login-logo`/`.login-title` kullanılmıyor artık.
 
 ### Para & formatlama
@@ -93,7 +94,10 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 `RATE_LIMIT_MS=7500`, `DUST_THRESHOLD=0.0001`, `CSV_BATCH_SIZE=50`, `FLASH_MS=3500`
 
 ### Renk paleti (TYPE_COLORS)
-`US_STOCK:#30d158`, `FUND:#0a84ff`, `CRYPTO:#ff9f0a`, `BIST:#bf5af2`, `GOLD:#ffd60a`, `FX:#8e8e93`
+`US_STOCK:#8B5CF6`, `FUND:#3B82F6`, `CRYPTO:#06B6D4`, `BIST:#F97316`, `GOLD:#C9A84C`, `FX:#10B981`
+
+### Brand kit token dosyası
+`src/styles/tokens.css` — tüm brand kit CSS custom property'leri (category colors, badge tokens, component tokens, extended palette). Kaynak: `portfoi-brand-kit.md`. `index.html`'deki mevcut `--bg/--text/--info/--font-*` tokenleri tekrarlanmaz.
 
 ### Flash & Confirm
 - `flash_(msg, "ok"|"err")` — 3.5 sn otomatik kapanır.
