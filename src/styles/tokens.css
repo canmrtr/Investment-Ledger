@@ -1,0 +1,82 @@
+/* === PORTFOI BRAND KIT — CSS Custom Properties === */
+/* Source of truth: portfoi-brand-kit.md             */
+
+:root {
+  /* --- Color Tokens (Section 2) --- */
+  --color-bg-primary:     #0D1117;
+  --color-bg-card:        #1A1F2E;
+  --color-bg-light:       #E8F4F8;
+
+  --color-accent:         #C9A84C;
+  --color-accent-muted:   #897544;
+
+  --color-text-primary:   #F5F3EE;
+  --color-text-secondary: #6B7280;
+
+  --color-positive:       #22C55E;
+  --color-negative:       #EF4444;
+
+  /* --- Extended Palette (Section 9) --- */
+  --color-teal:           #005B4D;
+  --color-cream:          #FFEFCA;
+
+  /* --- Category Colors (Section 8) --- */
+  --category-etf:         #3B82F6;
+  --category-gold:        #C9A84C;
+  --category-us-stock:    #8B5CF6;
+  --category-bist:        #F97316;
+  --category-crypto:      #06B6D4;
+  --category-fx:          #10B981;
+  --category-commodity:   #D97706;
+
+  /* --- Category Badge Tokens (Section 8) --- */
+  --badge-etf-bg:         rgba(59,  130, 246, 0.15);
+  --badge-etf-text:       #3B82F6;
+  --badge-gold-bg:        rgba(201, 168,  76, 0.15);
+  --badge-gold-text:      #C9A84C;
+  --badge-us-stock-bg:    rgba(139,  92, 246, 0.15);
+  --badge-us-stock-text:  #8B5CF6;
+  --badge-bist-bg:        rgba(249, 115,  22, 0.15);
+  --badge-bist-text:      #F97316;
+  --badge-crypto-bg:      rgba(  6, 182, 212, 0.15);
+  --badge-crypto-text:    #06B6D4;
+  --badge-fx-bg:          rgba( 16, 185, 129, 0.15);
+  --badge-fx-text:        #10B981;
+  --badge-commodity-bg:   rgba(217, 119,   6, 0.15);
+  --badge-commodity-text: #D97706;
+
+  /* --- Delta Badges (Section 4) --- */
+  --badge-positive-bg:    rgba(34,  197,  94, 0.15);
+  --badge-positive-text:  var(--color-positive);
+  --badge-negative-bg:    rgba(239,  68,  68, 0.15);
+  --badge-negative-text:  var(--color-negative);
+
+  /* --- Component Tokens (Section 4) --- */
+  --fab-bg:               var(--color-accent);
+  --fab-size:             56px;
+  --fab-border-radius:    28px;
+  --fab-icon-color:       #0D1117;
+
+  --tab-active-color:     var(--color-accent);
+  --tab-inactive-color:   var(--color-text-secondary);
+  --tab-bg:               var(--color-bg-primary);
+
+  --card-bg:              var(--color-bg-card);
+  --card-border:          1px solid rgba(201, 168, 76, 0.12);
+  --card-radius:          12px;
+  --card-padding:         16px;
+
+  --search-border:        var(--color-accent);
+  --search-bg:            var(--color-bg-card);
+  --search-text:          var(--color-text-primary);
+}
+
+/* --- Light Theme Overrides (Section 7) --- */
+[data-theme="light"] {
+  --color-bg-primary:   #F5F3EE;
+  --color-bg-card:      #E8E4DA;
+  --color-text-primary: #0D1117;
+  --color-accent:       #C9A84C;
+  --color-accent-muted: #897544;
+  --tab-bg:             #F5F3EE;
+}
