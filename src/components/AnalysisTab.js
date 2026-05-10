@@ -1,3 +1,187 @@
+// ── Aylık Özet helper fonksiyonları ─────────────────────────────
+
+const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran',
+                   'Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+
+function monthLabel(ym) { // "2026-04" → "Nisan 2026"
+  const [y, m] = ym.split('-');
+  return `${TR_MONTHS[parseInt(m, 10) - 1]} ${y}`;
+}
+
+function prevMonths(n) { // Son n tamamlanmış ay listesi (en yeni önce)
+  const months = [];
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - 1); // Bir önceki ay
+  for (let i = 0; i < n; i++) {
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    months.push({ value: ym, label: monthLabel(ym) });
+    d.setMonth(d.getMonth() - 1);
+  }
+  return months;
+}
+
+function calcMonthlyMetrics({ ym, pos, txs, prc, hist, snapshots, cnv }) {
+  const [y, m] = ym.split('-').map(Number);
+  const monthStart  = `${ym}-01`;
+  const nextStart   = m === 12
+    ? `${y + 1}-01-01`
+    : `${y}-${String(m + 1).padStart(2, '0')}-01`;
+
+  const priceCurOf = p => p.type === 'BIST' ? 'TRY' : (p.currency === 'EUR' ? 'EUR' : 'USD');
+  const snapKey    = (ticker, date) => `${ticker}_${date}`;
+  const snapPrice  = (ticker, date) => snapshots[snapKey(ticker, date)];
+
+  const tickerDelta = ticker => {
+    const start = snapPrice(ticker, monthStart);
+    const end   = prc[ticker];
+    if (start != null && end != null) return { ret: (end - start) / start * 100, approx: false };
+    const h = hist[ticker];
+    if (h?.p_m1 != null && end != null) return { ret: (end - h.p_m1) / h.p_m1 * 100, approx: true };
+    return null;
+  };
+
+  const hasSnapshots = pos.some(p => snapPrice(p.ticker, monthStart) != null);
+
+  const monthTxs = txs.filter(t => t.date >= monthStart && t.date < nextStart);
+
+  const dividends = monthTxs
+    .filter(t => t.way === 'DIV')
+    .reduce((s, t) => s + (cnv(+t.total || (+t.price * +t.shares), t.currency || 'USD') || 0), 0);
+
+  const netInvested = monthTxs
+    .filter(t => t.way !== 'DIV')
+    .reduce((s, t) => {
+      const amt = cnv(+t.total || (+t.price * +t.shares), t.currency || 'USD') || 0;
+      return s + (t.way === 'BUY' ? amt : -amt);
+    }, 0);
+
+  const eligible = pos.map(p => {
+    const delta = tickerDelta(p.ticker);
+    const pr    = prc[p.ticker];
+    if (!delta || !pr) return null;
+    const mv = cnv(p.shares * pr, priceCurOf(p)) || 0;
+    return { ticker: p.ticker, delta, mv };
+  }).filter(Boolean);
+
+  const eligibleMV  = eligible.reduce((s, p) => s + p.mv, 0);
+  const monthReturn = eligibleMV > 0
+    ? eligible.reduce((s, p) => s + (p.delta.ret / 100) * (p.mv / eligibleMV), 0) * 100
+    : null;
+  const isApprox = !hasSnapshots;
+
+  const totalMV = pos.reduce((s, p) => {
+    const pr = prc[p.ticker];
+    return pr ? s + (cnv(p.shares * pr, priceCurOf(p)) || 0) : s;
+  }, 0);
+
+  const posDeltas = pos
+    .map(p => { const d = tickerDelta(p.ticker); return d ? { ticker: p.ticker, ret: d.ret } : null; })
+    .filter(Boolean)
+    .sort((a, b) => b.ret - a.ret);
+  const bestPos  = posDeltas[0]  || null;
+  const worstPos = posDeltas[posDeltas.length - 1] || null;
+
+  const janStart   = `${y}-01-01`;
+  const ytdEligible = pos.map(p => {
+    const start = snapPrice(p.ticker, janStart);
+    const end   = prc[p.ticker];
+    if (!start || !end) return null;
+    const mv = cnv(p.shares * end, priceCurOf(p)) || 0;
+    return { ret: (end - start) / start * 100, mv };
+  }).filter(Boolean);
+  const ytdMV = ytdEligible.reduce((s, p) => s + p.mv, 0);
+  const ytd   = ytdMV > 0
+    ? ytdEligible.reduce((s, p) => s + (p.ret / 100) * (p.mv / ytdMV), 0) * 100
+    : null;
+
+  const benchDelta = ticker => {
+    const start = snapPrice(ticker, monthStart);
+    const end   = prc[ticker];
+    if (start != null && end != null) return (end - start) / start * 100;
+    const h = hist[ticker];
+    return (h?.p_m1 != null && end != null) ? (end - h.p_m1) / h.p_m1 * 100 : null;
+  };
+  const benchmarks = { spy: benchDelta('SPY'), xu100: benchDelta('XU100') };
+
+  const TYPE_LBL = { US_STOCK:'ABD', BIST:'BIST', FUND:'ETF', CRYPTO:'Kripto', GOLD:'Altın', FX:'Döviz' };
+  const allocMap = {};
+  pos.forEach(p => {
+    const pr = prc[p.ticker];
+    if (!pr) return;
+    const mv  = cnv(p.shares * pr, priceCurOf(p)) || 0;
+    const lbl = TYPE_LBL[p.type] || p.type;
+    allocMap[lbl] = (allocMap[lbl] || 0) + mv;
+  });
+  const allocTotal = Object.values(allocMap).reduce((s, v) => s + v, 0);
+  const allocation = Object.fromEntries(
+    Object.entries(allocMap).map(([k, v]) => [k, allocTotal > 0 ? v / allocTotal * 100 : 0])
+  );
+
+  return { monthReturn, isApprox, totalMV, dividends, netInvested, bestPos, worstPos, ytd, benchmarks, allocation, monthTxsCount: monthTxs.length };
+}
+
+function buildSummaryText({ metrics, monthLbl, dSym }) {
+  const { monthReturn, isApprox, totalMV, dividends, netInvested, bestPos, worstPos, ytd, benchmarks, allocation } = metrics;
+  const approx = isApprox ? '~' : '';
+  const fmtPct  = r => r != null ? `${r >= 0 ? '+' : ''}${r.toFixed(1)}%` : '—';
+  const fmtAmt  = v => `${dSym}${Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toFixed(1) + 'k' : Math.abs(v).toFixed(0)}`;
+
+  const portR  = monthReturn;
+  const spyR   = benchmarks.spy;
+  const xu100R = benchmarks.xu100;
+
+  const spyLine   = `  SPY      ${fmtPct(spyR)}${spyR != null && portR != null ? (portR >= spyR ? '  ✓ yendim' : '  ✗ geride') : ''}`;
+  const xu100Line = `  XU100    ${fmtPct(xu100R)}${xu100R != null && portR != null ? (portR >= xu100R ? '  ✓ yendim' : '  ✗ geride') : ''}`;
+  const ytdLine   = ytd != null ? `📅 YTD:      ${fmtPct(ytd)}` : null;
+  const allocStr  = Object.entries(allocation)
+    .filter(([, v]) => v >= 1)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `${k} %${v.toFixed(0)}`)
+    .join(' · ');
+
+  const lines = [
+    `📊 ${monthLbl} — Portföy Özeti`,
+    '',
+    `💰 Değer:    ${fmtAmt(totalMV)}`,
+    portR != null ? `📈 Aylık:    ${approx}${fmtPct(portR)}` : null,
+    ytdLine,
+    '',
+    'Benchmark:',
+    `  Portföy  ${approx}${fmtPct(portR)}`,
+    spyLine,
+    xu100Line,
+    '',
+    bestPos  ? `🏆 En İyi:  ${bestPos.ticker}  ${fmtPct(bestPos.ret)}`   : null,
+    worstPos ? `📉 En Kötü: ${worstPos.ticker}  ${fmtPct(worstPos.ret)}` : null,
+    '',
+    `💵 Temettü:     ${fmtAmt(dividends)}`,
+    `➕ Net Yatırım: ${netInvested >= 0 ? '+' : ''}${fmtAmt(Math.abs(netInvested))}`,
+    allocStr ? `🗂 Dağılım: ${allocStr}` : null,
+    '',
+    '— Portfoi ile hesaplandı',
+  ].filter(l => l !== null);
+
+  return lines.join('\n');
+}
+
+async function downloadOrShareCard(ref, monthLbl) {
+  if (!window.html2canvas || !ref.current) return;
+  const canvas = await window.html2canvas(ref.current, { backgroundColor: '#0c0c0c', scale: 2 });
+  const fileName = `portfoi-${monthLbl.replace(/ /g, '-')}.png`;
+  canvas.toBlob(async blob => {
+    const file = new File([blob], fileName, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return; } catch (_) {}
+    }
+    const a = document.createElement('a');
+    a.download = fileName;
+    a.href = URL.createObjectURL(blob);
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }, 'image/png');
+}
+
 // ── AnalysisTab — Portföy analiz sekmesi (Sprint 1) ────────────
 // Şu an: filtreli varlık dağılımı pie. Sprint 2: bölge / komisyon / win-loss.
 // Filter chip "Genel" → asset type breakdown; spesifik tip → o tipteki ticker breakdown.
