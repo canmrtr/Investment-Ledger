@@ -744,12 +744,13 @@ Deno.serve(async (req) => {
       const supa = getServiceClient();
       if (!supa) return json({ error: "supabase secrets eksik" }, 500);
 
-      // 7 günden eski ticker'ları al, max 60
+      // 7 günden eski ticker'ları al, max 60 — en eski önce (en uzun süre refresh edilmeyeni öncelikle güncelle)
       const cutoff = new Date(Date.now() - 7 * 86400000).toISOString();
       const { data: stale, error: qErr } = await supa
         .from("fund_cache")
         .select("ticker, asset_type")
         .lt("updated_at", cutoff)
+        .order("updated_at", { ascending: true })
         .limit(60);
 
       if (qErr) return json({ error: qErr.message }, 500);
@@ -780,7 +781,7 @@ Deno.serve(async (req) => {
               } else { failed++; }
             } else { failed++; }
           }
-        } catch { failed++; }
+        } catch (e) { console.warn("[refresh-fund-cache]", t, e); failed++; }
         if (i < stale.length - 1) await new Promise(r => setTimeout(r, 800));
       }
 
