@@ -237,7 +237,7 @@ const buildSlicesPath = (sliceArr, CX, CY, R) => {
   });
 };
 
-function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRates,openDetail}){
+function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRates,openDetail,onHealthSummary}){
   // Aylık Özet state
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
@@ -397,6 +397,19 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   ];
   const healthEligible = filteredPos.filter(p=>p.type==="US_STOCK"||p.type==="BIST");
   const healthFiltered = healthFilter==="all" ? healthEligible : healthEligible.filter(p=>p.type===healthFilter);
+  useEffect(()=>{
+    if(!onHealthSummary)return;
+    let redCount=0;
+    const eligible=pos.filter(p=>p.type==="US_STOCK"||p.type==="BIST");
+    eligible.forEach(p=>{
+      const m=fundCache[p.ticker]?.metrics;
+      if(!m)return;
+      HEALTH_METRICS.forEach(([key])=>{
+        if(fundScore(key,m[key])==='bad')redCount++;
+      });
+    });
+    onHealthSummary(redCount);
+  },[fundCache,pos]);
   const healthMissing = healthFiltered.filter(p=>!fundCache[p.ticker]);
   // Piyasa Düşüşü Dayanıklılık Skoru
   const ISY_KNOWN_BANKS = new Set(["GARAN","AKBNK","YKBNK","ISCTR","HALKB","VAKBN","ALBRK","QNBFB","TSKB","ICBCT","SKBNK"]);
@@ -916,7 +929,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           });
         });
         return(
-        <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+        <div className="card" data-card="health" style={{marginBottom:16,padding:"14px 16px"}}>
           {/* Üst bar: başlık + 3 rozet + Detay toggle */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
             <div className="stitle" style={{marginBottom:0}}>Portföy Sağlık Tablosu</div>
