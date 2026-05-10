@@ -214,8 +214,9 @@ function App({session}){
         const{data}=await sb.from("positions").select("ticker,name,type,shares,avg_cost,currency").eq("portfolio_id",publicViewId);
         positions=data||[];
       } else if(pf.privacy_level==="allocation_only"){
-        const{data}=await sb.from("positions").select("ticker,name,type,shares").eq("portfolio_id",publicViewId);
-        positions=data||[];
+        const{data,error}=await sb.rpc("get_allocation_only_positions",{p_portfolio_id:publicViewId});
+        if(error||data?.error){flash_("Portföy yüklenemedi","err");setPublicViewId(null);return;}
+        positions=Array.isArray(data)?data:[];
       }
       const{data:owner}=await sb.from("profiles").select("username,display_name,avatar_emoji").eq("user_id",pf.user_id).maybeSingle();
       setPublicViewData({portfolio:pf,positions,owner:owner||{}});
@@ -889,13 +890,15 @@ function App({session}){
       {tab==="publicview"&&publicViewData&&(()=>{
         const{portfolio,positions,owner}=publicViewData;
         const isFull=portfolio.privacy_level==="full";
-        const totalVal=isFull
-          ? positions.reduce((a,p)=>a+(p.avg_cost||0)*p.shares,0)
-          : positions.reduce((a,p)=>a+p.shares,0);
-        const rows=positions.map(p=>({
-          ...p,
-          pct:totalVal>0?(isFull?(p.avg_cost||0)*p.shares:p.shares)/totalVal*100:0,
-        })).sort((a,b)=>b.pct-a.pct);
+        const rows=isFull
+          ? (()=>{
+              const totalVal=positions.reduce((a,p)=>a+(p.avg_cost||0)*p.shares,0);
+              return positions.map(p=>({
+                ...p,
+                pct:totalVal>0?(p.avg_cost||0)*p.shares/totalVal*100:0,
+              })).sort((a,b)=>b.pct-a.pct);
+            })()
+          : [...positions].sort((a,b)=>b.pct-a.pct);
         return(
           <div>
             {/* Banner */}
