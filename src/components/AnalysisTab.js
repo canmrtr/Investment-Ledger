@@ -119,8 +119,9 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   const [fundBusy,setFundBusy]=useState(false);
   const [fundProg,setFundProg]=useState("");
   const [healthFilter,setHealthFilter]=useState("all"); // all | US_STOCK | BIST
-  // pos değişince yeni eklenen pozisyonların cache'lerini de topla
+  // pos değişince veya eager fetch yeni veri yazınca (fundEagerVer) LS'ten senkronla
   useEffect(()=>{
+    // 1) localStorage fast-path
     setFundCache(prev=>{
       const next={...prev};
       pos.forEach(p=>{
@@ -131,6 +132,29 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       });
       return next;
     });
+
+    // 2) Supabase fund_cache — pg_cron ile güncellenen merkezi veri
+    const tickers=pos
+      .filter(p=>p.type==="US_STOCK"||p.type==="BIST")
+      .map(p=>p.ticker);
+    if(!tickers.length)return;
+
+    sb.from("fund_cache")
+      .select("ticker, asset_type, metrics, annual, grades")
+      .in("ticker",tickers)
+      .then(({data,error})=>{
+        if(error||!data?.length)return;
+        setFundCache(prev=>{
+          const next={...prev};
+          data.forEach(row=>{
+            if(!row.metrics)return;
+            const d={metrics:row.metrics,annual:row.annual??null,grades:row.grades??null};
+            next[row.ticker]=d;
+            fundCacheSet(row.ticker,d);
+          });
+          return next;
+        });
+      });
   },[pos]);
   // Sağlık tablosu için 8 kritik metrik (default; tüm 21 metrik FUND_THRESHOLDS'ta)
   const HEALTH_METRICS=[
@@ -173,14 +197,20 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
     });
     return {good,total};
   };
-  const fetchAllFund = async () => {
-    const allMissing = [...new Map([...healthMissing, ...resilienceMissing].map(p=>[p.ticker,p])).values()];
-    if(allMissing.length===0||fundBusy)return;
+  // force=true: eligible üst kümesinin tamamını yeniden çek (cache fresh olsa bile).
+  // force=false (default): sadece eksikler. App.js mount'ta `fetchAllFundamentalsEager`
+  // arka planda çoğunu doldurduğu için missing genelde 0 olur — buton "Yenile" davranışına geçer.
+  const fetchAllFund = async (force=false) => {
+    const dedup = (arr) => [...new Map(arr.map(p=>[p.ticker,p])).values()];
+    const targets = force
+      ? dedup([...healthEligible, ...resilienceEligible])
+      : dedup([...healthMissing, ...resilienceMissing]);
+    if(targets.length===0||fundBusy)return;
     setFundBusy(true);
     const next={...fundCache};
-    for(let i=0;i<allMissing.length;i++){
-      const p=allMissing[i];
-      setFundProg(`${p.ticker} (${i+1}/${allMissing.length})`);
+    for(let i=0;i<targets.length;i++){
+      const p=targets[i];
+      setFundProg(`${p.ticker} (${i+1}/${targets.length})`);
       try{
         const r=await edgeCall("fetch-fundamentals",{ticker:p.ticker,asset_type:p.type});
         const d=await r.json();
@@ -190,11 +220,25 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           setFundCache({...next});  // her başarıda UI tazele
         }
       }catch(e){DEBUG && console.warn(`[health ${p.ticker}]`,e);}
-      if(i<allMissing.length-1) await new Promise(r=>setTimeout(r,800));
+      if(i<targets.length-1) await new Promise(r=>setTimeout(r,800));
     }
     setFundBusy(false);
     setFundProg("");
   };
+  // "son X sa önce" status için en eski fund cache timestamp'i (eligible ticker'lar arası)
+  const fundOldestTs = (() => {
+    const tickers = [...new Set([...healthEligible, ...resilienceEligible].map(p=>p.ticker))];
+    return fundCacheOldestTs(tickers);
+  })();
+  const fundFreshLabel = (() => {
+    if(!fundOldestTs)return null;
+    const mins = Math.floor((Date.now()-fundOldestTs)/60000);
+    if(mins<1)return "az önce";
+    if(mins<60)return `${mins} dk önce`;
+    const hrs = Math.floor(mins/60);
+    if(hrs<24)return `${hrs} sa önce`;
+    return `${Math.floor(hrs/24)} gün önce`;
+  })();
   // Pozisyon ham MV (orijinal currency'de) → display cur'a çevir
   const mvDisp = (p) => {
     const raw = (prc[p.ticker] || 0) * p.shares;
@@ -520,14 +564,20 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
             );
           })()}
 
-          {healthOpen && healthMissing.length>0 && (
+          {healthOpen && healthEligible.length>0 && (
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"8px 10px",background:"var(--bg3)",borderRadius:8,marginTop:10,flexWrap:"wrap"}}>
               <span style={{fontSize:11,color:"var(--text2)"}}>
                 {fundBusy
                   ? <><span className="spin" style={{width:11,height:11,marginRight:6,verticalAlign:"middle"}}></span>Çekiliyor: {fundProg}</>
-                  : `${healthMissing.length} pozisyonun fundamental verisi henüz çekilmemiş.`}
+                  : healthMissing.length>0
+                    ? `${healthMissing.length} pozisyonun fundamental verisi henüz çekilmemiş.`
+                    : `Veriler güncel${fundFreshLabel?` · son ${fundFreshLabel}`:""}`}
               </span>
-              {!fundBusy && <button className="pri btn-xs" onClick={fetchAllFund}>Eksikleri Çek</button>}
+              {!fundBusy && (
+                <button className={healthMissing.length>0?"pri btn-xs":"btn-xs"} onClick={()=>fetchAllFund(healthMissing.length===0&&resilienceMissing.length===0)}>
+                  {healthMissing.length>0?"Eksikleri Çek":"Yenile"}
+                </button>
+              )}
             </div>
           )}
 
@@ -1350,14 +1400,20 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                   </div>
                 )}
 
-                {resilienceMissing.length > 0 && (
+                {resilienceOpen && (
                   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,padding:"8px 10px",background:"var(--bg3)",borderRadius:8,marginTop:10,flexWrap:"wrap"}}>
                     <span style={{fontSize:11,color:"var(--text2)"}}>
                       {fundBusy
                         ? <><span className="spin" style={{width:11,height:11,marginRight:6,verticalAlign:"middle"}}></span>Çekiliyor: {fundProg}</>
-                        : `${resilienceMissing.length} pozisyon için fundamental veri eksik.`}
+                        : resilienceMissing.length>0
+                          ? `${resilienceMissing.length} pozisyon için fundamental veri eksik.`
+                          : `Veriler güncel${fundFreshLabel?` · son ${fundFreshLabel}`:""}`}
                     </span>
-                    {!fundBusy && <button className="pri btn-xs" onClick={fetchAllFund}>Eksikleri Çek</button>}
+                    {!fundBusy && (
+                      <button className={resilienceMissing.length>0?"pri btn-xs":"btn-xs"} onClick={()=>fetchAllFund(healthMissing.length===0&&resilienceMissing.length===0)}>
+                        {resilienceMissing.length>0?"Eksikleri Çek":"Yenile"}
+                      </button>
+                    )}
                   </div>
                 )}
 
