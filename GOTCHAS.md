@@ -27,6 +27,9 @@
 - **`openDetail` asset_type gap**: `openDetail` resolves type from `pos` → `watchlistItems` when caller omits it. But old watchlist rows may have `asset_type=NULL` in DB, and HistoryTab explicitly passes `undefined`. If a BIST ticker still gets HTTP 404 on meta, check the `watchlist` row's `asset_type` column in Supabase.
 - **`effectiveType` fallback = silent wrong API**: `effectiveType = p?.type || assetTypeHint || "US_STOCK"` in TickerDetailTab — if both are null, a BIST ticker hits Massive API (US stock provider) → HTTP 404 on company info/meta. Always trace the type chain before debugging 404s in TickerDetailTab.
 - **fund_cache out-of-plan sentinel**: Non-US/non-EDGAR tickers (e.g. NNOX — Israeli, MNSO — Chinese) return 422 with no `metrics` from `fetch-fundamentals`. Stored as `{metrics:null,unavailable:true}` sentinel. `stillMissing` check excludes `?.unavailable`; without this, "Eksikleri Çek" retries forever with no effect.
+- **`fetch-fundamentals` EDGAR fallback**: `!fmp.ok` (tüm FMP hataları: 402/429/boş array) → EDGAR dene. Sadece `isOutOfPlan` değil. `refresh-fund-cache` loop da aynı koşulu kullanmalı — ikisi diverge ederse stale tickers cron'da EDGAR'a düşmez.
+- **`.filter(([,v])=>v)` + IIFE null**: Array içinde IIFE `null` döndürebilirse (erken `return null`) destructuring filter crash eder. `.filter(Boolean)` önce gel: `.filter(Boolean).filter(([,v])=>v)`.
+- **`fund_cache` debug query**: `SELECT ticker, source, (metrics IS NOT NULL) has_metrics, updated_at FROM fund_cache ORDER BY updated_at DESC` — hangi tickerlerin fundamentals çektiğini 1 sorguda gösterir; log okumadan önce buraya bak.
 
 ## CSS / Layout
 

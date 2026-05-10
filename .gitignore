@@ -14,6 +14,9 @@ node_modules/
 # Supabase generated
 supabase/.temp/
 
+# Playwright MCP session logs (auto-generated, not for tracking)
+.playwright-mcp/
+
 # Scratch / one-off files (use e2e/ for tracked tests)
 il-*.mjs
 mockup-*.html
