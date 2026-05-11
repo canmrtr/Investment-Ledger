@@ -20,7 +20,7 @@ const sb = supabase.createClient(SUPA_URL, SUPA_ANON, {
 
 const {useState,useEffect,useRef} = React;
 
-const TL = {US_STOCK:"Hisse",FUND:"ETF/Fon",CRYPTO:"Kripto",BIST:"BIST",GOLD:"Altın",FX:"Döviz",BES:"BES Fonu"};
+const TL = {US_STOCK:"Hisse",FUND:"ETF/Fon",CRYPTO:"Kripto",BIST:"BIST",GOLD:"Altın",FX:"Döviz",BES:"BES Fonu",CASH:"Nakit",DEPOSIT:"Vadeli Mevduat"};
 // Pie chart slice + legend renkleri. Sabit — dashboard yeniden açıldığında değişmez.
 const TYPE_COLORS = {
   US_STOCK: "#8B5CF6",  // brand kit: --category-us-stock
@@ -30,6 +30,8 @@ const TYPE_COLORS = {
   GOLD:     "#C9A84C",  // brand kit: --category-gold
   FX:       "#10B981",  // brand kit: --category-fx
   BES:      "#EC4899",  // bireysel emeklilik
+  CASH:     "#64748B",  // slate — nakit
+  DEPOSIT:  "#6366F1",  // indigo — vadeli mevduat
 };
 const LS = {
   get:(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}},
