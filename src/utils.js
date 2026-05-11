@@ -316,7 +316,7 @@ const buildCashflows = (txs, todayMV) => {
 // Stock split'ler: bir işlemin tarihinden SONRA gelen her split'in
 // ratio'su birikimli olarak uygulanır (shares × factor). Toplam cost
 // aynı kalır, shares artar → avg_cost otomatik düşer.
-const rebuildPositions = async (userId, portfolioId = null) => {
+const rebuildPositions = async (userId, portfolioId = null, extraMeta = {}) => {
   let pid = portfolioId;
   if (!pid) {
     const {data:pf} = await sb.from("portfolios").select("id").eq("user_id",userId).order("created_at").limit(1).maybeSingle();
@@ -357,14 +357,23 @@ const rebuildPositions = async (userId, portfolioId = null) => {
     }
   }
 
-  const snapRes = await sb.from("positions").select("ticker,unit").eq("user_id",userId).eq("portfolio_id",pid);
+  const snapRes = await sb.from("positions").select("ticker,unit,interest_rate,maturity_date").eq("user_id",userId).eq("portfolio_id",pid);
   const unitMap = Object.fromEntries((snapRes.data||[]).map(p=>[p.ticker,p.unit||null]));
+  const depositSnapMap = {};
+  for(const p of (snapRes.data||[])){
+    if(p.interest_rate!=null||p.maturity_date!=null){
+      depositSnapMap[p.ticker]={interest_rate:p.interest_rate,maturity_date:p.maturity_date};
+    }
+  }
+  const depositMap = {...depositSnapMap, ...extraMeta};
 
   const np = Object.values(pm).filter(p => p.shares > CFG.DUST_THRESHOLD).map(p => ({
     ticker: p.ticker, name: p.name, type: p.type,
     shares: +p.shares.toFixed(6), avg_cost: +(p.cost/p.shares).toFixed(6),
     currency: p.currency, broker: p.broker,
     unit: unitMap[p.ticker] ?? null,
+    interest_rate: depositMap[p.ticker]?.interest_rate ?? null,
+    maturity_date: depositMap[p.ticker]?.maturity_date ?? null,
     updated_at: new Date().toISOString()
   }));
 
