@@ -1214,7 +1214,14 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           <div className="stitle" style={{marginBottom:0}}>Toplam Komisyon</div>
           {commData.total>0 && (
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <span className="mono" style={{fontSize:18,fontWeight:600}}>{mask(dSym+fmt(commData.total,2))}</span>
+              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end"}}>
+                <span className="mono" style={{fontSize:18,fontWeight:600}}>{mask(dSym+fmt(commData.total,2))}</span>
+                {slices.total>0 && (
+                  <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>
+                    portföy değerinin %{fmt((commData.total/slices.total)*100,1)}'i
+                  </div>
+                )}
+              </div>
               <button className="btn-xs" onClick={()=>setCommOpen(o=>!o)} style={{fontSize:11}}>
                 {commOpen?"Detay ▴":"Detay ▾"}
               </button>
@@ -1352,10 +1359,6 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                   <div style={{fontSize:10,color:"var(--text3)",marginTop:1}}>İlk 3 pozisyon ağırlığı</div>
                 </div>
                 <span style={{fontSize:12,padding:"3px 10px",borderRadius:12,background:color+"22",color,fontWeight:600}}>{level}</span>
-                <div style={{marginLeft:"auto",textAlign:"right"}}>
-                  <div className="mono" style={{fontSize:13,fontWeight:600}}>{hhi}</div>
-                  <div style={{fontSize:10,color:"var(--text3)"}}>HHI skoru</div>
-                </div>
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
                 {weights.slice(0,3).map((p,i)=>(
@@ -1369,9 +1372,9 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                   </div>
                 ))}
               </div>
-              <div style={{marginTop:10,fontSize:10,color:"var(--text3)"}}>
-                HHI = Σ(ağırlık²) × 10000 · {posWithMv.length} pozisyon · {posWithMv.length>3?`geri kalan ${posWithMv.length-3} pozisyon dağılımı etkiliyor`:""}{" "}
-                <span data-tip="Herfindahl-Hirschman Endeksi: 0=tam çeşitlenmiş, 10000=tek pozisyon. >2500 konsantre sayılır.">HHI nedir?</span>
+              <div style={{marginTop:10,fontSize:11,color:"var(--text3)"}}>
+                Portföyünün <span style={{fontWeight:600,color}}>{fmt(top3w,1)}%'si</span> ilk 3 pozisyona yoğunlaşmış.
+                {posWithMv.length > 3 && ` Geri kalan ${posWithMv.length-3} pozisyon riski dağıtıyor.`}
               </div>
             </div>
           );
