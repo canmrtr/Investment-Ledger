@@ -56,7 +56,7 @@
 - [x] ~~**Analist Derecelendirme Geçmişi**~~ (2026-04-30 Sprint 10) — FMP `/stable/grade`; TickerDetailTab Buy/Hold/Sell pill.
 - [x] ~~**Konsantrasyon Risk Göstergesi**~~ (2026-04-27 Sprint 4) — Top 3 + HHI + renk pill.
 - [x] ~~**Sektör Dağılımı**~~ (2026-04-27 Sprint 5) — SIC/borsa-mcp; pie + legend; SECTOR_COLORS.
-- [x] ~~**Dönem Bazlı Getiri Karşılaştırması**~~ (2026-04-29) — 3 yeni AnalysisTab kartı: Dönem Bazlı Getiri, FX Risk, 6 Aylık Performans.
+- [x] ~~**Dönem Bazlı Getiri Karşılaştırması**~~ (2026-04-29) — 3 yeni AnalysisTab kartı.
 - [x] ~~**Başa Baş (Break-Even) Analizi**~~ (2026-04-29) — komisyon dahil breakEven; distPct %.
 - [x] ~~**Volatilite / Drawdown Analizi**~~ (2026-04-29) — `price_cache.p_d1/w1/m1/y1` bazlı ağırlıklı portföy volatilitesi.
 - [x] ~~**Kur Riski Göstergesi**~~ (2026-04-29) — USD/EUR/TRY exposure bar + USDTRY +10% simülasyon.
@@ -67,3 +67,66 @@
 - [x] ~~**AnalysisTab FX yok warn-card**~~ (2026-04-26)
 - [x] ~~**Akıllı Nudge Kartları (a): `computeNudges()` + konsantrasyon + inaktivite kuralları**~~ (2026-05-10, Sprint 11)
 - [x] ~~**Akıllı Nudge Kartları (b): Dashboard render + dismiss (LS 7 gün)**~~ (2026-05-10, Sprint 11)
+
+---
+
+## Sprint 11–14 Tamamlananlar (2026-05-10)
+
+- [x] ~~**ETF Bölge Dağılımı**~~ (2026-05-10, Sprint 13) — `fetch-fundamentals` `mode:"etf-country"`; FMP country-weightings; `REGION_META` 4 yeni bucket; `etfCw` state LS-seeded 90 gün; TEFAS/TRY fallback.
+- [x] ~~**Akıllı Nudge (c)**~~ (2026-05-10, Sprint 13) — sağlık skoru + XIRR vs enflasyon kuralları + AnalysisTab scroll aksiyonu.
+- [x] ~~**Aylık Performans Özetini Kopyala / Paylaş**~~ (2026-05-10, Sprint 13) — MonthlySnapshotCard; `navigator.clipboard.writeText()` + PNG indirme; gizli mod desteği.
+- [x] ~~**İş Yatırım fetch timeout**~~ (Sprint 13) — `AbortSignal.timeout(8000)` isyatirim call'larına.
+- [x] ~~**Brand Kit token migrasyonu**~~ (2026-05-10, Sprint 13) — `src/styles/tokens.css`; TYPE_COLORS + AnalysisTab renk dizileri; `var(--font-*)` migration; Apply Checklist 11/11 ✅.
+- [x] ~~**Fundamental data Supabase cache (tam)**~~ (2026-05-10) — `fund_cache`; pg_cron weekly; AnalysisTab mount Supabase read.
+- [x] ~~**SEC EDGAR ticker DB → Supabase tablosu**~~ (2026-04-29) — `ticker_db` tablosu; haftalık pg_cron; 10.980 ticker.
+- [x] ~~**refresh-price-cache cron — asset_type rotasyonu**~~ (2026-04-29) — tüm asset_type; BIST→Yahoo, CRYPTO/GOLD/FX/US→Massive.
+- [x] ~~**Shared price cache mimarisi — user-başına fetch kaldır**~~ (2026-04-29) — cron kapsam genişletildi; frontend read-only.
+- [x] ~~**price_cache güvenlik (write-lock)**~~ (2026-04-27 Sprint 5)
+- [x] ~~**Claude Haiku parse rate limiting + maliyet kotası**~~ (2026-04-27 Sprint 5) — JWT-verified; 20/gün/kullanıcı.
+- [x] ~~**Progressive Web App (PWA) hazırlığı**~~ (2026-05-09) — `manifest.json` + `service-worker.js` + SW kayıt; M1 tamamlandı.
+- [x] ~~**PWA ikonları**~~ (2026-04-29) — `icon-192.png` + `icon-512.png`.
+- [x] ~~**Periyodik agent denetim turu — 2. tur**~~ (2026-04-29, Sprint 7)
+- [x] ~~**Periyodik agent denetim turu — 3. tur**~~ (2026-05-10, Sprint 11)
+- [x] ~~**Periyodik agent denetim turu — 4. tur**~~ (2026-05-10, Sprint 14)
+- [x] ~~**Login logo swap → Linear varyant**~~ (2026-05-10, Sprint 14) — `Logo/linear-dark.png` + `Logo/linear-light.png`; theme-logo CSS bug düzeltildi.
+- [x] ~~**UX Audit Quick Fixes (Grup H)**~~ (2026-05-10, Sprint 14) — H-1 Watchlist `confirm_` prop wiring; H-3 SearchTab `autoFocus` conditional ref.
+- [x] ~~**Hamburger signOut LS clear**~~ (2026-05-10, Sprint 14) — user-scope LS keys signOut'tan önce silinir.
+- [x] ~~**SEC_UA email → env var**~~ (2026-05-10, Sprint 14) — `Deno.env.get("SEC_CONTACT_EMAIL")`; secret eklendi.
+- [x] ~~**Brand-fit Analiz Sadeleştirme A-1 + B-1**~~ (2026-05-10, Sprint 14) — Portföy Sağlık 6 sonuç cümlesi + 4 bölüm başlığı.
+- [x] ~~**Ağırlıklı Ortalama Portföy P/E**~~ (2026-05-10, Sprint 14) — AnalysisTab Portföy Sağlık'ta mevcut; dokümante edildi.
+- [x] ~~**TR ADR → BIST fundamentals fix**~~ (2026-05-10) — `adr_bist_map` Supabase tablosu; ERELY→EREGL mapping; `bist.annual` path fix.
+
+---
+
+## Sprint Audit Backlog — Tamamlananlar
+
+- [x] ~~**Pozisyonları Yeniden Hesapla confirm guard**~~ (2026-04-26)
+- [x] ~~**HistoryTab tx satırından openDetail**~~ (2026-04-26)
+- [x] ~~**Touch device tooltip (data-tip tap-to-show)**~~ (2026-04-26)
+- [x] ~~**Loading state standardı (SkeletonRow/SkeletonCard)**~~ (2026-04-26)
+- [x] ~~**Form input error inline**~~ (2026-04-27)
+- [x] ~~**Confirm modal backdrop click guard (danger)**~~ (2026-04-27)
+- [x] ~~**EUR tablosu sort**~~ (2026-04-29)
+- [x] ~~**AddTab CSV import skip count**~~ (2026-04-26)
+- [x] ~~**cur-seg dokunma hedefi mobile**~~ (2026-04-26)
+- [x] ~~**Period buton wrap dar ekran**~~ (2026-04-29)
+- [x] ~~**↻ Güncelle progress mobile**~~ (2026-04-26)
+- [x] ~~**Flash position:fixed**~~ (2026-04-26)
+- [x] ~~**Sparkline empty state min-height**~~ (2026-04-26)
+- [x] ~~**input type="number" step="any"**~~ (2026-04-27)
+- [x] ~~**AI parse autofill pill (ConfirmBox)**~~ (2026-04-26)
+- [x] ~~**ConfirmBox inline edit**~~ (2026-04-26)
+- [x] ~~**Dashboard pozisyon listesi varsayılan sıralama: kazanım**~~ (2026-04-27 Sprint 4)
+- [x] ~~**AddTxInline NaN guard**~~ (2026-04-27 Sprint 4)
+- [x] ~~**CSV negatif/Infinity guard**~~ (2026-04-27 Sprint 4)
+- [x] ~~**massiveHistorical silent {}**~~ (2026-04-27 Sprint 4)
+- [x] ~~**refresh-price-cache cron secret**~~ (2026-04-27 Sprint 4)
+- [x] ~~**TRY-denominated avg_cost tespiti ve uyarısı**~~ (2026-04-30 Sprint 10)
+- [x] ~~**maxLength ticker/name/broker**~~ (2026-04-29)
+- [x] ~~**İş Yatırım fetch timeout**~~ (Sprint 13)
+- [x] ~~**Sektör Dağılımı "Bilinmiyor" bug fix**~~ (2026-04-29)
+- [x] ~~**`costDisp` `p.avg_cost` → `p.avgCost`**~~ (2026-04-30 Sprint 10)
+- [x] ~~**ManuelPosForm + HistoryTab edit form `$` hardcode**~~ (2026-04-30 Sprint 10)
+- [x] ~~**Dark/Light tema desteği**~~ (2026-04-26)
+- [x] ~~**Asset type ikonları: emoji → custom SVG**~~ (2026-04-26)
+- [x] ~~**Recent searches**~~ (2026-04-26)

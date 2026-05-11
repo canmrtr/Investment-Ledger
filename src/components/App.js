@@ -589,14 +589,16 @@ function App({session}){
           const periodTxs=txsDisp.filter(t=>t.date>startDate);
           const buys=periodTxs.filter(t=>t.way==="BUY").reduce((a,t)=>a+(+t.total+(+t.commission||0)),0);
           const sells=periodTxs.filter(t=>t.way==="SELL").reduce((a,t)=>a+(+t.total-(+t.commission||0)),0);
-          const tr=(tM+sells)-(startMV+buys);
+          const divs=periodTxs.filter(t=>t.way==="DIV").reduce((a,t)=>a+(+t.total||0),0);
+          const tr=(tM+sells+divs)-(startMV+buys);
           const trPct=(startMV+buys)>0?(tr/(startMV+buys))*100:null;
-          // XIRR cash flows: başta -startMV, period içi BUY/SELL, son +tM
+          // XIRR cash flows: başta -startMV, period içi BUY/SELL/DIV, son +tM
           const cfs=[{date:new Date(startDate),amount:-startMV}];
           for(const t of periodTxs){
             const c=+t.commission||0,tot=+t.total||0;
             if(t.way==="BUY")cfs.push({date:new Date(t.date),amount:-(tot+c)});
             else if(t.way==="SELL")cfs.push({date:new Date(t.date),amount:tot-c});
+            else if(t.way==="DIV")cfs.push({date:new Date(t.date),amount:tot});
           }
           cfs.push({date:new Date(),amount:tM});
           return{tr,trPct,xirrRate:xirr(cfs),startMV};
