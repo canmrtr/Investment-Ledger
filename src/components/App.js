@@ -196,7 +196,7 @@ function App({session}){
       sb.from("profiles").select("*").eq("user_id",user.id).maybeSingle(),
       sb.from("watchlist").select("id,ticker,asset_type,added_at").eq("user_id",user.id).order("added_at",{ascending:false})
     ]);
-    if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker,unit:p.unit||null})));
+    if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker,unit:p.unit||null,interestRate:p.interest_rate!=null?+p.interest_rate:null,maturityDate:p.maturity_date||null})));
     if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission,notes:t.notes||""})));
     if(sr.data)setSplits(sr.data);
     if(wl.data)setWatchlistItems(wl.data);
@@ -214,6 +214,24 @@ function App({session}){
         if(d&&(latestDate==="—"||d>latestDate))latestDate=d;
       }
       saveHist(nh);savePrc(np,latestDate);
+    }
+    // Synthetic prices for CASH/DEPOSIT — computed locally, never in price_cache
+    const synthPos=(pr.data||[]).filter(p=>p.type==="CASH"||p.type==="DEPOSIT");
+    if(synthPos.length){
+      const np2={};
+      for(const p of synthPos){
+        if(p.type==="CASH"){
+          np2[p.ticker]=1.0;
+        } else if(p.interest_rate!=null){
+          const ir=+p.interest_rate;
+          const buyTxs=(tr.data||[]).filter(t=>t.ticker===p.ticker&&t.way==="BUY");
+          const earliest=buyTxs.length?buyTxs.map(t=>new Date(t.date).getTime()).reduce((a,b)=>Math.min(a,b)):Date.now();
+          const maturityMs=p.maturity_date?new Date(p.maturity_date).getTime():earliest;
+          const days=Math.max(0,(Math.min(Date.now(),maturityMs)-earliest)/86400000);
+          np2[p.ticker]=1+ir*(days/360);
+        }
+      }
+      setPrc_(prev=>({...prev,...np2}));
     }
     setBusy(b=>({...b,d:false}));
   };
@@ -316,7 +334,8 @@ function App({session}){
   const allDisp=filteredPos.map(p=>{
     const cur=p.currency||"USD";
     // price_cache stores TRY for BIST/BES (Yahoo/EGM), USD for all other asset types (Massive).
-    const priceCur = (p.type==="BIST"||p.type==="BES") ? "TRY" : "USD";
+    const priceCur = (p.type==="BIST"||p.type==="BES") ? "TRY" :
+                     (p.type==="CASH"||p.type==="DEPOSIT") ? (p.currency||"TRY") : "USD";
     const price=prc[p.ticker];
     const rawCost=p.shares*p.avgCost;
     const rawMv=price!=null?p.shares*price:null;
