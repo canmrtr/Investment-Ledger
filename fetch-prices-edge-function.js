@@ -459,14 +459,15 @@ Deno.serve(async (req) => {
       if (supaUrl && serviceKey) {
         try {
           const supa = createClient(supaUrl, serviceKey, { auth: { persistSession: false } });
-          await supa.from("price_cache").upsert(
+          const { error: upsertErr } = await supa.from("price_cache").upsert(
             { ticker, price: result.price, d1: result.d1, w1: result.w1, m1: result.m1,
               y1: result.y1, p_d1: result.p_d1, p_w1: result.p_w1, p_m1: result.p_m1,
               p_m3: result.p_m3, p_m6: result.p_m6, p_y1: result.p_y1,
               updated_at: new Date().toISOString() },
             { onConflict: "ticker" }
           );
-        } catch (_) { /* non-critical; frontend zaten veriyi aldı */ }
+          if (upsertErr) console.error("[fetch-prices] price_cache upsert failed:", upsertErr.message);
+        } catch (e) { console.error("[fetch-prices] price_cache upsert failed:", e?.message ?? e); }
       }
     }
 
