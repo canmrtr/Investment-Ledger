@@ -6,7 +6,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
   // BIST'e göre günceller (mevcut davranış korunuyor).
   const initType = prefillType || "US_STOCK";
   const initCurrency = (initType==="BIST"||initType==="BES"||initType==="CASH"||initType==="DEPOSIT") ? "TRY" : "USD";
-  const E={ticker:"",name:"",type:initType,shares:"",avgCost:"",currency:initCurrency,broker:"",commission:"",date:today(),unit:"oz",currentValue:"",interestRate:"",maturityDate:""};
+  const E={ticker:"",name:"",type:initType,shares:"",avgCost:"",currency:initCurrency,broker:"",commission:"",date:today(),unit:"oz",currentValue:"",interestRate:"",maturityDate:"",reserveRatio:""};
   const [form,setForm]=useState(E);
   const [curPrice,setCurPrice]=useState(null);
   // Fiyat fetch sonucu hakkında inline uyarı/bilgi: {type:"ok"|"warn", text}.
@@ -24,7 +24,6 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     if(!isCashType&&(+form.avgCost<=0||isNaN(+form.avgCost)))e.avgCost=form.type==="BES"?"Tutar 0'dan büyük olmalı":"Fiyat 0'dan büyük olmalı";
     if(form.type==="DEPOSIT"){
       if(+form.interestRate<=0||isNaN(+form.interestRate))e.interestRate="Faiz oranı 0'dan büyük olmalı";
-      if(!form.maturityDate)e.maturityDate="Vade tarihi gerekli";
     }
     setErrs(e);
     return Object.keys(e).length===0;
@@ -89,7 +88,8 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     setEditTk(p.ticker);
     setForm({...E,ticker:p.ticker,name:p.name,type:p.type,shares:p.shares,avgCost:p.type==="CASH"||p.type==="DEPOSIT"?"":p.avgCost,currency:p.currency,broker:p.broker||"",
       interestRate:p.interestRate!=null?(p.interestRate*100).toString():"",
-      maturityDate:p.maturityDate||""});
+      maturityDate:p.maturityDate||"",
+      reserveRatio:p.reserveRatio!=null&&p.reserveRatio>0?(p.reserveRatio*100).toString():""});
     if(p.type!=="BES"&&p.type!=="CASH"&&p.type!=="DEPOSIT")fetchPrice(p.ticker);
   };
 
@@ -122,7 +122,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     if(te){flash_(te.message,"err");setSaving(false);return;}
 
     const depositMeta = form.type==="DEPOSIT"
-      ? {[tk]:{interest_rate:+form.interestRate/100,maturity_date:form.maturityDate}}
+      ? {[tk]:{interest_rate:+form.interestRate/100,maturity_date:form.maturityDate||null,reserve_ratio:+form.reserveRatio/100||0}}
       : {};
     const rebuilt=await rebuildPositions(user.id,portfolioId,depositMeta);
     if(rebuilt===null){flash_("Pozisyon güncellenemedi","err");setSaving(false);return;}
@@ -318,21 +318,45 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
                 aria-invalid={!!errs.interestRate}
                 style={errs.interestRate?{borderColor:"var(--err)"}:{}}
                 onChange={e=>{set({interestRate:e.target.value});if(errs.interestRate)setErrs(p=>({...p,interestRate:undefined}));}}
-                placeholder="45"/>
+                placeholder="42"/>
               {errs.interestRate&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.interestRate}</div>}
             </div>
           )}
           {form.type==="DEPOSIT"&&(
             <div>
-              <div className="kk" style={{marginBottom:4}}>Vade Tarihi *</div>
-              <input className="finp" type="date" value={form.maturityDate}
-                aria-invalid={!!errs.maturityDate}
-                style={errs.maturityDate?{borderColor:"var(--err)"}:{}}
-                onChange={e=>{set({maturityDate:e.target.value});if(errs.maturityDate)setErrs(p=>({...p,maturityDate:undefined}));}}
-                min={today()}/>
-              {errs.maturityDate&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.maturityDate}</div>}
+              <div className="kk" style={{marginBottom:4}}>Rezerv Oranı (%)</div>
+              <input className="finp" type="number" step="any" min="0" max="100" value={form.reserveRatio}
+                onChange={e=>set({reserveRatio:e.target.value})}
+                placeholder="0"/>
+              <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>Kazanç dışı talep hesabı (örn. Serbest Plus: 10)</div>
             </div>
           )}
+          {form.type==="DEPOSIT"&&(
+            <div>
+              <div className="kk" style={{marginBottom:4}}>Vade Tarihi</div>
+              <input className="finp" type="date" value={form.maturityDate}
+                onChange={e=>set({maturityDate:e.target.value})}
+                min={today()}/>
+              <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>Boş bırakın = süresiz hesap (Serbest Plus vb.)</div>
+            </div>
+          )}
+          {form.type==="DEPOSIT"&&form.shares&&+form.shares>0&&form.interestRate&&+form.interestRate>0&&form.date&&(()=>{
+            const effectiveRate=(+form.interestRate/100)*(1-(+form.reserveRatio||0)/100);
+            const days=Math.max(0,(Date.now()-new Date(form.date).getTime())/86400000);
+            const grossInt=(+form.shares)*(Math.pow(1+effectiveRate/365,days)-1);
+            const netInt=grossInt*(1-0.175);
+            return(
+              <div style={{fontSize:11,color:"var(--text2)",padding:"7px 0",gridColumn:"1/-1"}}>
+                <span>Anapara: {displaySym(form.currency)}{fmt(+form.shares,0)}</span>
+                <span style={{marginLeft:12}}>Etkin faiz: %{fmt(effectiveRate*100,2)}</span>
+                <span style={{marginLeft:12}}>{Math.floor(days)} gün</span>
+                {days>0&&<><br/>
+                  <span style={{color:"var(--text3)"}}>Brüt faiz: +{displaySym(form.currency)}{fmt(grossInt,0)}</span>
+                  <span style={{marginLeft:12,color:"var(--ok)"}}>Net (stopaj sonrası): +{displaySym(form.currency)}{fmt(netInt,0)}</span>
+                </>}
+              </div>
+            );
+          })()}
           <div style={{display:"flex",alignItems:"flex-end"}}>
             {form.type==="BES"?(
               form.avgCost&&+form.avgCost>0?(
@@ -358,7 +382,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
           </div>
         </div>
         <div className="brow">
-          <button className="pri" onClick={savePos} disabled={saving||!form.ticker||(form.type!=="BES"&&!form.shares)||(form.type==="DEPOSIT"&&(!form.interestRate||!form.maturityDate))||(!isCashType&&!form.avgCost)}>
+          <button className="pri" onClick={savePos} disabled={saving||!form.ticker||(form.type!=="BES"&&!form.shares)||(form.type==="DEPOSIT"&&!form.interestRate)||(!isCashType&&!form.avgCost)}>
             {saving?"Kaydediliyor...":(editTk?"Güncelle":"Pozisyon Kaydet")}
           </button>
           {editTk&&<button onClick={()=>{setEditTk(null);setForm(E);setCurPrice(null);}}>İptal</button>}

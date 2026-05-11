@@ -1,3 +1,31 @@
+// Piecewise daily-compounding interest for DEPOSIT positions.
+// Handles partial withdrawals by computing interest segment-by-segment.
+// effectiveRate: annual rate after reserve deduction (e.g. 0.378 for 42% × 0.9)
+// maturityDate: "YYYY-MM-DD" or null for perpetual
+const computeDepositGrossInterest=(txs,effectiveRate,maturityDate)=>{
+  const sorted=txs.filter(t=>t.way==="BUY"||t.way==="SELL").sort((a,b)=>new Date(a.date)-new Date(b.date));
+  if(!sorted.length)return 0;
+  const capMs=maturityDate?Math.min(Date.now(),new Date(maturityDate).getTime()):Date.now();
+  let balance=0,grossInterest=0,prevMs=null;
+  for(const tx of sorted){
+    const txMs=new Date(tx.date).getTime();
+    if(prevMs!==null&&balance>0){
+      const days=(Math.min(txMs,capMs)-prevMs)/86400000;
+      if(days>0)grossInterest+=balance*(Math.pow(1+effectiveRate/365,days)-1);
+    }
+    balance+=tx.way==="BUY"?+tx.shares*+tx.price:-+tx.shares*+tx.price;
+    prevMs=Math.min(txMs,capMs);
+    if(txMs>=capMs)break;
+  }
+  if(balance>0&&prevMs!==null&&prevMs<capMs){
+    const days=(capMs-prevMs)/86400000;
+    if(days>0)grossInterest+=balance*(Math.pow(1+effectiveRate/365,days)-1);
+  }
+  return grossInterest;
+};
+
+const DEPOSIT_TAX_RATE=0.175; // TRY mevduat stopaj oranı
+
 // ── Main App ─────────────────────────────────────────────────────
 function App({session}){
   const user=session.user;
@@ -196,7 +224,7 @@ function App({session}){
       sb.from("profiles").select("*").eq("user_id",user.id).maybeSingle(),
       sb.from("watchlist").select("id,ticker,asset_type,added_at").eq("user_id",user.id).order("added_at",{ascending:false})
     ]);
-    if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker,unit:p.unit||null,interestRate:p.interest_rate!=null?+p.interest_rate:null,maturityDate:p.maturity_date||null})));
+    if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker,unit:p.unit||null,interestRate:p.interest_rate!=null?+p.interest_rate:null,maturityDate:p.maturity_date||null,reserveRatio:p.reserve_ratio??0})));
     if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission,notes:t.notes||""})));
     if(sr.data)setSplits(sr.data);
     if(wl.data)setWatchlistItems(wl.data);
@@ -215,7 +243,8 @@ function App({session}){
       }
       saveHist(nh);savePrc(np,latestDate);
     }
-    // Synthetic prices for CASH/DEPOSIT — computed locally, never in price_cache
+    // Synthetic prices for CASH/DEPOSIT — computed locally via daily compounding, never in price_cache.
+    // factor = (principal + grossInterest) / principal; mv = shares × factor = currentValue.
     const synthPos=(pr.data||[]).filter(p=>p.type==="CASH"||p.type==="DEPOSIT");
     if(synthPos.length){
       const np2={};
@@ -223,12 +252,11 @@ function App({session}){
         if(p.type==="CASH"){
           np2[p.ticker]=1.0;
         } else if(p.interest_rate!=null){
-          const ir=+p.interest_rate;
-          const buyTxs=(tr.data||[]).filter(t=>t.ticker===p.ticker&&t.way==="BUY");
-          const earliest=buyTxs.length?buyTxs.map(t=>new Date(t.date).getTime()).reduce((a,b)=>Math.min(a,b)):Date.now();
-          const maturityMs=p.maturity_date?new Date(p.maturity_date).getTime():earliest;
-          const days=Math.max(0,(Math.min(Date.now(),maturityMs)-earliest)/86400000);
-          np2[p.ticker]=1+ir*(days/360);
+          const effectiveRate=+p.interest_rate*(1-(p.reserve_ratio??0));
+          const depTxs=(tr.data||[]).filter(t=>t.ticker===p.ticker);
+          const grossInterest=computeDepositGrossInterest(depTxs,effectiveRate,p.maturity_date||null);
+          const principal=+p.shares; // shares = current principal balance after rebuild
+          np2[p.ticker]=principal>0?(principal+grossInterest)/principal:1.0;
         }
       }
       setPrc_(prev=>({...prev,...np2}));
@@ -309,9 +337,10 @@ function App({session}){
   const wrapPos=(p)=>{
     const price=prc[p.ticker];
     const rawCost=p.shares*p.avgCost;
-    // price_cache is TRY for BIST/BES, USD for everything else.
+    // price_cache is TRY for BIST/BES, position currency for CASH/DEPOSIT (factor-based), USD otherwise.
     // Normalize cost to match price currency so pl/plPct are same-currency.
-    const priceCur=(p.type==="BIST"||p.type==="BES")?"TRY":"USD";
+    const priceCur=(p.type==="BIST"||p.type==="BES")?"TRY":
+                   (p.type==="CASH"||p.type==="DEPOSIT")?(p.currency||"TRY"):"USD";
     const cost=(p.currency!==priceCur&&fxRates)?(convert(rawCost,p.currency,priceCur,fxRates)??rawCost):rawCost;
     const mv=price!=null?p.shares*price:null,pl=mv!=null?mv-cost:null;
     const h=hist[p.ticker]||null;
@@ -855,13 +884,21 @@ function App({session}){
                           const isGU2=p.type==="GOLD"&&p.unit&&p.unit!=="oz";
                           const ozF2=isGU2?goldOzPerUnit(p.unit):1;
                           const curPrc=prc[p.ticker];
+                          const isDeposit=p.type==="DEPOSIT";
+                          const isCash=p.type==="CASH";
+                          // Gross interest = (factor-1)*principal; net = gross*(1-stopaj)
+                          const grossInt=isDeposit&&curPrc!=null?(curPrc-1)*p.shares:0;
+                          const netInt=grossInt*(1-DEPOSIT_TAX_RATE);
+                          // Net P&L% for DEPOSIT (after 17.5% stopaj); gross for others
+                          const displayPlPct=isDeposit&&p.plPct!=null?p.plPct*(1-DEPOSIT_TAX_RATE):p.plPct;
+                          const depSym=displaySym(p.currency||"TRY");
                           return(
                           <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
-                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span>{p.type==="DEPOSIT"&&p.maturityDate&&(()=>{const ms=new Date(p.maturityDate)-Date.now();const past=ms<0,soon=ms<30*86400000;const bg=past?"rgba(255,51,102,0.15)":soon?"rgba(255,184,0,0.15)":"rgba(0,217,126,0.08)";const col=past?"var(--err)":soon?"var(--warn)":"var(--ok)";return <span style={{fontSize:9,padding:"1px 5px",borderRadius:8,marginLeft:4,background:bg,color:col,whiteSpace:"nowrap"}}>Vade {fmtDateTR(p.maturityDate)}</span>;})()}</div></td>
-                            {!hide&&<td className="r">{(()=>{if(isGU2){const lbl={g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit;return <>{fmtShares(p.shares/ozF2)}<span style={{fontSize:10,color:"var(--text2)",marginLeft:2}}>{lbl}</span></>;}return fmtShares(p.shares);})()}</td>}
-                            {!hide&&<td className="r mono" style={{color:"var(--text2)"}}>{curPrc!=null?mask((cfg.mixed?displaySym(p.currency):cfg.sym)+fmt(curPrc*ozF2,2)):"—"}</td>}
-                            {!hide&&<td className="r">{p.mv?mask((cfg.mixed?displaySym(p.currency):cfg.sym)+fmt(p.mv,0)):"—"}</td>}
-                            <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
+                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span>{isDeposit&&p.maturityDate&&(()=>{const ms=new Date(p.maturityDate)-Date.now();const past=ms<0,soon=ms<30*86400000;const bg=past?"rgba(255,51,102,0.15)":soon?"rgba(255,184,0,0.15)":"rgba(0,217,126,0.08)";const col=past?"var(--err)":soon?"var(--warn)":"var(--ok)";return <span style={{fontSize:9,padding:"1px 5px",borderRadius:8,marginLeft:4,background:bg,color:col,whiteSpace:"nowrap"}}>Vade {fmtDateTR(p.maturityDate)}</span>;})()}</div></td>
+                            {!hide&&<td className="r">{(()=>{if(isGU2){const lbl={g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit;return <>{fmtShares(p.shares/ozF2)}<span style={{fontSize:10,color:"var(--text2)",marginLeft:2}}>{lbl}</span></>;}if(isDeposit||isCash)return <span style={{fontSize:11,color:"var(--text2)"}}>{depSym}{fmt(p.shares,0)} anapara</span>;return fmtShares(p.shares);})()}</td>}
+                            {!hide&&<td className="r mono" style={{color:"var(--text2)"}}>{(isDeposit||isCash)?"—":curPrc!=null?mask(cfg.sym+fmt(curPrc*ozF2,2)):"—"}</td>}
+                            {!hide&&<td className="r">{p.mv?<>{mask((cfg.mixed?depSym:cfg.sym)+fmt(p.mv,0))}{isDeposit&&grossInt>0&&<div style={{fontSize:10,lineHeight:1.4,marginTop:1}}><span style={{color:"var(--text3)"}}>Brüt +{depSym}{fmt(grossInt,0)}</span><br/><span style={{color:"var(--ok)"}}>Net +{depSym}{fmt(netInt,0)}</span></div>}</>:"—"}</td>}
+                            <td className={"r"+pc(displayPlPct)}>{fmtP(displayPlPct)}</td>
                             {hasH&&<td className="r">{(()=>{if(p.periodChgPct==null)return"—";return<><div className={"mono"+pc(p.periodChgPct)} style={{fontWeight:600,fontSize:12,lineHeight:1.25}}>{fmt(Math.abs(p.periodChgPct),1)}%</div><div className={"mono"+pc(p.periodChgPct)} style={{fontSize:10,opacity:.75}}>{cfg.sym}{fmt(Math.abs(p.periodChgDlr),0)}</div></>;})()}</td>}
                           </tr>
                         );})}
@@ -881,21 +918,27 @@ function App({session}){
                       const isGU=p.type==="GOLD"&&p.unit&&p.unit!=="oz";
                       const ozF=isGU?goldOzPerUnit(p.unit):1;
                       const uLbl=isGU?({g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit):"";
-                      const adetStr=fmtShares(p.shares/ozF)+(uLbl?" "+uLbl:"");
+                      const isMixedRow=p.type==="CASH"||p.type==="DEPOSIT";
+                      const mSym=displaySym(p.currency||"TRY");
+                      const adetStr=isMixedRow?`${mSym}${fmt(p.shares,0)} anapara`:fmtShares(p.shares/ozF)+(uLbl?" "+uLbl:"");
                       const curPrice=prc[p.ticker];
-                      const priceStr=curPrice!=null?(cfg.mixed?displaySym(p.currency):cfg.sym)+fmt(curPrice*ozF,2):"—";
+                      const priceStr=isMixedRow?"—":curPrice!=null?cfg.sym+fmt(curPrice*ozF,2):"—";
                       const cPct=p.periodChgPct,cDlr=p.periodChgDlr,hasC=cPct!=null;
-                      const pos=hasC&&cPct>=0;
+                      const posDir=hasC&&cPct>=0;
+                      const grossIntM=p.type==="DEPOSIT"&&curPrice!=null?(curPrice-1)*p.shares:0;
+                      const netIntM=grossIntM*(1-DEPOSIT_TAX_RATE);
+                      const displayPlPctM=p.type==="DEPOSIT"&&p.plPct!=null?p.plPct*(1-DEPOSIT_TAX_RATE):p.plPct;
                       return(
                         <div key={p.ticker} className="pcr" onClick={()=>openDetail(p.ticker)}>
                           <div className="pcr-left">
                             <span className="pcr-ticker">{p.ticker}</span>
                             <span className="pcr-sub">{hide?"•••• | ••••":`${adetStr} | ${priceStr}`}</span>
+                            {p.type==="DEPOSIT"&&grossIntM>0&&!hide&&<span style={{fontSize:10,color:"var(--ok)"}}>Net +{mSym}{fmt(netIntM,0)} faiz</span>}
                           </div>
                           <div className="pcr-right">
-                            <span className="pcr-mv">{p.mv!=null?mask((cfg.mixed?displaySym(p.currency):cfg.sym)+fmt(p.mv,0)):"—"}</span>
-                            <span className={"pcr-chg"+(hasC?(pos?" ok":" err"):"")}>
-                              {hide?"••••":hasC?`${cfg.sym}${fmt(Math.abs(cDlr),0)}  ${fmt(Math.abs(cPct),1)}%`:"—"}
+                            <span className="pcr-mv">{p.mv!=null?mask((cfg.mixed?mSym:cfg.sym)+fmt(p.mv,0)):"—"}</span>
+                            <span className={"pcr-chg"+(displayPlPctM!=null?(displayPlPctM>=0?" ok":" err"):"")}>
+                              {hide?"••••":displayPlPctM!=null?fmtP(displayPlPctM):hasC?`${cfg.sym}${fmt(Math.abs(cDlr),0)}  ${fmt(Math.abs(cPct),1)}%`:"—"}
                             </span>
                           </div>
                         </div>

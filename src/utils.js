@@ -357,12 +357,12 @@ const rebuildPositions = async (userId, portfolioId = null, extraMeta = {}) => {
     }
   }
 
-  const snapRes = await sb.from("positions").select("ticker,unit,interest_rate,maturity_date").eq("user_id",userId).eq("portfolio_id",pid);
+  const snapRes = await sb.from("positions").select("ticker,unit,interest_rate,maturity_date,reserve_ratio").eq("user_id",userId).eq("portfolio_id",pid);
   const unitMap = Object.fromEntries((snapRes.data||[]).map(p=>[p.ticker,p.unit||null]));
   const depositSnapMap = {};
   for(const p of (snapRes.data||[])){
-    if(p.interest_rate!=null||p.maturity_date!=null){
-      depositSnapMap[p.ticker]={interest_rate:p.interest_rate,maturity_date:p.maturity_date};
+    if(p.interest_rate!=null||p.maturity_date!=null||p.reserve_ratio){
+      depositSnapMap[p.ticker]={interest_rate:p.interest_rate,maturity_date:p.maturity_date,reserve_ratio:p.reserve_ratio??0};
     }
   }
   const depositMap = {...depositSnapMap, ...extraMeta};
@@ -374,6 +374,7 @@ const rebuildPositions = async (userId, portfolioId = null, extraMeta = {}) => {
     unit: unitMap[p.ticker] ?? null,
     interest_rate: depositMap[p.ticker]?.interest_rate ?? null,
     maturity_date: depositMap[p.ticker]?.maturity_date ?? null,
+    reserve_ratio: depositMap[p.ticker]?.reserve_ratio ?? 0,
     updated_at: new Date().toISOString()
   }));
 
