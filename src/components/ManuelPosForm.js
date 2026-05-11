@@ -247,7 +247,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               else if(newType==="CRYPTO"||newType==="US_STOCK"||newType==="FUND"||newType==="GOLD")upd.currency="USD";
               set(upd);
               // Type değişince eski fiyat geçersiz; ticker varsa yeniden çek
-              setCurPrice(null);
+              setCurPrice(null);setPriceNote(null);
               if(form.ticker&&newType!=="CASH"&&newType!=="DEPOSIT")fetchPrice(form.ticker,form.date,newType);
             }}>
               <option value="US_STOCK">Hisse (US)</option>
@@ -348,8 +348,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
                   )}
                 </div>
               ):null
-            ):(
-              form.shares&&form.avgCost?(
+            ):(!isCashType&&form.shares&&form.avgCost?(
                 <div style={{fontSize:11,color:"var(--text2)",padding:"7px 0"}}>
                   Maliyet: {displaySym(form.currency)}{fmt((+form.shares)*(+form.avgCost),0)}
                   {curPrice&&<><br/>Piyasa: {displaySym(form.currency)}{fmt((+form.shares)*curPrice,0)}</>}
