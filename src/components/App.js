@@ -289,7 +289,12 @@ function App({session}){
   // Derived
   // Per-position raw mantık (her currency kendi sembolüyle render edilen tablolar için)
   const wrapPos=(p)=>{
-    const price=prc[p.ticker],cost=p.shares*p.avgCost;
+    const price=prc[p.ticker];
+    const rawCost=p.shares*p.avgCost;
+    // price_cache is TRY for BIST/BES, USD for everything else.
+    // Normalize cost to match price currency so pl/plPct are same-currency.
+    const priceCur=(p.type==="BIST"||p.type==="BES")?"TRY":"USD";
+    const cost=(p.currency!==priceCur&&fxRates)?(convert(rawCost,p.currency,priceCur,fxRates)??rawCost):rawCost;
     const mv=price!=null?p.shares*price:null,pl=mv!=null?mv-cost:null;
     const h=hist[p.ticker]||null;
     return{...p,price,cost,mv,pl,plPct:(pl!=null&&cost>0)?(pl/cost)*100:null,d1:h?.d1??null,w1:h?.w1??null,m1:h?.m1??null,y1:h?.y1??null};

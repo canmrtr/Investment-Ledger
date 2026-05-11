@@ -338,7 +338,7 @@ const rebuildPositions = async (userId, portfolioId = null) => {
   const pm = {};
   for (const t of all) {
     if (!pm[t.ticker]) {
-      const normCur = t.asset_type==="BIST" ? "TRY" : (t.currency==="EUR" ? "EUR" : "USD");
+      const normCur = t.asset_type==="BIST" ? "TRY" : (t.currency==="EUR" ? "EUR" : t.currency==="TRY" ? "TRY" : "USD");
       pm[t.ticker] = {ticker:t.ticker,name:t.name,type:t.asset_type,shares:0,cost:0,currency:normCur,broker:t.broker};
     }
     const p = pm[t.ticker];

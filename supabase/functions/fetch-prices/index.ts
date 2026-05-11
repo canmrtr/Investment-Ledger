@@ -317,10 +317,24 @@ Deno.serve(async (req) => {
   // ──────────────────────────────────────────────────────────────────────────
 
   try {
-    const { ticker, mode, date, from, to, asset_type } = await req.json();
+    const { ticker, mode, date, from, to, asset_type, price } = await req.json();
     if (!ticker) return json({ error: "ticker required" }, 400);
     // Ticker format validation — path traversal / SSRF prevention
     if (!/^[A-Z0-9:.\-_]{1,30}$/i.test(ticker)) return json({ error: "Geçersiz ticker formatı" }, 400);
+
+    // Manual price set — BES ve benzer manuel varlıklar için price_cache'e kullanıcı değeri yazar.
+    if (mode === "set-manual-price") {
+      if (!price || +price <= 0) return json({ error: "Geçerli bir tutar girin" }, 400);
+      const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      if (!serviceKey) return json({ error: "Service key eksik" }, 500);
+      const supa = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
+      const { error: upsertErr } = await supa.from("price_cache").upsert(
+        { ticker: ticker.toUpperCase(), price: +price, updated_at: new Date().toISOString() },
+        { onConflict: "ticker" }
+      );
+      if (upsertErr) return json({ error: upsertErr.message }, 500);
+      return json({ ok: true });
+    }
 
     const massiveKey = Deno.env.get("MASSIVE_KEY");
     const tdKey      = Deno.env.get("TWELVEDATA_KEY");
