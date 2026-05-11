@@ -796,14 +796,22 @@ function App({session}){
             )}
 
             {[...BLOCK_TYPES].sort((a,b)=>{
-              const mvOf=t=>filteredPos.filter(p=>p.type===t).map(wrapPos).reduce((s,p)=>s+(p.mv??p.cost),0);
-              const toUsd=(mv,t)=>(t==="BIST"||t==="BES")?(convert(mv,"TRY","USD",fxRates)??0):mv;
+              const mvOf=t=>{
+                const ps=filteredPos.filter(p=>p.type===t).map(wrapPos);
+                const bt=BLOCK_TYPES.find(b=>b.type===t);
+                if(bt?.mixed)return ps.reduce((s,p)=>s+(cnv(p.mv??p.cost,p.currency||"TRY")??0),0);
+                return ps.reduce((s,p)=>s+(p.mv??p.cost),0);
+              };
+              const toUsd=(mv,t)=>(t==="BIST"||t==="BES")?(convert(mv,"TRY","USD",fxRates)??0):
+                           (t==="CASH"||t==="DEPOSIT")?(convert(mv,displayCur,"USD",fxRates)??0):mv;
               return toUsd(mvOf(b.type),b.type)-toUsd(mvOf(a.type),a.type);
             }).map((cfg, idx) => {
               const items = filteredPos.filter(p => p.type===cfg.type).map(p=>{const w=wrapPos(p);const chg=periodChange(w);return{...w,periodChgPct:chg?.pct??null,periodChgDlr:chg?.dlr??null};});
               if(items.length===0) return null;
               const sortedItems = sortPos(items, sort);
-              const totMv = items.reduce((a,p)=>a+(p.mv ?? p.cost),0);
+              const totMv = cfg.mixed
+                ? items.reduce((a,p)=>a+(cnv(p.mv??p.cost,p.currency||"TRY")??0),0)
+                : items.reduce((a,p)=>a+(p.mv ?? p.cost),0);
               const itemsWithChg = items.filter(p=>p.periodChgDlr!=null);
               const blockDeltaDlr = itemsWithChg.reduce((s,p)=>s+p.periodChgDlr,0);
               const blockStartMv = itemsWithChg.reduce((s,p)=>s+(p.mv??p.cost)-p.periodChgDlr,0);
@@ -825,7 +833,7 @@ function App({session}){
                       {missingPriceCount>0&&blockDeltaPct!=null&&(
                         <span style={{fontSize:10,color:"var(--text3)"}} data-tip={`${missingPriceCount} ticker için ${sel.lbl} fiyatı eksik`}>{missingPriceCount} eksik</span>
                       )}
-                      {!hide&&<span style={{fontSize:15,fontWeight:500,fontFamily:"var(--font-numeric)",color:"var(--text)"}}>{mask(cfg.sym+fmt(totMv,0))}</span>}
+                      {!hide&&<span style={{fontSize:15,fontWeight:500,fontFamily:"var(--font-numeric)",color:"var(--text)"}}>{mask((cfg.mixed?dSym:cfg.sym)+fmt(totMv,0))}</span>}
                       <span style={{fontSize:11,color:"var(--text3)"}}>{isOpen?"▾":"▸"}</span>
                     </div>
                   </div>
@@ -849,10 +857,10 @@ function App({session}){
                           const curPrc=prc[p.ticker];
                           return(
                           <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
-                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span></div></td>
+                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span>{p.type==="DEPOSIT"&&p.maturityDate&&(()=>{const ms=new Date(p.maturityDate)-Date.now();const past=ms<0,soon=ms<30*86400000;const bg=past?"rgba(255,51,102,0.15)":soon?"rgba(255,184,0,0.15)":"rgba(0,217,126,0.08)";const col=past?"var(--err)":soon?"var(--warn)":"var(--ok)";return <span style={{fontSize:9,padding:"1px 5px",borderRadius:8,marginLeft:4,background:bg,color:col,whiteSpace:"nowrap"}}>Vade {fmtDateTR(p.maturityDate)}</span>;})()}</div></td>
                             {!hide&&<td className="r">{(()=>{if(isGU2){const lbl={g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit;return <>{fmtShares(p.shares/ozF2)}<span style={{fontSize:10,color:"var(--text2)",marginLeft:2}}>{lbl}</span></>;}return fmtShares(p.shares);})()}</td>}
-                            {!hide&&<td className="r mono" style={{color:"var(--text2)"}}>{curPrc!=null?mask(cfg.sym+fmt(curPrc*ozF2,2)):"—"}</td>}
-                            {!hide&&<td className="r">{p.mv?mask(cfg.sym+fmt(p.mv,0)):"—"}</td>}
+                            {!hide&&<td className="r mono" style={{color:"var(--text2)"}}>{curPrc!=null?mask((cfg.mixed?displaySym(p.currency):cfg.sym)+fmt(curPrc*ozF2,2)):"—"}</td>}
+                            {!hide&&<td className="r">{p.mv?mask((cfg.mixed?displaySym(p.currency):cfg.sym)+fmt(p.mv,0)):"—"}</td>}
                             <td className={"r"+pc(p.plPct)}>{fmtP(p.plPct)}</td>
                             {hasH&&<td className="r">{(()=>{if(p.periodChgPct==null)return"—";return<><div className={"mono"+pc(p.periodChgPct)} style={{fontWeight:600,fontSize:12,lineHeight:1.25}}>{fmt(Math.abs(p.periodChgPct),1)}%</div><div className={"mono"+pc(p.periodChgPct)} style={{fontSize:10,opacity:.75}}>{cfg.sym}{fmt(Math.abs(p.periodChgDlr),0)}</div></>;})()}</td>}
                           </tr>
@@ -875,7 +883,7 @@ function App({session}){
                       const uLbl=isGU?({g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit):"";
                       const adetStr=fmtShares(p.shares/ozF)+(uLbl?" "+uLbl:"");
                       const curPrice=prc[p.ticker];
-                      const priceStr=curPrice!=null?cfg.sym+fmt(curPrice*ozF,2):"—";
+                      const priceStr=curPrice!=null?(cfg.mixed?displaySym(p.currency):cfg.sym)+fmt(curPrice*ozF,2):"—";
                       const cPct=p.periodChgPct,cDlr=p.periodChgDlr,hasC=cPct!=null;
                       const pos=hasC&&cPct>=0;
                       return(
@@ -885,7 +893,7 @@ function App({session}){
                             <span className="pcr-sub">{hide?"•••• | ••••":`${adetStr} | ${priceStr}`}</span>
                           </div>
                           <div className="pcr-right">
-                            <span className="pcr-mv">{p.mv!=null?mask(cfg.sym+fmt(p.mv,0)):"—"}</span>
+                            <span className="pcr-mv">{p.mv!=null?mask((cfg.mixed?displaySym(p.currency):cfg.sym)+fmt(p.mv,0)):"—"}</span>
                             <span className={"pcr-chg"+(hasC?(pos?" ok":" err"):"")}>
                               {hide?"••••":hasC?`${cfg.sym}${fmt(Math.abs(cDlr),0)}  ${fmt(Math.abs(cPct),1)}%`:"—"}
                             </span>
