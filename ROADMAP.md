@@ -34,15 +34,15 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 > P0 doğrulandı — temiz: `positions_allocation_read` policy DB'de YOK. Tasarım kararı: `get_allocation_only_positions` anon EXECUTE kasıtlı; sosyal discovery için yalnızca `{ticker,name,type,pct}` döner.
 
-**P1 — Sprint-15:**
+**P1 — Sprint-15:** ✅ Tamamlandı (2026-05-11)
 
-- [ ] **`fetch-fundamentals` auth eksikliği** `[S]` `[P1]` `Sprint-15` — ticker-list/dividend-calendar/etf-country/default modlarında JWT doğrulaması yok; anon kullanıcı ~11k ticker çekip Twelve Data/FMP kotası boşaltabilir. Düzeltme: tüm modlarda `Authorization` header'dan `getUser`; cron modları `CRON_SECRET` ile kalır. `→ fetch-fundamentals-edge-function.js`
-- [ ] **`fetch-prices` JWT try/catch dışında** `[S]` `[P1]` `Sprint-15` — `getUser()` try/catch bloğu dışında; exception → 500. try/catch içine al. `→ fetch-prices-edge-function.js:302-312`
-- [ ] **`refresh-price-cache` BIST type+USD currency edge case** `[S]` `[P1]` `Sprint-15` — BIST tipi ama `currency=USD` pozisyonlar Massive'e yönleniyor; type-first routing ekle: `asset_type=BIST` her zaman Yahoo'ya. `→ refresh-price-cache-edge-function.js:148-153`
-- [ ] **`Dönem getirisi ve dönem XIRR temettüyü içermiyor`** `[S]` `[P1]` `Sprint-15` — `computePeriod` yalnızca BUY/SELL; seçili dönem DIV işlemleri eksik. Düzeltme: `tr`'ye dönem temettülerini ekle; dönem XIRR'de DIV pozitif nakit akışı. `→ App.js:326-327,583,591-592; utils.js:304`
-- [ ] **`parse-transaction:136-138` ham çıktı sızıyor** `[S]` `[P2]` `Sprint-15` — Hata response'u `raw.slice(0,500)` ile Claude çıktısını açıyor. Hata mesajını generic yap; `raw` yalnızca sunucu loguna. `→ parse-transaction-edge-function.js:136-138`
-- [ ] **`fetch-fundamentals:820-821` `bist.raw?.annual` → `bist.annual`** `[S]` `[P2]` `Sprint-15` — `bist.raw?.annual` her zaman `undefined`; fund_cache'e BIST annual `null` yazılıyor. `→ fetch-fundamentals-edge-function.js:820-821`
-- [ ] **`fetch-fundamentals` dividend-calendar ticker validation yok** `[S]` `[P2]` `Sprint-15` — `dividend-calendar` modunda `ticker` doğrulanmıyor; injection riski. Allowlist regex ekle. `→ fetch-fundamentals-edge-function.js:703-728`
+- [x] **`fetch-fundamentals` auth eksikliği** `[S]` `[P1]` `Sprint-15` — ticker-list/dividend-calendar/etf-country/default modlarında JWT doğrulaması yok; anon kullanıcı ~11k ticker çekip Twelve Data/FMP kotası boşaltabilir. Düzeltme: tüm modlarda `Authorization` header'dan `getUser`; cron modları `CRON_SECRET` ile kalır. `→ fetch-fundamentals-edge-function.js`
+- [x] **`fetch-prices` JWT try/catch dışında** `[S]` `[P1]` `Sprint-15` — `getUser()` try/catch bloğu dışında; exception → 500. try/catch içine al. `→ fetch-prices-edge-function.js:302-312`
+- [x] **`refresh-price-cache` BIST type+USD currency edge case** `[S]` `[P1]` `Sprint-15` — BIST tipi ama `currency=USD` pozisyonlar Massive'e yönleniyor; type-first routing ekle: `asset_type=BIST` her zaman Yahoo'ya. `→ refresh-price-cache-edge-function.js:148-153`
+- [x] **`Dönem getirisi ve dönem XIRR temettüyü içermiyor`** `[S]` `[P1]` `Sprint-15` — `computePeriod` yalnızca BUY/SELL; seçili dönem DIV işlemleri eksik. Düzeltme: `tr`'ye dönem temettülerini ekle; dönem XIRR'de DIV pozitif nakit akışı. `→ App.js:326-327,583,591-592; utils.js:304`
+- [x] **`parse-transaction:136-138` ham çıktı sızıyor** `[S]` `[P2]` `Sprint-15` — Hata response'u `raw.slice(0,500)` ile Claude çıktısını açıyor. Hata mesajını generic yap; `raw` yalnızca sunucu loguna. `→ parse-transaction-edge-function.js:136-138`
+- [x] **`fetch-fundamentals:820-821` `bist.raw?.annual` → `bist.annual`** `[S]` `[P2]` `Sprint-15` — `bist.raw?.annual` her zaman `undefined`; fund_cache'e BIST annual `null` yazılıyor. Önceki sprint'te zaten düzeltilmişti; audit sırasında teyit edildi. `→ fetch-fundamentals-edge-function.js:820-821`
+- [x] **`fetch-fundamentals` dividend-calendar ticker validation yok** `[S]` `[P2]` `Sprint-15` — `dividend-calendar` modunda `ticker` doğrulanmıyor; injection riski. Allowlist regex ekle. `→ fetch-fundamentals-edge-function.js:703-728`
 
 **P2 — Sprint-16:**
 

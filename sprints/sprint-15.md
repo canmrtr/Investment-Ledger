@@ -129,12 +129,12 @@ Sprint 14 tüm scope'u teslim etti (7 commit, tek push). Brand-fit Item 5'in A-2
 
 ## Definition of Done
 
-- [ ] Item 1 (1a+1b+1c): `edge-reviewer` onayı + `npm run check:edge` + `npm run check:edge-drift` geçti + 3 fn deploy edildi.
-- [ ] Item 2: `computePeriod` DIV dahil; dönem getirisi DIV olan portföyde değişiyor; `npm run check:babel` geçti.
-- [ ] Item 3 (A-2+A-3): `ui-builder` onayı; BreakEven + FX Risk kartları bağlam cümleli; `npm run check:babel` geçti.
-- [ ] Item 4 (B-2): `ui-builder` onayı; HHI formül metni ekranda yok; Komisyon bağlam satırı var.
-- [ ] Item 5 (5a+5b+5c): `edge-reviewer` onayı; BIST annual dolu; raw error generic; divcal ticker validation `400`.
-- [ ] `ROADMAP.md` "Sonraki Adım" bölümü Sprint 16 hazırlığıyla refresh edildi.
+- [x] Item 1 (1a+1b+1c): `edge-reviewer` onayı + `npm run check:edge` + `npm run check:edge-drift` geçti + 3 fn deploy edildi.
+- [x] Item 2: `computePeriod` DIV dahil; dönem getirisi DIV olan portföyde değişiyor; `npm run check:babel` geçti.
+- [x] Item 3 (A-2+A-3): `ui-builder` onayı; BreakEven + FX Risk kartları bağlam cümleli; `npm run check:babel` geçti.
+- [x] Item 4 (B-2): `ui-builder` onayı; HHI formül metni ekranda yok; Komisyon bağlam satırı var.
+- [x] Item 5 (5a+5b+5c): `edge-reviewer` onayı; BIST annual dolu; raw error generic; divcal ticker validation `400`.
+- [x] `ROADMAP.md` Sprint 15 item'ları `[x]` işaretlendi; Sprint 16 sarkan item'lar listelendi.
 
 ---
 
@@ -150,4 +150,22 @@ Sprint 14 tüm scope'u teslim etti (7 commit, tek push). Brand-fit Item 5'in A-2
 
 ## Retro Alanı
 
-_(Sprint tamamlanınca doldurulacak)_
+**Teslim tarihi**: 2026-05-11 | **Commit sayısı**: 6 commit, main'e push edildi.
+
+**Ne iyi gitti:**
+- Edge security bloku (1a+1b+1c) beklenenden temiz çıktı; JWT try/catch wrapper + skipJwt flag pattern tekrar kullanılabilir.
+- `computePeriod` DIV fix tek dosyada izole kaldı; XIRR tarafı beklenenden kolay entegre oldu.
+- Brand-fit A-2/A-3/B-2 AnalysisTab'ı görsel olarak netleştirdi; "aboveBE/belowBE özet cümlesi" özellikle değer kattı.
+- 5a audit bulgusu (`bist.raw?.annual`) önceki sprint'te zaten düzeltilmişti; audit sırasında teyit edildi — bu bir "free pass".
+
+**Ne zordu:**
+- Item 3 ve 4 implementer subagent'ları commit yapmayı unuttu; main branch'te unstaged değişikler kaldı. Fix agent + manuel commit ile düzeltildi. Subagent prompt'larına "commit et" talimatı daha açık yazılmalı.
+- Spec reviewer, `distPct` renk mantığını yanlış flagladı (pre-existing code) — gereksiz review döngüsüne yol açtı. Reviewer context'ine "sprint-15 scope'u dışındakileri flagleme" notu eklenebilir.
+
+**Sprint 16 ilk sıra:**
+- `get_allocation_only_positions` multi-currency (migration + RPC)
+- `watchlist_own` policy FOR ALL → INSERT/SELECT/DELETE split
+- SRI hash html2canvas
+- ManuelPosForm currency filtresi + EUR sort + BIST/CRYPTO/GOLD cron refresh batch
+- Temettü Takvimi (dividend-calendar mode + UI)
+- `il_recent_search` signOut temizliği (LS key user-scope)

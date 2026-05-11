@@ -98,6 +98,21 @@
 
 ---
 
+## Sprint 15 Tamamlananlar (2026-05-11)
+
+- [x] ~~**Edge Security 1a — `fetch-fundamentals` JWT auth**~~ (2026-05-11, Sprint 15) — ticker-list/dividend-calendar/etf-country/default modlarında `getUser` ile kimlik doğrulama; cron modları `CRON_SECRET` bypass; 5 frontend `edgeCall→edgeCallAuth` geçişi.
+- [x] ~~**Edge Security 1b — `fetch-prices` JWT try/catch**~~ (2026-05-11, Sprint 15) — `getUser()` try/catch içine alındı; exception → 401 JSON Response (500 yerine).
+- [x] ~~**Edge Security 1c — `refresh-price-cache` BIST .IS routing**~~ (2026-05-11, Sprint 15) — `asset_type=BIST` her zaman Yahoo Finance'e; `.IS` suffix normalizasyonu; USD currency edge case düzeltildi.
+- [x] ~~**`computePeriod` DIV cashflow**~~ (2026-05-11, Sprint 15) — dönem TR hesabına temettüler dahil; dönem XIRR'e DIV pozitif nakit akışı olarak eklendi; 1G/1H/1A/3A/6A/1Y dilimleri artık doğru.
+- [x] ~~**Brand-fit A-2 — BreakEven bağlam cümlesi**~~ (2026-05-11, Sprint 15) — tablo üstüne "X pozisyon kâr bölgesinde / Y pozisyon zarar bölgesinde" özet; belowBE `var(--warn)` sarı.
+- [x] ~~**Brand-fit A-3 — FX Risk dinamik başlık**~~ (2026-05-11, Sprint 15) — `dominantFrac` ile dinamik `fxSubText`; "Portföyünün %X'i [PARA] kuru riskine açık" cümlesi; warn-card copy düzeltildi.
+- [x] ~~**Brand-fit B-2a — Komisyon oranı bağlamı**~~ (2026-05-11, Sprint 15) — komisyon KPI altına "— getirinin yaklaşık %X'i" context satırı.
+- [x] ~~**Brand-fit B-2b — HHI formül kaldırıldı**~~ (2026-05-11, Sprint 15) — HHI KPI kutusu ve "HHI = Σ(ağırlık²)..." footer kaldırıldı; yerine "Portföyünün %X'i ilk 3 pozisyona yoğunlaşmış" sade cümlesi.
+- [x] ~~**Audit P2 — `parse-transaction` raw leak kaldırıldı**~~ (2026-05-11, Sprint 15) — hata response'undan `raw.slice(0,500)` çıkarıldı; `console.warn` sunucu loguna.
+- [x] ~~**Audit P2 — `dividend-calendar` ticker allowlist regex**~~ (2026-05-11, Sprint 15) — `^[A-Z0-9.\-]{1,12}$` guard; geçersiz ticker → 400 Bad Request.
+
+---
+
 ## Sprint Audit Backlog — Tamamlananlar
 
 - [x] ~~**Pozisyonları Yeniden Hesapla confirm guard**~~ (2026-04-26)
