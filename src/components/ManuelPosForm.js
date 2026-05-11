@@ -151,16 +151,18 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               max={today()}/>
           </div>
           <div>
-            <div className="kk" style={{marginBottom:4}}>Ticker *</div>
+            <div className="kk" style={{marginBottom:4}}>{form.type==="BES"?"Fon Kodu *":"Ticker *"}</div>
             <div style={{display:"flex",gap:6}}>
               <input className="finp" style={{textTransform:"uppercase"}} maxLength={20} value={form.ticker}
                 onChange={e=>{set({ticker:e.target.value.toUpperCase(),name:"",avgCost:""});setCurPrice(null);setPriceNote(null);}}
                 onBlur={e=>e.target.value&&fetchPrice(e.target.value)}
-                placeholder="AAPL" disabled={!!editTk}/>
-              <button style={{whiteSpace:"nowrap",fontSize:12,padding:"7px 10px"}}
-                onClick={()=>fetchPrice()} disabled={fetchP||!form.ticker}>
-                {fetchP?<div className="spin" style={{width:12,height:12}}></div>:"↻"}
-              </button>
+                placeholder={form.type==="BES"?"AGS, EAF...":"AAPL"} disabled={!!editTk}/>
+              {form.type!=="BES"&&(
+                <button style={{whiteSpace:"nowrap",fontSize:12,padding:"7px 10px"}}
+                  onClick={()=>fetchPrice()} disabled={fetchP||!form.ticker}>
+                  {fetchP?<div className="spin" style={{width:12,height:12}}></div>:"↻"}
+                </button>
+              )}
             </div>
             {form.type==="CRYPTO"&&!editTk&&(
               <div style={{marginTop:6}}>
@@ -217,8 +219,8 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
             )}
           </div>
           <div>
-            <div className="kk" style={{marginBottom:4}}>Şirket Adı</div>
-            <input className="finp" maxLength={100} value={form.name} onChange={e=>set({name:e.target.value})} placeholder="Apple Inc"/>
+            <div className="kk" style={{marginBottom:4}}>{form.type==="BES"?"Fon Adı":"Şirket Adı"}</div>
+            <input className="finp" maxLength={100} value={form.name} onChange={e=>set({name:e.target.value})} placeholder={form.type==="BES"?"Anadolu Hayat BES Fonu...":"Apple Inc"}/>
           </div>
           <div>
             <div className="kk" style={{marginBottom:4}}>Varlık Türü</div>
@@ -242,14 +244,16 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               <option value="BES">BES Fonu</option>
             </select>
           </div>
+          {form.type!=="BES"&&(
+            <div>
+              <div className="kk" style={{marginBottom:4}}>Para Birimi</div>
+              <select className="finp" value={form.currency} onChange={e=>set({currency:e.target.value})}>
+                <option>USD</option><option>TRY</option><option>EUR</option>
+              </select>
+            </div>
+          )}
           <div>
-            <div className="kk" style={{marginBottom:4}}>Para Birimi</div>
-            <select className="finp" value={form.currency} onChange={e=>set({currency:e.target.value})}>
-              <option>USD</option><option>TRY</option><option>EUR</option>
-            </select>
-          </div>
-          <div>
-            <div className="kk" style={{marginBottom:4}}>{form.type==="GOLD"?`Adet * (${GOLD_UNITS.find(g=>g.key===form.unit)?.label||'oz'})`:"Adet *"}</div>
+            <div className="kk" style={{marginBottom:4}}>{form.type==="GOLD"?`Adet * (${GOLD_UNITS.find(g=>g.key===form.unit)?.label||'oz'})`:form.type==="BES"?"Pay Adedi *":"Adet *"}</div>
             <input className="finp" type="number" step="any" value={form.shares}
               aria-invalid={!!errs.shares}
               style={errs.shares?{borderColor:"var(--err)"}:{}}
@@ -269,13 +273,15 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
             {errs.avgCost&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.avgCost}</div>}
           </div>
           <div>
-            <div className="kk" style={{marginBottom:4}}>Broker</div>
-            <input className="finp" maxLength={50} value={form.broker} onChange={e=>set({broker:e.target.value})} placeholder="Akbank, Midas..."/>
+            <div className="kk" style={{marginBottom:4}}>{form.type==="BES"?"Emeklilik Şirketi":"Broker"}</div>
+            <input className="finp" maxLength={50} value={form.broker} onChange={e=>set({broker:e.target.value})} placeholder={form.type==="BES"?"Anadolu Hayat, Garanti...":"Akbank, Midas..."}/>
           </div>
-          <div>
-            <div className="kk" style={{marginBottom:4}}>Komisyon</div>
-            <input className="finp" type="number" step="any" value={form.commission} onChange={e=>set({commission:e.target.value})} placeholder="0.00"/>
-          </div>
+          {form.type!=="BES"&&(
+            <div>
+              <div className="kk" style={{marginBottom:4}}>Komisyon</div>
+              <input className="finp" type="number" step="any" value={form.commission} onChange={e=>set({commission:e.target.value})} placeholder="0.00"/>
+            </div>
+          )}
           <div style={{display:"flex",alignItems:"flex-end"}}>
             {form.shares&&form.avgCost?(
               <div style={{fontSize:11,color:"var(--text2)",padding:"7px 0"}}>
