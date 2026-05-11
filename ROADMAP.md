@@ -66,7 +66,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **FX/GOLD ham ticker normalize** `[S]` `[P2]` — `asset_type:"FX"` prefix'siz `USDTRY` gelince 404; `C:` autoprefix + format guard.
 - [x] **BES (Bireysel Emeklilik) temel giriş** `[S]` `[P1]` `Hotfix-2026-05-11` ✅ — ManuelPosForm BES için pay adedi/NAV kaldırıldı; "Yatırılan Toplam Tutar" + "Güncel Değer" alanları eklendi. `shares=1, avg_cost=yatırılan`; güncel değer `fetch-prices mode:"set-manual-price"` → `price_cache`. Devlet katkısı farklı hesap kodu ile ayrı pozisyon.
 - [ ] **BES güncel değer aylık güncelleme** `[S]` `[P2]` — Pozisyon satırında "Değer Güncelle" butonu; `set-manual-price` endpoint hazır, yalnızca UI gerekli.
-- [ ] **Vadeli mevduat** `[M]` `[P2]` — faiz oranı, vade, getiri; kullanıcı girer, provider yok.
+- [x] **Nakit & Vadeli Mevduat (CASH/DEPOSIT)** `[M]` `[P2]` `Hotfix-2026-05-11` ✅ — CASH (banka bakiyesi) + DEPOSIT (vadeli mevduat) first-class asset type eklendi. Faiz oranı, vade tarihi, basit faiz hesabı (cap at maturity). DB: `interest_rate`, `maturity_date` kolonları + `rebuild_positions_atomic` RPC. Dashboard mixed-currency blokları; vade tarihi badge (kırmızı/sarı/yeşil); HHI konsantrasyon riskinden hariç. 11 commit, migration 016–017.
 - [ ] **Eurobond / Tahvil takibi** `[M]` `[P2]` — `asset_type:"BOND"`; kupon tarihleri, vade, YTM; manuel giriş. Fiyat: Massive `AGG`/`TLT` proxy veya Hazine websitesi.
 - [ ] **Kripto staking / getiri takibi** `[S]` `[P2]` — Staking kazancını DIV gibi takip; mevcut `transactions.way:"DIV"` altyapısı yeniden kullanılır.
 - [ ] **DCA Planı (Otomatik Alım Hatırlatıcısı)** `[M]` `[P3]` — ticker + dönem + tutar; pg_cron email hatırlatma. Yeni `dca_plans` tablosu + Resend API.
@@ -442,6 +442,8 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 Sprint 4–16 ✅ | **Sprint 17 aktif → 2026-05-26 → 2026-06-08** | Dosya: `sprints/sprint-17.md`
 
 Sprint 16 retro: Item 1–4 tek gün (2026-05-11) teslim edildi; 4 commit. Migration 014 (multi-currency RPC), Migration 015 (watchlist policy split), html2canvas SRI, BIST/CRYPTO/GOLD cron fix. Item 5 (Temettü Takvimi Faz 1) edge fn + UI kapasitesi aşıldığı için Sprint 17'ye devir — altyapı hazır, başlangıç maliyeti sıfır.
+
+Hotfix 2026-05-11 (Sprint 17 öncesi): **Nakit & Vadeli Mevduat** tamamlandı — CASH + DEPOSIT asset type'ları, mixed-currency Dashboard blokları, vade tarihi badge, HHI exclusion. 11 commit, migration 016–017.
 
 **Sprint 17 scope (sıralı):**
 

@@ -15,6 +15,15 @@
 - Pozisyon listesinde "₺N yatırılan" label'ı.
 - Commit: `6317454`
 
+**Nakit & Vadeli Mevduat (CASH/DEPOSIT)** ✅ — Banka hesabı bakiyeleri ve vadeli mevduat first-class asset type olarak eklendi:
+- `CASH`: TRY/USD/EUR banka hesabı; fiyat = 1.0 sabit; P&L = 0.
+- `DEPOSIT`: faiz oranı + vade tarihi + basit faiz hesabı (`1 + oran × gün/360`, vadeye cap); P&L = tahakkuk eden faiz.
+- DB: `positions.interest_rate` + `positions.maturity_date` + `positions.reserve_ratio`; `rebuild_positions_atomic` RPC güncellendi (migration 016–017).
+- Dashboard: `mixed:true` bloklar (çok para birimli toplam); vade tarihi badge (kırmızı/sarı/yeşil).
+- AddTab: Manuel-only mod (text/image/CSV gizli).
+- HHI konsantrasyon riskinden hariç.
+- 11 commit: `5fba9fc` → `e074ca7`
+
 ---
 
 ## Bağlam: Sprint 16 Retro Özeti
