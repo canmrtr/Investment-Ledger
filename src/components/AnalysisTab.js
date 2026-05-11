@@ -1347,35 +1347,51 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           if(total<=0||posWithMv.length===0)return <div className="empty" style={{padding:"12px 0",fontSize:11}}>Yeterli pozisyon yok</div>;
           const sorted=[...posWithMv].sort((a,b)=>b.dispMv-a.dispMv);
           const weights=sorted.map(p=>({...p,w:p.dispMv/total}));
-          const top3w=weights.slice(0,3).reduce((a,p)=>a+p.w,0)*100;
+          const fundWeights=weights.filter(p=>p.type==="FUND");
+          const stockWeights=weights.filter(p=>p.type!=="FUND");
+          const top3wStocks=stockWeights.slice(0,3).reduce((a,p)=>a+p.w,0)*100;
+          const top3wAll=weights.slice(0,3).reduce((a,p)=>a+p.w,0)*100;
           const hhi=Math.round(weights.reduce((a,p)=>a+(p.w*100)*(p.w*100),0));
-          const level=top3w>60?"Yüksek":top3w>40?"Orta":"Düşük";
-          const color=top3w>60?"var(--err)":top3w>40?"var(--warn)":"var(--ok)";
+          const level=top3wStocks>60?"Yüksek":top3wStocks>40?"Orta":"Düşük";
+          const color=top3wStocks>60?"var(--err)":top3wStocks>40?"var(--warn)":"var(--ok)";
+          const fundMvPct=fundWeights.reduce((a,p)=>a+p.w,0)*100;
           return(
             <div>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
                 <div>
-                  <div className="mono" style={{fontSize:22,fontWeight:700,color}}>{mask(fmt(top3w,1)+"%")}</div>
-                  <div style={{fontSize:10,color:"var(--text3)",marginTop:1}}>İlk 3 pozisyon ağırlığı</div>
+                  <div className="mono" style={{fontSize:22,fontWeight:700,color}}>{mask(fmt(top3wStocks,1)+"%")}</div>
+                  <div style={{fontSize:10,color:"var(--text3)",marginTop:1}} data-tip="Hisse, Kripto ve Emtia pozisyonları dahil. ETF/Fon pozisyonları iç çeşitlilik sağladığından ayrı gösterilmiştir.">İlk 3 pozisyon ağırlığı</div>
+                  {fundWeights.length>0&&<div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>ETF dahil: {fmt(top3wAll,1)}%</div>}
                 </div>
                 <span style={{fontSize:12,padding:"3px 10px",borderRadius:12,background:color+"22",color,fontWeight:600}}>{level}</span>
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                {weights.slice(0,3).map((p,i)=>(
-                  <div key={p.ticker} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>openDetail(p.ticker,p.type,"analysis")}>
-                    <span style={{color:"var(--text3)",fontSize:11,minWidth:14}}>{i+1}.</span>
-                    <span className="mono" style={{fontSize:13,fontWeight:600,minWidth:60}}>{p.ticker}</span>
-                    <div style={{flex:1,height:6,background:"var(--bg3)",borderRadius:3,overflow:"hidden"}}>
-                      <div style={{width:(p.w*100)+"%",height:"100%",background:color,borderRadius:3}}/>
+                {weights.slice(0,3).map((p,i)=>{
+                  const isFund=p.type==="FUND";
+                  return(
+                    <div key={p.ticker} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>openDetail(p.ticker,p.type,"analysis")}>
+                      <span style={{color:"var(--text3)",fontSize:11,minWidth:14}}>{i+1}.</span>
+                      <div style={{display:"flex",alignItems:"center",gap:4,minWidth:60}}>
+                        <span className="mono" style={{fontSize:13,fontWeight:600}}>{p.ticker}</span>
+                        {isFund&&<span className="badge etf" style={{fontSize:9}}>ETF</span>}
+                      </div>
+                      <div style={{flex:1,height:6,background:"var(--bg3)",borderRadius:3,overflow:"hidden"}}>
+                        <div style={{width:(p.w*100)+"%",height:"100%",background:isFund?"var(--info)":color,borderRadius:3,opacity:isFund?0.5:1}}/>
+                      </div>
+                      <span className="mono" style={{fontSize:12,color:"var(--text2)",minWidth:40,textAlign:"right"}}>{fmt(p.w*100,1)}%</span>
                     </div>
-                    <span className="mono" style={{fontSize:12,color:"var(--text2)",minWidth:40,textAlign:"right"}}>{fmt(p.w*100,1)}%</span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               <div style={{marginTop:10,fontSize:11,color:"var(--text3)"}}>
-                Portföyünün <span style={{fontWeight:600,color}}>{fmt(top3w,1)}%'si</span> ilk 3 pozisyona yoğunlaşmış.
-                {posWithMv.length > 3 && ` Geri kalan ${posWithMv.length-3} pozisyon riski dağıtıyor.`}
+                Portföyünün <span style={{fontWeight:600,color}}>{fmt(top3wStocks,1)}%'si</span> ilk 3 hisse/kripto/emtia pozisyonuna yoğunlaşmış.
+                {stockWeights.length>3&&` Geri kalan ${stockWeights.length-3} pozisyon riski dağıtıyor.`}
               </div>
+              {fundWeights.length>0&&(
+                <div style={{marginTop:6,fontSize:10,color:"var(--text3)",borderTop:"1px solid var(--border)",paddingTop:6}}>
+                  {fundWeights.length} ETF/Fon pozisyonu ({mask(fmt(fundMvPct,1)+"%")}) iç çeşitlilik nedeniyle ayrı tutulmuştur.
+                </div>
+              )}
             </div>
           );
         })()}

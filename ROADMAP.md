@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-11** (Sprint 16 aktif; Item 1–4 tamamlandı ✅. Item 5 (Temettü Takvimi Faz 1) devam ediyor. Dosya: `sprints/sprint-16.md`.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-11** (Sprint 16 kapandı: Item 1–4 tamamlandı, Item 5 Sprint 17'ye devir. Sprint 17 aktif → 2026-05-26 → 2026-06-08. Dosya: `sprints/sprint-17.md`.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -58,7 +58,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Asset Type Genişletme
 
-- [ ] **AI parse temettü desteği (DIV way)** `[S]` `[P1]` — `parse-transaction` sistem promptu `way:"BUY|SELL"` ile kısıtlı; Türkçe temettü ifadeleri başarısız. Düzeltme: parser sözleşmesini `BUY|SELL|DIV` yap, Türkçe örnekler ekle, insert öncesi `way` istemci doğrulaması. `→ parse-transaction-edge-function.js:94; AddTab.js:134`
+- [ ] **AI parse temettü desteği (DIV way)** `[S]` `[P1]` `Sprint-17` — `parse-transaction` sistem promptu `way:"BUY|SELL"` ile kısıtlı; Türkçe temettü ifadeleri başarısız. Düzeltme: parser sözleşmesini `BUY|SELL|DIV` yap, Türkçe örnekler ekle, insert öncesi `way` istemci doğrulaması. `→ parse-transaction-edge-function.js:94; AddTab.js:134`
 - [ ] **Sektör-aware fundamental eşikler** `[M]` `[P1]` — tech P/E ≤30, utility ≤15 vs.; `sic_description` veya FMP `sector` ile profil seç. TR enflasyonu CAGR eşiklerini de etkiliyor.
 - [ ] **TR altın işçilik premium göstergesi** `[M]` `[P2]` — Reşat/Ata birimi ekleme; Dashboard "5 çeyrek · ₺12,000/ad · Spot saf ₺55,000 · Premium %9" render; ödenen fiyat − spot saf fark hesabı.
 - [ ] **BIST P/S metriği** `[S]` `[P2]` — borsa-mcp `meta.market_cap` / `latestRevenue` ile derive; frontend veya edge function 2. call.
@@ -74,8 +74,8 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 ## Temettü Takvimi
 
 - [ ] **Temettü Takvimi** `[M]` `[P2]` — FMP `/stable/stock/dividends`; tutulan ticker'lar için sonraki temettü tarihi; HistoryTab "Yaklaşan Temettüler" collapsible veya TickerDetailTab "Sonraki Temettü" satırı. `fetch-fundamentals`'a yeni `mode:"dividend-calendar"` dalı.
-  - [ ] (a) `mode:"dividend-calendar"` dalı; `dividends` array → ex-date, amount `[S]`
-  - [ ] (b) TickerDetailTab "Sonraki Temettü" satırı (held ise) `[S]`
+  - [ ] (a) `mode:"dividend-calendar"` dalı; `dividends` array → ex-date, amount `[S]` `Sprint-17`
+  - [ ] (b) TickerDetailTab "Sonraki Temettü" satırı (held ise) `[S]` `Sprint-17`
   - [ ] (c) Dashboard/HistoryTab "Bu ay beklenen temettüler" özet satırı `[S]`
 - [ ] **Kazanç Takvimi (Earnings Calendar)** `[S]` `[P3]` — FMP `/stable/earning-calendar`; TickerDetailTab meta'ya "Sonraki Bilanço: 28 Nisan" satırı.
 
@@ -159,7 +159,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ### Analiz Tab Açık Alt Görevler
 
-- [ ] **Dashboard: Kripto getirisi gösterilmiyor** `[S]` `[P1]` — Dashboard ekranında kripto pozisyonlarının getirisi hâlâ görünmüyor. Düzeltilmesi gerekli.
+- [x] **Dashboard: Kripto getirisi gösterilmiyor** `[S]` `[P1]` ✅ — Düzeltildi.
 
 - [ ] **Başabaş tablosu ve potansiyel kayıp bölümleri — değer/yer tradeoff** `[S]` `[P2]` `[PO+UX]` — Bu iki bölüm basit hesaplar sunuyor; Analiz ekranını gereksiz kalabalık yapıyor olabilir. Kaldırılması, küçültülmesi veya başka yere taşınması PO ve UX designer ile birlikte değerlendirilecek.
 
@@ -344,9 +344,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ### Brand Fit & Jargon Temizliği (Grup A/B — Sprint-15 kapsamı)
 
-- [ ] **Finans jargonunu Türkçe kullanıcı diline çevir** `[S]` `[P1]` — Default UI'da: `Total Return` → `Toplam Getiri`, `Benchmark` → `Karşılaştırma`, `Trade` → `İşlem`, `XIRR` → `Yıllık Getiri` (detayda XIRR), `P/E/P/S` → `F/K/F/S`. Kısaltmalar tooltip/detayda kalabilir.
+- [ ] **Finans jargonunu Türkçe kullanıcı diline çevir** `[S]` `[P1]` `Sprint-17` — Default UI'da: `Total Return` → `Toplam Getiri`, `Benchmark` → `Karşılaştırma`, `Trade` → `İşlem`, `XIRR` → `Yıllık Getiri` (detayda XIRR), `P/E/P/S` → `F/K/F/S`. Kısaltmalar tooltip/detayda kalabilir.
 - [ ] **Karmaşık kartlara önce sonuç cümlesi ekle** `[S]` `[P1]` — Sağlık, Konsantrasyon, Kur Riski, Dayanıklılık, Başa Baş, Fundamental checklist → metrik tablosundan önce sade sonuç cümlesi. Nudge copy pattern yeniden kullanılır.
-- [ ] **Formülleri ekrandan kaldır** `[S]` `[P1]` — "HHI= Σ(ağırlık²) × 10000", skor formülleri, `FUND_THRESHOLDS'tan` metinleri kaldır; sonucu göster, hesabı gizle. "HHI nedir?" tooltip kalabilir. `→ AnalysisTab.js:1290,1943,1126`
+- [ ] **Formülleri ekrandan kaldır** `[S]` `[P1]` `Sprint-17` — "HHI= Σ(ağırlık²) × 10000", skor formülleri, `FUND_THRESHOLDS'tan` metinleri kaldır; sonucu göster, hesabı gizle. "HHI nedir?" tooltip kalabilir. `→ AnalysisTab.js:1290,1943,1126`
 - [ ] **Boş durum metinlerini kullanıcı diline çevir** `[S]` `[P2]` — `"snap. yok"` → `"Veri henüz oluşmadı"`; `"Bilinmiyor"` sektör → `"Henüz sınıflandırılmadı"`.
 - [ ] **"Potansiyel Kayıp Simülasyonu" → "Senaryo Analizi" veya "Stres Testi"** `[S]` `[P2]` — Daha az korkutucu framing; renk nötrleştirme. `→ AnalysisTab.js:1371`
 - [ ] **Potansiyel Kayıp Simülasyonu — altın pozisyonlarını filtrele** `[S]` `[P2]` — "Piyasa −%10/20/30" GOLD tipi pozisyonları kapsamalı mı? (a) `type!=='GOLD'` filtresi + "Hisse & Fon Değeri" alt başlığı, veya (b) footnote ile açıkla.
@@ -437,21 +437,21 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Sonraki Adım
 
-Sprint 4–15 ✅ | **Sprint 16 aktif → 2026-05-12 → 2026-05-25** | Dosya: `sprints/sprint-16.md`
+Sprint 4–16 ✅ | **Sprint 17 aktif → 2026-05-26 → 2026-06-08** | Dosya: `sprints/sprint-17.md`
 
-Sprint 15 retro: 5 item, 6 commit, tek seansta teslim (2026-05-11). Item 1: 3 edge fn JWT/try-catch/BIST-routing + 5 frontend edgeCall→edgeCallAuth. Item 2: computePeriod DIV cashflow. Item 3: BreakEven özet cümlesi + FX Risk dinamik başlık. Item 4: Komisyon oran bağlamı + HHI gizle. Item 5: parse-transaction raw leak + dividend-calendar ticker validation. 5a (bist.raw?.annual) daha önce fix edilmişti.
+Sprint 16 retro: Item 1–4 tek gün (2026-05-11) teslim edildi; 4 commit. Migration 014 (multi-currency RPC), Migration 015 (watchlist policy split), html2canvas SRI, BIST/CRYPTO/GOLD cron fix. Item 5 (Temettü Takvimi Faz 1) edge fn + UI kapasitesi aşıldığı için Sprint 17'ye devir — altyapı hazır, başlangıç maliyeti sıfır.
 
-**Sprint 16 scope (sıralı):**
+**Sprint 17 scope (sıralı):**
 
-1. ✅ **`get_allocation_only_positions` çoklu-para birimi** — Migration 014; USD normalize; anon GRANT kaldırıldı.
-2. ✅ **Security Audit Batch — S1+S2+S3** — Watchlist policy split (015), html2canvas SRI, fetch-prices upsert logging.
-3. ✅ **UI Bug Batch — U1+U2+U3** — ManuelPosForm TRY/EUR, EUR sort, il_recent_search doğrulandı.
-4. ✅ **BIST/CRYPTO/GOLD cron refresh** — type IN filtresi; deployed.
-5. **Temettü Takvimi — Faz 1** `[P2]` `Sprint-16` `[M]` — `mode:"dividend-calendar"` dalı (a) + TickerDetailTab "Sonraki Temettü" satırı (b). **Devam ediyor.**
+1. **Temettü Takvimi Faz 1** `[M][P2]` `Sprint-17` — Sprint 16 deviri; `mode:"dividend-calendar"` + TickerDetailTab "Sonraki Temettü" satırı.
+2. **AI Parse DIV Way** `[S][P1]` `Sprint-17` — `parse-transaction` sözleşmesi `BUY|SELL|DIV`; Türkçe temettü ifadesi örnekleri; `saveTx` istemci doğrulaması.
+3. **Brand Fit B1+B2** `[S×2][P1]` `Sprint-17` — Finans jargonu Türkçeleştirme + formül gizleme (AnalysisTab); kapasiteye göre ertelenebilir.
 
-**Sprint 17'ye bakış (henüz commit yok):**
+**Sprint 18 adayları (öncelik sırasıyla):**
 
-- Temettü Takvimi Faz 2: Dashboard/HistoryTab "Bu ay beklenen temettüler" özet satırı (c)
-- `Dashboard: Kripto getirisi gösterilmiyor` `[P1]` fix
-- Piyasa Dayanıklılık Skoru `[M][P2]`
-- AI parse DIV way desteği `[S][P1]`
+1. Temettü Takvimi Faz 2 — Dashboard/HistoryTab "Bu ay beklenen temettüler" özet satırı (c)
+2. Piyasa Dayanıklılık Skoru `[M][P2]` — `resilienceScore` + AnalysisTab kartı
+3. Stale Fiyat Uyarısı `[S][P2]` — `price_cache.updated_at` 24h+ ticker'lara badge
+4. Karmaşık kartlara önce sonuç cümlesi `[S][P1]` — Nudge copy pattern; brand fit devamı
+5. Sektör-aware fundamental eşikler `[M][P1]` — tech/utility P/E farklılaşması
+6. AnalysisTab 15 kart bölüm başlıkları `[M][P2]` — Dağılım/Risk/Performans/Gelir görsel hiyerarşi
