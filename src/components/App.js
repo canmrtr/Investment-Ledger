@@ -220,6 +220,8 @@ function App({session}){
   // Public portfolio view — URL param ile açıldığında portföyü çek
   useEffect(()=>{
     if(!publicViewId)return;
+    if(session===undefined)return; // auth henüz yükleniyor
+    if(session===null){flash_("Bu portföyü görmek için giriş yapmalısınız","err");setPublicViewId(null);return;}
     (async()=>{
       const{data:pf}=await sb.from("portfolios").select("id,name,is_public,privacy_level,user_id").eq("id",publicViewId).eq("is_public",true).maybeSingle();
       if(!pf){flash_("Bu portföy bulunamadı veya gizli","err");setPublicViewId(null);return;}
@@ -236,7 +238,7 @@ function App({session}){
       setPublicViewData({portfolio:pf,positions,owner:owner||{}});
       setTab("publicview");
     })();
-  },[publicViewId]);
+  },[publicViewId,session]);
   // FX: mount + pos/txs değişince EUR ihtiyacı oluşursa tetikle. Cache 24h fresh ise atla.
   useEffect(()=>{
     const fresh = fxAt && (Date.now() - fxAt) < FX_TTL_MS;

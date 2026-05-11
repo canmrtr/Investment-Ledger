@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-11** (Sprint 15 planlandı: 3 P1 edge security + 1 P1 veri doğruluğu + Brand-fit A-2/A-3/B-2 + 3 P2 edge audit fix. Dosya: `sprints/sprint-15.md`.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-11** (Sprint 15 tamamlandı ✅. Sprint 16 planlandı: multi-currency RPC fix + security audit batch + UI bug batch + Temettü Takvimi. Dosya: `sprints/sprint-16.md`.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -437,23 +437,21 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Sonraki Adım
 
-Sprint 4–15 ✅ | **Sprint 16 → planlanacak**
+Sprint 4–15 ✅ | **Sprint 16 aktif → 2026-05-12 → 2026-05-25** | Dosya: `sprints/sprint-16.md`
 
 Sprint 15 retro: 5 item, 6 commit, tek seansta teslim (2026-05-11). Item 1: 3 edge fn JWT/try-catch/BIST-routing + 5 frontend edgeCall→edgeCallAuth. Item 2: computePeriod DIV cashflow. Item 3: BreakEven özet cümlesi + FX Risk dinamik başlık. Item 4: Komisyon oran bağlamı + HHI gizle. Item 5: parse-transaction raw leak + dividend-calendar ticker validation. 5a (bist.raw?.annual) daha önce fix edilmişti.
 
-**Sprint 15 scope (sıralı, aktif):**
+**Sprint 16 scope (sıralı, aktif):**
 
-1. **Edge Security Fixes — 1a+1b+1c** `[P1]` `Sprint-15` 3×`[S]` — `fetch-fundamentals` JWT auth, `fetch-prices` try/catch kapsama, `refresh-price-cache` BIST type-first routing. Aynı deploy batchinde gönder. `→ fetch-fundamentals-edge-function.js | fetch-prices-edge-function.js:302-312 | refresh-price-cache-edge-function.js:148-153`
-2. **`computePeriod` DIV Eksikliği** `[P1]` `Sprint-15` `[S]` — Dönem getirisi ve dönem XIRR'e seçili dönemdeki temettüler dahil edilmiyor. `→ App.js:326-327,583,591-592; utils.js:304`
-3. **Brand-fit A-2 + A-3** `[P1]` `Sprint-15` 2×`[S]` — BreakEven bağlam cümlesi ("X% artışta başa baş"), FX Risk açıklayıcı cümle ("Portföyünün %62'si dolar riskine açık"). `→ AnalysisTab.js`
-4. **Brand-fit B-2** `[P2]` `Sprint-15` `[S]` — Komisyon bağlam oranı ("getirinin %0.8'i"), Konsantrasyon HHI formülünü ekrandan kaldır + cümle+pill. `→ AnalysisTab.js`
-5. **Audit P2 Batch — 5a+5b+5c** `[P2]` `Sprint-15` 3×`[S]` — `bist.raw?.annual→bist.annual` (BIST annual null), `parse-transaction` ham çıktı sızıntısı generic error, `dividend-calendar` ticker allowlist regex. `→ fetch-fundamentals-edge-function.js:820-821,703-728 | parse-transaction-edge-function.js:136-138`
+1. **`get_allocation_only_positions` çoklu-para birimi** `[P1]` `Sprint-16` `[M]` — RPC döviz dönüşümü yok; USD+TRY karışık portföylerde public allocation yüzdeleri yanıltıcı. Migration + RPC refactor + frontend. `→ migrations/012_public_allocation_rpc.sql; App.js:226,982`
+2. **Security Audit Batch — S1+S2+S3** `[P2]` `Sprint-16` 3×`[S]` — `watchlist_own` policy FOR ALL→INSERT/SELECT/DELETE, `html2canvas` SRI hash, `price_snapshots` policy rol kısıtlaması notu + `fetch-prices` upsert hata yutma fix. Tek migration batchinde gönder.
+3. **UI Bug Batch — U1+U2+U3** `[P2]` `Sprint-16` 3×`[S]` — ManuelPosForm TRY/EUR currency filtresi, EUR sort state, `il_recent_search` signOut temizliği. Tek PR'da.
+4. **BIST/CRYPTO/GOLD cron refresh** `[P2]` `Sprint-16` `[S]` — `refresh-price-cache` sadece US_STOCK çekiyor; diğer asset tipleri stale kalıyor. `→ refresh-price-cache-edge-function.js`
+5. **Temettü Takvimi — Faz 1** `[P2]` `Sprint-16` `[M]` — `mode:"dividend-calendar"` dalı (a) + TickerDetailTab "Sonraki Temettü" satırı (b). FMP endpoint hazır; edge fn modüler yapısı hazır.
 
-**Sprint 16'ya sarkacaklar (bilinçli erteleme):**
+**Sprint 17'ye bakış (henüz commit yok):**
 
-1. **`get_allocation_only_positions` çoklu-para birimi** `[P1]` `Sprint-16` — Migration + RPC + frontend; rls-auditor sign-off gerekiyor.
-2. **`watchlist` policy FOR ALL → INSERT/SELECT/DELETE** `[P2]` `Sprint-16` — Migration; rls-auditor sign-off.
-3. **CSP/SRI `html2canvas` integrity hash** `[P2]` `Sprint-16` — Security hygiene; acil değil.
-4. **ManuelPosForm currency filtresi** + **EUR sort** + **BIST/CRYPTO/GOLD cron refresh** `[P2]` `Sprint-16` — UI bug batch; capacity Sprint 15'te doldu.
-5. **Temettü Takvimi [M][P2]** `Sprint-16` — FMP altyapısı hazır; frontend + edge dal eklenecek.
-6. **`il_recent_search` signOut temizliği** `[P2]` `Sprint-16` — LS hygiene; tek satır; kolay ama Sprint 15 scope'una sığmadı.
+- Temettü Takvimi Faz 2: Dashboard/HistoryTab "Bu ay beklenen temettüler" özet satırı (c)
+- `Dashboard: Kripto getirisi gösterilmiyor` `[P1]` fix
+- Piyasa Dayanıklılık Skoru `[M][P2]`
+- AI parse DIV way desteği `[S][P1]`
