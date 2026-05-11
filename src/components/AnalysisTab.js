@@ -1342,7 +1342,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
         <div className="stitle" style={{marginBottom:12}}>Konsantrasyon Riski</div>
         {(()=>{
-          const posWithMv=filteredPos.map(p=>({...p,dispMv:mvDisp(p)})).filter(p=>p.dispMv>0);
+          const posWithMv=filteredPos.filter(p=>p.type!=="CASH"&&p.type!=="DEPOSIT").map(p=>({...p,dispMv:mvDisp(p)})).filter(p=>p.dispMv>0);
           const total=posWithMv.reduce((a,p)=>a+p.dispMv,0);
           if(total<=0||posWithMv.length===0)return <div className="empty" style={{padding:"12px 0",fontSize:11}}>Yeterli pozisyon yok</div>;
           const sorted=[...posWithMv].sort((a,b)=>b.dispMv-a.dispMv);
