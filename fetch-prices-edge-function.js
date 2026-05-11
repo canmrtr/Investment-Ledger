@@ -300,16 +300,20 @@ Deno.serve(async (req) => {
   });
 
   // ── JWT doğrulama ──────────────────────────────────────────────────────────
-  const authHeader = req.headers.get("Authorization") || "";
-  const token = authHeader.replace(/^Bearer\s+/i, "");
-  if (!token) return json({ error: "Kimlik doğrulama gerekli" }, 401);
-  const supaUrl = Deno.env.get("SUPABASE_URL")!;
-  const supaAnon = Deno.env.get("SUPABASE_ANON_KEY")!;
-  const supaAuth = createClient(supaUrl, supaAnon, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-  const { data: { user }, error: authErr } = await supaAuth.auth.getUser(token);
-  if (authErr || !user) return json({ error: "Geçersiz oturum" }, 401);
+  try {
+    const authHeader = req.headers.get("Authorization") || "";
+    const token = authHeader.replace(/^Bearer\s+/i, "");
+    if (!token) return json({ error: "Kimlik doğrulama gerekli" }, 401);
+    const supaUrl = Deno.env.get("SUPABASE_URL")!;
+    const supaAnon = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supaAuth = createClient(supaUrl, supaAnon, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: { user }, error: authErr } = await supaAuth.auth.getUser(token);
+    if (authErr || !user) return json({ error: "Geçersiz oturum" }, 401);
+  } catch (_authEx) {
+    return json({ error: "Kimlik doğrulama başarısız" }, 401);
+  }
   // ──────────────────────────────────────────────────────────────────────────
 
   try {

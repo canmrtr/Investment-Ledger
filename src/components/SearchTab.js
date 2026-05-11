@@ -32,7 +32,7 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
     ).then(results=>{
       const all=results.flatMap(r=>r.data||[]);
       if(all.length===0){
-        return edgeCall("fetch-fundamentals",{mode:"ticker-list"})
+        return edgeCallAuth("fetch-fundamentals",{mode:"ticker-list"})
           .then(r=>r.json())
           .then(d=>{ if(Array.isArray(d.list)){tickerDbCacheSet(d.list);setTickerDb(d.list);} });
       }

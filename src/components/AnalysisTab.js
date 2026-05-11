@@ -501,7 +501,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       const p=targets[i];
       setFundProg(`${p.ticker} (${i+1}/${targets.length})`);
       try{
-        const r=await edgeCall("fetch-fundamentals",{ticker:p.ticker,asset_type:p.type});
+        const r=await edgeCallAuth("fetch-fundamentals",{ticker:p.ticker,asset_type:p.type});
         const d=await r.json();
         if(r.ok&&d?.metrics){
           next[p.ticker]=d;

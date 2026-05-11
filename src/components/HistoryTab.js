@@ -23,7 +23,7 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,open
     });
     setDivCalMap(m=>({...m,...cached}));
     if(!toFetch.length)return;
-    edgeCall("fetch-fundamentals",{mode:"dividend-calendar",tickers:toFetch})
+    edgeCallAuth("fetch-fundamentals",{mode:"dividend-calendar",tickers:toFetch})
       .then(r=>r.json())
       .then(data=>{
         if(!data?.dividends)return;

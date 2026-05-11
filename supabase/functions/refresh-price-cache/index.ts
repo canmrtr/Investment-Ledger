@@ -98,6 +98,10 @@ const normalizeTicker = (ticker, type) => {
     if (!sym) throw new Error(`GOLD ticker "${ticker}" goldMap'te bulunamadı`);
     return `C:${sym}USD`;
   }
+  if (type === "BIST") {
+    if (/\.IS$/i.test(ticker)) return ticker.toUpperCase();
+    return `${ticker.toUpperCase()}.IS`;
+  }
   return ticker;
 };
 

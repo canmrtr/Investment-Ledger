@@ -444,7 +444,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
   // Dividend calendar — yalnızca held US_STOCK için; BIST'te FMP temettü güvenilir değil
   useEffect(()=>{
     if(isBist||!p||divCal!==null)return;
-    edgeCall("fetch-fundamentals",{mode:"dividend-calendar",tickers:[ticker]})
+    edgeCallAuth("fetch-fundamentals",{mode:"dividend-calendar",tickers:[ticker]})
       .then(r=>r.json())
       .then(data=>{
         const items=data?.dividends?.[ticker]||[];
@@ -463,7 +463,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
     }
     setFundLoading(true);setFundErr("");setFundErrCode("");
     try{
-      const r=await edgeCall("fetch-fundamentals",{ticker,asset_type:effectiveType});
+      const r=await edgeCallAuth("fetch-fundamentals",{ticker,asset_type:effectiveType});
       let d=null;
       try{d=await r.json();}catch(_){/* non-JSON */}
       if(r.ok&&d&&d.metrics){
