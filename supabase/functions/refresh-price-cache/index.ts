@@ -144,17 +144,19 @@ Deno.serve(async (req) => {
     let limit = DEFAULT_BATCH;
     try {
       const body = await req.json();
-      if (typeof body.limit === "number" && body.limit > 0) limit = Math.min(body.limit, 10);
+      if (typeof body.limit === "number" && body.limit > 0) limit = Math.min(body.limit, 7);
     } catch (_) { /* body yok / invalid — default */ }
 
     const supa = createClient(supaUrl, serviceKey, { auth: { persistSession: false } });
 
-    // 1) Tüm user'ların USD pozisyonlarından unique ticker listesi (RLS bypass)
-    // `type` da alıyoruz — CRYPTO/GOLD tickers Massive formatına normalize etmek için gerekli.
+    // 1) Tüm user'lardan unique ticker listesi (RLS bypass).
+    // FX hariç tüm desteklenen asset tipleri dahil edilir.
+    // `type` alıyoruz — CRYPTO/GOLD tickers Massive formatına normalize etmek için gerekli.
+    const REFRESHABLE_TYPES = ["US_STOCK", "FUND", "CRYPTO", "GOLD", "BIST"];
     const { data: posList, error: posErr } = await supa
       .from("positions")
       .select("ticker, type")
-      .eq("currency", "USD");
+      .in("type", REFRESHABLE_TYPES);
     if (posErr) throw new Error("positions read failed: " + posErr.message);
     // ticker → type haritası (ilk occurrence kazanır — aynı ticker farklı portföyde olabilir)
     const tickerTypes = {};
@@ -165,7 +167,7 @@ Deno.serve(async (req) => {
 
     if (allTickers.length === 0) {
       return new Response(
-        JSON.stringify({ message: "no USD tickers in positions", total: 0, processed: 0 }),
+        JSON.stringify({ message: "no refreshable tickers in positions", total: 0, processed: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
