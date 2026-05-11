@@ -58,6 +58,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Asset Type Genişletme
 
+- [ ] **BES Devlet Katkısı (DK) entegrasyonu** `[M]` `[P0]` `Sprint-17` — 4 ayrı form alanı (kişisel yatırılan, kişisel portföy güncel, DK anaparası, DK portföy güncel); `positions` tablosuna `dk_principal` + `dk_current` kolonları eklenir; `rebuild_positions_atomic` RPC güncellenir; maliyet tabanı = yalnızca kişisel yatırılan, DK+getiri tamamı kazanç sayılır; yanlış "ayrı pozisyon ekle" hint kaldırılır. Spec: `docs/superpowers/specs/2026-05-11-bes-state-contribution-design.md`
 - [ ] **AI parse temettü desteği (DIV way)** `[S]` `[P1]` `Sprint-17` — `parse-transaction` sistem promptu `way:"BUY|SELL"` ile kısıtlı; Türkçe temettü ifadeleri başarısız. Düzeltme: parser sözleşmesini `BUY|SELL|DIV` yap, Türkçe örnekler ekle, insert öncesi `way` istemci doğrulaması. `→ parse-transaction-edge-function.js:94; AddTab.js:134`
 - [ ] **Sektör-aware fundamental eşikler** `[M]` `[P1]` — tech P/E ≤30, utility ≤15 vs.; `sic_description` veya FMP `sector` ile profil seç. TR enflasyonu CAGR eşiklerini de etkiliyor.
 - [ ] **TR altın işçilik premium göstergesi** `[M]` `[P2]` — Reşat/Ata birimi ekleme; Dashboard "5 çeyrek · ₺12,000/ad · Spot saf ₺55,000 · Premium %9" render; ödenen fiyat − spot saf fark hesabı.
