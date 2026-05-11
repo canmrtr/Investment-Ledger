@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-11** (Sprint 15 tamamlandı ✅. Sprint 16 planlandı: multi-currency RPC fix + security audit batch + UI bug batch + Temettü Takvimi. Dosya: `sprints/sprint-16.md`.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-11** (Sprint 16 aktif; Item 1–4 tamamlandı ✅. Item 5 (Temettü Takvimi Faz 1) devam ediyor. Dosya: `sprints/sprint-16.md`.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -46,11 +46,11 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 **P2 — Sprint-16:**
 
-- [ ] **`get_allocation_only_positions` çoklu-para birimi sorunu** `[M]` `[P1]` `Sprint-16` — RPC döviz dönüşümü yapmadan topluyor; USD+TRY karıştırınca yüzdeler yanıltıcı. Düzeltme: `price_cache`+FX ile tek para birimine normalize et. `→ migrations/012_public_allocation_rpc.sql:36; App.js:226,982`
-- [ ] **"Tam Detay" portföy paylaşımı: UI ≠ veri katmanı** `[S]` `[P1]` `Sprint-16` — Settings "Tam Detay" → "Adet ve maliyet bilgileri görünür" diyor; public render her zaman yalnızca ticker/isim/yüzde bar gösteriyor. Social Faz 2 ile birlikte ele alınacak. `→ App.js:944,960,982,1082`
-- [ ] **CSP/SRI: `html2canvas` integrity hash eksik** `[S]` `[P2]` `Sprint-16` — `index.html:291` `html2canvas@1.4.1` CDN script `integrity=` yok. SRI hash ekle veya kendi asset'ine al.
-- [ ] **`watchlist_own` policy `FOR ALL` — UPDATE riski** `[S]` `[P2]` `Sprint-16` — `ticker` sütunu UPDATE edilebilir (istenmiyor). `FOR INSERT`/`FOR SELECT`/`FOR DELETE` olarak üçe böl.
-- [ ] **`fetch-prices` historical upsert hatası sessizce yutuluyor** `[S]` `[P2]` `Sprint-16` — Supabase upsert hatası `console.error` bile çağrılmadan yutuluyur; fiyat geçmişi eksik kalabiliyor. `→ fetch-prices-edge-function.js:453-467`
+- [x] **`get_allocation_only_positions` çoklu-para birimi sorunu** `[M]` `[P1]` `Sprint-16` ✅ — Migration 014: price_cache FX oranı ile USD'ye normalize; avg_cost fallback yok; anon GRANT kaldırıldı.
+- [ ] **"Tam Detay" portföy paylaşımı: UI ≠ veri katmanı** `[S]` `[P1]` — Settings "Tam Detay" → "Adet ve maliyet bilgileri görünür" diyor; public render her zaman yalnızca ticker/isim/yüzde bar gösteriyor. Social Faz 2 ile birlikte ele alınacak. `→ App.js:944,960,982,1082`
+- [x] **CSP/SRI: `html2canvas` integrity hash eksik** `[S]` `[P2]` `Sprint-16` ✅ — `index.html` sha512 integrity attribute eklendi.
+- [x] **`watchlist_own` policy `FOR ALL` — UPDATE riski** `[S]` `[P2]` `Sprint-16` ✅ — Migration 015: FOR INSERT/SELECT/DELETE ayrı policy; UPDATE DB seviyesinde engelli.
+- [x] **`fetch-prices` historical upsert hatası sessizce yutuluyor** `[S]` `[P2]` `Sprint-16` ✅ — PostgREST + network hataları console.error ile loglanıyor.
 - [ ] **LS key'leri user-scope değil** `[S]` `[P2]` `Sprint-16` — `il_prc`, `il_hist`, `il_hide` vb. user-specific prefix taşımıyor. Kısa vade: signOut'ta tüm `il_` key'leri temizle. Uzun vade: key'lere `user.id` prefix ekle.
 - [ ] **`price_snapshots` policy `TO anon, authenticated` eksik** `[S]` `[P2]` `Sprint-16` — Role kısıtlaması belirtilmemiş; davranış aynı ama dokümantasyon netleşmeli.
 
@@ -302,8 +302,8 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 - [ ] **AI parse kaydetme: `way` istemci doğrulaması eksik** `[S]` `[P2]` — CSV `BUY|SELL|DIV` normalize ediyor; AI parse yalnızca sayısal kontrol yapıp `way`'i insert ediyor. `saveTx`'e `way`/`asset_type`/tarih/para birimi doğrulaması ekle. `→ AddTab.js:73,79`
 - [ ] **İşlem türü kart ikonları yeniden ele alınacak** `[S]` `[P1]` — AddTab asset type picker ikonları marka diliyle tam örtüşmüyor. Brand kit uyumlu SVG/logo yaklaşımı seçilecek.
-- [ ] **ManuelPosForm sadece USD pozisyonları listeler** `[S]` `[P2]` — `pos.filter(p=>p.currency==="USD")` TRY/EUR pozisyonlarını göstermiyor. `pos.filter(p=>p.shares>CFG.DUST_THRESHOLD)` kullan. `→ App.js:~2402`
-- [ ] **EUR tablosu sıralanamıyor** `[S]` `[P2]` — USD/TRY tabloları `tsort`/`sortTry` ile sıralanıyor; EUR sadece alfabetik. `sortEur` state ekle. `→ App.js:~5157-5176`
+- [x] **ManuelPosForm sadece USD pozisyonları listeler** `[S]` `[P2]` `Sprint-16` ✅ — `shares > CFG.DUST_THRESHOLD` filtresi; currency sembolü otomatik (₺/€/$).
+- [x] **EUR tablosu sıralanamıyor** `[S]` `[P2]` `Sprint-16` ✅ — `sortEur` state + Ticker/Toplam sütunları tıklanabilir; ↑↓ ikonu.
 
 ### Tasarım Tutarsızlıkları
 
@@ -365,9 +365,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **Dashboard ↻ Güncelle başarısız ticker ayrıntısı** `[S]` `[P2]` — Şu an "başarısız: AAPL" toast; Settings → Sistem Durumu'nda per-ticker hata sebebi (HTTP 403, bulunamadı vb.).
 - [ ] **price_cache sanity check** `[S]` `[P2]` — `price = 0 || price = null` satırlar "bayat" sayılıp yeniden fetch tetiklemeli.
 - [ ] **Service Worker cache versiyonlama** `[S]` `[P2]` — `CACHE = 'il-shell-v1'` sabit kalınca deploy sonrası eski HTML serve edilebilir. Öneri: deploy script'e `CACHE` adını otomatik artıran adım ekle veya `index.html`'i SHELL cache'inden çıkarıp network-first'e al.
-- [ ] **il_recent_search signOut temizliği** `[S]` `[P2]` — `signOut` handler `il_recent_search` LS'ten temizlemeli.
+- [x] **il_recent_search signOut temizliği** `[S]` `[P2]` ✅ — Her iki signOut handler'da zaten temizleniyordu; doğrulandı.
 - [ ] **Form tutarı gizli-mod preview** `[S]` `[P2]` — `hide=true` iken form amount alanlarında girilen değerler `mask()` ile maskelenmeli.
-- [ ] **BIST/CRYPTO/GOLD cron refresh** `[S]` `[P2]` — `refresh-price-cache` sadece US_STOCK çekiyor; BIST/CRYPTO/GOLD sütunları stale kalıyor.
+- [x] **BIST/CRYPTO/GOLD cron refresh** `[S]` `[P2]` `Sprint-16` ✅ — `currency="USD"` filtresi → `type IN (US_STOCK,FUND,CRYPTO,GOLD,BIST)`; deployed.
 - [ ] **HistoryTab tarih `fontFamily:"monospace"` sistem fontu** `[S]` `[P3]` — `"'DM Mono',monospace"` kullan. `→ HistoryTab.js:~2069`
 - [ ] **HistoryTab accordion ticker DM Mono** `[S]` `[P2]` — `fontFamily:"DM Mono, monospace"` ekle.
 - [ ] **Border contrast bump** `[S]` `[P2]` — `--border rgba(255,255,255,0.06)` bazı kartlarda kayboluyor; %10 veya inner shadow.
@@ -441,13 +441,13 @@ Sprint 4–15 ✅ | **Sprint 16 aktif → 2026-05-12 → 2026-05-25** | Dosya: `
 
 Sprint 15 retro: 5 item, 6 commit, tek seansta teslim (2026-05-11). Item 1: 3 edge fn JWT/try-catch/BIST-routing + 5 frontend edgeCall→edgeCallAuth. Item 2: computePeriod DIV cashflow. Item 3: BreakEven özet cümlesi + FX Risk dinamik başlık. Item 4: Komisyon oran bağlamı + HHI gizle. Item 5: parse-transaction raw leak + dividend-calendar ticker validation. 5a (bist.raw?.annual) daha önce fix edilmişti.
 
-**Sprint 16 scope (sıralı, aktif):**
+**Sprint 16 scope (sıralı):**
 
-1. **`get_allocation_only_positions` çoklu-para birimi** `[P1]` `Sprint-16` `[M]` — RPC döviz dönüşümü yok; USD+TRY karışık portföylerde public allocation yüzdeleri yanıltıcı. Migration + RPC refactor + frontend. `→ migrations/012_public_allocation_rpc.sql; App.js:226,982`
-2. **Security Audit Batch — S1+S2+S3** `[P2]` `Sprint-16` 3×`[S]` — `watchlist_own` policy FOR ALL→INSERT/SELECT/DELETE, `html2canvas` SRI hash, `price_snapshots` policy rol kısıtlaması notu + `fetch-prices` upsert hata yutma fix. Tek migration batchinde gönder.
-3. **UI Bug Batch — U1+U2+U3** `[P2]` `Sprint-16` 3×`[S]` — ManuelPosForm TRY/EUR currency filtresi, EUR sort state, `il_recent_search` signOut temizliği. Tek PR'da.
-4. **BIST/CRYPTO/GOLD cron refresh** `[P2]` `Sprint-16` `[S]` — `refresh-price-cache` sadece US_STOCK çekiyor; diğer asset tipleri stale kalıyor. `→ refresh-price-cache-edge-function.js`
-5. **Temettü Takvimi — Faz 1** `[P2]` `Sprint-16` `[M]` — `mode:"dividend-calendar"` dalı (a) + TickerDetailTab "Sonraki Temettü" satırı (b). FMP endpoint hazır; edge fn modüler yapısı hazır.
+1. ✅ **`get_allocation_only_positions` çoklu-para birimi** — Migration 014; USD normalize; anon GRANT kaldırıldı.
+2. ✅ **Security Audit Batch — S1+S2+S3** — Watchlist policy split (015), html2canvas SRI, fetch-prices upsert logging.
+3. ✅ **UI Bug Batch — U1+U2+U3** — ManuelPosForm TRY/EUR, EUR sort, il_recent_search doğrulandı.
+4. ✅ **BIST/CRYPTO/GOLD cron refresh** — type IN filtresi; deployed.
+5. **Temettü Takvimi — Faz 1** `[P2]` `Sprint-16` `[M]` — `mode:"dividend-calendar"` dalı (a) + TickerDetailTab "Sonraki Temettü" satırı (b). **Devam ediyor.**
 
 **Sprint 17'ye bakış (henüz commit yok):**
 

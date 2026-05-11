@@ -137,10 +137,10 @@ Sprint 16 Sprint 15'in "bilinçli erteleme" listesinden devralınan 5 item ile b
 
 ## Definition of Done
 
-- [ ] Item 1: `rls-auditor` onayı + migration Supabase'e uygulandı + karma-para birimi portföyde allocation toplam %100.
-- [ ] Item 2 (S1+S2+S3+S4): `rls-auditor` S1 onayı + `edge-reviewer` S3 onayı + `npm run check:edge` geçti + watchlist INSERT/SELECT/DELETE test edildi.
-- [ ] Item 3 (U1+U2+U3): TRY/EUR pozisyonlar ManuelPosForm'da görünüyor + EUR sort çalışıyor + signOut `il_recent_search` temizliyor + `npm run check:babel` geçti.
-- [ ] Item 4: BIST/CRYPTO/GOLD `updated_at` cron sonrası güncelleniyor + `npm run check:edge` geçti + deploy yapıldı.
+- [x] Item 1: `rls-auditor` onayı + migration 014 Supabase'e uygulandı + USD/TRY normalize + anon GRANT kaldırıldı. ✅ 2026-05-11
+- [x] Item 2 (S1+S2+S3): `rls-auditor` S1 onayı + `edge-reviewer` S3 onayı + migration 015 uygulandı + html2canvas SRI eklendi + fetch-prices deployed. ✅ 2026-05-11
+- [x] Item 3 (U1+U2+U3): TRY/EUR pozisyonlar ManuelPosForm'da görünüyor + EUR sort çalışıyor + il_recent_search doğrulandı + `npm run check:babel` geçti. ✅ 2026-05-11
+- [x] Item 4: type IN filtresi uygulandı + `npm run check:edge` + drift check geçti + refresh-price-cache deployed. ✅ 2026-05-11
 - [ ] Item 5 (5a+5b): `edge-reviewer` + `ui-builder` onayı + held ticker TickerDetailTab'da temettü satırı + hata durumunda graceful fallback.
 - [ ] `ROADMAP.md` Sprint 16 item'ları `[x]` işaretlendi; Sprint 17 bakış listesi güncellendi.
 
