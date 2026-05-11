@@ -93,11 +93,20 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 - `savePos`: tx insert → `rebuildPositions` (atomik RPC) → `loadData`. Manuel upsert yok.
 - `delPos`: tüm transaction'ları sil → `rebuildPositions` → `loadData`. Sadece position row'u silmez; confirm dialog `danger:true`.
 
+### CASH / DEPOSIT pozisyon modeli
+- **CASH**: `shares=bakiye, avg_cost=1.0`; `prc[ticker]=1.0` (synthetic, fetch yok). P&L daima 0.
+- **DEPOSIT**: `shares=anapara, avg_cost=1.0, interest_rate=yıllık (ör. 0.42), reserve_ratio=rezerv fraksiyonu (ör. 0.10), maturity_date=opsiyonel`; `prc[ticker]=(anapara+brütFaiz)/anapara` günlük bileşik.
+- `fetchPrices/fetchHist` dışı — `prc` `loadData`'da `setPrc_` ile synthetic inject edilir (`src/components/App.js:loadData`).
+- `rebuildPositions(userId, pid, extraMeta)` — `extraMeta={[ticker]:{interest_rate,maturity_date,reserve_ratio}}` ilk BUY kayıtta geçilir; sonraki rebuild'lar DB snapshot ile restore eder.
+- Brüt faiz: `computeDepositGrossInterest()` (App.js modül seviyesi, component dışı); stopaj sabit: `DEPOSIT_TAX_RATE=0.175`.
+- **Çekim**: SELL tx (`shares=çekilen tutar, price=1.0`); piecewise hesap tüm BUY/SELL segmentlerine göre çalışır.
+- Dashboard'da net P&L% (stopaj sonrası) ve brüt/net faiz breakdown gösterilir.
+
 ### CFG sabitleri
 `RATE_LIMIT_MS=7500`, `DUST_THRESHOLD=0.0001`, `CSV_BATCH_SIZE=50`, `FLASH_MS=3500`
 
 ### Renk paleti (TYPE_COLORS)
-`US_STOCK:#8B5CF6`, `FUND:#3B82F6`, `CRYPTO:#06B6D4`, `BIST:#F97316`, `GOLD:#C9A84C`, `FX:#10B981`, `CASH:#64748B`, `DEPOSIT:#6366F1`
+`US_STOCK:#8B5CF6`, `FUND:#3B82F6`, `CRYPTO:#06B6D4`, `BIST:#F97316`, `GOLD:#C9A84C`, `FX:#10B981`, `BES:#EC4899`, `CASH:#64748B`, `DEPOSIT:#6366F1`
 
 ### Brand kit token dosyası
 `src/styles/tokens.css` — tüm brand kit CSS custom property'leri (category colors, badge tokens, component tokens, extended palette). Kaynak: `portfoi-brand-kit.md`. `index.html`'deki mevcut `--bg/--text/--info/--font-*` tokenleri tekrarlanmaz.

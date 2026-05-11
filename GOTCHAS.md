@@ -14,8 +14,11 @@
 ## Frontend / React
 
 - **AI parse response shape**: edge fn her zaman `{transactions:[...]}` döner. Guard: `Array.isArray(d.transactions) ? ... : (d.ticker ? [d] : [])`.
-- **`rebuildPositions` unit snapshot**: önce `SELECT ticker, unit FROM positions` ile `unitMap` al; rebuild sonrası `unit: unitMap[p.ticker] ?? null` restore et — aksi halde altın pozisyonları unit kaybeder.
+- **`rebuildPositions` column snapshot**: önce `SELECT ticker, unit, interest_rate, maturity_date, reserve_ratio FROM positions` al; `unitMap` + `depositSnapMap` build et; rebuild sonrası tüm alanları restore et — aksi halde GOLD unit ve DEPOSIT faiz/vade/rezerv kaybolur.
 - **`p.currency` vs price_cache**: `prc[ticker]` BIST→TRY, diğer→USD döner. MV hesabında `p.type==="BIST"?"TRY":"USD"` kullan; cost için `p.currency` doğru.
+- **`wrapPos` priceCur CASH/DEPOSIT**: CASH/DEPOSIT için priceCur `p.currency` olmalı (USD değil) — aksi halde `rawCost` TRY→USD çevrilir ama `mv` TRY'de kalır → `pl`/`plPct` saçma değer üretir.
+- **DEPOSIT synthetic price — piecewise zorunlu**: `1 + rate * days/360` hatalı — perpetual hesaplarda (vade tarihi yok) 0 gün hesaplar; SELL (çekim) tx'larını yok sayar. Her zaman `computeDepositGrossInterest()` (App.js, modül seviyesi) kullan.
+- **Migration uygulandı mı?**: `supabase/migrations/` altında dosya varsa DB'ye apply edildiği garantisi yok. `SELECT column_name FROM information_schema.columns WHERE table_name='positions' AND column_name='<col>'` ile doğrula.
 - **`periodChange` sanity check**: `cur/base < 0.05` → null (USD/TRY mix yakalanır).
 - **TRY avgCost mismatch**: `currency="USD"` ama avg_cost TRY cinsindeyse wrapPos/periodChange yanlış hesaplar — kullanıcı USD fiyatıyla düzeltmeli.
 - **JSX ternary IIFE**: orphaned `)` metin nodu bırakmamaya dikkat — babel check koş.
