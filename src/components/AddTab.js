@@ -9,8 +9,12 @@ const ADD_TYPES = [
   {type:"CRYPTO",   label:"Kripto",     desc:"BTC, ETH"},
   {type:"GOLD",     label:"Altın",      desc:"Spot ons (XAUUSD)"},
   {type:"FX",       label:"Döviz",      desc:"USDTRY, EURUSD"},
-  {type:"BES",      label:"BES Fonu",   desc:"Bireysel Emeklilik — AGS001, PEB011"},
+  {type:"BES",      label:"BES Fonu",        desc:"Bireysel Emeklilik — AGS001, PEB011"},
+  {type:"CASH",     label:"Nakit",           desc:"Banka hesabı — TRY, USD, EUR"},
+  {type:"DEPOSIT",  label:"Vadeli Mevduat",  desc:"Faizli sabit vadeli hesap"},
 ];
+
+const MANUEL_ONLY_TYPES = new Set(["CASH","DEPOSIT"]);
 
 function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
   const [pickedType,setPickedType]=useState(null);  // null = picker; set → mode tabs
@@ -203,7 +207,7 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
             {ADD_TYPES.map(({type,label,desc})=>(
               <button key={type} data-test={`pick-${type}`} className="pick-card"
-                onClick={()=>setPickedType(type)}>
+                onClick={()=>{setPickedType(type);if(MANUEL_ONLY_TYPES.has(type))setMode("manuel");}}>
                 <span style={{color:"var(--info)",display:"flex",alignItems:"center"}}>{ASSET_ICONS[type]&&ASSET_ICONS[type](28)}</span>
                 <span style={{fontSize:14,fontWeight:600}}>{label}</span>
                 <span style={{fontSize:11,color:"var(--text2)"}}>{desc}</span>
@@ -228,7 +232,9 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
       </div>
 
       <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
-        {MODES.map(([m,l])=>(
+        {(pickedType && MANUEL_ONLY_TYPES.has(pickedType)
+          ? MODES.filter(([m])=>m==="manuel")
+          : MODES).map(([m,l])=>(
           <button key={m} className={"mtab"+(mode===m?" on":"")} onClick={()=>switchMode(m)}>{l}</button>
         ))}
       </div>
