@@ -5,7 +5,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
   // istediği zaman değiştirebilir; type değişimi `onChange`'de currency'i de
   // BIST'e göre günceller (mevcut davranış korunuyor).
   const initType = prefillType || "US_STOCK";
-  const initCurrency = initType==="BIST" ? "TRY" : "USD";
+  const initCurrency = (initType==="BIST"||initType==="BES") ? "TRY" : "USD";
   const E={ticker:"",name:"",type:initType,shares:"",avgCost:"",currency:initCurrency,broker:"",commission:"",date:today(),unit:"oz"};
   const [form,setForm]=useState(E);
   const [curPrice,setCurPrice]=useState(null);
@@ -34,6 +34,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     const at=typeOverride||form.type;
     if(!upper)return;
     if(NAMES[upper])set({name:NAMES[upper]});
+    if(at==="BES")return;  // BES: NAV manuel girilir, auto-fetch atla
     setFetchP(true);setCurPrice(null);setPriceNote(null);
     // Sembol: form.currency'den (kullanıcı override edebildiği için type yerine currency referans).
     const sym = displaySym(form.currency);
@@ -225,7 +226,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               const newType=e.target.value;
               const upd={type:newType};
               // Currency varsayılanları — kullanıcı manuel override edebilir
-              if(newType==="BIST")upd.currency="TRY";
+              if(newType==="BIST"||newType==="BES")upd.currency="TRY";
               else if(newType==="CRYPTO"||newType==="US_STOCK"||newType==="FUND"||newType==="GOLD")upd.currency="USD";
               set(upd);
               // Type değişince eski fiyat geçersiz; ticker varsa yeniden çek
@@ -238,6 +239,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               <option value="BIST">BIST</option>
               <option value="GOLD">Altın</option>
               <option value="FX">Döviz</option>
+              <option value="BES">BES Fonu</option>
             </select>
           </div>
           <div>
@@ -257,7 +259,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
             {errs.shares&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.shares}</div>}
           </div>
           <div>
-            <div className="kk" style={{marginBottom:4}}>{form.type==="GOLD"?`Ort. Maliyet * (${form.currency}/${GOLD_UNITS.find(g=>g.key===form.unit)?.label||'oz'})`:"Ort. Maliyet *"}</div>
+            <div className="kk" style={{marginBottom:4}}>{form.type==="GOLD"?`Ort. Maliyet * (${form.currency}/${GOLD_UNITS.find(g=>g.key===form.unit)?.label||'oz'})`:form.type==="BES"?"Birim Pay Değeri (NAV) *":"Ort. Maliyet *"}</div>
             <input className="finp" type="number" step="any" value={form.avgCost}
               aria-invalid={!!errs.avgCost}
               style={errs.avgCost?{borderColor:"var(--err)"}:{}}

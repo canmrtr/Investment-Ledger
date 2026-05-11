@@ -9,6 +9,7 @@ const ADD_TYPES = [
   {type:"CRYPTO",   label:"Kripto",     desc:"BTC, ETH"},
   {type:"GOLD",     label:"Altın",      desc:"Spot ons (XAUUSD)"},
   {type:"FX",       label:"Döviz",      desc:"USDTRY, EURUSD"},
+  {type:"BES",      label:"BES Fonu",   desc:"Bireysel Emeklilik — AGS001, PEB011"},
 ];
 
 function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){

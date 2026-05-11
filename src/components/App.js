@@ -310,8 +310,8 @@ function App({session}){
   // Tüm pozisyonların display cur'a normalize edilmiş hali — KPI/pie/sparkline için
   const allDisp=filteredPos.map(p=>{
     const cur=p.currency||"USD";
-    // price_cache stores TRY for BIST (Yahoo), USD for all other asset types (Massive).
-    const priceCur = p.type==="BIST" ? "TRY" : "USD";
+    // price_cache stores TRY for BIST/BES (Yahoo/EGM), USD for all other asset types (Massive).
+    const priceCur = (p.type==="BIST"||p.type==="BES") ? "TRY" : "USD";
     const price=prc[p.ticker];
     const rawCost=p.shares*p.avgCost;
     const rawMv=price!=null?p.shares*price:null;
@@ -773,7 +773,7 @@ function App({session}){
 
             {[...BLOCK_TYPES].sort((a,b)=>{
               const mvOf=t=>filteredPos.filter(p=>p.type===t).map(wrapPos).reduce((s,p)=>s+(p.mv??p.cost),0);
-              const toUsd=(mv,t)=>t==="BIST"?(convert(mv,"TRY","USD",fxRates)??0):mv;
+              const toUsd=(mv,t)=>(t==="BIST"||t==="BES")?(convert(mv,"TRY","USD",fxRates)??0):mv;
               return toUsd(mvOf(b.type),b.type)-toUsd(mvOf(a.type),a.type);
             }).map((cfg, idx) => {
               const items = filteredPos.filter(p => p.type===cfg.type).map(p=>{const w=wrapPos(p);const chg=periodChange(w);return{...w,periodChgPct:chg?.pct??null,periodChgDlr:chg?.dlr??null};});

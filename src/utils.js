@@ -160,6 +160,7 @@ const BLOCK_TYPES = [
   {type:"CRYPTO",   label:"Kripto",    cur:"USD", sym:"$", badge:"cry", icon:(s=14)=>ASSET_ICONS.CRYPTO(s)},
   {type:"GOLD",     label:"Altın",     cur:"USD", sym:"$", badge:null,  icon:(s=14)=>ASSET_ICONS.GOLD(s)},
   {type:"FX",       label:"Döviz",     cur:"USD", sym:"$", badge:null,  icon:(s=14)=>ASSET_ICONS.FX(s)},
+  {type:"BES",      label:"BES Fonları",cur:"TRY", sym:"₺", badge:"bes", icon:(s=14)=>ASSET_ICONS.BES(s)},
 ];
 
 // Massive desteği olan emtialar — picker chip listesi.
@@ -496,6 +497,7 @@ const ASSET_ICONS = {
   CRYPTO:   (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 20 7 20 17 12 22 4 17 4 7"/><path d="M9 9 C9 9 9 7 12 7 C15 7 15 9 15 10 C15 11.5 12 12 12 12 C15 12 15 13.5 15 15 C15 16 15 18 12 18 C9 18 9 16 9 16"/><line x1="12" y1="6" x2="12" y2="7"/><line x1="12" y1="18" x2="12" y2="19"/></svg>,
   GOLD:     (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>,
   FX:       (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12 C2 12 6 4 12 4 C18 4 22 12 22 12 C22 12 18 20 12 20 C6 20 2 12 2 12 Z"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="4" x2="12" y2="2"/><line x1="12" y1="20" x2="12" y2="22"/></svg>,
+  BES:      (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6L12 2z"/><path d="M9 12l2 2 4-4"/></svg>,
 };
 
 // Emtia SVG ikonları (COMMODITY_SYMBOLS için)
