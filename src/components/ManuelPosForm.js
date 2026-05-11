@@ -292,14 +292,14 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
         <div style={{fontSize:11,color:"var(--text2)",marginTop:8}}>ℹ Bu form bir BUY işlemi kaydeder ve mevcut pozisyonu günceller.</div>
       </div>
 
-      {pos.filter(p=>p.currency==="USD").length>0&&(
+      {pos.filter(p=>p.shares>CFG.DUST_THRESHOLD).length>0&&(
         <div>
           <div className="stitle">Mevcut Pozisyonlar</div>
-          {[...pos].filter(p=>p.currency==="USD").sort((a,b)=>a.ticker.localeCompare(b.ticker)).map(p=>(
+          {[...pos].filter(p=>p.shares>CFG.DUST_THRESHOLD).sort((a,b)=>a.ticker.localeCompare(b.ticker)).map(p=>(
             <div key={p.ticker} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 0",borderBottom:"0.5px solid var(--border)"}}>
               <div>
                 <span style={{fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{p.ticker}</span>
-                <span className="dim" style={{fontSize:11,marginLeft:8}}>{fmtShares(p.shares)} adet · ${fmt(p.avgCost)} ort.</span>
+                <span className="dim" style={{fontSize:11,marginLeft:8}}>{fmtShares(p.shares)} adet · {displaySym(p.currency)}{fmt(p.avgCost)} ort.</span>
                 {p.broker&&<span className="dim" style={{fontSize:10,marginLeft:6}}>· {p.broker}</span>}
               </div>
               <div className="brow" style={{gap:5}}>

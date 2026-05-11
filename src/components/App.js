@@ -50,6 +50,7 @@ function App({session}){
   const [fxAt,setFxAt]=useState(()=>{const c=fxCacheGet();return c?c.t:null;});
   const [sort,setSort]=useState({by:"plPct",dir:"desc"});
   const [sortTry,setSortTry]=useState({by:"plPct",dir:"desc"});
+  const [sortEur,setSortEur]=useState({by:"cost",dir:"desc"});
   const [dashTypeFilter,setDashTypeFilter]=useState(()=>BLOCK_TYPES.map(b=>b.type));
   const [collapsedBlocks,setCollapsedBlocks]=useState(()=>new Set(BLOCK_TYPES.map(b=>b.type)));
   const [distMode,setDistMode]=useState("mv"); // "cost" | "mv" — pie chart mode
@@ -347,10 +348,19 @@ function App({session}){
   const sortPos=(arr,st)=>[...arr].sort((a,b)=>{const def=st.dir==="desc"?-Infinity:Infinity;const va=a[st.by]??def,vb=b[st.by]??def;return st.dir==="asc"?va-vb:vb-va;});
   const sorted=sortPos(usd,sort);
   const sortedTry=sortPos(try_,sortTry);
+  const sortedEur=[...eur].sort((a,b)=>{
+    if(sortEur.by==="ticker")return sortEur.dir==="asc"?a.ticker.localeCompare(b.ticker):b.ticker.localeCompare(a.ticker);
+    const def=sortEur.dir==="desc"?-Infinity:Infinity;
+    const va=a[sortEur.by]??def,vb=b[sortEur.by]??def;
+    return sortEur.dir==="asc"?va-vb:vb-va;
+  });
   const tsort=k=>setSort(s=>({by:k,dir:s.by===k&&s.dir==="asc"?"desc":"asc"}));
   const tsortTry=k=>setSortTry(s=>({by:k,dir:s.by===k&&s.dir==="asc"?"desc":"asc"}));
+  const tsortEur=k=>setSortEur(s=>({by:k,dir:s.by===k&&s.dir==="asc"?"desc":"asc"}));
   const sa=k=>sort.by===k?(sort.dir==="asc"?" ↑":" ↓"):"";
   const saTry=k=>sortTry.by===k?(sortTry.dir==="asc"?" ↑":" ↓"):"";
+  const saEur=k=>sortEur.by===k?(sortEur.dir==="asc"?" ↑":" ↓"):"";
+
   const top4=fn=>[...usd].filter(p=>p.plPct!=null).sort(fn).slice(0,4);
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -883,14 +893,14 @@ function App({session}){
                   <div className="tbl-wrap">
                     <table>
                       <thead><tr>
-                        <th scope="col" className="l">Ticker</th>
+                        <th scope="col" className="l" onClick={()=>tsortEur("ticker")} style={{cursor:"pointer"}}>Ticker{saEur("ticker")}</th>
                         {!hide&&<th scope="col" className="r">Adet</th>}
                         {!hide&&<th scope="col" className="r">Ort. Maliyet</th>}
-                        {!hide&&<th scope="col" className="r">Toplam</th>}
+                        {!hide&&<th scope="col" className="r" onClick={()=>tsortEur("cost")} style={{cursor:"pointer"}}>Toplam{saEur("cost")}</th>}
                         <th scope="col" className="l">Broker</th>
                       </tr></thead>
                       <tbody>
-                        {[...eur].sort((a,b)=>a.ticker.localeCompare(b.ticker)).map(p=>(
+                        {sortedEur.map(p=>(
                           <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
                             <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span></div></td>
                             {!hide&&<td className="r">{fmtShares(p.shares)}</td>}
