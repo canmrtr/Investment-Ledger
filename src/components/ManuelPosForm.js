@@ -5,8 +5,8 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
   // istediği zaman değiştirebilir; type değişimi `onChange`'de currency'i de
   // BIST'e göre günceller (mevcut davranış korunuyor).
   const initType = prefillType || "US_STOCK";
-  const initCurrency = (initType==="BIST"||initType==="BES") ? "TRY" : "USD";
-  const E={ticker:"",name:"",type:initType,shares:"",avgCost:"",currency:initCurrency,broker:"",commission:"",date:today(),unit:"oz",currentValue:""};
+  const initCurrency = (initType==="BIST"||initType==="BES"||initType==="CASH"||initType==="DEPOSIT") ? "TRY" : "USD";
+  const E={ticker:"",name:"",type:initType,shares:"",avgCost:"",currency:initCurrency,broker:"",commission:"",date:today(),unit:"oz",currentValue:"",interestRate:"",maturityDate:""};
   const [form,setForm]=useState(E);
   const [curPrice,setCurPrice]=useState(null);
   // Fiyat fetch sonucu hakkında inline uyarı/bilgi: {type:"ok"|"warn", text}.
@@ -19,8 +19,13 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
   const set=f=>setForm(p=>({...p,...f}));
   const validate=()=>{
     const e={};
-    if(form.type!=="BES"&&(+form.shares<=0||isNaN(+form.shares)))e.shares="Adet 0'dan büyük olmalı";
-    if(+form.avgCost<=0||isNaN(+form.avgCost))e.avgCost=form.type==="BES"?"Tutar 0'dan büyük olmalı":"Fiyat 0'dan büyük olmalı";
+    const isCashType=form.type==="CASH"||form.type==="DEPOSIT";
+    if(form.type!=="BES"&&(+form.shares<=0||isNaN(+form.shares)))e.shares="Bakiye 0'dan büyük olmalı";
+    if(!isCashType&&(+form.avgCost<=0||isNaN(+form.avgCost)))e.avgCost=form.type==="BES"?"Tutar 0'dan büyük olmalı":"Fiyat 0'dan büyük olmalı";
+    if(form.type==="DEPOSIT"){
+      if(+form.interestRate<=0||isNaN(+form.interestRate))e.interestRate="Faiz oranı 0'dan büyük olmalı";
+      if(!form.maturityDate)e.maturityDate="Vade tarihi gerekli";
+    }
     setErrs(e);
     return Object.keys(e).length===0;
   };
@@ -34,7 +39,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     const at=typeOverride||form.type;
     if(!upper)return;
     if(NAMES[upper])set({name:NAMES[upper]});
-    if(at==="BES")return;  // BES: NAV manuel girilir, auto-fetch atla
+    if(at==="BES"||at==="CASH"||at==="DEPOSIT")return;  // BES/CASH/DEPOSIT: auto-fetch atla
     setFetchP(true);setCurPrice(null);setPriceNote(null);
     // Sembol: form.currency'den (kullanıcı override edebildiği için type yerine currency referans).
     const sym = displaySym(form.currency);
@@ -82,23 +87,23 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
 
   const startEdit=p=>{
     setEditTk(p.ticker);
-    setForm({...E,ticker:p.ticker,name:p.name,type:p.type,shares:p.shares,avgCost:p.avgCost,currency:p.currency,broker:p.broker||""});
-    if(p.type!=="BES")fetchPrice(p.ticker);
+    setForm({...E,ticker:p.ticker,name:p.name,type:p.type,shares:p.shares,avgCost:p.type==="CASH"||p.type==="DEPOSIT"?"":p.avgCost,currency:p.currency,broker:p.broker||"",
+      interestRate:p.interestRate!=null?(p.interestRate*100).toString():"",
+      maturityDate:p.maturityDate||""});
+    if(p.type!=="BES"&&p.type!=="CASH"&&p.type!=="DEPOSIT")fetchPrice(p.ticker);
   };
 
   const savePos=async()=>{
-    if(!form.ticker||(form.type!=="BES"&&!form.shares)||!form.avgCost)return;
+    const isCashType=form.type==="CASH"||form.type==="DEPOSIT";
+    if(!form.ticker||(form.type!=="BES"&&!isCashType&&!form.shares)||(isCashType&&!form.shares))return;
     if(!validate())return;
     setSaving(true);
     const tk=form.ticker.toUpperCase();
     const nm=form.name||tk;
-    // GOLD: kullanıcı seçili birimde giriyor → oz-eşdeğerine çevir.
     const ozFactor = form.type==="GOLD" ? goldOzPerUnit(form.unit||'oz') : 1;
-    // BES: shares her zaman 1, avg_cost = yatırılan tutar.
-    const sh = form.type==="BES" ? 1 : +form.shares * ozFactor;
-    const pr = form.type==="BES" ? +form.avgCost : +form.avgCost / ozFactor;
+    const sh = form.type==="BES" ? 1 : isCashType ? +form.shares : +form.shares * ozFactor;
+    const pr = form.type==="BES" ? +form.avgCost : isCashType ? 1.0 : +form.avgCost / ozFactor;
 
-    // Transaction'a yaz
     const goldUnitNote = form.type==="GOLD"&&form.unit&&form.unit!=="oz" ? `Manuel giriş (${form.unit})` : "Manuel giriş";
     const tx={
       user_id:user.id,
@@ -116,7 +121,10 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     const{error:te}=await sb.from("transactions").insert(tx);
     if(te){flash_(te.message,"err");setSaving(false);return;}
 
-    const rebuilt=await rebuildPositions(user.id,portfolioId);
+    const depositMeta = form.type==="DEPOSIT"
+      ? {[tk]:{interest_rate:+form.interestRate/100,maturity_date:form.maturityDate}}
+      : {};
+    const rebuilt=await rebuildPositions(user.id,portfolioId,depositMeta);
     if(rebuilt===null){flash_("Pozisyon güncellenemedi","err");setSaving(false);return;}
 
     await loadData();
@@ -139,6 +147,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     await loadData();flash_(`${tk} silindi`);
   };
 
+  const isCashType = form.type==="CASH"||form.type==="DEPOSIT";
   return(
     <div>
       <div className="cbox" style={{marginBottom:16}}>
@@ -157,13 +166,13 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               max={today()}/>
           </div>
           <div>
-            <div className="kk" style={{marginBottom:4}}>{form.type==="BES"?"Hesap Kodu *":"Ticker *"}</div>
+            <div className="kk" style={{marginBottom:4}}>{form.type==="BES"?"Hesap Kodu *":form.type==="CASH"||form.type==="DEPOSIT"?"Hesap Etiketi *":"Ticker *"}</div>
             <div style={{display:"flex",gap:6}}>
               <input className="finp" style={{textTransform:"uppercase"}} maxLength={20} value={form.ticker}
                 onChange={e=>{set({ticker:e.target.value.toUpperCase(),name:"",avgCost:""});setCurPrice(null);setPriceNote(null);}}
-                onBlur={e=>e.target.value&&fetchPrice(e.target.value)}
-                placeholder={form.type==="BES"?"AH, GARANTI...":"AAPL"} disabled={!!editTk}/>
-              {form.type!=="BES"&&(
+                onBlur={e=>e.target.value&&form.type!=="CASH"&&form.type!=="DEPOSIT"&&fetchPrice(e.target.value)}
+                placeholder={form.type==="BES"?"AH, GARANTI...":form.type==="CASH"?"ZIRAAT_TRY":form.type==="DEPOSIT"?"AKBANK_VAD_1":"AAPL"} disabled={!!editTk}/>
+              {form.type!=="BES"&&form.type!=="CASH"&&form.type!=="DEPOSIT"&&(
                 <button style={{whiteSpace:"nowrap",fontSize:12,padding:"7px 10px"}}
                   onClick={()=>fetchPrice()} disabled={fetchP||!form.ticker}>
                   {fetchP?<div className="spin" style={{width:12,height:12}}></div>:"↻"}
@@ -234,12 +243,12 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               const newType=e.target.value;
               const upd={type:newType};
               // Currency varsayılanları — kullanıcı manuel override edebilir
-              if(newType==="BIST"||newType==="BES")upd.currency="TRY";
+              if(newType==="BIST"||newType==="BES"||newType==="CASH"||newType==="DEPOSIT")upd.currency="TRY";
               else if(newType==="CRYPTO"||newType==="US_STOCK"||newType==="FUND"||newType==="GOLD")upd.currency="USD";
               set(upd);
               // Type değişince eski fiyat geçersiz; ticker varsa yeniden çek
               setCurPrice(null);
-              if(form.ticker)fetchPrice(form.ticker,form.date,newType);
+              if(form.ticker&&newType!=="CASH"&&newType!=="DEPOSIT")fetchPrice(form.ticker,form.date,newType);
             }}>
               <option value="US_STOCK">Hisse (US)</option>
               <option value="FUND">ETF / Fon</option>
@@ -248,6 +257,8 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               <option value="GOLD">Altın</option>
               <option value="FX">Döviz</option>
               <option value="BES">BES Fonu</option>
+              <option value="CASH">Nakit</option>
+              <option value="DEPOSIT">Vadeli Mevduat</option>
             </select>
           </div>
           {form.type!=="BES"&&(
@@ -260,7 +271,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
           )}
           {form.type!=="BES"&&(
             <div>
-              <div className="kk" style={{marginBottom:4}}>{form.type==="GOLD"?`Adet * (${GOLD_UNITS.find(g=>g.key===form.unit)?.label||'oz'})`:"Adet *"}</div>
+              <div className="kk" style={{marginBottom:4}}>{form.type==="GOLD"?`Adet * (${GOLD_UNITS.find(g=>g.key===form.unit)?.label||'oz'})`:form.type==="CASH"||form.type==="DEPOSIT"?"Bakiye *":"Adet *"}</div>
               <input className="finp" type="number" step="any" value={form.shares}
                 aria-invalid={!!errs.shares}
                 style={errs.shares?{borderColor:"var(--err)"}:{}}
@@ -270,6 +281,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               {errs.shares&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.shares}</div>}
             </div>
           )}
+          {!isCashType&&(
           <div>
             <div className="kk" style={{marginBottom:4}}>{form.type==="BES"?"Yatırılan Toplam Tutar (₺) *":form.type==="GOLD"?`Ort. Maliyet * (${form.currency}/${GOLD_UNITS.find(g=>g.key===form.unit)?.label||'oz'})`:"Ort. Maliyet *"}</div>
             <input className="finp" type="number" step="any" value={form.avgCost}
@@ -280,6 +292,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               placeholder={form.type==="BES"?"10000":"0.00"}/>
             {errs.avgCost&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.avgCost}</div>}
           </div>
+          )}
           {form.type==="BES"&&(
             <div>
               <div className="kk" style={{marginBottom:4}}>Güncel Değer (₺) — opsiyonel</div>
@@ -289,13 +302,35 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
             </div>
           )}
           <div>
-            <div className="kk" style={{marginBottom:4}}>{form.type==="BES"?"Emeklilik Şirketi":"Broker"}</div>
-            <input className="finp" maxLength={50} value={form.broker} onChange={e=>set({broker:e.target.value})} placeholder={form.type==="BES"?"Anadolu Hayat, Garanti, Allianz...":"Akbank, Midas..."}/>
+            <div className="kk" style={{marginBottom:4}}>{form.type==="BES"?"Emeklilik Şirketi":isCashType?"Banka (isteğe bağlı)":"Broker"}</div>
+            <input className="finp" maxLength={50} value={form.broker} onChange={e=>set({broker:e.target.value})} placeholder={form.type==="BES"?"Anadolu Hayat, Garanti, Allianz...":isCashType?"Ziraat, Akbank, Garanti...":"Akbank, Midas..."}/>
           </div>
-          {form.type!=="BES"&&(
+          {form.type!=="BES"&&!isCashType&&(
             <div>
               <div className="kk" style={{marginBottom:4}}>Komisyon</div>
               <input className="finp" type="number" step="any" value={form.commission} onChange={e=>set({commission:e.target.value})} placeholder="0.00"/>
+            </div>
+          )}
+          {form.type==="DEPOSIT"&&(
+            <div>
+              <div className="kk" style={{marginBottom:4}}>Faiz Oranı (%) *</div>
+              <input className="finp" type="number" step="any" value={form.interestRate}
+                aria-invalid={!!errs.interestRate}
+                style={errs.interestRate?{borderColor:"var(--err)"}:{}}
+                onChange={e=>{set({interestRate:e.target.value});if(errs.interestRate)setErrs(p=>({...p,interestRate:undefined}));}}
+                placeholder="45"/>
+              {errs.interestRate&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.interestRate}</div>}
+            </div>
+          )}
+          {form.type==="DEPOSIT"&&(
+            <div>
+              <div className="kk" style={{marginBottom:4}}>Vade Tarihi *</div>
+              <input className="finp" type="date" value={form.maturityDate}
+                aria-invalid={!!errs.maturityDate}
+                style={errs.maturityDate?{borderColor:"var(--err)"}:{}}
+                onChange={e=>{set({maturityDate:e.target.value});if(errs.maturityDate)setErrs(p=>({...p,maturityDate:undefined}));}}
+                min={today()}/>
+              {errs.maturityDate&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.maturityDate}</div>}
             </div>
           )}
           <div style={{display:"flex",alignItems:"flex-end"}}>
@@ -324,7 +359,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
           </div>
         </div>
         <div className="brow">
-          <button className="pri" onClick={savePos} disabled={saving||!form.ticker||(form.type!=="BES"&&!form.shares)||!form.avgCost}>
+          <button className="pri" onClick={savePos} disabled={saving||!form.ticker||(form.type!=="BES"&&!form.shares)||(form.type==="DEPOSIT"&&(!form.interestRate||!form.maturityDate))||(!isCashType&&!form.avgCost)}>
             {saving?"Kaydediliyor...":(editTk?"Güncelle":"Pozisyon Kaydet")}
           </button>
           {editTk&&<button onClick={()=>{setEditTk(null);setForm(E);setCurPrice(null);}}>İptal</button>}
@@ -342,6 +377,8 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
                 <span style={{fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{p.ticker}</span>
                 {p.type==="BES"
                   ?<span className="dim" style={{fontSize:11,marginLeft:8}}>₺{fmt(p.avgCost,0)} yatırılan</span>
+                  :(p.type==="CASH"||p.type==="DEPOSIT")
+                    ?<span className="dim" style={{fontSize:11,marginLeft:8}}>{displaySym(p.currency)}{fmt(p.shares,0)} bakiye{p.type==="DEPOSIT"&&p.interestRate?` · %${fmt(p.interestRate*100,1)} yıllık`:""}</span>
                   :<span className="dim" style={{fontSize:11,marginLeft:8}}>{fmtShares(p.shares)} adet · {displaySym(p.currency)}{fmt(p.avgCost)} ort.</span>
                 }
                 {p.broker&&<span className="dim" style={{fontSize:10,marginLeft:6}}>· {p.broker}</span>}
