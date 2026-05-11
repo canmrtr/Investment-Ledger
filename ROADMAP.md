@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-11** (Sprint 16 kapandı: Item 1–4 tamamlandı, Item 5 Sprint 17'ye devir. Sprint 17 aktif → 2026-05-26 → 2026-06-08. Dosya: `sprints/sprint-17.md`.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-11** (Sprint 16 kapandı: Item 1–4 tamamlandı, Item 5 Sprint 17'ye devir. Sprint 17 aktif → 2026-05-26 → 2026-06-08. Dosya: `sprints/sprint-17.md`. Hotfix 2026-05-11: BES form yeniden tasarlandı — pay adedi/NAV yerine yatırılan tutar + güncel değer.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -64,6 +64,8 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **BIST P/S metriği** `[S]` `[P2]` — borsa-mcp `meta.market_cap` / `latestRevenue` ile derive; frontend veya edge function 2. call.
 - [ ] **BIST bankalar fundamentals** `[L]` `[P2]` — UFRS grubu Roman numeral itemCode mapping; `ISY_KNOWN_BANKS` early-exit kaldır.
 - [ ] **FX/GOLD ham ticker normalize** `[S]` `[P2]` — `asset_type:"FX"` prefix'siz `USDTRY` gelince 404; `C:` autoprefix + format guard.
+- [x] **BES (Bireysel Emeklilik) temel giriş** `[S]` `[P1]` `Hotfix-2026-05-11` ✅ — ManuelPosForm BES için pay adedi/NAV kaldırıldı; "Yatırılan Toplam Tutar" + "Güncel Değer" alanları eklendi. `shares=1, avg_cost=yatırılan`; güncel değer `fetch-prices mode:"set-manual-price"` → `price_cache`. Devlet katkısı farklı hesap kodu ile ayrı pozisyon.
+- [ ] **BES güncel değer aylık güncelleme** `[S]` `[P2]` — Pozisyon satırında "Değer Güncelle" butonu; `set-manual-price` endpoint hazır, yalnızca UI gerekli.
 - [ ] **Vadeli mevduat** `[M]` `[P2]` — faiz oranı, vade, getiri; kullanıcı girer, provider yok.
 - [ ] **Eurobond / Tahvil takibi** `[M]` `[P2]` — `asset_type:"BOND"`; kupon tarihleri, vade, YTM; manuel giriş. Fiyat: Massive `AGG`/`TLT` proxy veya Hazine websitesi.
 - [ ] **Kripto staking / getiri takibi** `[S]` `[P2]` — Staking kazancını DIV gibi takip; mevcut `transactions.way:"DIV"` altyapısı yeniden kullanılır.
