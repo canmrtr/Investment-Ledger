@@ -437,9 +437,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Sonraki Adım
 
-Sprint 4–14 ✅ | **Sprint 15 → aktif (2026-05-11 → 2026-05-23)**
+Sprint 4–15 ✅ | **Sprint 16 → planlanacak**
 
-Sprint 14 retro: 5 sprint item + 2 audit P1 fix toplam 7 commit'te teslim. Item 5 (Brand-fit Sadeleştirme) A-1+B-1 yapıldı; A-2/A-3/B-2 Sprint 15'e ötelendi. Denetim Turu 4: 1 P0 (temiz) + 5 P1 + 9 P2 bulgu.
+Sprint 15 retro: 5 item, 6 commit, tek seansta teslim (2026-05-11). Item 1: 3 edge fn JWT/try-catch/BIST-routing + 5 frontend edgeCall→edgeCallAuth. Item 2: computePeriod DIV cashflow. Item 3: BreakEven özet cümlesi + FX Risk dinamik başlık. Item 4: Komisyon oran bağlamı + HHI gizle. Item 5: parse-transaction raw leak + dividend-calendar ticker validation. 5a (bist.raw?.annual) daha önce fix edilmişti.
 
 **Sprint 15 scope (sıralı, aktif):**
 
