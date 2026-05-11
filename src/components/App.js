@@ -292,7 +292,7 @@ function App({session}){
   useEffect(()=>{
     if((!pos.length&&!watchlistItems.length)||busy.h||busy.p)return;
     const posSet=new Set(pos.map(p=>p.ticker));
-    const posTickers=pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO").map(p=>p.ticker);
+    const posTickers=pos.filter(p=>p.type!=="CASH"&&p.type!=="DEPOSIT"&&(p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO")).map(p=>p.ticker);
     const wlTickers=watchlistItems.filter(w=>!posSet.has(w.ticker)&&(w.asset_type||"US_STOCK")!=="FX").map(w=>w.ticker);
     const tickers=[...new Set([...posTickers,...wlTickers])];
     const missingPos=tickers.filter(t=>!hist[t]||hist[t].p_y1==null);
@@ -392,7 +392,7 @@ function App({session}){
   const fetchPrices=async()=>{
     setBusy(b=>({...b,p:true}));
     const posSet=new Set(pos.map(p=>p.ticker));
-    const posFetchable=pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO")
+    const posFetchable=pos.filter(p=>p.type!=="CASH"&&p.type!=="DEPOSIT"&&(p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO"))
       .map(p=>({ticker:p.ticker,type:p.type}));
     const wlFetchable=watchlistItems.filter(w=>!posSet.has(w.ticker)&&(w.asset_type||"US_STOCK")!=="FX")
       .map(w=>({ticker:w.ticker,type:w.asset_type||"US_STOCK"}));
@@ -424,7 +424,7 @@ function App({session}){
     const wlTypeMap=Object.fromEntries(watchlistItems.filter(w=>w.asset_type).map(w=>[w.ticker,w.asset_type]));
     const fetchable = tickersOverride
       ? tickersOverride.map(t=>{const p=pos.find(x=>x.ticker===t);return{ticker:t,type:p?.type||wlTypeMap[t]||benchTypeMap[t]||"US_STOCK"};})
-      : pos.filter(p=>p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO").map(p=>({ticker:p.ticker,type:p.type}));
+      : pos.filter(p=>p.type!=="CASH"&&p.type!=="DEPOSIT"&&(p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO")).map(p=>({ticker:p.ticker,type:p.type}));
     const nh={...hist};const np={...prc};let cnt=0;const failed=[];
     for(let i=0;i<fetchable.length;i++){
       const {ticker:t,type:at}=fetchable[i];
