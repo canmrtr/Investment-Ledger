@@ -1404,8 +1404,20 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
 
           if (sorted.length === 0) return <div className="empty" style={{padding:"12px 0",fontSize:11}}>Açık pozisyon yok</div>;
 
+          const aboveBE = sorted.filter(r => r.distPct != null && r.distPct > 0).length;
+          const belowBE = sorted.filter(r => r.distPct != null && r.distPct <= 0).length;
+
           return (
             <div>
+              {(aboveBE > 0 || belowBE > 0) && (
+                <div style={{fontSize:12, color:"var(--text2)", marginBottom:10}}>
+                  <span style={{color:"var(--ok)", fontWeight:600}}>{aboveBE} pozisyon</span>
+                  {" "}kâr bölgesinde
+                  {belowBE > 0 && (
+                    <span style={{color:"var(--text3)"}}>{" · "}<span style={{color:"var(--warn)", fontWeight:600}}>{belowBE} pozisyon</span>{" "}henüz başa baş noktasının altında</span>
+                  )}
+                </div>
+              )}
               <div style={{overflowX:"auto"}}>
                 <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
                   <thead>
@@ -1725,10 +1737,17 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
         const eurFrac = fxTotal>0 ? fxGroups.EUR/fxTotal : 0;
         const usdSens10 = usdFrac*10;
         const CUR_COLORS = {USD:"#0a84ff", TRY:"var(--info)", EUR:"#ffd60a"};
+        const dominantFrac = Math.max(usdFrac, eurFrac);
+        const dominantCur = usdFrac >= eurFrac ? "USD" : "EUR";
+        const fxSubText = fxTotal > 0
+          ? dominantFrac > 0.05
+            ? `Portföyünün %${(dominantFrac * 100).toFixed(0)}'${dominantCur === "USD" ? "i dolar" : "i euro"} kuru riskine açık.`
+            : "Kur dağılımı dengeli."
+          : "Fiyat verisi bekleniyor.";
         return (
           <div className="card" style={{marginBottom:14,padding:"16px 18px"}}>
             <div className="stitle" style={{marginBottom:4}}>Kur Riski</div>
-            <div style={{fontSize:11,color:"var(--text3)",marginBottom:14}}>Para birimi bazında piyasa değeri dağılımı</div>
+            <div style={{fontSize:11,color:"var(--text3)",marginBottom:14}}>{fxSubText}</div>
             {fxTotal>0 ? (
               <div>
                 {[["USD","#0a84ff"],["TRY","var(--info)"],["EUR","#ffd60a"]].map(([cur,color])=>{
@@ -1755,13 +1774,12 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                 })}
                 {displayCur==="TRY"&&usdFrac>0.05&&(
                   <div className="warn-card" style={{marginTop:8,marginBottom:0,fontSize:11}}>
-                    USD pozisyon <strong>%{(usdFrac*100).toFixed(0)}</strong> — USDTRY +%10'da portföy ≈{" "}
-                    <strong className="ok">+%{usdSens10.toFixed(1)}</strong>
+                    Portföyünün <strong>%{(usdFrac*100).toFixed(0)}</strong>'i dolar cinsinden. USDTRY +%10'luk hareket portföyü yaklaşık <strong className="ok">%{usdSens10.toFixed(1)}</strong> etkiler.
                   </div>
                 )}
                 {displayCur==="TRY"&&eurFrac>0.05&&(
                   <div className="warn-card" style={{marginTop:8,marginBottom:0,fontSize:11}}>
-                    EUR pozisyon <strong>%{(eurFrac*100).toFixed(0)}</strong> — portföyde karışık kur riski mevcut.
+                    Portföyünün <strong>%{(eurFrac*100).toFixed(0)}</strong>'i euro cinsinden. Kur çeşitlendirmesi riski dağıtabilir.
                   </div>
                 )}
               </div>
