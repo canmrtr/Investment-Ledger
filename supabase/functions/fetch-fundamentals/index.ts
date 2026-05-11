@@ -747,11 +747,14 @@ Deno.serve(async (req) => {
     if (body.mode === "dividend-calendar") {
       const tickers: string[] = Array.isArray(body.tickers) ? body.tickers.slice(0, 20) : [];
       if (tickers.length === 0) return json({ error: "tickers array required" }, 400);
+      const TICKER_RE = /^[A-Z0-9.\-]{1,12}$/i;
+      const validTickers = tickers.filter(tk => TICKER_RE.test(String(tk)));
+      if (validTickers.length === 0) return json({ error: "Geçerli ticker bulunamadı" }, 400);
       const fmpKey = Deno.env.get("FMP_KEY");
       if (!fmpKey) return json({ error: "FMP_KEY secret eksik" }, 500);
       const today = new Date().toISOString().split("T")[0];
       const results: Record<string, Array<{ex_date: string; pay_date: string|null; amount: number|null; currency: string}>> = {};
-      await Promise.all(tickers.map(async (tk: string) => {
+      await Promise.all(validTickers.map(async (tk: string) => {
         try {
           const url = `https://financialmodelingprep.com/stable/stock/dividends?symbol=${encodeURIComponent(tk)}&limit=5&apikey=${fmpKey}`;
           const r = await fetch(url, { signal: AbortSignal.timeout(8000) });

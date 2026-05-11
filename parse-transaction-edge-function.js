@@ -119,7 +119,8 @@ Girdide birden fazla işlem varsa hepsini ayrı obje olarak array'e ekle. Bugün
     try {
       result = JSON.parse(jsonStr);
     } catch (parseErr) {
-      return json({ error: "AI yanıtı geçerli JSON değil", raw: raw.slice(0, 500) }, 422);
+      console.warn("[parse-tx] invalid AI output:", raw.slice(0, 200));
+      return json({ error: "AI yanıtı geçerli JSON değil" }, 422);
     }
 
     // Normalize: response her zaman { transactions: [...] } olsun.
@@ -127,13 +128,14 @@ Girdide birden fazla işlem varsa hepsini ayrı obje olarak array'e ekle. Bugün
       if (result && (result.ticker || result.date)) {
         result = { transactions: [result] };
       } else {
-        return json({ error: "AI yanıtı geçerli işlem içermiyor", raw: raw.slice(0, 500) }, 422);
+        console.warn("[parse-tx] invalid AI output:", raw.slice(0, 200));
+        return json({ error: "AI yanıtı geçerli işlem içermiyor" }, 422);
       }
     }
 
     return json(result);
   } catch (err) {
-    console.error("[parse-tx] unhandled error:", err);
-    return json({ error: "İşlem parse hatası", raw: raw.slice(0, 500) }, 500);
+    console.error("[parse-tx] unhandled error:", err, "raw:", raw.slice(0, 200));
+    return json({ error: "İşlem parse hatası" }, 500);
   }
 });
