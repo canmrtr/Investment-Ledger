@@ -350,6 +350,9 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
   const [editTxId,setEditTxId]=useState(null);
   const [editForm,setEditForm]=useState({});
   const [savingTx,setSavingTx]=useState(false);
+  const [showCek,setShowCek]=useState(false);
+  const [cekForm,setCekForm]=useState({date:today(),amount:""});
+  const [savingCek,setSavingCek]=useState(false);
 
   const startEditTx=t=>{
     setEditTxId(t.id);
@@ -372,6 +375,24 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
     await sb.from("transactions").delete().eq("id",t.id).eq("user_id",user.id);
     await rebuildPositions(user.id,portfolioId);await loadData();flash_("Silindi ✓");
     setExpandedTx(null);
+  };
+  const saveCek=async()=>{
+    const amt=+cekForm.amount;
+    if(!amt||amt<=0){flash_("Geçersiz tutar","err");return;}
+    if(amt>p.shares){flash_(`Çekim tutarı anapara (${sym}${fmt(p.shares,0)}) aşamaz`,"err");return;}
+    setSavingCek(true);
+    const{error}=await sb.from("transactions").insert({
+      user_id:user.id,date:cekForm.date,ticker:p.ticker,
+      name:p.name,asset_type:"DEPOSIT",way:"SELL",
+      shares:amt,price:1.0,currency:p.currency,total:amt,
+      broker:p.broker||"",commission:0,exchange:"",notes:"",
+      portfolio_id:portfolioId
+    });
+    setSavingCek(false);
+    if(error){flash_(error.message,"err");return;}
+    await rebuildPositions(user.id,portfolioId);await loadData();
+    flash_("Çekim eklendi ✓");
+    setShowCek(false);setCekForm({date:today(),amount:""});
   };
 
   const p=pos.find(x=>x.ticker===ticker);
@@ -562,6 +583,24 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                 </div>
               );
             })()}
+            <div style={{marginTop:12,borderTop:"0.5px solid var(--border)",paddingTop:12}}>
+              {!showCek?(
+                <button className="btn-sm" onClick={()=>setShowCek(true)}>Çek</button>
+              ):(
+                <div style={{display:"flex",gap:8,alignItems:"flex-end",flexWrap:"wrap"}}>
+                  <div>
+                    <div className="kk" style={{marginBottom:3}}>Tarih</div>
+                    <input className="finp sm" type="date" value={cekForm.date} onChange={e=>setCekForm(f=>({...f,date:e.target.value}))} max={today()}/>
+                  </div>
+                  <div>
+                    <div className="kk" style={{marginBottom:3}}>Tutar ({sym})</div>
+                    <input className="finp sm" type="number" step="any" min="0" placeholder="0" value={cekForm.amount} onChange={e=>setCekForm(f=>({...f,amount:e.target.value}))} style={{width:120}}/>
+                  </div>
+                  <button className="btn-md pri" onClick={saveCek} disabled={savingCek}>{savingCek?"...":"Çek"}</button>
+                  <button className="btn-md" onClick={()=>{setShowCek(false);setCekForm({date:today(),amount:""});}}>İptal</button>
+                </div>
+              )}
+            </div>
           </div>
         )}
         {!isDeposit&&<div className="g4" style={{marginBottom:8}}>
