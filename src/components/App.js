@@ -224,7 +224,7 @@ function App({session}){
       sb.from("profiles").select("*").eq("user_id",user.id).maybeSingle(),
       sb.from("watchlist").select("id,ticker,asset_type,added_at").eq("user_id",user.id).order("added_at",{ascending:false})
     ]);
-    if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker,unit:p.unit||null,interestRate:p.interest_rate!=null?+p.interest_rate:null,maturityDate:p.maturity_date||null,reserveRatio:p.reserve_ratio??0})));
+    if(pr.data)setPos(pr.data.map(p=>({ticker:p.ticker,name:p.name,type:p.type,shares:+p.shares,avgCost:+p.avg_cost,currency:p.currency,broker:p.broker,unit:p.unit||null,interestRate:p.interest_rate!=null?+p.interest_rate:null,maturityDate:p.maturity_date||null,reserveRatio:p.reserve_ratio??0,dkPrincipal:p.dk_principal!=null?+p.dk_principal:null,dkCurrent:p.dk_current!=null?+p.dk_current:null})));
     if(tr.data)setTxs(tr.data.map(t=>({id:t.id,date:t.date,ticker:t.ticker,name:t.name,asset_type:t.asset_type,way:t.way,shares:+t.shares,price:+t.price,currency:t.currency,total:+t.total,broker:t.broker,commission:+t.commission,notes:t.notes||""})));
     if(sr.data)setSplits(sr.data);
     if(wl.data)setWatchlistItems(wl.data);
