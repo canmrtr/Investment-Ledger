@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-13** (Sprint 16 kapandı: Item 1–4 erken tamamlandı (2026-05-11), Item 5 Sprint 17'ye devir. Sprint 17 hazır → başlangıç: 2026-05-26 → 2026-06-08. Dosya: `sprints/sprint-17.md`. Hotfix 2026-05-11: BES form yeniden tasarlandı + CASH/DEPOSIT first-class asset type eklendi.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-13** (Sprint 17 kapandı: Temettü Takvimi Faz 1 + AI Parse DIV + Brand Fit B1/B2 tamamlandı. Sprint 18 hazır → 2026-05-13 → 2026-05-27. Dosya: `sprints/sprint-18.md`. TEFAS entegrasyon tasarımı + planı hazır → `docs/superpowers/specs/2026-05-13-tefas-integration-design.md` + `docs/superpowers/plans/2026-05-13-tefas-integration.md`.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -24,7 +24,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Bekleyenler / Blokerli
 
-- [ ] **TEFAS WAF testi** `[S]` `[P2]` — Endpoint: `https://fundturkey.com.tr/api/DB/BindHistoryInfo` (POST, cookie + `X-Requested-With` header). Bloker: F5 WAF cloud IP'leri engelliyor (Nisan 2026). Test adımı: Supabase Dashboard → Edge Functions → Test tab'dan POST dene. Çalışırsa FUND dalı + US ETF vs TEFAS ayrımı girer; çalışmazsa RapidAPI wrapper veya borsa-mcp proxy.
+- [ ] **TEFAS WAF testi** `[S]` `[P1]` — Endpoint: `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` (POST, `X-Requested-With` header). Bloker: F5 WAF cloud IP'leri engelliyor (Nisan 2026 — yeniden test edilmedi). Test adımı: plan Task 1'e bakınız. Çalışırsa → TEFAS entegrasyonu tam akış; WAF hâlâ engelliyorsa `fonbul.com` fallback devreye girer (plan Task 4). Plan: `docs/superpowers/plans/2026-05-13-tefas-integration.md`
 
 ---
 
@@ -58,8 +58,18 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Asset Type Genişletme
 
-- [ ] **BES Devlet Katkısı (DK) entegrasyonu** `[M]` `[P0]` `Sprint-17` — 4 ayrı form alanı (kişisel yatırılan, kişisel portföy güncel, DK anaparası, DK portföy güncel); `positions` tablosuna `dk_principal` + `dk_current` kolonları eklenir; `rebuild_positions_atomic` RPC güncellenir; maliyet tabanı = yalnızca kişisel yatırılan, DK+getiri tamamı kazanç sayılır; yanlış "ayrı pozisyon ekle" hint kaldırılır. Spec: `docs/superpowers/specs/2026-05-11-bes-state-contribution-design.md`
-- [ ] **AI parse temettü desteği (DIV way)** `[S]` `[P1]` `Sprint-17` — `parse-transaction` sistem promptu `way:"BUY|SELL"` ile kısıtlı; Türkçe temettü ifadeleri başarısız. Düzeltme: parser sözleşmesini `BUY|SELL|DIV` yap, Türkçe örnekler ekle, insert öncesi `way` istemci doğrulaması. `→ parse-transaction-edge-function.js:94; AddTab.js:134`
+- [ ] **TEFAS Yatırım Fonu entegrasyonu** `[L]` `[P1]` — Yeni `TEFAS` asset type (`#84CC16` lime, TRY cinsinden). Günlük NAV fiyatı `tefas.gov.tr` API'sinden; WAF engeli varsa `fonbul.com` fallback. ~1000 fonluk `tefas_funds` Supabase tablosu (katalog); SearchTab'da kod + isim araması. Dashboard "TEFAS Fonları" bloğu (₺). AnalysisTab: Varlık Dağılımı lime dilimi, Bölge Dağılımı → Türkiye. 6h cron refresh. Tasarım + plan hazır; önce WAF testi gerekli. Spec: `docs/superpowers/specs/2026-05-13-tefas-integration-design.md` · Plan: `docs/superpowers/plans/2026-05-13-tefas-integration.md`
+  - [ ] (1) WAF testi + `fetch-prices` `isTefas` routing `[S]`
+  - [ ] (2) `tefas_funds` SQL migration + RLS `[S]`
+  - [ ] (3) Frontend sabitler: TYPE_COLORS, TL, BLOCK_TYPES, ASSET_ICONS `[S]`
+  - [ ] (4) `fetch-fundamentals mode:"tefas-catalog"` + katalog yükleme `[S]`
+  - [ ] (5) AddTab TEFAS Fonu picker girişi `[S]`
+  - [ ] (6) SearchTab `tefas_funds` birleşik arama + lime badge `[S]`
+  - [ ] (7) AnalysisTab REGION_OF, priceCurOf, Fundamentals hariç `[S]`
+  - [ ] (8) Settings katalogu yenile butonu `[S]`
+  - [ ] (9) `refresh-price-cache` cron'a TEFAS ekleme `[S]`
+- [ ] **BES Devlet Katkısı (DK) entegrasyonu** `[M]` `[P0]` `Sprint-18` — 4 ayrı form alanı (kişisel yatırılan, kişisel portföy güncel, DK anaparası, DK portföy güncel); `positions` tablosuna `dk_principal` + `dk_current` kolonları eklenir; `rebuild_positions_atomic` RPC güncellenir; maliyet tabanı = yalnızca kişisel yatırılan, DK+getiri tamamı kazanç sayılır; yanlış "ayrı pozisyon ekle" hint kaldırılır. Spec: `docs/superpowers/specs/2026-05-11-bes-state-contribution-design.md`
+- [x] ~~**AI parse temettü desteği (DIV way)**~~ `[S]` `[P1]` (2026-05-13) — `parse-transaction` sözleşmesi `BUY|SELL|DIV` oldu; Türkçe temettü ifadesi örnekleri eklendi; `saveTx` way allowlist doğrulaması eklendi. `→ parse-transaction-edge-function.js; AddTab.js`
 - [ ] **Sektör-aware fundamental eşikler** `[M]` `[P1]` — tech P/E ≤30, utility ≤15 vs.; `sic_description` veya FMP `sector` ile profil seç. TR enflasyonu CAGR eşiklerini de etkiliyor.
 - [ ] **TR altın işçilik premium göstergesi** `[M]` `[P2]` — Reşat/Ata birimi ekleme; Dashboard "5 çeyrek · ₺12,000/ad · Spot saf ₺55,000 · Premium %9" render; ödenen fiyat − spot saf fark hesabı.
 - [ ] **BIST P/S metriği** `[S]` `[P2]` — borsa-mcp `meta.market_cap` / `latestRevenue` ile derive; frontend veya edge function 2. call.
@@ -69,8 +79,8 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **BES TickerDetailTab breakdown kartı** `[S]` `[P1]` — BES pozisyonlarında genel hisse senedi görünümü (Adet/Piyasa Değeri/P&L/Şirket Bilgisi) yerine 4 özel satır göster: **Yatırılan Tutar** (X = `avg_cost`), **Yatırım Getirisi** (X_g = `price_cache − dk_current − avg_cost`), **Devlet Katkısı** (Y = `dk_principal`), **Devlet Katkısı Getirisi** (Y_g = `dk_current − dk_principal`). Önkoşul: BES DK entegrasyonu tamamlanmış olmalı (`dk_principal`/`dk_current` kolonları mevcut). Mevcut `TickerDetailTab` içinde `type==="BES"` dalı; generik metrikler (Şirket Bilgisi, Geçersiz ticker uyarısı) gizlenir. Spec: `docs/superpowers/specs/2026-05-11-bes-state-contribution-design.md#future-work`
 - [ ] **BES güncel değer aylık güncelleme** `[S]` `[P2]` — Pozisyon satırında "Değer Güncelle" butonu; `set-manual-price` endpoint hazır, yalnızca UI gerekli.
 - [x] **Nakit & Vadeli Mevduat (CASH/DEPOSIT)** `[M]` `[P2]` `Hotfix-2026-05-11` ✅ — CASH (banka bakiyesi) + DEPOSIT (vadeli mevduat) first-class asset type eklendi. Faiz oranı, vade tarihi, basit faiz hesabı (cap at maturity). DB: `interest_rate`, `maturity_date` kolonları + `rebuild_positions_atomic` RPC. Dashboard mixed-currency blokları; vade tarihi badge (kırmızı/sarı/yeşil); HHI konsantrasyon riskinden hariç. 11 commit, migration 016–017.
-- [ ] **DEPOSIT/CASH Dashboard blok değeri ₺ göster** `[S]` `[P1]` — Dashboard'da Vadeli Mevduat bloğu değer toplamı `$30,127` gösteriyor; DEPOSIT ve CASH pozisyonlar TRY cinsinden olduğu için blok toplamı ve bireysel pozisyon satırı `₺` sembolüyle gösterilmeli. Display currency toggle ($/ ₺) değişince döviz bazında çevrilmeli, ama default `$` seçiliyken bile bu blok ₺ olarak kalmalı ya da açıkça ₺ değeri göstermeli.
-- [ ] **DEPOSIT TickerDetailTab özel görünümü** `[S]` `[P1]` — DEPOSIT pozisyonlarında "Adet/Ort. Maliyet/Piyasa Değeri/P&L/Şirket Bilgisi" yerine mevduata özgü bilgi kartı göster. Şema değişikliği yok — `maturity_date` varlığına göre iki varyant:
+- [ ] **DEPOSIT/CASH Dashboard blok değeri ₺ göster** `[S]` `[P1]` `Sprint-18` — Dashboard'da Vadeli Mevduat bloğu değer toplamı `$30,127` gösteriyor; DEPOSIT ve CASH pozisyonlar TRY cinsinden olduğu için blok toplamı ve bireysel pozisyon satırı `₺` sembolüyle gösterilmeli. Display currency toggle ($/ ₺) değişince döviz bazında çevrilmeli, ama default `$` seçiliyken bile bu blok ₺ olarak kalmalı ya da açıkça ₺ değeri göstermeli.
+- [ ] **DEPOSIT TickerDetailTab özel görünümü** `[S]` `[P1]` `Sprint-18` — DEPOSIT pozisyonlarında "Adet/Ort. Maliyet/Piyasa Değeri/P&L/Şirket Bilgisi" yerine mevduata özgü bilgi kartı göster. Şema değişikliği yok — `maturity_date` varlığına göre iki varyant:
   - **Vadeli mevduat** (`maturity_date` dolu): **Anapara** (`shares`), **Faiz Oranı** (`interest_rate` → `%43.00`), **Vade Tarihi** (`maturity_date` + kalan gün badge), **Hesaplanan Brüt Faiz** (`computeDepositGrossInterest()`), **Stopaj (%17.5)** (brüt × 0.175), **Net Faiz**, **Güncel Değer** (anapara + net faiz).
   - **Esnek hesap / Serbest Plus** (`maturity_date` null): Vade Tarihi satırı yerine **Tür: Serbest/Esnek** badge; **Günlük Net Kazanç** (yıllık oran / 365 × anapara × 0.825); diğer satırlar aynı.
   - Her iki varyant: işlem geçmişinde "1364699.53 adet ₺1.00" → "₺1,364,700 yatırılan" render. Generik hisse metrikler (`type==="DEPOSIT"` dalında) tamamen gizlenir.
@@ -83,9 +93,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 ## Temettü Takvimi
 
 - [ ] **Temettü Takvimi** `[M]` `[P2]` — FMP `/stable/stock/dividends`; tutulan ticker'lar için sonraki temettü tarihi; HistoryTab "Yaklaşan Temettüler" collapsible veya TickerDetailTab "Sonraki Temettü" satırı. `fetch-fundamentals`'a yeni `mode:"dividend-calendar"` dalı.
-  - [ ] (a) `mode:"dividend-calendar"` dalı; `dividends` array → ex-date, amount `[S]` `Sprint-17`
-  - [ ] (b) TickerDetailTab "Sonraki Temettü" satırı (held ise) `[S]` `Sprint-17`
-  - [ ] (c) Dashboard/HistoryTab "Bu ay beklenen temettüler" özet satırı `[S]`
+  - [x] ~~(a) `mode:"dividend-calendar"` dalı; `dividends` array → ex-date, amount~~ `[S]` (2026-05-13)
+  - [x] ~~(b) TickerDetailTab "Sonraki Temettü" satırı (held ise)~~ `[S]` (2026-05-13)
+  - [ ] (c) Dashboard/HistoryTab "Bu ay beklenen temettüler" özet satırı `[S]` `Sprint-19`
 - [ ] **Kazanç Takvimi (Earnings Calendar)** `[S]` `[P3]` — FMP `/stable/earning-calendar`; TickerDetailTab meta'ya "Sonraki Bilanço: 28 Nisan" satırı.
 
 ---
@@ -353,9 +363,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ### Brand Fit & Jargon Temizliği (Grup A/B — Sprint-15 kapsamı)
 
-- [ ] **Finans jargonunu Türkçe kullanıcı diline çevir** `[S]` `[P1]` `Sprint-17` — Default UI'da: `Total Return` → `Toplam Getiri`, `Benchmark` → `Karşılaştırma`, `Trade` → `İşlem`, `XIRR` → `Yıllık Getiri` (detayda XIRR), `P/E/P/S` → `F/K/F/S`. Kısaltmalar tooltip/detayda kalabilir.
+- [x] ~~**Finans jargonunu Türkçe kullanıcı diline çevir**~~ `[S]` `[P1]` (2026-05-13) — `Total Return → Toplam Getiri`, `Benchmark → Karşılaştırma`, `Trade → İşlem`, `XIRR → Yıllık Getiri` (detayda XIRR), `P/E/P/S → F/K/F/S`; 9 yer güncellendi.
 - [ ] **Karmaşık kartlara önce sonuç cümlesi ekle** `[S]` `[P1]` — Sağlık, Konsantrasyon, Kur Riski, Dayanıklılık, Başa Baş, Fundamental checklist → metrik tablosundan önce sade sonuç cümlesi. Nudge copy pattern yeniden kullanılır.
-- [ ] **Formülleri ekrandan kaldır** `[S]` `[P1]` `Sprint-17` — "HHI= Σ(ağırlık²) × 10000", skor formülleri, `FUND_THRESHOLDS'tan` metinleri kaldır; sonucu göster, hesabı gizle. "HHI nedir?" tooltip kalabilir. `→ AnalysisTab.js:1290,1943,1126`
+- [x] ~~**Formülleri ekrandan kaldır**~~ `[S]` `[P1]` (2026-05-13) — `HHI= Σ(ağırlık²) × 10000`, skor formülleri, `FUND_THRESHOLDS` string metinleri kaldırıldı; sonuç değerleri + açıklayıcı tooltip kaldı. `→ AnalysisTab.js:1290,1943,1126`
 - [ ] **Boş durum metinlerini kullanıcı diline çevir** `[S]` `[P2]` — `"snap. yok"` → `"Veri henüz oluşmadı"`; `"Bilinmiyor"` sektör → `"Henüz sınıflandırılmadı"`.
 - [ ] **"Potansiyel Kayıp Simülasyonu" → "Senaryo Analizi" veya "Stres Testi"** `[S]` `[P2]` — Daha az korkutucu framing; renk nötrleştirme. `→ AnalysisTab.js:1371`
 - [ ] **Potansiyel Kayıp Simülasyonu — altın pozisyonlarını filtrele** `[S]` `[P2]` — "Piyasa −%10/20/30" GOLD tipi pozisyonları kapsamalı mı? (a) `type!=='GOLD'` filtresi + "Hisse & Fon Değeri" alt başlığı, veya (b) footnote ile açıkla.
@@ -446,21 +456,21 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Sonraki Adım
 
-Sprint 4–16 ✅ | **Sprint 17 hazır → 2026-05-26 → 2026-06-08** | Dosya: `sprints/sprint-17.md`
+Sprint 4–17 ✅ | **Sprint 18 aktif → 2026-05-13 → 2026-05-27** | Dosya: `sprints/sprint-18.md`
 
-**Sprint 16 retro (2026-05-13):** Item 1–4 planlanan 2 haftanın yerine tek günde (2026-05-11) teslim edildi; 4 commit. Migration 014 (multi-currency public allocation RPC), Migration 015 (watchlist policy split INSERT/SELECT/DELETE), html2canvas SRI hash, BIST/CRYPTO/GOLD cron type filtresi. Item 5 (Temettü Takvimi Faz 1) edge fn + UI subagent iş yükü nedeniyle Sprint 17'ye devredildi; altyapı hazır, başlangıç maliyeti sıfır. Kapasite fazlası Hotfix olarak kullanıldı: BES form yeniden tasarımı + CASH/DEPOSIT first-class asset type (11 commit, migration 016–017).
+**Sprint 17 retro (2026-05-13):** Tüm 3 item teslim edildi. Temettü Takvimi Faz 1 (dividend-calendar mode + TickerDetailTab satırı) tamamlandı. AI Parse DIV way desteği eklendi (`BUY|SELL|DIV` sözleşmesi + saveTx allowlist). Brand Fit B1+B2 (9 jargon yerine Türkçe + formül gizleme) tamamlandı. BES DK P0 olarak ROADMAP'e girdi; design spec onaylandı; Sprint 18 scope'una alındı.
 
-**Sprint 17 scope (başlangıç: 2026-05-26, sıralı):**
+**Sprint 18 scope (aktif, öncelik sırasıyla):**
 
-1. **Temettü Takvimi Faz 1** `[M][P2]` `Sprint-17` — Sprint 16 deviri; `mode:"dividend-calendar"` edge fn dalı + TickerDetailTab "Sonraki Temettü" satırı.
-2. **AI Parse DIV Way** `[S][P1]` `Sprint-17` — `parse-transaction` sözleşmesi `BUY|SELL|DIV`; Türkçe temettü ifadesi örnekleri; `saveTx` istemci doğrulaması.
-3. **Brand Fit B1+B2** `[S×2][P1]` `Sprint-17` — Finans jargonu Türkçeleştirme + AnalysisTab formül gizleme; kapasite sıkışırsa 3 ertelenir.
+1. **BES Devlet Katkısı (DK) entegrasyonu** `[M][P0]` `Sprint-18` — DB migration (`dk_principal`/`dk_current`); RPC güncelleme; `utils.js` rebuildPositions + ManuelPosForm 4 alan; P&L doğru hesaplama. Spec hazır.
+2. **DEPOSIT TickerDetailTab özel görünümü** `[S][P1]` `Sprint-18` — Vadeli/esnek hesap varyantları; anapara/faiz/vade/net faiz satırları; generik hisse metrikleri gizli.
+3. **DEPOSIT/CASH Dashboard blok ₺ sembolü** `[S][P1]` `Sprint-18` — TRY mevduat blok toplamı ve satırlarında `$` yerine `₺`.
 
-**Sprint 18 adayları (öncelik sırasıyla):**
+**Sprint 19 adayları (öncelik sırasıyla):**
 
-1. **BES Devlet Katkısı (DK) entegrasyonu** `[M][P0]` — `dk_principal` + `dk_current` kolonları; RPC güncelleme; Dashboard görünüm. Spec: `docs/superpowers/specs/2026-05-11-bes-state-contribution-design.md`
-2. **Temettü Takvimi Faz 2** `[S][P2]` — Dashboard/HistoryTab "Bu ay beklenen temettüler" özet satırı; Faz 1 doğrulandıktan sonra
-3. **Piyasa Dayanıklılık Skoru** `[M][P2]` — `resilienceScore` (3 metrik) + AnalysisTab kartı
-4. **Karmaşık kartlara önce sonuç cümlesi** `[S][P1]` — Nudge copy pattern; Brand Fit devamı
-5. **Stale Fiyat Uyarısı** `[S][P2]` — `price_cache.updated_at` 24h+ ticker'lara turuncu badge
-6. **DEPOSIT TickerDetailTab özel görünümü** `[S][P1]` — Mevduat bilgi kartı (anapara, faiz oranı, vade, net faiz)
+1. **BES TickerDetailTab breakdown kartı** `[S][P1]` — Kişisel katkı / DK / getirileri ayrı satırlar; BES DK entegrasyonu önkoşul.
+2. **Karmaşık kartlara önce sonuç cümlesi** `[S][P1]` — Sağlık, Konsantrasyon, Kur Riski, Dayanıklılık kartları; Brand Fit B3 devamı.
+3. **Temettü Takvimi Faz 2** `[S][P2]` — Dashboard/HistoryTab "Bu ay beklenen temettüler"; Faz 1 stabilize olduktan sonra.
+4. **Piyasa Dayanıklılık Skoru** `[M][P2]` — `resilienceScore` (3 metrik) + AnalysisTab kartı; tamamen frontend.
+5. **Stale Fiyat Uyarısı** `[S][P2]` — `price_cache.updated_at` 24h+ ticker'lara turuncu badge.
+6. **BES güncel değer aylık güncelleme** `[S][P2]` — Pozisyon satırında "Değer Güncelle" butonu; `set-manual-price` endpoint hazır.
