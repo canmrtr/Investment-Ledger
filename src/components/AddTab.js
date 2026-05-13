@@ -76,7 +76,7 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
   const saveTx=async(list)=>{
     const items = Array.isArray(list) ? list : (parsed||[]);
     if(!items||items.length===0)return;
-    const valid=items.filter(p=>{const sh=+p.shares,pr=+p.price;return !isNaN(sh)&&sh>0&&!isNaN(pr)&&pr>=0;});
+    const valid=items.filter(p=>{const sh=+p.shares,pr=+p.price;return !isNaN(sh)&&sh>0&&!isNaN(pr)&&pr>=0&&["BUY","SELL","DIV"].includes((p.way||"").toUpperCase());});
     const invalidCnt=items.length-valid.length;
     if(valid.length===0){flash_("Geçerli işlem bulunamadı","err");return;}
     const rows = valid.map(p=>({
@@ -86,6 +86,10 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
       broker:p.broker||"",commission:+(p.commission||0),exchange:p.exchange||"",notes:p.notes||"",
       portfolio_id:portfolioId
     }));
+    // belt-and-suspenders: way must be BUY/SELL/DIV
+    const VALID_WAYS = ["BUY","SELL","DIV"];
+    const invalidWay = rows.find(r=>!VALID_WAYS.includes((r.way||"").toUpperCase()));
+    if(invalidWay){flash_(`Geçersiz işlem türü: ${invalidWay.way}. BUY, SELL veya DIV olmalı.`,"err");return;}
     const{error}=await sb.from("transactions").insert(rows);
     if(error){flash_(error.message,"err");return;}
     const syncTickers=[...new Set(rows.filter(r=>r.asset_type!=="BIST").map(r=>r.ticker))];

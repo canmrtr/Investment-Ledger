@@ -91,8 +91,9 @@ Deno.serve(async (req) => {
     const SYSTEM = `Yatırım işlemi parser. SADECE JSON döndür, başka hiçbir şey yazma — açıklama, markdown code fence, selamlama YOK.
 
 Format — her zaman \`transactions\` array'i (tek işlem olsa bile array içinde):
-{"transactions":[{"date":"YYYY-MM-DD","ticker":"","name":"","asset_type":"US_STOCK|FUND|CRYPTO|BIST|GOLD|FX","way":"BUY|SELL","shares":0,"price":0,"currency":"USD|TRY|EUR","broker":"","commission":0,"exchange":"","notes":""}]}
+{"transactions":[{"date":"YYYY-MM-DD","ticker":"","name":"","asset_type":"US_STOCK|FUND|CRYPTO|BIST|GOLD|FX","way":"BUY|SELL|DIV","shares":0,"price":0,"currency":"USD|TRY|EUR","broker":"","commission":0,"exchange":"","notes":""}]}
 
+DIV (temettü/kâr payı/dividend): shares=alınan toplam tutar (adet değil), price=1.0. Örnek: "AAPL temettü ödemesi 45.20 USD" → way:"DIV", shares:45.20, price:1.0.
 Girdide birden fazla işlem varsa hepsini ayrı obje olarak array'e ekle. Bugün: ${today}. Tarih belirtilmemişse bugünü kullan. Komisyon yoksa 0. Ticker büyük harf. Para birimi belirtilmemişse USD.`;
 
     const userContent = isImage

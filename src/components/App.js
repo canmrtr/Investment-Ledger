@@ -751,7 +751,7 @@ function App({session}){
                   </div>
                   {/* Kart 2: Total Return % (büyük) + tutar (ikincil) */}
                   <div className="card" data-tip={"Period boyunca toplam getiri: (Bugün MV + Period Satışları) − (Period Başı MV + Period Alımları). Tüm currency'ler displayCur'a convert. Realize + unrealize, komisyonlar dahil."} style={{cursor:"help"}}>
-                    <div className="lbl">Total Return ({sel.lbl})</div>
+                    <div className="lbl">Toplam Getiri ({sel.lbl})</div>
                     <div className={"mono"+(pInfo&&pInfo.trPct!=null?pc(pInfo.trPct):"")} style={{fontSize:16,fontWeight:600}}>
                       {pInfo&&pInfo.trPct!=null?mask(fmtP(pInfo.trPct)):"—"}
                     </div>
@@ -763,7 +763,7 @@ function App({session}){
                   </div>
                   {/* Kart 3: XIRR */}
                   <div className="card" data-tip="Cash flow tabanlı yıllıklandırılmış iç verim oranı (Excel XIRR). Para zamanlamasını dikkate alır. Kısa periyotlarda matematiksel olarak hesaplanabilir ama yanıltıcı olduğu için ≥1Y'de gösterilir." style={{cursor:"help"}}>
-                    <div className="lbl">Yıllık (XIRR)</div>
+                    <div className="lbl">Yıllık Getiri</div>
                     <div className={"mono"+(longPeriod&&pInfo&&pInfo.xirrRate!=null?pc(pInfo.xirrRate):"")} style={{fontSize:16,fontWeight:600}}>
                       {longPeriod&&pInfo&&pInfo.xirrRate!=null?mask(fmtP(pInfo.xirrRate*100)):"—"}
                     </div>
@@ -795,7 +795,7 @@ function App({session}){
             {/* Benchmark karşılaştırması — SPY + XU100, seçili periyot */}
             {sel.key!=="max"&&BENCHMARKS.some(b=>hist[b.ticker]?.last)&&(
               <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10,flexWrap:"wrap"}}>
-                <span style={{fontSize:10,color:"var(--text3)",fontWeight:500,textTransform:"uppercase",letterSpacing:.5}}>Benchmark</span>
+                <span style={{fontSize:10,color:"var(--text3)",fontWeight:500,textTransform:"uppercase",letterSpacing:.5}}>Karşılaştırma</span>
                 {BENCHMARKS.map(b=>{
                   const h=hist[b.ticker];
                   if(!h?.last)return null;

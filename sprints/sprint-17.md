@@ -1,4 +1,4 @@
-# Sprint 17 — 2026-05-26 → 2026-06-08
+# Sprint 17 — 2026-05-13 → 2026-05-26
 
 **Goal**: Can, elindeki temettü hisselerinde "Sonraki Temettü" tarihini tek bakışta görür; AI parse ile ilk kez DIV işlemi girebilir; UI jargonu Türkçeleşir — yatırım deneyimini doğrudan etkileyen üç somut iyileştirme tamamlanır.
 
@@ -76,7 +76,7 @@ Sprint 16 Item 1–4 planlandığı gibi tek gün (2026-05-11) teslim edildi; 4 
 
 ---
 
-### 4. Brand Fit Batch — B1 Finans Jargonu + B2 Formül Gizleme `[S×2][P1]`
+### 3. Brand Fit Batch — B1 Finans Jargonu + B2 Formül Gizleme `[S×2][P1]`
 
 **Roadmap satırı**: `UI & A11y Backlog → Brand Fit & Jargon Temizliği → "Finans jargonunu Türkçe kullanıcı diline çevir" + "Formülleri ekrandan kaldır" [P1]`
 

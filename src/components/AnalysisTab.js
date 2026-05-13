@@ -147,7 +147,7 @@ function buildSummaryText({ metrics, monthLbl, dSym }) {
     portR != null ? `📈 Aylık:    ${approx}${fmtPct(portR)}` : null,
     ytdLine,
     '',
-    'Benchmark:',
+    'Karşılaştırma:',
     `  Portföy  ${approx}${fmtPct(portR)}`,
     spyLine,
     xu100Line,
@@ -434,7 +434,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
 
   // Sağlık tablosu için 8 kritik metrik (default; tüm 21 metrik FUND_THRESHOLDS'ta)
   const HEALTH_METRICS=[
-    ["pe",                "P/E",          "x"],
+    ["pe",                "F/K",          "x"],
     ["roe",               "ROE",          "pct"],
     ["netMargin",         "Net Marj",     "pct"],
     ["operatingMargin",   "Op Marj",      "pct"],
@@ -765,7 +765,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
             </div>
 
             {/* Benchmark */}
-            <div className="lbl" style={{marginBottom:6}}>Benchmark</div>
+            <div className="lbl" style={{marginBottom:6}}>Karşılaştırma</div>
             {[
               {label:"Portföy", ret: monthReturn, approx: isApprox},
               {label:"SPY",     ret: benchmarks.spy},
@@ -1201,7 +1201,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
 
           {healthOpen && (
             <div style={{fontSize:10,color:"var(--text3)",marginTop:8,lineHeight:1.5}}>
-              Eşikler `FUND_THRESHOLDS`'tan; kolon başlığında hover ile detay. BIST için P/S henüz yok (—). TR enflasyon nominal CAGR'ı şişiriyor — BIST büyüme metriklerine ihtiyatla bak.
+              Her metrik için eşikler kolon başlığında hover ile görünür. BIST için F/S henüz yok (—). TR enflasyon nominal CAGR'ı şişiriyor — BIST büyüme metriklerine ihtiyatla bak.
             </div>
           )}
         </div>
@@ -1280,7 +1280,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       {/* Kazanan/Kaybeden Trade — BUY ve SELL bağımsız, split-adjusted */}
       <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:14}}>
-          <div className="stitle" style={{marginBottom:0}}>Kazanan / Kaybeden Trade</div>
+          <div className="stitle" style={{marginBottom:0}}>Kazanan / Kaybeden İşlem</div>
           <span style={{fontSize:10,color:"var(--text3)"}}>güncel fiyatla kıyas · split-adjusted</span>
         </div>
         {(() => {
@@ -1710,7 +1710,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
         return (
           <div className="card" style={{marginBottom:14,padding:"16px 18px"}}>
             <div className="stitle" style={{marginBottom:4}}>Dönem Bazlı Getiri</div>
-            <div style={{fontSize:11,color:"var(--text3)",marginBottom:14}}>Portföy vs Benchmark (ağırlıklı ortalama)</div>
+            <div style={{fontSize:11,color:"var(--text3)",marginBottom:14}}>Portföy vs Karşılaştırma (ağırlıklı ortalama)</div>
             <table style={{width:"100%",borderCollapse:"collapse"}}>
               <thead>
                 <tr>
