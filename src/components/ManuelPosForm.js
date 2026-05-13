@@ -426,7 +426,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
           </div>
         </div>
         <div className="brow">
-          <button className="pri" onClick={savePos} disabled={saving||!form.ticker||(form.type!=="BES"&&!form.shares)||(form.type==="DEPOSIT"&&!form.interestRate)||(!isCashType&&!form.avgCost)}>
+          <button className="pri" onClick={savePos} disabled={saving||!form.ticker||(form.type!=="BES"&&!form.shares)||(form.type==="DEPOSIT"&&!form.interestRate)||(!isCashType&&!form.avgCost)||(form.type==="BES"&&(!form.currentValue||!form.dkPrincipal||!form.dkCurrent))}>
             {saving?"Kaydediliyor...":(editTk?"Güncelle":"Pozisyon Kaydet")}
           </button>
           {editTk&&<button onClick={()=>{setEditTk(null);setForm(E);setCurPrice(null);}}>İptal</button>}
