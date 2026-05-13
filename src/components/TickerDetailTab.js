@@ -837,6 +837,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
         <div style={{border:"0.5px solid var(--border)",borderRadius:12,overflow:"hidden"}}>
           {tickerTxs.map(t=>{
             const cSym=t.currency==="TRY"?"₺":"$";
+            const isTxDepositOrCash=t.asset_type==="DEPOSIT"||t.asset_type==="CASH";
             const isOpen=expandedTx===t.id;
             const isEdit=editTxId===t.id;
             return(
@@ -847,8 +848,8 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                   <div style={{display:"flex",gap:10,alignItems:"center",flex:1,flexWrap:"wrap"}}>
                     <span style={{fontSize:11,color:"var(--text2)",fontFamily:"monospace",minWidth:80}}>{fmtDateTR(t.date)}</span>
                     <span className={t.way==="BUY"?"ok":t.way==="DIV"?"warn":"err"} style={{fontSize:11,minWidth:28}}>{t.way==="BUY"?"Alış":t.way==="DIV"?"Temettü":"Satış"}</span>
-                    <span className="mono" style={{fontSize:12}}>{fmtShares(t.shares)} adet</span>
-                    {!hideAmts&&<span className="mono dim" style={{fontSize:12}}>{mask(cSym+fmt(t.price))}</span>}
+                    <span className="mono" style={{fontSize:12}}>{isTxDepositOrCash&&t.way==="BUY"?cSym+fmt(t.shares,0)+" yatırılan":isTxDepositOrCash&&t.way==="SELL"?cSym+fmt(t.shares,0)+" çekilen":fmtShares(t.shares)+" adet"}</span>
+                    {!hideAmts&&!isTxDepositOrCash&&<span className="mono dim" style={{fontSize:12}}>{mask(cSym+fmt(t.price))}</span>}
                     {!hideAmts&&<span className="mono" style={{fontSize:12,fontWeight:600}}>{mask(cSym+fmt(t.total,0))}</span>}
                     {t.broker&&<span className="dim" style={{fontSize:10}}>{t.broker}</span>}
                     {!hideAmts&&+t.commission>0&&<span className="dim" style={{fontSize:10}}>Kom: {mask(cSym+fmt(+t.commission,2))}</span>}
