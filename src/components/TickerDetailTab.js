@@ -864,15 +864,17 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                       {[
                         ["Tarih",fmtDateTR(t.date)],
                         ["İşlem",t.way==="BUY"?"Alış":t.way==="DIV"?"Temettü":"Satış"],
-                        ["Adet",fmtShares(t.shares,6)],
-                        ["Birim Fiyat",hideAmts?"••••":cSym+fmt(t.price)],
+                        isTxDepositOrCash
+                          ?[t.way==="SELL"?"Çekilen Tutar":"Yatırılan Tutar",hideAmts?"••••":cSym+fmt(t.shares,0)]
+                          :["Adet",fmtShares(t.shares,6)],
+                        !isTxDepositOrCash&&["Birim Fiyat",hideAmts?"••••":cSym+fmt(t.price)],
                         ["Toplam",hideAmts?"••••":cSym+fmt(t.total,2)],
                         ["Komisyon",hideAmts?"••••":cSym+fmt(+t.commission||0,2)],
                         ["Para Birimi",t.currency||"USD"],
                         ["Broker",t.broker||"—"],
                         ["Borsa",t.exchange||"—"],
                         ["Tür",TL[t.asset_type]||t.asset_type||"—"],
-                      ].map(([k,v])=>(
+                      ].filter(Boolean).map(([k,v])=>(
                         <div key={k}><div className="kk">{k}</div><div className="kv_">{String(v)}</div></div>
                       ))}
                     </div>
