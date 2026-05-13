@@ -17,6 +17,10 @@ supabase/.temp/
 # Playwright MCP session logs (auto-generated, not for tracking)
 .playwright-mcp/
 
+# Environment / secrets (never commit)
+.env
+.env.local
+
 # Scratch / one-off files (use e2e/ for tracked tests)
 il-*.mjs
 mockup-*.html
