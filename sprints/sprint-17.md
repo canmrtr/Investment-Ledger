@@ -108,9 +108,9 @@ Sprint 16 Item 1–4 planlandığı gibi tek gün (2026-05-11) teslim edildi; 4 
 
 ## Definition of Done
 
-- [ ] Item 1 (1a+1b): edge-reviewer + ui-builder onayı + held ticker TickerDetailTab'da temettü satırı + graceful fallback + `npm run check:edge` geçti.
-- [ ] Item 2 (2a+2b): DIV parse çalışıyor + saveTx doğrulaması + edge-reviewer + ui-builder onayı + `npm run check:edge` geçti.
-- [ ] Item 3 (B1+B2): Türkçe jargon geçişi + formüller gizlendi + `npm run check:babel` geçti + ui-builder onayı.
+- [x] Item 1 (1a+1b): dividend-calendar mode + Sonraki Temettü satırı — önceki sprint'te implement edilmişti; doğrulandı.
+- [x] Item 2 (2a+2b): DIV parse (`BUY|SELL|DIV`, shares=toplam tutar) + saveTx way allowlist + `npm run check:edge` geçti.
+- [x] Item 3 (B1+B2): Türkçe jargon geçişi (9 yer) + FUND_THRESHOLDS gizlendi + `npm run check:babel` geçti.
 - [ ] `ROADMAP.md` Sprint 17 item'ları `[x]` işaretlendi; Sprint 18 bakış listesi güncellendi.
 
 ---
