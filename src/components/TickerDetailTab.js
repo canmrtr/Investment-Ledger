@@ -379,6 +379,14 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
   // Effective asset type — held varsa onun type'ı, non-held ise search'ten gelen hint
   // (BIST veya US_STOCK varsayılan). Provider routing + currency display için kullanılır.
   const effectiveType = p?.type || assetTypeHint || "US_STOCK";
+  const isDeposit=p?.type==="DEPOSIT";
+  const depositGross=isDeposit&&p.interestRate!=null?computeDepositGrossInterest(tickerTxs,p.interestRate*(1-(p.reserveRatio||0)),p.maturityDate||null):0;
+  const depositNet=depositGross*(1-DEPOSIT_TAX_RATE);
+  const _depNow=Date.now();
+  const _depMatMs=isDeposit&&p.maturityDate?new Date(p.maturityDate).getTime():null;
+  const depositDaysLeft=_depMatMs!=null?Math.round((_depMatMs-_depNow)/86400000):null;
+  const _depBuyMs=(()=>{if(!isDeposit)return null;const ds=tickerTxs.filter(t=>t.way==="BUY").map(t=>new Date(t.date).getTime());return ds.length>0?Math.min(...ds):_depNow;})();
+  const depositElapsed=_depBuyMs!=null?Math.max(1,Math.round((_depNow-_depBuyMs)/86400000)):1;
   const isBist = effectiveType==="BIST";
   const displayCurrency = p?.currency || (isBist ? "TRY" : "USD");
   const sym = displayCurrency==="TRY" ? "₺" : displayCurrency==="EUR" ? "€" : "$";
@@ -528,7 +536,35 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       {/* Pozisyon özeti — 4 ana kart (sadece held ticker için) */}
       {p&&(
         <React.Fragment>
-        <div className="g4" style={{marginBottom:8}}>
+        {isDeposit&&(
+          <div className="card" style={{marginBottom:8,padding:"14px 16px"}}>
+            <div className="stitle" style={{marginBottom:10}}>Mevduat Özeti</div>
+            {(()=>{
+              const rows=[
+                ["Anapara",mask(sym+fmt(p.shares,0))],
+                ["Yıllık Faiz Oranı",((p.interestRate||0)*100).toFixed(2)+"%"],
+                ["Vade Tarihi",p.maturityDate?(()=>{
+                  const past=depositDaysLeft!=null&&depositDaysLeft<0;
+                  const soon=depositDaysLeft!=null&&depositDaysLeft<=30&&!past;
+                  const col=past?"var(--err)":soon?"var(--warn)":"var(--ok)";
+                  const bg=past?"rgba(255,51,102,0.15)":soon?"rgba(255,184,0,0.15)":"rgba(0,217,126,0.08)";
+                  return<span>{fmtDateTR(p.maturityDate)}<span style={{marginLeft:6,fontSize:10,padding:"1px 6px",borderRadius:8,background:bg,color:col}}>{past?"Vadesi geçti":depositDaysLeft===0?"Bugün":"+"+depositDaysLeft+" gün"}</span></span>;
+                })():<span style={{fontSize:11,padding:"2px 8px",borderRadius:8,background:"rgba(201,168,76,0.12)",color:"var(--info)"}}>Esnek Hesap</span>],
+                ["Brüt Faiz",mask(sym+fmt(depositGross,0))],
+                ["Stopaj (%17.5)",mask("−"+sym+fmt(depositGross*DEPOSIT_TAX_RATE,0))],
+                ["Net Faiz",<span style={{color:"var(--ok)"}} key="nf">{mask("+"+sym+fmt(depositNet,0))}</span>],
+                !p.maturityDate?["Günlük Net Kazanç",mask(sym+fmt(depositNet/depositElapsed,2))]:null,
+                ["Güncel Değer",mask(sym+fmt(p.shares+depositNet,0))],
+              ].filter(Boolean);
+              return(
+                <div className="kv">
+                  {rows.map(([k,v])=><div key={k}><div className="kk">{k}</div><div className="kv_">{v}</div></div>)}
+                </div>
+              );
+            })()}
+          </div>
+        )}
+        {!isDeposit&&<div className="g4" style={{marginBottom:8}}>
           <div className="card" data-tip="Pozisyondaki toplam adet (split-adjusted)" style={{cursor:"help"}}>
             <div className="lbl">Adet</div>
             <div className="mono" style={{fontSize:16,fontWeight:600}}>{fmtShares(p.shares)}</div>
@@ -546,7 +582,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
             <div className={"mono"+(totalPL!=null?pc(totalPL):"")} style={{fontSize:16,fontWeight:600}}>{totalPL!=null?mask((totalPL>=0?"+":"-")+sym+fmt(Math.abs(totalPL),2)):"—"}</div>
             {totalPLPct!=null&&<div className={"mono"+pc(totalPLPct)} style={{fontSize:11,marginTop:2}}>{fmtP(totalPLPct)}</div>}
           </div>
-        </div>
+        </div>}
         {p&&price!=null&&p.type!=="BIST"&&p.currency!=="TRY"&&p.avgCost>price*30&&(
           <div className="warn-card" style={{marginBottom:8}}>
             Maliyet tutarı TRY cinsinden girilmiş olabilir ({displaySym(p.currency)} bekleniyor). İşlemi düzeltin ve <b>Ayarlar → ♻️ Yeniden Hesapla</b> çalıştırın.
@@ -581,7 +617,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       )}
 
       {/* Detay satırı — Ort. Maliyet · Realized · Unrealized · Komisyon (sadece held için) */}
-      {p&&(
+      {p&&!isDeposit&&(
         <div style={{display:"flex",flexWrap:"wrap",gap:14,padding:"8px 14px",marginBottom:14,fontSize:11,color:"var(--text2)",background:"var(--bg2)",borderRadius:8,border:"0.5px solid var(--border)"}}>
           <span data-tip="Bugün satın alsan birim başına ödediğin ortalama" style={{cursor:"help"}}>
             Ort. Maliyet: <span className="mono" style={{color:"var(--text)"}}>{mask(sym+fmt(p.avgCost))}</span>
@@ -609,7 +645,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       )}
 
       {/* Şirket bilgisi — meta'da gösterilebilir bir alan yoksa hiç render etme. */}
-      {(()=>{
+      {!isDeposit&&(()=>{
         const hasDetailMeta = meta && (
           meta.sic_description || meta.industry || meta.market_cap || meta.shares_outstanding ||
           meta.total_employees || meta.list_date || meta.homepage_url || meta.description ||
@@ -674,7 +710,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       })()}
 
       {/* Fundamental — değer yatırımı checklist (US_STOCK + BIST) */}
-      {supportsFund&&(
+      {supportsFund&&!isDeposit&&(
         <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
             <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
@@ -766,7 +802,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       )}
 
       {/* Analist Tavsiyeleri — sadece US_STOCK + fund.grades */}
-      {effectiveType==="US_STOCK"&&fund?.grades?.length>0&&(
+      {effectiveType==="US_STOCK"&&!isDeposit&&fund?.grades?.length>0&&(
         <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
           <div className="stitle" style={{marginBottom:10}}>Analist Tavsiyeleri</div>
           {fund.grades.map((g,i)=>{
