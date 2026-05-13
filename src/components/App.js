@@ -838,8 +838,13 @@ function App({session}){
               const items = filteredPos.filter(p => p.type===cfg.type).map(p=>{const w=wrapPos(p);const chg=periodChange(w);return{...w,periodChgPct:chg?.pct??null,periodChgDlr:chg?.dlr??null};});
               if(items.length===0) return null;
               const sortedItems = sortPos(items, sort);
+              const isNativeBlock=cfg.type==="CASH"||cfg.type==="DEPOSIT";
+              const allSameCur=isNativeBlock&&items.length>0&&items.every(p=>p.currency===items[0].currency);
+              const nativeSym=allSameCur?displaySym(items[0].currency||"TRY"):dSym;
               const totMv = cfg.mixed
-                ? items.reduce((a,p)=>a+(cnv(p.mv??p.cost,p.currency||"TRY")??0),0)
+                ? (allSameCur
+                    ? items.reduce((a,p)=>a+(p.mv??p.cost),0)
+                    : items.reduce((a,p)=>a+(cnv(p.mv??p.cost,p.currency||"TRY")??0),0))
                 : items.reduce((a,p)=>a+(p.mv ?? p.cost),0);
               const itemsWithChg = items.filter(p=>p.periodChgDlr!=null);
               const blockDeltaDlr = itemsWithChg.reduce((s,p)=>s+p.periodChgDlr,0);
@@ -862,7 +867,7 @@ function App({session}){
                       {missingPriceCount>0&&blockDeltaPct!=null&&(
                         <span style={{fontSize:10,color:"var(--text3)"}} data-tip={`${missingPriceCount} ticker için ${sel.lbl} fiyatı eksik`}>{missingPriceCount} eksik</span>
                       )}
-                      {!hide&&<span style={{fontSize:15,fontWeight:500,fontFamily:"var(--font-numeric)",color:"var(--text)"}}>{mask((cfg.mixed?dSym:cfg.sym)+fmt(totMv,0))}</span>}
+                      {!hide&&<span style={{fontSize:15,fontWeight:500,fontFamily:"var(--font-numeric)",color:"var(--text)"}}>{mask((cfg.mixed?nativeSym:cfg.sym)+fmt(totMv,0))}</span>}
                       <span style={{fontSize:11,color:"var(--text3)"}}>{isOpen?"▾":"▸"}</span>
                     </div>
                   </div>
