@@ -6,7 +6,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
   // BIST'e göre günceller (mevcut davranış korunuyor).
   const initType = prefillType || "US_STOCK";
   const initCurrency = (initType==="BIST"||initType==="BES"||initType==="CASH"||initType==="DEPOSIT") ? "TRY" : "USD";
-  const E={ticker:"",name:"",type:initType,shares:"",avgCost:"",currency:initCurrency,broker:"",commission:"",date:today(),unit:"oz",currentValue:"",interestRate:"",maturityDate:"",reserveRatio:""};
+  const E={ticker:"",name:"",type:initType,shares:"",avgCost:"",currency:initCurrency,broker:"",commission:"",date:today(),unit:"oz",currentValue:"",interestRate:"",maturityDate:"",reserveRatio:"",dkPrincipal:"",dkCurrent:""};
   const [form,setForm]=useState(E);
   const [curPrice,setCurPrice]=useState(null);
   // Fiyat fetch sonucu hakkında inline uyarı/bilgi: {type:"ok"|"warn", text}.
@@ -24,6 +24,11 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     if(!isCashType&&(+form.avgCost<=0||isNaN(+form.avgCost)))e.avgCost=form.type==="BES"?"Tutar 0'dan büyük olmalı":"Fiyat 0'dan büyük olmalı";
     if(form.type==="DEPOSIT"){
       if(+form.interestRate<=0||isNaN(+form.interestRate))e.interestRate="Faiz oranı 0'dan büyük olmalı";
+    }
+    if(form.type==="BES"){
+      if(+form.currentValue<=0||isNaN(+form.currentValue))e.currentValue="Kişisel portföy değeri 0'dan büyük olmalı";
+      if(+form.dkPrincipal<=0||isNaN(+form.dkPrincipal))e.dkPrincipal="DK anaparası 0'dan büyük olmalı";
+      if(+form.dkCurrent<=0||isNaN(+form.dkCurrent))e.dkCurrent="DK güncel değeri 0'dan büyük olmalı";
     }
     setErrs(e);
     return Object.keys(e).length===0;
@@ -89,7 +94,9 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     setForm({...E,ticker:p.ticker,name:p.name,type:p.type,shares:p.shares,avgCost:p.type==="CASH"||p.type==="DEPOSIT"?"":p.avgCost,currency:p.currency,broker:p.broker||"",
       interestRate:p.interestRate!=null?(p.interestRate*100).toString():"",
       maturityDate:p.maturityDate||"",
-      reserveRatio:p.reserveRatio!=null&&p.reserveRatio>0?(p.reserveRatio*100).toString():""});
+      reserveRatio:p.reserveRatio!=null&&p.reserveRatio>0?(p.reserveRatio*100).toString():"",
+      dkPrincipal:p.dkPrincipal!=null?p.dkPrincipal.toString():"",
+      dkCurrent:p.dkCurrent!=null?p.dkCurrent.toString():""});
     if(p.type!=="BES"&&p.type!=="CASH"&&p.type!=="DEPOSIT")fetchPrice(p.ticker);
   };
 
@@ -121,21 +128,24 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     const{error:te}=await sb.from("transactions").insert(tx);
     if(te){flash_(te.message,"err");setSaving(false);return;}
 
-    const depositMeta = form.type==="DEPOSIT"
-      ? {[tk]:{interest_rate:+form.interestRate/100,maturity_date:form.maturityDate||null,reserve_ratio:+form.reserveRatio/100||0}}
-      : {};
-    const rebuilt=await rebuildPositions(user.id,portfolioId,depositMeta);
-    if(rebuilt===null){flash_("Pozisyon güncellenemedi","err");setSaving(false);return;}
-
-    await loadData();
-    flash_(`${tk} işlem geçmişine ve pozisyona eklendi ✓`);
-    if(form.type==="BES"&&+form.currentValue>0){
+    if(form.type==="BES"){
+      const total=+form.currentValue + +form.dkCurrent;
       try{
-        await edgePriceCall({mode:"set-manual-price",ticker:tk,price:+form.currentValue,asset_type:"BES"});
+        await edgePriceCall({mode:"set-manual-price",ticker:tk,price:total,asset_type:"BES"});
       }catch(e){
         console.warn("[BES set-manual-price]",e);
       }
     }
+    const extraMeta = form.type==="DEPOSIT"
+      ? {[tk]:{interest_rate:+form.interestRate/100,maturity_date:form.maturityDate||null,reserve_ratio:+form.reserveRatio/100||0}}
+      : form.type==="BES"
+        ? {[tk]:{dk_principal:+form.dkPrincipal,dk_current:+form.dkCurrent}}
+        : {};
+    const rebuilt=await rebuildPositions(user.id,portfolioId,extraMeta);
+    if(rebuilt===null){flash_("Pozisyon güncellenemedi","err");setSaving(false);return;}
+
+    await loadData();
+    flash_(`${tk} işlem geçmişine ve pozisyona eklendi ✓`);
     setEditTk(null);setForm(E);setCurPrice(null);
     setSaving(false);
   };
@@ -283,7 +293,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
           )}
           {!isCashType&&(
           <div>
-            <div className="kk" style={{marginBottom:4}}>{form.type==="BES"?"Yatırılan Toplam Tutar (₺) *":form.type==="GOLD"?`Ort. Maliyet * (${form.currency}/${GOLD_UNITS.find(g=>g.key===form.unit)?.label||'oz'})`:"Ort. Maliyet *"}</div>
+            <div className="kk" style={{marginBottom:4}}>{form.type==="BES"?"Kişisel Yatırılan (₺) *":form.type==="GOLD"?`Ort. Maliyet * (${form.currency}/${GOLD_UNITS.find(g=>g.key===form.unit)?.label||'oz'})`:"Ort. Maliyet *"}</div>
             <input className="finp" type="number" step="any" value={form.avgCost}
               aria-invalid={!!errs.avgCost}
               style={errs.avgCost?{borderColor:"var(--err)"}:{}}
@@ -295,10 +305,38 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
           )}
           {form.type==="BES"&&(
             <div>
-              <div className="kk" style={{marginBottom:4}}>Güncel Değer (₺) — opsiyonel</div>
+              <div className="kk" style={{marginBottom:4}}>Kişisel Portföy Güncel Değeri (₺) *</div>
               <input className="finp" type="number" step="any" value={form.currentValue}
-                onChange={e=>set({currentValue:e.target.value})}
-                placeholder="güncel portföy değeri"/>
+                aria-invalid={!!errs.currentValue}
+                style={errs.currentValue?{borderColor:"var(--err)"}:{}}
+                onChange={e=>{set({currentValue:e.target.value});if(errs.currentValue)setErrs(p=>({...p,currentValue:undefined}));}}
+                placeholder="kişisel portföy güncel değeri"/>
+              {errs.currentValue&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.currentValue}</div>}
+            </div>
+          )}
+          {form.type==="BES"&&(
+            <div>
+              <div className="kk" style={{marginBottom:4}}>Devlet Katkısı Anaparası (₺) *</div>
+              <input className="finp" type="number" step="any" value={form.dkPrincipal}
+                aria-invalid={!!errs.dkPrincipal}
+                style={errs.dkPrincipal?{borderColor:"var(--err)"}:{}}
+                onChange={e=>{set({dkPrincipal:e.target.value});if(errs.dkPrincipal)setErrs(p=>({...p,dkPrincipal:undefined}));}}
+                placeholder="devlet katkısı anaparası"/>
+              {errs.dkPrincipal&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.dkPrincipal}</div>}
+            </div>
+          )}
+          {form.type==="BES"&&(
+            <div>
+              <div className="kk" style={{marginBottom:4}}>DK Portföy Güncel Değeri (₺) *</div>
+              <input className="finp" type="number" step="any" value={form.dkCurrent}
+                aria-invalid={!!errs.dkCurrent}
+                style={errs.dkCurrent?{borderColor:"var(--err)"}:{}}
+                onChange={e=>{set({dkCurrent:e.target.value});if(errs.dkCurrent)setErrs(p=>({...p,dkCurrent:undefined}));}}
+                placeholder="DK portföy güncel değeri"/>
+              {errs.dkCurrent&&<div style={{fontSize:11,color:"var(--err)",marginTop:3}}>{errs.dkCurrent}</div>}
+              {+form.dkCurrent>0&&+form.dkPrincipal>0&&+form.dkCurrent<+form.dkPrincipal&&(
+                <div style={{fontSize:11,color:"var(--warn)",marginTop:3}}>DK güncel değeri anaparadan düşük — devam edebilirsin.</div>
+              )}
             </div>
           )}
           <div>
@@ -361,15 +399,21 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
             {form.type==="BES"?(
               form.avgCost&&+form.avgCost>0?(
                 <div style={{fontSize:11,color:"var(--text2)",padding:"7px 0"}}>
-                  Yatırılan: ₺{fmt(+form.avgCost,0)}
-                  {form.currentValue&&+form.currentValue>0&&(
-                    <>
-                      <br/>Güncel: ₺{fmt(+form.currentValue,0)}
-                      <br/><span style={{color:+form.currentValue>=+form.avgCost?"var(--ok)":"var(--err)"}}>
-                        {+form.currentValue>=+form.avgCost?"+":""}{fmt((+form.currentValue-+form.avgCost)*100/(+form.avgCost),1)}%
-                      </span>
-                    </>
-                  )}
+                  <span>Kişisel katkı: ₺{fmt(+form.avgCost,0)}</span>
+                  {+form.dkPrincipal>0&&<span style={{marginLeft:8}}>· DK: ₺{fmt(+form.dkPrincipal,0)}</span>}
+                  {+form.currentValue>0&&+form.dkCurrent>0&&(()=>{
+                    const total=+form.currentValue+ +form.dkCurrent;
+                    const gain=total- +form.avgCost;
+                    const pct=gain/(+form.avgCost)*100;
+                    return(
+                      <>
+                        <br/>Toplam hesap değeri: ₺{fmt(total,0)}
+                        <br/><span style={{color:gain>=0?"var(--ok)":"var(--err)"}}>
+                          Toplam getiri: {gain>=0?"+":""}₺{fmt(gain,0)} ({gain>=0?"+":""}{fmt(pct,1)}%)
+                        </span>
+                      </>
+                    );
+                  })()}
                 </div>
               ):null
             ):(!isCashType&&form.shares&&form.avgCost?(
@@ -388,7 +432,6 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
           {editTk&&<button onClick={()=>{setEditTk(null);setForm(E);setCurPrice(null);}}>İptal</button>}
         </div>
         <div style={{fontSize:11,color:"var(--text2)",marginTop:8}}>ℹ Bu form bir BUY işlemi kaydeder ve mevcut pozisyonu günceller.</div>
-        {form.type==="BES"&&<div style={{fontSize:11,color:"var(--text3)",marginTop:4}}>Devlet katkısı için farklı bir hesap kodu ile ayrı pozisyon ekleyin (örn: AH_DK).</div>}
       </div>
 
       {pos.filter(p=>p.shares>CFG.DUST_THRESHOLD).length>0&&(
@@ -399,7 +442,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               <div>
                 <span style={{fontWeight:700,fontSize:13,fontFamily:"monospace"}}>{p.ticker}</span>
                 {p.type==="BES"
-                  ?<span className="dim" style={{fontSize:11,marginLeft:8}}>₺{fmt(p.avgCost,0)} yatırılan</span>
+                  ?<span className="dim" style={{fontSize:11,marginLeft:8}}>₺{fmt(p.avgCost,0)} kişisel{p.dkPrincipal!=null?` · DK: ₺${fmt(p.dkPrincipal,0)} · Güncel DK: ₺${fmt(p.dkCurrent,0)}`:""}</span>
                   :(p.type==="CASH"||p.type==="DEPOSIT")
                     ?<span className="dim" style={{fontSize:11,marginLeft:8}}>{displaySym(p.currency)}{fmt(p.shares,0)} bakiye{p.type==="DEPOSIT"&&p.interestRate?` · %${fmt(p.interestRate*100,1)} yıllık`:""}</span>
                   :<span className="dim" style={{fontSize:11,marginLeft:8}}>{fmtShares(p.shares)} adet · {displaySym(p.currency)}{fmt(p.avgCost)} ort.</span>
