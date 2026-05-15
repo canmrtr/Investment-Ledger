@@ -609,14 +609,14 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
             <div className="stitle" style={{marginBottom:10}}>BES Özeti</div>
             {(()=>{
               const dkNull=p.dkCurrent==null;
-              const kisGuncel=dkNull?null:price-p.dkCurrent;
+              const kisGuncel=(dkNull||price==null)?null:price-p.dkCurrent;
               const kisGetiri=kisGuncel!=null?kisGuncel-p.avgCost:null;
               const dkGetiri=(p.dkCurrent!=null&&p.dkPrincipal!=null)?p.dkCurrent-p.dkPrincipal:null;
               return(
                 <React.Fragment>
                   <div style={{marginBottom:8}}>
                     <div style={{fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.1em",color:"rgba(201,168,76,0.55)",marginBottom:5}}>Kişisel Portföy</div>
-                    <div className="kv">
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                         <div className="kk">Yatırılan Tutar</div>
                         <div className="kv_">{mask(sym+fmt(p.avgCost,0))}</div>
@@ -641,7 +641,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                   </div>
                   <div style={{background:"rgba(201,168,76,0.05)",border:"1px solid rgba(201,168,76,0.1)",borderRadius:8,padding:"8px 10px",marginBottom:8}}>
                     <div style={{fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.1em",color:"rgba(201,168,76,0.55)",marginBottom:5}}>Devlet Katkısı</div>
-                    <div className="kv">
+                    <div style={{display:"flex",flexDirection:"column",gap:8}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                         <div className="kk">DK Anaparası</div>
                         <div className="kv_">{p.dkPrincipal!=null?mask(sym+fmt(p.dkPrincipal,0)):"—"}</div>
