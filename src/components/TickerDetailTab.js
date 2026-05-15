@@ -161,15 +161,7 @@ const sanitizeMeta = (data) => {
 };
 const metaCacheSet = (ticker, data) => LS.set(`meta_${ticker}`, { d: sanitizeMeta(data), t: Date.now() });
 
-// Dividend calendar cache — 24 saat TTL
-const DIVCAL_TTL_MS = 24 * 3600000;
-const divCalCacheGet = (ticker) => {
-  const c = LS.get(`il_divcal_${ticker}`, null);
-  if (!c || !c.t) return null;
-  if (Date.now() - c.t > DIVCAL_TTL_MS) return null;
-  return c.d;
-};
-const divCalCacheSet = (ticker, data) => LS.set(`il_divcal_${ticker}`, { d: data, t: Date.now() });
+// divCalCacheGet/Set + DIVCAL_TTL_MS → src/utils.js (Faz 2'de Dashboard ile paylaşıldı).
 
 // Value-investing checklist eşikleri.
 // dir: "high"=büyük iyi, "low"=küçük iyi. Örn. ROE yüksek, P/E düşük olsun.

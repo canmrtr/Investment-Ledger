@@ -88,6 +88,28 @@ const fundCacheOldestTs = (tickers) => {
   return oldest;
 };
 
+// Dividend calendar cache — 24 saat TTL. TickerDetailTab "Sonraki Temettü" + Dashboard
+// "Bu Ay Beklenen Temettüler" kartı paylaşır. Key: il_divcal_${ticker}.
+const DIVCAL_TTL_MS = 24 * 3600000;
+const divCalCacheGet = (ticker) => {
+  const c = LS.get(`il_divcal_${ticker}`, null);
+  if (!c || !c.t) return null;
+  if (Date.now() - c.t > DIVCAL_TTL_MS) return null;
+  return c.d;
+};
+const divCalCacheSet = (ticker, data) => LS.set(`il_divcal_${ticker}`, { d: data, t: Date.now() });
+
+// price_cache.updated_at için stale kontrolü. 24 saatten eski ise true.
+// Synthetic tipler (CASH/DEPOSIT/BES) price_cache'te değil — onlar için updated_at undefined
+// olur ve fonksiyon false döner. CASH/DEPOSIT/BES tip kontrolü caller'da değil, burada
+// güvenli (undefined → false).
+const isPriceStale = (updatedAtISO, thresholdHours = 24) => {
+  if (!updatedAtISO) return false;
+  const ts = new Date(updatedAtISO).getTime();
+  if (isNaN(ts)) return false;
+  return (Date.now() - ts) > thresholdHours * 3600000;
+};
+
 const displaySym = (cur) => cur==="TRY" ? "₺" : cur==="EUR" ? "€" : "$";
 // from/to currency arasında çeviri. Aynıysa as-is. fxRates eksikse null döner (caller fallback).
 const convert = (amount, from, to, fxRates) => {
