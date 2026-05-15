@@ -130,6 +130,26 @@ Sticky pos.3 nav (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar).
 
 ---
 
+## Temettü Takvimi (Dividend Calendar)
+
+- **Pipeline**: `fetch-fundamentals` edge fn'de `mode:"dividend-calendar"` (line 745-776) → FMP `stable/stock/dividends`; per-ticker `[{ex_date, pay_date, amount, currency}]` döner. Max 20 ticker/request (server-side `Promise.all`).
+- **LS cache**: `il_divcal_${ticker}` 24h TTL. `divCalCacheGet/Set` `src/utils.js`'te (Faz 2'den önce TickerDetailTab.js'teydi).
+- **Faz 1 (Sprint 17)** — TickerDetailTab "Sonraki Temettü" satırı: held US_STOCK için tek-ticker lazy fetch, tutulan adetle çarpılır.
+- **Faz 2 (Sprint 19)** — Dashboard "Bu Ay Beklenen Temettüler" `<details>` kartı:
+  - `divCalByTicker` state App.js'te `{ticker: cal[]}` formatında — LS cache'in in-memory aynası.
+  - `pos` değiştiğinde useEffect tetiklenir: held US_STOCK ticker'ları için önce LS'ten cached değerler `setDivCalByTicker(cached)`, eksiklerden ilk 20 için `edgeCallAuth("fetch-fundamentals",{mode:"dividend-calendar",tickers:batch})` batch çağrısı; response geldiğinde state ve LS güncellenir.
+  - Render: KPI grid ile Period selector arasında, ex_date ∈ [today, today+30] filtresi, `amount × shares` tahmini tutar, total summary'de gösterilir. Liste boşsa kart tamamen gizli.
+- **Out of scope**: BIST (FMP temettü güvenilir değil), HistoryTab "Yaklaşan Temettüler" tablosu (sprint feedback'e bağlı).
+
+## Stale Fiyat Uyarısı (price_cache yaşı)
+
+- **State**: `prcUpdatedAt` `{ticker: ISO}` App.js'te; `loadData` `price_cache` rows'undan `c.updated_at`'i map'ler. Synthetic tipler (CASH/DEPOSIT/BES) `price_cache`'te yok → map'te key yok → `isPriceStale(undefined) === false` → badge görünmez.
+- **Helper**: `isPriceStale(updatedAtISO, thresholdHours=24)` `src/utils.js`'te. `null/undefined/invalid` → `false`. Threshold parametrik (default 24).
+- **Render**: Dashboard pos-row desktop (`.tcell`) + mobile (`.pcr-ticker`) + WatchlistTab ticker hücresi — `<span className="badge stale" data-tip="Fiyat X sa önce güncellendi">Fiyat eski</span>`. `data-tip` içinde `fmtAge(new Date(updatedAt).getTime())` ile insan-okur format ("3 sa önce", "2 gün önce").
+- **CSS**: `.badge.stale` `index.html`'de — `.badge.cry/.badge.split` ile birebir aynı turuncu (`var(--warn) #ffb800`).
+
+---
+
 ## Search Tab
 
 - **Veri**: Supabase `ticker_db` tablosu (10.980 satır; haftalık `sync-ticker-db-weekly` pg_cron). LS cache `sec_ticker_db_v2` 24h TTL.

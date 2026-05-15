@@ -46,8 +46,8 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 `Root → Login | App(#shell)`
 - **#topbar**: hamburger menü (profil + settings + signOut, kullanıcı-scope LS keys signOut'tan önce temizlenir) + 6 nav + $/₺ toggle + 👁 hide + İşlem Ekle; 30dk auto-refresh
 - `TABS = [["dashboard","Dashboard"],["watchlist","Watchlist"],["analysis","Analiz"],["search","Ara"],["add","+ Ekle"],["rehber","Rehber"]]` — Settings ana nav'dan çıktı, hamburger içinden açılır
-- **Dashboard**: KPI (TR + XIRR), 6 BLOCK_TYPE pozisyon bloğu (başlangıçta kapalı)
-- **WatchlistTab**: fiyat/günlük değişim tablosu, "Çıkar" per row (async `confirm_` prop'u App'ten gelir), empty-card CTA; `watchlist` Supabase tablosu (id, user_id, ticker, asset_type, added_at)
+- **Dashboard**: KPI (TR + XIRR), "Bu Ay Beklenen Temettüler" `<details>` kart (held US_STOCK için ex_date ∈ [today, today+30]; empty state'te gizli), 6 BLOCK_TYPE pozisyon bloğu (başlangıçta kapalı); pos-row'da ticker yanında `.badge.stale` (24h+ eski `price_cache.updated_at`)
+- **WatchlistTab**: fiyat/günlük değişim tablosu, "Çıkar" per row (async `confirm_` prop'u App'ten gelir), empty-card CTA; ticker yanında `.badge.stale`; `watchlist` Supabase tablosu (id, user_id, ticker, asset_type, added_at)
 - **AnalysisTab**: 4 bölüm başlığı (Performans & Getiri / Dağılım / Fundamentals / Risk Değerlendirmesi); Varlık/Bölge/Sektör Dağılımı (pie, collapsible); **Portföy Sağlık** (Portföy F/K KPI + 6 portföy seviyesi sonuç cümlesi "🟢 Borçlanma seviyesi sağlıklı" + "Detay ▾" toggle ile 8 metrik dense tablo, lazy-fetch); Komisyon (broker×yıl), Kazanan/Kaybeden, Konsantrasyon Riski, Break-Even, Potansiyel Kayıp, Dönem Bazlı Getiri (benchmark), FX Risk, 6 Aylık Performans, Temettü Özeti; global asset-type filtre (.fbar)
 - **SearchTab**: ~11k ticker (US + BIST); autofocus sadece desktop'ta (`!('ontouchstart' in window)`); portföy + discovery; "+ İzle" / "✓ İzleniyor" non-held toggle
 - **AddTab**: 8 asset type picker → text/image/csv/manuel; CASH/DEPOSIT Manuel-only (text/image/csv gizli); ConfirmBox + ManuelPosForm
@@ -79,7 +79,7 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 
 ### CSS sınıfları
 - `.btn-xs/sm/md`, `.btn-danger-out`, `.finp`/`.finp.sm`, `.empty-card`, `.warn-card`
-- `.pos-row`, `.badge.etf/cry/split`, `.mdl-bd/bx`, `.seg`, `.mtab`, `.pie-row/pie-sw`, `[data-tip]`
+- `.pos-row`, `.badge.etf/cry/split/stale`, `.mdl-bd/bx`, `.seg`, `.mtab`, `.pie-row/pie-sw`, `[data-tip]`
 - `.theme-logo-dark`/`.theme-logo-light` — `[data-theme="light"]` ile otomatik logo geçişi; `.delta-pos`/`.delta-neg` — yeşil/kırmızı delta badge sınıfları
 - **`.pie-row`**: `flex:"0 0 70px"` ($) + `flex:"0 0 56px"` (%) sabit basis; label `flex:1,minWidth:0`. `minWidth` yetmez, truncate/ellipsis ekleme.
 - **`.fbar`**: `overflow-x:auto; scrollbar-width:none`; `.fbar .mtab`: `flex:0 0 auto; white-space:nowrap`. Wrapper'da `flexWrap:wrap` kullanma.

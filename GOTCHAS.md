@@ -35,6 +35,8 @@
 - **`bist.annual` path**: `fetchBist` dönüşü `{ metrics, annual, raw }` — `annual` top-level'da. `bist.raw?.annual` hep `undefined` döner (raw'da sadece `latestFiscalYear/yearsBackUsed/financialGroup/currency` var). `upsertFundCache` ve response body'de `bist.annual` kullan.
 - **`.filter(([,v])=>v)` + IIFE null**: Array içinde IIFE `null` döndürebilirse (erken `return null`) destructuring filter crash eder. `.filter(Boolean)` önce gel: `.filter(Boolean).filter(([,v])=>v)`.
 - **`fund_cache` debug query**: `SELECT ticker, source, (metrics IS NOT NULL) has_metrics, updated_at FROM fund_cache ORDER BY updated_at DESC` — hangi tickerlerin fundamentals çektiğini 1 sorguda gösterir; log okumadan önce buraya bak.
+- **`divCalCacheGet/Set` paylaşımlı LS cache**: TickerDetailTab (Faz 1) ve Dashboard "Bu Ay Beklenen Temettüler" kartı (Faz 2) aynı `il_divcal_${ticker}` LS key'ini kullanır (24h TTL). Helper `src/utils.js`'te merkezi — TickerDetailTab.js'te yerel kopyası **yok**, oradan kaldırıldı. Yeni dividend-aware yerleşim noktası eklerken aynı helper'a çağrı yap; cache key'i veya TTL'i çoğaltma.
+- **`prcUpdatedAt` synthetic exemption — explicit type-check değil**: Stale fiyat badge'i `isPriceStale(prcUpdatedAt[ticker])` ile koşullanır. CASH/DEPOSIT/BES için `loadData` `prcUpdatedAt`'a yazmaz (price_cache'te değiller), key undefined → `isPriceStale(undefined) === false` → badge görünmez. Callsite'da `if(p.type==="CASH"||...)` yazma — natural map-key absence yeterli ve daha temiz. Yeni synthetic tip eklenirse: sadece `loadData`'nın `prcUpdatedAt` yazımına dahil etme.
 
 ## CSS / Layout
 
