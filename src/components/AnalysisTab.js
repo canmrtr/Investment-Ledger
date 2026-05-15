@@ -1355,7 +1355,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           const verdictSignal = top3wStocks > 60 ? "bad" : top3wStocks > 40 ? "neutral" : "good";
           const verdictWord = verdictSignal === "bad" ? "yüksek konsantrasyon" : verdictSignal === "neutral" ? "orta düzey" : "iyi";
           const verdictIcon = verdictSignal === "bad" ? "🔴" : verdictSignal === "neutral" ? "🟡" : "🟢";
-          const verdictColor = verdictSignal === "bad" ? "var(--err)" : verdictSignal === "neutral" ? "var(--warn)" : "var(--ok)";
+          const verdictColor = color;
           return(
             <div>
               <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)",marginBottom:12}}>
