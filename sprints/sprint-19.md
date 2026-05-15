@@ -1,6 +1,8 @@
-# Sprint 19 — 2026-05-28 → 2026-06-10
+# Sprint 19 — 2026-05-28 → 2026-06-10 ✅ TAMAMLANDI 2026-05-15
 
 **Goal**: Can, BES pozisyonundaki katkı/getiri dağılımını net görür; karmaşık analiz kartları düz dille özetlenir; temettü takvimi Dashboard'da izlenebilir hale gelir; fiyat verisi eskidikçe uyarı alır — günlük kullanım deneyimi ölçülebilir biçimde iyileşir.
+
+**Durum**: 4 item tamamlandı (1, 2, 3, 4). Item 2d (Dayanıklılık verdict) Sprint 20'ye ertelendi; Item 3c (HistoryTab yaklaşan temettüler tablosu) dahil edilmedi. Sonraki sprint adayları: Piyasa Dayanıklılık Skoru, TEFAS WAF testi, BES "Değer Güncelle" butonu.
 
 **Capacity**: 2 hafta × ~6h/hafta efektif ≈ ~12h toplam (hafta sonu + akşam)
 
@@ -75,9 +77,11 @@ Item 2 (DEPOSIT TickerDetailTab) ve Item 3 (DEPOSIT/CASH blok sembolü) sprint d
 **Neden bu sprint**: Faz 1 (dividend-calendar mode + TickerDetailTab satırı) Sprint 17'de tamamlandı, stabilize oldu. Faz 2 küçük bir ek: mevcut `fund_cache.dividends` verisi zaten çekiliyor; yalnızca filtreleme + Dashboard/HistoryTab render gerekiyor. Can temettü beklentilerini takip etmek istiyor — sabah açılışında "bu ay ne geliyor?" görünümü.
 
 **Alt-task'lar**:
-- [ ] **3a Veri filtreleme**: `fund_cache` dividends array'ini mevcut ay + sonraki 30 güne göre filtrele; tutulan ticker'lar ile kesişim; `upcomingDividends` state.
-- [ ] **3b Dashboard özet satırı**: KPI bölümü altında veya ayrı collapsible kart: "Bu ay X ticker'dan temettü bekleniyor · Toplam tahmini: $Y." Ticker listesi hover/expand. `ui-builder` sign-off.
-- [ ] **3c HistoryTab "Yaklaşan Temettüler" collapsible** (isteğe bağlı, kapasiteye göre): Ex-date, ticker, tahmini tutar tablosu; `upcomingDividends` state'i yeniden kullanır.
+- [x] **3a Veri filtreleme**: `divCalCacheGet/Set` `src/utils.js`'e taşındı (Faz 1 LS cache'i Dashboard ile paylaşılıyor). `divCalByTicker` state App.js'e eklendi; pos değiştiğinde LS'ten yüklenir + eksik US_STOCK ticker'ları için `dividend-calendar` mode batch fetch (20 ticker/batch).
+- [x] **3b Dashboard özet satırı**: KPI ile Period selector arasına `<details>` collapsible kart eklendi: "Bu Ay Beklenen Temettüler — N hisse · Tahmini $Y". Açılınca ex_date + amount/hisse + tahmini tutar tablosu görünür. Empty state'te kart tamamen gizli.
+- [ ] **3c HistoryTab "Yaklaşan Temettüler" collapsible**: **dahil edilmedi** (kullanıcı onayı 2026-05-15). Dashboard kartı yeterli demo değeri sunuyor.
+
+**Tamamlandı 2026-05-15** — Dashboard kartı canlıda. `divCalByTicker` state ile pos değişiminde reactive update. 24h TTL korundu.
 
 **DoD**:
 - Dashboard'da "Bu ay beklenen temettüler" satırı görünüyor; veri yoksa gizli kalıyor (boş kart değil).
@@ -97,9 +101,11 @@ Item 2 (DEPOSIT TickerDetailTab) ve Item 3 (DEPOSIT/CASH blok sembolü) sprint d
 **Neden bu sprint**: `price_cache.updated_at` zaten mevcut; yeni fetch yok. Saf render mantığı — Dashboard/WatchlistTab'da ticker satırına turuncu badge eklenir. Can fiyatın kaç saatlik olduğunu bilmek istiyor; yanlış fiyatla karar alınmasını önler. 1-2 saatlik iş.
 
 **Alt-task'lar**:
-- [ ] **4a Yaş hesabı yardımcısı**: `isPriceStale(updatedAt, thresholdHours=24)` → boolean; `src/utils.js`'e eklenir.
-- [ ] **4b Dashboard pozisyon satırı badge**: `isPriceStale` true ise ticker yanına turuncu "Fiyat eski" mini badge (≤20px yükseklik). Hover'da `updated_at` okunabilir formatı gösterir (`data-tip`).
-- [ ] **4c WatchlistTab badge** (isteğe bağlı, kapasiteye göre): Aynı badge WatchlistTab satırlarına da eklenir; aynı yardımcı fonksiyon.
+- [x] **4a Yaş hesabı yardımcısı**: `isPriceStale(updatedAtISO, thresholdHours=24)` `src/utils.js`'e eklendi. `null/undefined/invalid` → false (synthetic tipler doğal olarak dışlı).
+- [x] **4b Dashboard pozisyon satırı badge**: `prcUpdatedAt` state App.js'e eklendi; `loadData` `price_cache.updated_at`'i map'liyor. Desktop `.tcell` ve mobile `.pcr-ticker` içinde `.badge.stale` turuncu badge; hover'da `data-tip` ile "Fiyat X sa önce güncellendi" görünüyor.
+- [x] **4c WatchlistTab badge**: `prcUpdatedAt` prop ile WatchlistTab'a geçildi; ticker hücresinde aynı badge render ediliyor.
+
+**Tamamlandı 2026-05-15** — `index.html`'de `.badge.stale` CSS sınıfı (`.badge.split` ile aynı renk şeması). CASH/DEPOSIT/BES için badge görünmez (`prcUpdatedAt` map'inde key yok).
 
 **DoD**:
 - 24 saatten eski `updated_at` değeri olan ticker satırlarında turuncu "Fiyat eski" badge görünüyor.

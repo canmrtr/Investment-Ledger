@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-15** (Sprint 19 Item 1 BES TickerDetailTab breakdown + Item 2 Karmaşık Kartlara Sonuç Cümlesi tamamlandı. Item 1: 6 commit `45d98fc..50b92f4`. Item 2: 7 commit `4d57b4c..9ca62f5` — 3 AnalysisTab kartı tek satırlık verdict cümlesi ile açılıyor. Item 2d Dayanıklılık kartı Sprint 20'ye taşındı (skor bağımlılığı). Sprint 19 kalan: 3 Temettü Faz 2, 4 Stale fiyat uyarısı. TEFAS entegrasyon tasarımı + planı hazır → `docs/superpowers/specs/2026-05-13-tefas-integration-design.md` + `docs/superpowers/plans/2026-05-13-tefas-integration.md`.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-15** (Sprint 19 ✅ kapandı — 4 item tamamlandı: BES TickerDetailTab, analiz kartı verdict cümleleri, Temettü Faz 2 Dashboard kartı, Stale Fiyat badge. Sprint 20 başlamaya hazır.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -24,7 +24,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Bekleyenler / Blokerli
 
-- [ ] **TEFAS WAF testi** `[S]` `[P1]` — Endpoint: `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` (POST, `X-Requested-With` header). Bloker: F5 WAF cloud IP'leri engelliyor (Nisan 2026 — yeniden test edilmedi). Test adımı: plan Task 1'e bakınız. Çalışırsa → TEFAS entegrasyonu tam akış; WAF hâlâ engelliyorsa `fonbul.com` fallback devreye girer (plan Task 4). Plan: `docs/superpowers/plans/2026-05-13-tefas-integration.md`
+- [ ] **TEFAS WAF testi** `[S]` `[P1]` `Sprint-20 adayı` — Endpoint: `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` (POST, `X-Requested-With` header). Bloker: F5 WAF cloud IP'leri engelliyor (Nisan 2026 — yeniden test edilmedi). Test adımı: plan Task 1'e bakınız. Çalışırsa → TEFAS entegrasyonu tam akış; WAF hâlâ engelliyorsa `fonbul.com` fallback devreye girer (plan Task 4). Plan: `docs/superpowers/plans/2026-05-13-tefas-integration.md`
 
 ---
 
@@ -52,7 +52,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [x] **`watchlist_own` policy `FOR ALL` — UPDATE riski** `[S]` `[P2]` `Sprint-16` ✅ — Migration 015: FOR INSERT/SELECT/DELETE ayrı policy; UPDATE DB seviyesinde engelli.
 - [x] **`fetch-prices` historical upsert hatası sessizce yutuluyor** `[S]` `[P2]` `Sprint-16` ✅ — PostgREST + network hataları console.error ile loglanıyor.
 - [ ] **LS key'leri user-scope değil** `[S]` `[P2]` `Sprint-16` — `il_prc`, `il_hist`, `il_hide` vb. user-specific prefix taşımıyor. Kısa vade: signOut'ta tüm `il_` key'leri temizle. Uzun vade: key'lere `user.id` prefix ekle.
-- [ ] **`price_snapshots` policy `TO anon, authenticated` eksik** `[S]` `[P2]` `Sprint-16` — Role kısıtlaması belirtilmemiş; davranış aynı ama dokümantasyon netleşmeli.
+- [ ] **`price_snapshots` policy `TO anon, authenticated` eksik** `[S]` `[P3]` — Role kısıtlaması belirtilmemiş; davranış aynı ama dokümantasyon netleşmeli. (Sprint-16'da yapılmadı; düşük aciliyet — P3'e indirildi 2026-05-15.)
 
 ---
 
@@ -95,7 +95,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **Temettü Takvimi** `[M]` `[P2]` — FMP `/stable/stock/dividends`; tutulan ticker'lar için sonraki temettü tarihi; HistoryTab "Yaklaşan Temettüler" collapsible veya TickerDetailTab "Sonraki Temettü" satırı. `fetch-fundamentals`'a yeni `mode:"dividend-calendar"` dalı.
   - [x] ~~(a) `mode:"dividend-calendar"` dalı; `dividends` array → ex-date, amount~~ `[S]` (2026-05-13)
   - [x] ~~(b) TickerDetailTab "Sonraki Temettü" satırı (held ise)~~ `[S]` (2026-05-13)
-  - [ ] (c) Dashboard/HistoryTab "Bu ay beklenen temettüler" özet satırı `[S]` `Sprint-19`
+  - [x] ~~(c) Dashboard "Bu Ay Beklenen Temettüler" `<details>` kartı~~ `[S]` `Sprint-19` `2026-05-15` — Faz 1 LS cache'i (`il_divcal_${ticker}`, 24h TTL) `src/utils.js`'e taşındı. App.js'e `divCalByTicker` state + pos değişiminde LS-load + eksik US_STOCK ticker'ları için `dividend-calendar` batch fetch (20/batch). KPI ile Period selector arasında `<details>` kart; ex_date ∈ [today, today+30] filtresi; empty state'te kart tamamen gizli. HistoryTab tablosu (3c) Sprint 20+ feedback'e bırakıldı.
 - [ ] **Kazanç Takvimi (Earnings Calendar)** `[S]` `[P3]` — FMP `/stable/earning-calendar`; TickerDetailTab meta'ya "Sonraki Bilanço: 28 Nisan" satırı.
 
 ---
@@ -180,9 +180,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 - [x] **Dashboard: Kripto getirisi gösterilmiyor** `[S]` `[P1]` ✅ — Düzeltildi.
 
-- [ ] **Başabaş tablosu ve potansiyel kayıp bölümleri — değer/yer tradeoff** `[S]` `[P2]` `[PO+UX]` — Bu iki bölüm basit hesaplar sunuyor; Analiz ekranını gereksiz kalabalık yapıyor olabilir. Kaldırılması, küçültülmesi veya başka yere taşınması PO ve UX designer ile birlikte değerlendirilecek.
+- [ ] **Başabaş tablosu ve potansiyel kayıp bölümleri — Detay katmanına taşı** `[S]` `[P3]` — PO kararı (2026-05-15): Kaldırılmıyor; value-investing için başabaş noktası kritik. "AnalysisTab Özet/Detay iki katman" item'ı tamamlandığında otomatik Detay katmanına geçer. Bağımlılık: `AnalysisTab Özet / Detay iki katmana bölünsün`.
 
-- [ ] **Aylık özet yerleşimi — UX revizyonu** `[S]` `[P2]` `[PO+UX]` — Analiz ekranının tepesindeki aylık özet bölümü çok fazla yer kaplıyor. Seçenekler: (a) hamburger menü içine taşı, (b) ekranda daha aşağıya kaydır. PO öncelik ve yerleşim kararı verecek; UX designer ekran düzeni gözden geçirecek.
+- [ ] **Aylık özet yerleşimi — sayfada daha aşağı** `[S]` `[P3]` — PO kararı (2026-05-15): (b) seçeneği — ekranda daha aşağıya kaydır (Dağılım kartlarının altı). Hamburger değil; görünürlük kaybolmamalı. `ui-builder` düzen güncelleme.
 
 - [ ] **Win/Loss time horizon seçimi** `[S]` `[P2]` — şu an bugünkü fiyat; 1A/3A/6A/1Y window chip.
 - [ ] **Win/Loss sold-out ticker live price** `[S]` `[P2]` — cache'te yoksa "noPrice" sayım dışı; live fetch seçeneği.
@@ -194,7 +194,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 ## Otomasyon & Raporlama
 
 - [ ] **Haftalık Portföy Özeti E-postası** `[M]` `[P2]` — Her Pazar pg_cron: haftanın getirisi, en iyi/en kötü 3 ticker. Resend API. `portfolio_weekly_snapshot` tablosu (user_id, week_start, mv_usd, mv_try, top_gainer, top_loser). Bağımlılık: Resend API key.
-- [ ] **Stale Fiyat Uyarısı (price_cache yaşı)** `[S]` `[P2]` — `price_cache.updated_at` 24 saatten eski ticker'lara turuncu "Fiyat eski (2 gün)" badge. `updated_at` zaten cache'te; sadece render mantığı.
+- [x] **Stale Fiyat Uyarısı (price_cache yaşı)** `[S]` `[P2]` `Sprint-19` `2026-05-15` — `isPriceStale(updatedAtISO, 24)` `src/utils.js`'te; App.js `prcUpdatedAt` state'i `price_cache.updated_at`'i map'liyor; `.badge.stale` Dashboard desktop+mobile pos-row'da ve WatchlistTab ticker hücresinde; hover'da `data-tip` ile "Fiyat X sa önce güncellendi". CASH/DEPOSIT/BES synthetic tipler `prcUpdatedAt` map'inde yok → badge görünmez.
 - [ ] **Otomatik Split Tespiti** `[L]` `[P3]` — FMP adjusted fiyatla avg_cost karşılaştırma; >50% sapmada "split olmuş olabilir" uyarısı.
 
 ---
@@ -402,9 +402,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Güvenlik Hardening
 
-- [ ] **Yahoo Finance → resmi BIST data kaynağı** `[L]` `[P1]` — Unofficial endpoint; herhangi bir güncellemede tüm BIST kullanıcıları için fiyat kesilir. Adaylar: Rasyonet, Matriks, Bigpara API. Geçiş mimarisi edge function içinde izole.
-- [ ] **borsa-mcp self-host** `[M]` `[P1]` — Tek geliştirici hosted instance, SLA yok. Supabase Edge Function içine veya VPS'e Docker ile al (`saidsurucu/borsa-mcp`).
-- [ ] **Massive.com rate limit yönetimi** `[M]` `[P1]` — `RATE_LIMIT_MS=7500`; çok kullanıcıda 429. Seçenek: paid tier veya cache-first mimar.
+- [ ] **Yahoo Finance → resmi BIST data kaynağı** `[L]` `[P1]` `[Going-Live Öncesi]` — Unofficial endpoint; herhangi bir güncellemede tüm BIST kullanıcıları için fiyat kesilir. Adaylar: Rasyonet, Matriks, Bigpara API. Geçiş mimarisi edge function içinde izole. Solo-dev aşamasında kabul edilebilir risk; canlı sistem öncesinde ele alınmalı.
+- [ ] **borsa-mcp self-host** `[M]` `[P1]` `[Going-Live Öncesi]` — Tek geliştirici hosted instance, SLA yok. Supabase Edge Function içine veya VPS'e Docker ile al (`saidsurucu/borsa-mcp`). Şu an tek kullanıcı — acil değil; multi-user öncesi.
+- [ ] **Massive.com rate limit yönetimi** `[M]` `[P1]` `[Going-Live Öncesi]` — `RATE_LIMIT_MS=7500`; çok kullanıcıda 429. Seçenek: paid tier veya cache-first mimar. Tek kullanıcıda sorun çıkmıyor; multi-user öncesi.
 - [ ] **Frankfurter API fallback** `[S]` `[P2]` — Ücretsiz, SLA yok; ECB doğrudan XML feed (`sdw-wsrest.ecb.europa.eu`) fallback.
 - [ ] **İş Yatırım MaliTablo resmi olmayan endpoint izleme** `[S]` `[P2]` — Anti-bot değişikliğinde BIST fundamentals sessizce kırılır; response boş/HTML gelince kullanıcıya açık hata göster.
 - [ ] **Auto-fetch opt-in** `[S]` `[P2]` — Çok kullanıcıda rate limit zorlar; "otomatik güncelleme aralığı" kullanıcı ayarı ileride eklenebilir.
@@ -456,19 +456,19 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Sonraki Adım
 
-Sprint 4–18 ✅ | **Sprint 19 aktif → 2026-05-28 → 2026-06-10** | Dosya: `sprints/sprint-19.md`
+Sprint 4–19 ✅ | **Sprint 20 başlamaya hazır** | Önceki dosya: `sprints/sprint-19.md`
 
-**Sprint 18 retro (2026-05-13 → 2026-05-27):** Item 1 (BES DK entegrasyonu) sprint başında teslim edildi — 4 form alanı, DB migration 018, RPC güncelleme, `utils.js`+`App.js`+`ManuelPosForm.js` değişiklikleri canlıda. Item 2 (DEPOSIT TickerDetailTab) ve Item 3 (DEPOSIT/CASH blok sembolü) sprint döngüsü içinde tamamlandı. Sprint hedefi karşılandı; veri kalitesi ve BES takip doğruluğu iyileşti.
+**Sprint 19 ✅ kapandı (2026-05-15):**
+- ✅ Item 1 — BES TickerDetailTab breakdown kartı: 7-satır iki bölümlü kart + NULL guard, 6 commit canlıda.
+- ✅ Item 2 — Karmaşık kartlara verdict cümlesi: 3 kart (Portföy Sağlık, Konsantrasyon, Kur Riski), 7 commit canlıda.
+- ✅ Item 3 — Temettü Takvimi Faz 2: Dashboard "Bu Ay Beklenen Temettüler" `<details>` kartı (Faz 1 LS cache'i paylaşan `divCalByTicker` state + batch fetch). HistoryTab tablosu (3c) dahil edilmedi.
+- ✅ Item 4 — Stale Fiyat Uyarısı: `isPriceStale()` utils.js'te; `prcUpdatedAt` state; Dashboard pos-row (desktop+mobile) + WatchlistTab'da `.badge.stale` turuncu badge.
 
-**Sprint 19 scope (aktif, öncelik sırasıyla):**
+**Sprint 20 adayları (öncelik sırasıyla):**
 
-1. ~~**BES TickerDetailTab breakdown kartı** `[S][P1]` `Sprint-19`~~ — ✅ **Tamamlandı 2026-05-15**. 7-satır iki bölümlü kart + NULL guard canlıda.
-2. ~~**Karmaşık kartlara önce sonuç cümlesi** `[S][P1]` `Sprint-19`~~ — ✅ **Tamamlandı 2026-05-15**. 3 kart, 7 commit canlıda.
-3. **Temettü Takvimi Faz 2** `[S][P2]` `Sprint-19` — Dashboard "Bu ay beklenen temettüler" özet satırı; `fund_cache.dividends` filtreleme; yeni fetch yok.
-4. **Stale Fiyat Uyarısı** `[S][P2]` `Sprint-19` — `price_cache.updated_at` 24h+ ticker'lara turuncu "Fiyat eski" badge; `isPriceStale()` yardımcısı; CASH/DEPOSIT exempt.
-
-**Sprint 20 adayları (öngörülen):**
-
-1. **Piyasa Dayanıklılık Skoru** `[M][P2]` — `resilienceScore` (3 metrik) + MV-weighted portföy skoru + AnalysisTab kartı; tamamen frontend hesabı.
-2. **BES güncel değer aylık güncelleme** `[S][P2]` — Pozisyon satırında "Değer Güncelle" butonu; `set-manual-price` endpoint hazır, yalnızca UI.
-3. **TEFAS WAF testi** `[S][P1]` — Önkoşul test adımı; WAF geçerse tam TEFAS entegrasyonu başlatılabilir.
+1. **Piyasa Dayanıklılık Skoru** `[M][P2]` — `resilienceScore` (3 metrik: Borç/Özk, FCF marjı, op marjı) + MV-weighted portföy skoru + AnalysisTab kartı + 2d verdict cümlesi (Sprint 19 Item 2'nin tamamlayıcısı). Tamamen frontend.
+2. **TEFAS WAF testi** `[S][P1]` — Bloker test adımı: endpoint `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` canlı ortamda dene; geçerse tam TEFAS entegrasyonu başlatılabilir. Aksi halde `fonbul.com` fallback planına geç.
+3. **BES güncel değer aylık güncelleme** `[S][P2]` — Pozisyon satırında "Değer Güncelle" butonu; `set-manual-price` endpoint hazır, yalnızca UI. Sprint 20'de Dayanıklılık Skoru ile birlikte alınabilir (her ikisi S).
+4. **Güvenlik: "Tam Detay" portföy paylaşımı UI ≠ veri katmanı** `[S][P1]` — Settings "Tam Detay" açıklaması ile gerçek render uyuşmuyor; Social Faz 2 olmadan da düzeltilebilir (sadece Settings metni düzeltmesi + `is_public` render doğrulaması).
+5. **LS key'leri user-scope değil** `[S][P2]` — `il_prc`, `il_hist`, `il_hide` user-specific prefix taşımıyor; kısa vade: signOut'ta `il_` temizliği (zaten kısmen var), uzun vade: `user.id` prefix.
+6. **Alım Fiyatı Bölgesi Analizi (52W Konumu)** `[S][P2]` — avg_cost'u 52W aralığına yerleştiren horizontal progress bar; `high_52w/low_52w` fundamentals cache'te mevcut, yeni fetch yok. Günlük kullanımda "iyi giriş mi?" sorusunu yanıtlar.
