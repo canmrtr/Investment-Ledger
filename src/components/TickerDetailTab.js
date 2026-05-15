@@ -604,6 +604,71 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
             </div>
           </div>
         )}
+        {isBes&&(
+          <div className="card" style={{marginBottom:8,padding:"14px 16px"}}>
+            <div className="stitle" style={{marginBottom:10}}>BES Özeti</div>
+            {(()=>{
+              const dkNull=p.dkCurrent==null;
+              const kisGuncel=dkNull?null:price-p.dkCurrent;
+              const kisGetiri=kisGuncel!=null?kisGuncel-p.avgCost:null;
+              const dkGetiri=(p.dkCurrent!=null&&p.dkPrincipal!=null)?p.dkCurrent-p.dkPrincipal:null;
+              return(
+                <React.Fragment>
+                  <div style={{marginBottom:8}}>
+                    <div style={{fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.1em",color:"rgba(201,168,76,0.55)",marginBottom:5}}>Kişisel Portföy</div>
+                    <div className="kv">
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div className="kk">Yatırılan Tutar</div>
+                        <div className="kv_">{mask(sym+fmt(p.avgCost,0))}</div>
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div className="kk">Kişisel Güncel</div>
+                        <div className="kv_">
+                          {dkNull
+                            ?<span style={{fontSize:11,color:"var(--warn)"}}>⚠ DK bilgisi güncellenmeli</span>
+                            :mask(sym+fmt(kisGuncel,0))}
+                        </div>
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div className="kk" style={{fontSize:9}}>Yatırım Getirisi</div>
+                        <div style={{fontFamily:"var(--font-numeric)",fontSize:12,fontWeight:500}}>
+                          {kisGetiri!=null
+                            ?<span style={{color:kisGetiri>=0?"var(--ok)":"var(--err)"}}>{mask((kisGetiri>=0?"+":"−")+sym+fmt(Math.abs(kisGetiri),0))}</span>
+                            :"—"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{background:"rgba(201,168,76,0.05)",border:"1px solid rgba(201,168,76,0.1)",borderRadius:8,padding:"8px 10px",marginBottom:8}}>
+                    <div style={{fontSize:9,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.1em",color:"rgba(201,168,76,0.55)",marginBottom:5}}>Devlet Katkısı</div>
+                    <div className="kv">
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div className="kk">DK Anaparası</div>
+                        <div className="kv_">{p.dkPrincipal!=null?mask(sym+fmt(p.dkPrincipal,0)):"—"}</div>
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div className="kk">DK Güncel</div>
+                        <div className="kv_">{p.dkCurrent!=null?mask(sym+fmt(p.dkCurrent,0)):"—"}</div>
+                      </div>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div className="kk" style={{fontSize:9}}>DK Getirisi</div>
+                        <div style={{fontFamily:"var(--font-numeric)",fontSize:12,fontWeight:500}}>
+                          {dkGetiri!=null
+                            ?<span style={{color:dkGetiri>=0?"var(--ok)":"var(--err)"}}>{mask((dkGetiri>=0?"+":"−")+sym+fmt(Math.abs(dkGetiri),0))}</span>
+                            :"—"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{borderTop:"0.5px solid var(--border)",paddingTop:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <div style={{fontSize:11,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.08em",color:"var(--text2)"}}>Toplam Değer</div>
+                    <div style={{fontFamily:"var(--font-numeric)",fontSize:16,fontWeight:700,color:"var(--info)"}}>{price!=null?mask(sym+fmt(price,0)):"—"}</div>
+                  </div>
+                </React.Fragment>
+              );
+            })()}
+          </div>
+        )}
         {!isDeposit&&<div className="g4" style={{marginBottom:8}}>
           <div className="card" data-tip="Pozisyondaki toplam adet (split-adjusted)" style={{cursor:"help"}}>
             <div className="lbl">Adet</div>
