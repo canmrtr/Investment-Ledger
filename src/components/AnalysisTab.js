@@ -1056,12 +1056,12 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           {(()=>{
             // Ağırlıklı ortalama hesapla: her pozisyon için piyasa değeri ağırlığı
             const metricKeys = [
-              { key:"liabToEquity",     label:"Borçlanma seviyesi",  good:"sağlıklı",   warn:"orta",        bad:"yüksek",      threshGood:0.80,  threshOk:2.00,  dir:"low",  unit:"x",   thresh:"eşik 0.80x" },
-              { key:"netMargin",        label:"Kârlılık",            good:"güçlü",      warn:"orta",        bad:"zayıf",       threshGood:0.10,  threshOk:0.05,  dir:"high", unit:"pct", thresh:"eşik %10"   },
-              { key:"revenueGrowth5Y",  label:"Gelir büyümesi",      good:"güçlü",      warn:"ılımlı",      bad:"yavaş",       threshGood:0.10,  threshOk:0.05,  dir:"high", unit:"pct", thresh:"eşik %10"   },
-              { key:"roe",              label:"Özkaynak verimliliği", good:"yüksek",     warn:"orta",        bad:"düşük",       threshGood:0.15,  threshOk:0.08,  dir:"high", unit:"pct", thresh:"eşik %15"   },
-              { key:"operatingMargin",  label:"Operasyonel kârlılık", good:"güçlü",      warn:"orta",        bad:"zayıf",       threshGood:0.15,  threshOk:0.08,  dir:"high", unit:"pct", thresh:"eşik %15"   },
-              { key:"netDebtToFcf",     label:"Borç/Nakit akışı",    good:"kontrollü",  warn:"izlenmeli",   bad:"yüksek",      threshGood:2.00,  threshOk:5.00,  dir:"low",  unit:"x",   thresh:"eşik 2.0x"  },
+              { key:"liabToEquity",    threshGood:0.80, threshOk:2.00, dir:"low"  },
+              { key:"netMargin",       threshGood:0.10, threshOk:0.05, dir:"high" },
+              { key:"revenueGrowth5Y", threshGood:0.10, threshOk:0.05, dir:"high" },
+              { key:"roe",             threshGood:0.15, threshOk:0.08, dir:"high" },
+              { key:"operatingMargin", threshGood:0.15, threshOk:0.08, dir:"high" },
+              { key:"netDebtToFcf",    threshGood:2.00, threshOk:5.00, dir:"low"  },
             ];
             const sentences = metricKeys.map(mk => {
               let wSum=0, wTotal=0, count=0;
