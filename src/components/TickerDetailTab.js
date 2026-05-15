@@ -626,7 +626,9 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                         <div className="kv_">
                           {dkNull
                             ?<span style={{fontSize:11,color:"var(--warn)"}}>⚠ DK bilgisi güncellenmeli</span>
-                            :mask(sym+fmt(kisGuncel,0))}
+                            :kisGuncel!=null
+                              ?mask(sym+fmt(kisGuncel,0))
+                              :"—"}
                         </div>
                       </div>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
