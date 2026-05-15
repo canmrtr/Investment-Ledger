@@ -1087,12 +1087,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
               } else {
                 signal = avg <= mk.threshGood ? "good" : avg <= mk.threshOk ? "neutral" : "bad";
               }
-              const adj = signal === "good" ? mk.good : signal === "neutral" ? mk.warn : mk.bad;
-              const icon = signal === "good" ? "🟢" : signal === "neutral" ? "🟡" : "🔴";
-              // Tooltip: ham değer + eşik
-              const rawStr = mk.unit === "pct" ? `%${(avg*100).toFixed(1)}` : `${avg.toFixed(2)}x`;
-              const tip = `Ağırlıklı ort. ${mk.label.toLowerCase()}: ${rawStr} — ${mk.thresh}`;
-              return { icon, label: mk.label, adj, tip, signal };
+              return { signal };
             }).filter(Boolean);
             if (sentences.length === 0) return null;
             const goodCount = sentences.filter(s => s.signal === "good").length;
