@@ -70,6 +70,8 @@ function App({session}){
   const [activePortfolioId,setActivePortfolioId]=useState(null); // set by loadData after server validation
   const [prc,setPrc_]=useState(()=>{const p=LS.get("il_prc",null);return p?p.p:{};});
   const [pdate,setPdate]=useState(()=>{const p=LS.get("il_prc",null);return p?p.d:"—";});
+  const [prcUpdatedAt,setPrcUpdatedAt]=useState({}); // {ticker: ISO} — price_cache.updated_at; synthetic tipler için boş.
+  const [divCalByTicker,setDivCalByTicker]=useState({}); // {ticker: [{ex_date,amount,...}]} — dividend-calendar in-memory mirror of LS cache.
   const [hist,setHist_]=useState(()=>LS.get("il_hist",{}));
   const [hide,setHide_]=useState(()=>LS.get("il_hide",false));
   const [displayCur,setDisplayCur_]=useState(()=>LS.get("il_disp_cur","USD"));
@@ -234,14 +236,17 @@ function App({session}){
     if(pc.data&&pc.data.length){
       const num=v=>v==null?null:+v;
       const nh={...hist},np={...prc};
+      const nUpd={};
       let latestDate=pdate;
       for(const c of pc.data){
         nh[c.ticker]={last:num(c.price),d1:num(c.d1),w1:num(c.w1),m1:num(c.m1),y1:num(c.y1),p_d1:num(c.p_d1),p_w1:num(c.p_w1),p_m1:num(c.p_m1),p_m3:num(c.p_m3),p_m6:num(c.p_m6),p_y1:num(c.p_y1)};
         if(c.price!=null)np[c.ticker]=+c.price;
+        if(c.updated_at)nUpd[c.ticker]=c.updated_at;
         const d=c.updated_at?.split("T")[0];
         if(d&&(latestDate==="—"||d>latestDate))latestDate=d;
       }
       saveHist(nh);savePrc(np,latestDate);
+      setPrcUpdatedAt(nUpd);
     }
     // Synthetic prices for CASH/DEPOSIT — computed locally via daily compounding, never in price_cache.
     // factor = (principal + grossInterest) / principal; mv = shares × factor = currentValue.
@@ -264,6 +269,36 @@ function App({session}){
     setBusy(b=>({...b,d:false}));
   };
   useEffect(()=>{loadData();},[]);
+  // Held US_STOCK için dividend-calendar verisini LS'ten yükle + eksikleri batch fetch et.
+  // Faz 1 TickerDetailTab'ın LS cache'ini paylaşıyoruz; Dashboard "Bu Ay Beklenen Temettüler" kartı bu state'i okur.
+  useEffect(()=>{
+    const usTickers=pos.filter(p=>p.type==="US_STOCK").map(p=>p.ticker);
+    if(usTickers.length===0){if(Object.keys(divCalByTicker).length)setDivCalByTicker({});return;}
+    // Mevcut LS cache'ten oku
+    const cached={};
+    const missing=[];
+    for(const tk of usTickers){
+      const c=divCalCacheGet(tk);
+      if(c)cached[tk]=c;else missing.push(tk);
+    }
+    setDivCalByTicker(cached);
+    if(missing.length===0)return;
+    // Eksikleri batch fetch (edge fn 20 ticker/batch destekliyor)
+    const batch=missing.slice(0,20);
+    edgeCallAuth("fetch-fundamentals",{mode:"dividend-calendar",tickers:batch})
+      .then(r=>r.json())
+      .then(data=>{
+        const divs=data?.dividends||{};
+        const upd={...cached};
+        for(const tk of batch){
+          const items=divs[tk]||[];
+          divCalCacheSet(tk,items);
+          upd[tk]=items;
+        }
+        setDivCalByTicker(upd);
+      })
+      .catch(()=>{/* sessizce geç — kart sadece gizli kalır */});
+  },[pos]);
   // Public portfolio view — URL param ile açıldığında portföyü çek
   useEffect(()=>{
     if(!publicViewId)return;
@@ -773,6 +808,40 @@ function App({session}){
               );
             })()}
 
+            {/* Bu Ay Beklenen Temettüler — held US_STOCK için ex_date ∈ [today, today+30] */}
+            {(()=>{
+              const today=new Date().toISOString().split("T")[0];
+              const end=new Date(Date.now()+30*86400000).toISOString().split("T")[0];
+              const list=[];
+              for(const p of pos){
+                if(p.type!=="US_STOCK")continue;
+                const cal=divCalByTicker[p.ticker];
+                if(!cal||!cal.length)continue;
+                const upcoming=cal.find(d=>d.ex_date>=today&&d.ex_date<=end);
+                if(!upcoming||upcoming.amount==null)continue;
+                list.push({ticker:p.ticker,ex_date:upcoming.ex_date,amount:+upcoming.amount,est:(+upcoming.amount)*(+p.shares)});
+              }
+              if(list.length===0)return null;
+              list.sort((a,b)=>a.ex_date.localeCompare(b.ex_date));
+              const total=list.reduce((s,d)=>s+d.est,0);
+              return(
+                <details className="cbox" style={{marginBottom:16,padding:"12px 14px"}}>
+                  <summary style={{cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center",listStyle:"none",gap:8}}>
+                    <span className="stitle" style={{margin:0}}>Bu Ay Beklenen Temettüler</span>
+                    <span className="mono" style={{fontSize:13,color:"var(--info)"}}>{list.length} hisse · Tahmini {mask("$"+fmt(total,2))}</span>
+                  </summary>
+                  <div style={{marginTop:10}}>
+                    {list.map(d=>(
+                      <div key={d.ticker} className="row" style={{fontSize:12}}>
+                        <span><span className="mono" style={{fontWeight:600}}>{d.ticker}</span> <span style={{color:"var(--text3)",marginLeft:6}}>{fmtDateTR(d.ex_date)}</span></span>
+                        <span className="mono">${fmt(d.amount,4)}/hisse · {mask("$"+fmt(d.est,2))}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              );
+            })()}
+
             {/* Period selector */}
             <div className="fbar" style={{marginBottom:16}}>
               {PERIODS.map(p=>{
@@ -899,7 +968,7 @@ function App({session}){
                           const depSym=displaySym(p.currency||"TRY");
                           return(
                           <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
-                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span>{isDeposit&&p.maturityDate&&(()=>{const ms=new Date(p.maturityDate)-Date.now();const past=ms<0,soon=ms<30*86400000;const bg=past?"rgba(255,51,102,0.15)":soon?"rgba(255,184,0,0.15)":"rgba(0,217,126,0.08)";const col=past?"var(--err)":soon?"var(--warn)":"var(--ok)";return <span style={{fontSize:9,padding:"1px 5px",borderRadius:8,marginLeft:4,background:bg,color:col,whiteSpace:"nowrap"}}>Vade {fmtDateTR(p.maturityDate)}</span>;})()}</div></td>
+                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span>{isPriceStale(prcUpdatedAt[p.ticker])&&<span className="badge stale" data-tip={"Fiyat "+fmtAge(new Date(prcUpdatedAt[p.ticker]).getTime())+" güncellendi"}>Fiyat eski</span>}{isDeposit&&p.maturityDate&&(()=>{const ms=new Date(p.maturityDate)-Date.now();const past=ms<0,soon=ms<30*86400000;const bg=past?"rgba(255,51,102,0.15)":soon?"rgba(255,184,0,0.15)":"rgba(0,217,126,0.08)";const col=past?"var(--err)":soon?"var(--warn)":"var(--ok)";return <span style={{fontSize:9,padding:"1px 5px",borderRadius:8,marginLeft:4,background:bg,color:col,whiteSpace:"nowrap"}}>Vade {fmtDateTR(p.maturityDate)}</span>;})()}</div></td>
                             {!hide&&<td className="r">{(()=>{if(isGU2){const lbl={g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit;return <>{fmtShares(p.shares/ozF2)}<span style={{fontSize:10,color:"var(--text2)",marginLeft:2}}>{lbl}</span></>;}if(isDeposit||isCash)return <span style={{fontSize:11,color:"var(--text2)"}}>{depSym}{fmt(p.shares,0)} anapara</span>;return fmtShares(p.shares);})()}</td>}
                             {!hide&&<td className="r mono" style={{color:"var(--text2)"}}>{(isDeposit||isCash)?"—":curPrc!=null?mask(cfg.sym+fmt(curPrc*ozF2,2)):"—"}</td>}
                             {!hide&&<td className="r">{p.mv?<>{mask((cfg.mixed?depSym:cfg.sym)+fmt(p.mv,0))}{isDeposit&&grossInt>0&&<div style={{fontSize:10,lineHeight:1.4,marginTop:1}}><span style={{color:"var(--text3)"}}>Brüt +{depSym}{fmt(grossInt,0)}</span><br/><span style={{color:"var(--ok)"}}>Net +{depSym}{fmt(netInt,0)}</span></div>}</>:"—"}</td>}
@@ -936,7 +1005,7 @@ function App({session}){
                       return(
                         <div key={p.ticker} className="pcr" onClick={()=>openDetail(p.ticker)}>
                           <div className="pcr-left">
-                            <span className="pcr-ticker">{p.ticker}</span>
+                            <span className="pcr-ticker">{p.ticker}{isPriceStale(prcUpdatedAt[p.ticker])&&<span className="badge stale" data-tip={"Fiyat "+fmtAge(new Date(prcUpdatedAt[p.ticker]).getTime())+" güncellendi"}>Fiyat eski</span>}</span>
                             <span className="pcr-sub">{hide?"•••• | ••••":`${adetStr} | ${priceStr}`}</span>
                             {p.type==="DEPOSIT"&&grossIntM>0&&!hide&&<span style={{fontSize:10,color:"var(--ok)"}}>Net +{mSym}{fmt(netIntM,0)} faiz</span>}
                           </div>
@@ -1007,7 +1076,7 @@ function App({session}){
 
       {/* WATCHLIST */}
       {tab==="watchlist"&&(
-        <WatchlistTab items={watchlistItems} prc={prc} hist={hist} onToggle={toggleWatchlist} openDetail={openDetail} setTab={setTab} hideAmts={hide} mask={mask} confirm_={confirm_}/>
+        <WatchlistTab items={watchlistItems} prc={prc} hist={hist} prcUpdatedAt={prcUpdatedAt} onToggle={toggleWatchlist} openDetail={openDetail} setTab={setTab} hideAmts={hide} mask={mask} confirm_={confirm_}/>
       )}
 
 

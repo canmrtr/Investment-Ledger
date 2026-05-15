@@ -1,5 +1,5 @@
 // ── WatchlistTab ─────────────────────────────────────────────────
-function WatchlistTab({items,prc,hist,onToggle,openDetail,setTab,hideAmts,mask,confirm_}){
+function WatchlistTab({items,prc,hist,prcUpdatedAt,onToggle,openDetail,setTab,hideAmts,mask,confirm_}){
   React.useEffect(()=>{
     // prices are fetched by App's existing pos-change effect; no extra fetch needed
   },[]);
@@ -31,7 +31,7 @@ function WatchlistTab({items,prc,hist,onToggle,openDetail,setTab,hideAmts,mask,c
             const d1pct=hist[w.ticker]?.d1;
             return(
               <tr key={w.ticker} className="pos-row" onClick={()=>openDetail(w.ticker,w.asset_type)}>
-                <td style={{padding:"10px 16px",fontFamily:"var(--mono)",fontWeight:600,fontSize:13}}>{w.ticker}</td>
+                <td style={{padding:"10px 16px",fontFamily:"var(--mono)",fontWeight:600,fontSize:13}}>{w.ticker}{isPriceStale(prcUpdatedAt?.[w.ticker])&&<span className="badge stale" data-tip={"Fiyat "+fmtAge(new Date(prcUpdatedAt[w.ticker]).getTime())+" güncellendi"}>Fiyat eski</span>}</td>
                 <td style={{textAlign:"right",padding:"10px 8px",fontFamily:"var(--mono)",fontSize:13}}>{hideAmts?mask("••••"):(price!=null?fmt(price,2):"—")}</td>
                 <td style={{textAlign:"right",padding:"10px 8px",fontFamily:"var(--mono)",fontSize:13,color:d1pct==null?"var(--text3)":d1pct>=0?"var(--ok)":"var(--err)"}}>
                   {hideAmts?mask("••••"):(d1pct!=null?fmtP(d1pct):"—")}
