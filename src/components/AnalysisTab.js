@@ -1095,17 +1095,19 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
               return { icon, label: mk.label, adj, tip, signal };
             }).filter(Boolean);
             if (sentences.length === 0) return null;
+            const goodCount = sentences.filter(s => s.signal === "good").length;
+            const badCount = sentences.filter(s => s.signal === "bad").length;
+            const verdictSignal = goodCount >= 4 ? "good" : badCount >= 3 ? "bad" : "neutral";
+            const verdictWord = verdictSignal === "good" ? "güçlü" : verdictSignal === "bad" ? "zayıf" : "orta";
+            const verdictIcon = verdictSignal === "good" ? "🟢" : verdictSignal === "bad" ? "🔴" : "🟡";
+            const verdictColor = verdictSignal === "good" ? "var(--ok)" : verdictSignal === "bad" ? "var(--err)" : "var(--warn)";
             return (
-              <div style={{marginTop:12,display:"flex",flexDirection:"column",gap:6}}>
-                {sentences.map((s, i) => (
-                  <div key={i} style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)"}}
-                    data-tip={s.tip}>
-                    <span style={{fontSize:13}}>{s.icon}</span>
-                    <span><strong style={{color:"var(--text)",fontWeight:500}}>{s.label}</strong>
-                      {" "}<span style={{color: s.signal==="good"?"var(--ok)":s.signal==="neutral"?"var(--warn)":"var(--err)"}}>{s.adj}</span>
-                    </span>
-                  </div>
-                ))}
+              <div style={{marginTop:12,display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)"}}>
+                <span style={{fontSize:13}}>{verdictIcon}</span>
+                <span>
+                  {goodCount} metrik sağlıklı, {badCount} dikkat gerektiriyor — <strong style={{color:"var(--text)",fontWeight:500}}>portföyün genel fundamentali</strong>{" "}
+                  <span style={{color:verdictColor}}>{verdictWord}</span>.
+                </span>
               </div>
             );
           })()}
