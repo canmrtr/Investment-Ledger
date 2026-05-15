@@ -669,7 +669,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
             })()}
           </div>
         )}
-        {!isDeposit&&<div className="g4" style={{marginBottom:8}}>
+        {!isDeposit&&!isBes&&<div className="g4" style={{marginBottom:8}}>
           <div className="card" data-tip="Pozisyondaki toplam adet (split-adjusted)" style={{cursor:"help"}}>
             <div className="lbl">Adet</div>
             <div className="mono" style={{fontSize:16,fontWeight:600}}>{fmtShares(p.shares)}</div>
@@ -693,7 +693,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
             Maliyet tutarı TRY cinsinden girilmiş olabilir ({displaySym(p.currency)} bekleniyor). İşlemi düzeltin ve <b>Ayarlar → ♻️ Yeniden Hesapla</b> çalıştırın.
           </div>
         )}
-        {totalDivIncome>0&&(
+        {!isBes&&totalDivIncome>0&&(
           <div style={{marginTop:6,padding:"10px 12px",background:"var(--bg3)",borderRadius:8,border:"1px solid rgba(0,217,126,0.15)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:annualDivEst!=null?6:0}}>
               <span className="lbl" style={{color:"var(--ok)"}}>Temettü Geliri</span>
@@ -722,7 +722,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       )}
 
       {/* Detay satırı — Ort. Maliyet · Realized · Unrealized · Komisyon (sadece held için) */}
-      {p&&!isDeposit&&(
+      {p&&!isDeposit&&!isBes&&(
         <div style={{display:"flex",flexWrap:"wrap",gap:14,padding:"8px 14px",marginBottom:14,fontSize:11,color:"var(--text2)",background:"var(--bg2)",borderRadius:8,border:"0.5px solid var(--border)"}}>
           <span data-tip="Bugün satın alsan birim başına ödediğin ortalama" style={{cursor:"help"}}>
             Ort. Maliyet: <span className="mono" style={{color:"var(--text)"}}>{mask(sym+fmt(p.avgCost))}</span>
@@ -750,7 +750,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       )}
 
       {/* Şirket bilgisi — meta'da gösterilebilir bir alan yoksa hiç render etme. */}
-      {!isDeposit&&(()=>{
+      {!isDeposit&&!isBes&&(()=>{
         const hasDetailMeta = meta && (
           meta.sic_description || meta.industry || meta.market_cap || meta.shares_outstanding ||
           meta.total_employees || meta.list_date || meta.homepage_url || meta.description ||
