@@ -23,13 +23,15 @@ Item 2 (DEPOSIT TickerDetailTab) ve Item 3 (DEPOSIT/CASH blok sembolü) sprint d
 **Neden bu sprint**: Sprint 18 Item 1 (BES DK entegrasyonu) tamamlandıkça `dk_principal` + `dk_current` kolonları mevcut; önkoşul kalktı. Şu an BES pozisyonu TickerDetailTab'da generik hisse görünümü sunuyor — "Adet", "Şirket Bilgisi", "P/E" gibi alanlar BES için anlamsız. Can aktif BES kullanıcısı; DK takibinin faydası ancak bu kart tamamlanınca tam görünür olur.
 
 **Alt-task'lar**:
-- [ ] **1a `TickerDetailTab.js` — `type==="BES"` dalı**: Generik hisse metrikleri (`Adet`, `Ort. Maliyet`, `Şirket Bilgisi`, invalid ticker uyarısı) gizlenir; BES özel 4+1 satır render edilir. `ui-builder` sign-off zorunlu.
-- [ ] **1b Kişisel katkı satırı**: `avg_cost` değeri → "Yatırılan Tutar: ₺X" (maliyet tabanı).
-- [ ] **1c Yatırım getirisi satırı**: `prc[ticker] − dk_current − avg_cost` → "Yatırım Getirisi: ₺X" (kişisel portföy kazancı).
-- [ ] **1d Devlet Katkısı satırı**: `dk_principal` → "Devlet Katkısı: ₺X" (DK anaparası).
-- [ ] **1e DK getiri satırı**: `dk_current − dk_principal` → "Devlet Katkısı Getirisi: ₺X" (DK kazancı).
-- [ ] **1f Toplam satırı**: `prc[ticker]` (kişisel_güncel + dk_güncel) → "Toplam Değer: ₺X" kalın, vurgulu.
-- [ ] **1g `dk_principal` NULL guard**: Eski BES pozisyonları (DK alanı girilmemiş) için DK satırları "—" gösteriyor; app çökmüyor.
+- [x] **1a `TickerDetailTab.js` — `type==="BES"` dalı**: Generik hisse metrikleri (`Adet`, `Ort. Maliyet`, `Şirket Bilgisi`, invalid ticker uyarısı) gizlenir; BES özel 6+1 satır render edilir. `ui-builder` sign-off ✅.
+- [x] **1b Kişisel katkı satırı**: `avg_cost` değeri → "Yatırılan Tutar: ₺X" (maliyet tabanı).
+- [x] **1c Yatırım getirisi satırı**: `prc[ticker] − dk_current − avg_cost` → "Yatırım Getirisi: ₺X" (kişisel portföy kazancı). Önce "Kişisel Güncel" sub-row ile gösterilir.
+- [x] **1d Devlet Katkısı satırı**: `dk_principal` → "DK Anaparası: ₺X" (DK anaparası).
+- [x] **1e DK getiri satırı**: `dk_current − dk_principal` → "DK Getirisi: ₺X" (DK kazancı). Önce "DK Güncel" sub-row ile gösterilir.
+- [x] **1f Toplam satırı**: `prc[ticker]` (kişisel_güncel + dk_güncel) → "Toplam Değer: ₺X" kalın, vurgulu (16px gold).
+- [x] **1g `dk_principal` NULL guard**: Eski BES pozisyonları (`dkCurrent==null`) için "Kişisel Güncel" satırı "⚠ DK bilgisi güncellenmeli" nudge gösteriyor; DK satırları "—"; app çökmüyor.
+
+**Tamamlandı 2026-05-15** — 6 commit (`45d98fc..50b92f4`) ile canlı. Final layout iki bölümlü: Kişisel Portföy + tinted Devlet Katkısı + Toplam Değer footer. Ekstra olarak Task 2'de "Kişisel Güncel" ve "DK Güncel" ara satırları eklendi (spec'in 5 satırından 7'ye çıktı) ve ↻ Meta butonu BES için gizlendi. Spec: `docs/superpowers/specs/2026-05-15-bes-tickerdetail-breakdown-design.md`, plan: `docs/superpowers/plans/2026-05-15-bes-tickerdetail-breakdown.md`.
 
 **DoD**:
 - BES pozisyonu TickerDetailTab'da 5 satır (Yatırılan Tutar / Yatırım Getirisi / Devlet Katkısı / DK Getirisi / Toplam Değer) gösteriyor.

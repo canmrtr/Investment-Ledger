@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-13** (Sprint 18 Item 1 BES DK tamamlandı. Sprint 19 planlandı → 2026-05-28 → 2026-06-10. Dosya: `sprints/sprint-19.md`. TEFAS entegrasyon tasarımı + planı hazır → `docs/superpowers/specs/2026-05-13-tefas-integration-design.md` + `docs/superpowers/plans/2026-05-13-tefas-integration.md`.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-15** (Sprint 19 Item 1 BES TickerDetailTab breakdown kartı tamamlandı → 6 commit `45d98fc..50b92f4` canlıda. 7-satır iki bölümlü kart + NULL guard + ↻ Meta gizleme. Sprint 19 kalan item'lar: 2 Sonuç cümlesi, 3 Temettü Faz 2, 4 Stale fiyat uyarısı. TEFAS entegrasyon tasarımı + planı hazır → `docs/superpowers/specs/2026-05-13-tefas-integration-design.md` + `docs/superpowers/plans/2026-05-13-tefas-integration.md`.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -76,7 +76,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **BIST bankalar fundamentals** `[L]` `[P2]` — UFRS grubu Roman numeral itemCode mapping; `ISY_KNOWN_BANKS` early-exit kaldır.
 - [ ] **FX/GOLD ham ticker normalize** `[S]` `[P2]` — `asset_type:"FX"` prefix'siz `USDTRY` gelince 404; `C:` autoprefix + format guard.
 - [x] **BES (Bireysel Emeklilik) temel giriş** `[S]` `[P1]` `Hotfix-2026-05-11` ✅ — ManuelPosForm BES için pay adedi/NAV kaldırıldı; "Yatırılan Toplam Tutar" + "Güncel Değer" alanları eklendi. `shares=1, avg_cost=yatırılan`; güncel değer `fetch-prices mode:"set-manual-price"` → `price_cache`. Devlet katkısı farklı hesap kodu ile ayrı pozisyon.
-- [ ] **BES TickerDetailTab breakdown kartı** `[S]` `[P1]` — BES pozisyonlarında genel hisse senedi görünümü (Adet/Piyasa Değeri/P&L/Şirket Bilgisi) yerine 4 özel satır göster: **Yatırılan Tutar** (X = `avg_cost`), **Yatırım Getirisi** (X_g = `price_cache − dk_current − avg_cost`), **Devlet Katkısı** (Y = `dk_principal`), **Devlet Katkısı Getirisi** (Y_g = `dk_current − dk_principal`). Önkoşul: BES DK entegrasyonu tamamlanmış olmalı (`dk_principal`/`dk_current` kolonları mevcut). Mevcut `TickerDetailTab` içinde `type==="BES"` dalı; generik metrikler (Şirket Bilgisi, Geçersiz ticker uyarısı) gizlenir. Spec: `docs/superpowers/specs/2026-05-11-bes-state-contribution-design.md#future-work`
+- [x] **BES TickerDetailTab breakdown kartı** `[S]` `[P1]` `Sprint-19` `2026-05-15` — Tamamlandı: 7-satır iki bölümlü kart (Kişisel Portföy + tinted Devlet Katkısı + Toplam Değer footer). 6 commit `45d98fc..50b92f4`. NULL guard ile eski BES pozisyonları "⚠ DK bilgisi güncellenmeli" nudge gösteriyor. ↻ Meta butonu BES için gizlendi; meta/divCal edge fetch'leri skiplendi. Spec: `docs/superpowers/specs/2026-05-15-bes-tickerdetail-breakdown-design.md`, plan: `docs/superpowers/plans/2026-05-15-bes-tickerdetail-breakdown.md`.
 - [ ] **BES güncel değer aylık güncelleme** `[S]` `[P2]` — Pozisyon satırında "Değer Güncelle" butonu; `set-manual-price` endpoint hazır, yalnızca UI gerekli.
 - [x] **Nakit & Vadeli Mevduat (CASH/DEPOSIT)** `[M]` `[P2]` `Hotfix-2026-05-11` ✅ — CASH (banka bakiyesi) + DEPOSIT (vadeli mevduat) first-class asset type eklendi. Faiz oranı, vade tarihi, basit faiz hesabı (cap at maturity). DB: `interest_rate`, `maturity_date` kolonları + `rebuild_positions_atomic` RPC. Dashboard mixed-currency blokları; vade tarihi badge (kırmızı/sarı/yeşil); HHI konsantrasyon riskinden hariç. 11 commit, migration 016–017.
 - [x] **DEPOSIT/CASH Dashboard blok değeri ₺ göster** `[S]` `[P1]` `Sprint-18` ✅ (2026-05-13) — Dashboard'da Vadeli Mevduat bloğu değer toplamı `$30,127` gösteriyor; DEPOSIT ve CASH pozisyonlar TRY cinsinden olduğu için blok toplamı ve bireysel pozisyon satırı `₺` sembolüyle gösterilmeli. Display currency toggle ($/ ₺) değişince döviz bazında çevrilmeli, ama default `$` seçiliyken bile bu blok ₺ olarak kalmalı ya da açıkça ₺ değeri göstermeli.
@@ -462,7 +462,7 @@ Sprint 4–18 ✅ | **Sprint 19 aktif → 2026-05-28 → 2026-06-10** | Dosya: `
 
 **Sprint 19 scope (aktif, öncelik sırasıyla):**
 
-1. **BES TickerDetailTab breakdown kartı** `[S][P1]` `Sprint-19` — Yatırılan Tutar / Yatırım Getirisi / Devlet Katkısı / DK Getirisi / Toplam Değer; generik hisse metrikleri gizli; NULL guard. Önkoşul Sprint 18 Item 1 ✅.
+1. ~~**BES TickerDetailTab breakdown kartı** `[S][P1]` `Sprint-19`~~ — ✅ **Tamamlandı 2026-05-15**. 7-satır iki bölümlü kart + NULL guard canlıda.
 2. **Karmaşık kartlara önce sonuç cümlesi** `[S][P1]` `Sprint-19` — Portföy Sağlık, Konsantrasyon Riski, Kur Riski kartlarında tablo öncesi tek cümle özet; Brand Fit B3.
 3. **Temettü Takvimi Faz 2** `[S][P2]` `Sprint-19` — Dashboard "Bu ay beklenen temettüler" özet satırı; `fund_cache.dividends` filtreleme; yeni fetch yok.
 4. **Stale Fiyat Uyarısı** `[S][P2]` `Sprint-19` — `price_cache.updated_at` 24h+ ticker'lara turuncu "Fiyat eski" badge; `isPriceStale()` yardımcısı; CASH/DEPOSIT exempt.

@@ -93,9 +93,10 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 - `savePos`: tx insert → `rebuildPositions` (atomik RPC) → `loadData`. Manuel upsert yok.
 - `delPos`: tüm transaction'ları sil → `rebuildPositions` → `loadData`. Sadece position row'u silmez; confirm dialog `danger:true`.
 
-### CASH / DEPOSIT pozisyon modeli
+### CASH / DEPOSIT / BES pozisyon modeli
 - **CASH**: `shares=bakiye, avg_cost=1.0`; `prc[ticker]=1.0` (synthetic, fetch yok). P&L daima 0.
 - **DEPOSIT**: `shares=anapara, avg_cost=1.0, interest_rate=yıllık (ör. 0.42), reserve_ratio=rezerv fraksiyonu (ör. 0.10), maturity_date=opsiyonel`; `prc[ticker]=(anapara+brütFaiz)/anapara` günlük bileşik.
+- **BES**: `shares=1, avg_cost=kişisel_yatırılan_tutar (X)`; `dk_principal=DK anaparası (Y), dk_current=DK güncel (Y+Y_g)` (her ikisi de nullable — eski pozisyonlar için); `prc[ticker]=total (X+X_g + Y+Y_g)` `set-manual-price` ile yazılır. Kişisel güncel = `prc[ticker] − dk_current`. ManuelPosForm 4 alan: Kişisel Yatırılan, Kişisel Güncel, DK Anaparası, DK Güncel. TickerDetailTab: BES Özeti kartı 7 satır iki bölümde gösterir (`isBes` dalı).
 - `fetchPrices/fetchHist` dışı — `prc` `loadData`'da `setPrc_` ile synthetic inject edilir (`src/components/App.js:loadData`).
 - `rebuildPositions(userId, pid, extraMeta)` — `extraMeta={[ticker]:{interest_rate,maturity_date,reserve_ratio}}` ilk BUY kayıtta geçilir; sonraki rebuild'lar DB snapshot ile restore eder.
 - Brüt faiz: `computeDepositGrossInterest()` (App.js modül seviyesi, component dışı); stopaj sabit: `DEPOSIT_TAX_RATE=0.175`.
