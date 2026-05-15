@@ -401,6 +401,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
   // (BIST veya US_STOCK varsayılan). Provider routing + currency display için kullanılır.
   const effectiveType = p?.type || assetTypeHint || "US_STOCK";
   const isDeposit=p?.type==="DEPOSIT";
+  const isBes=p?.type==="BES";
   const depositGross=isDeposit&&p.interestRate!=null?computeDepositGrossInterest(tickerTxs,p.interestRate*(1-(p.reserveRatio||0)),p.maturityDate||null):0;
   const depositNet=depositGross*(1-DEPOSIT_TAX_RATE);
   const _depNow=Date.now();
@@ -468,11 +469,11 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
     }catch(e){setMetaErr(e.message);}
     setMetaLoading(false);
   };
-  useEffect(()=>{if(!meta)fetchMeta(false);},[ticker,effectiveType]);
+  useEffect(()=>{if(isBes||!meta)return;fetchMeta(false);},[ticker,effectiveType]);
 
   // Dividend calendar — yalnızca held US_STOCK için; BIST'te FMP temettü güvenilir değil
   useEffect(()=>{
-    if(isBist||!p||divCal!==null)return;
+    if(isBist||isBes||!p||divCal!==null)return;
     edgeCallAuth("fetch-fundamentals",{mode:"dividend-calendar",tickers:[ticker]})
       .then(r=>r.json())
       .then(data=>{
