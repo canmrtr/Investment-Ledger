@@ -469,7 +469,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
     }catch(e){setMetaErr(e.message);}
     setMetaLoading(false);
   };
-  useEffect(()=>{if(isBes||!meta)return;fetchMeta(false);},[ticker,effectiveType]);
+  useEffect(()=>{if(!isBes&&!meta)fetchMeta(false);},[ticker,effectiveType]);
 
   // Dividend calendar — yalnızca held US_STOCK için; BIST'te FMP temettü güvenilir değil
   useEffect(()=>{
@@ -520,7 +520,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
         <button className="btn-sm" onClick={closeDetail}>← Geri</button>
         <div style={{flex:1}}></div>
-        <button className="btn-sm" onClick={()=>fetchMeta(true)} disabled={metaLoading}>{metaLoading?"...":"↻ Meta"}</button>
+        {!isBes&&<button className="btn-sm" onClick={()=>fetchMeta(true)} disabled={metaLoading}>{metaLoading?"...":"↻ Meta"}</button>}
       </div>
 
       {/* Ticker + price */}
