@@ -1352,8 +1352,19 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           const level=top3wStocks>60?"Yüksek":top3wStocks>40?"Orta":"Düşük";
           const color=top3wStocks>60?"var(--err)":top3wStocks>40?"var(--warn)":"var(--ok)";
           const fundMvPct=fundWeights.reduce((a,p)=>a+p.w,0)*100;
+          const verdictSignal = top3wStocks > 60 ? "bad" : top3wStocks > 40 ? "neutral" : "good";
+          const verdictWord = verdictSignal === "bad" ? "yüksek konsantrasyon" : verdictSignal === "neutral" ? "orta düzey" : "iyi";
+          const verdictIcon = verdictSignal === "bad" ? "🔴" : verdictSignal === "neutral" ? "🟡" : "🟢";
+          const verdictColor = verdictSignal === "bad" ? "var(--err)" : verdictSignal === "neutral" ? "var(--warn)" : "var(--ok)";
           return(
             <div>
+              <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)",marginBottom:12}}>
+                <span style={{fontSize:13}}>{verdictIcon}</span>
+                <span>
+                  <strong style={{color:"var(--text)",fontWeight:500}}>Portföyün çeşitlendirme düzeyi</strong>{" "}
+                  <span style={{color:verdictColor}}>{verdictWord}</span>.
+                </span>
+              </div>
               <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14}}>
                 <div>
                   <div className="mono" style={{fontSize:22,fontWeight:700,color}}>{mask(fmt(top3wStocks,1)+"%")}</div>
