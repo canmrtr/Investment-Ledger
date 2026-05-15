@@ -1764,8 +1764,6 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
         const eurFrac = fxTotal>0 ? fxGroups.EUR/fxTotal : 0;
         const usdSens10 = usdFrac*10;
         const CUR_COLORS = {USD:"#0a84ff", TRY:"var(--info)", EUR:"#ffd60a"};
-        const dominantFrac = Math.max(usdFrac, eurFrac);
-        const dominantCur = usdFrac >= eurFrac ? "USD" : "EUR";
         const nonTryFrac = fxTotal > 0 ? (fxGroups.USD + fxGroups.EUR) / fxTotal : 0;
         const nonTryPct = Math.round(nonTryFrac * 100);
         const verdictRender = fxTotal === 0
