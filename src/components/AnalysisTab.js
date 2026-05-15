@@ -1766,15 +1766,36 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
         const CUR_COLORS = {USD:"#0a84ff", TRY:"var(--info)", EUR:"#ffd60a"};
         const dominantFrac = Math.max(usdFrac, eurFrac);
         const dominantCur = usdFrac >= eurFrac ? "USD" : "EUR";
-        const fxSubText = fxTotal > 0
-          ? dominantFrac > 0.05
-            ? `Portföyünün %${(dominantFrac * 100).toFixed(0)}'${dominantCur === "USD" ? "i dolar" : "i euro"} kuru riskine açık.`
-            : "Kur dağılımı dengeli."
-          : "Fiyat verisi bekleniyor.";
+        const nonTryFrac = fxTotal > 0 ? (fxGroups.USD + fxGroups.EUR) / fxTotal : 0;
+        const nonTryPct = Math.round(nonTryFrac * 100);
+        const verdictRender = fxTotal === 0
+          ? <div style={{fontSize:11,color:"var(--text3)",marginBottom:14}}>Fiyat verisi bekleniyor.</div>
+          : nonTryFrac === 0
+            ? (
+              <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)",marginBottom:14}}>
+                <span style={{fontSize:13}}>🟢</span>
+                <span><strong style={{color:"var(--text)",fontWeight:500}}>Portföy tamamen TRY</strong> — kur riski yok.</span>
+              </div>
+            )
+            : (()=>{
+              const verdictSignal = nonTryFrac > 0.70 ? "bad" : nonTryFrac >= 0.30 ? "neutral" : "good";
+              const verdictWord = verdictSignal === "bad" ? "yüksek" : verdictSignal === "neutral" ? "orta" : "düşük";
+              const verdictIcon = verdictSignal === "bad" ? "🔴" : verdictSignal === "neutral" ? "🟡" : "🟢";
+              const verdictColor = verdictSignal === "bad" ? "var(--err)" : verdictSignal === "neutral" ? "var(--warn)" : "var(--ok)";
+              return (
+                <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)",marginBottom:14}}>
+                  <span style={{fontSize:13}}>{verdictIcon}</span>
+                  <span>
+                    Portföyün <strong style={{color:"var(--text)",fontWeight:500}}>%{nonTryPct}'i yabancı para</strong> cinsinden — kur değişimine{" "}
+                    <span style={{color:verdictColor}}>{verdictWord}</span> maruz.
+                  </span>
+                </div>
+              );
+            })();
         return (
           <div className="card" style={{marginBottom:14,padding:"16px 18px"}}>
             <div className="stitle" style={{marginBottom:4}}>Kur Riski</div>
-            <div style={{fontSize:11,color:"var(--text3)",marginBottom:14}}>{fxSubText}</div>
+            {verdictRender}
             {fxTotal>0 ? (
               <div>
                 {[["USD","#0a84ff"],["TRY","var(--info)"],["EUR","#ffd60a"]].map(([cur,color])=>{
