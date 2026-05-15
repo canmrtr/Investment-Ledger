@@ -51,10 +51,12 @@ Item 2 (DEPOSIT TickerDetailTab) ve Item 3 (DEPOSIT/CASH blok sembolü) sprint d
 **Neden bu sprint**: Sprint 17'de B1 (jargon → Türkçe) + B2 (formül gizleme) tamamlandı; B3 bu item. Kullanıcı AnalysisTab'ı açtığında tablo/metrikten önce tek cümle okumak istiyor — "Portföyün borç düzeyi sağlıklı" gibi. Bu nudge copy pattern `parse-transaction` prompt'larında zaten var; yeniden kullanım kolay. 4 kart hedefleniyor; her biri bağımsız, paralel geliştirilebilir.
 
 **Alt-task'lar**:
-- [ ] **2a Portföy Sağlık kartı**: Mevcut 🟢/🟡/🔴 sayıları → öncesine bir cümle: "X metrik sağlıklı, Y dikkat gerektiriyor — portföyün genel fundamentali [güçlü/orta/zayıf]." `healthScore` hesabına göre üç varyant metin. `ui-builder` sign-off.
-- [ ] **2b Konsantrasyon Riski kartı**: HHI sonucuna göre: "Portföyün çeşitlendirme düzeyi [iyi / orta düzey / yüksek konsantrasyon]." Sayısal HHI tooltip'te kalır.
-- [ ] **2c Kur Riski kartı**: USD/TRY dağılımı özetini tek cümleyle: "Portföyün [X]%'i dolar cinsinden — kur değişimine [yüksek/orta/düşük] maruz." Eşikler sabit: >%70 yüksek, %30-70 orta, <%30 düşük.
-- [ ] **2d Dayanıklılık kartı** (eğer Piyasa Dayanıklılık Skoru Sprint 19'a alınırsa): Skor 1-10 → "Portföyün piyasa düşüşlerine karşı dayanıklılığı [güçlü/orta/kırılgan]." Önce skor hesabı tamamlanmalı; bağımlılık var.
+- [x] **2a Portföy Sağlık kartı**: 6 per-metric sentence yerine tek aggregate verdict: "X metrik sağlıklı, Y dikkat gerektiriyor — portföyün genel fundamentali [güçlü/orta/zayıf]." Eşikler: goodCount≥4→güçlü, badCount≥3→zayıf, else orta. `ui-builder` sign-off ✅.
+- [x] **2b Konsantrasyon Riski kartı**: Kart üstünde yeni verdict: "Portföyün çeşitlendirme düzeyi [iyi / orta düzey / yüksek konsantrasyon]." Eşikler `top3wStocks` ile (>60→yüksek konsantrasyon, >40→orta düzey, ≤40→iyi). Mevcut alttaki açıklama cümlesi korundu.
+- [x] **2c Kur Riski kartı**: `fxSubText` yerine explicit verdict + JSX-based render: "Portföyün %X'i yabancı para cinsinden — kur değişimine [yüksek/orta/düşük] maruz." Eşikler: >70% yüksek, 30-70% orta, <30% düşük. All-TRY ve no-data fallback case'leri eklendi.
+- [ ] **2d Dayanıklılık kartı** (eğer Piyasa Dayanıklılık Skoru Sprint 19'a alınırsa): Skor 1-10 → "Portföyün piyasa düşüşlerine karşı dayanıklılığı [güçlü/orta/kırılgan]." Sprint 20'ye ertelendi (Piyasa Dayanıklılık Skoru bağımlılığı).
+
+**Tamamlandı 2026-05-15** — 7 commit (`4d57b4c..9ca62f5`) canlıda. 3 AnalysisTab kartı şimdi tek satırlık sinyal-renkli verdict cümlesi ile açılıyor. Item 2d Sprint 20'ye taşındı. Spec: `docs/superpowers/specs/2026-05-15-analysis-card-verdicts-design.md`, plan: `docs/superpowers/plans/2026-05-15-analysis-card-verdicts.md`.
 
 **DoD**:
 - Portföy Sağlık, Konsantrasyon Riski, Kur Riski kartları metrik tablosundan önce tek cümle sonuç gösteriyor.

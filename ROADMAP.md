@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-15** (Sprint 19 Item 1 BES TickerDetailTab breakdown kartı tamamlandı → 6 commit `45d98fc..50b92f4` canlıda. 7-satır iki bölümlü kart + NULL guard + ↻ Meta gizleme. Sprint 19 kalan item'lar: 2 Sonuç cümlesi, 3 Temettü Faz 2, 4 Stale fiyat uyarısı. TEFAS entegrasyon tasarımı + planı hazır → `docs/superpowers/specs/2026-05-13-tefas-integration-design.md` + `docs/superpowers/plans/2026-05-13-tefas-integration.md`.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-15** (Sprint 19 Item 1 BES TickerDetailTab breakdown + Item 2 Karmaşık Kartlara Sonuç Cümlesi tamamlandı. Item 1: 6 commit `45d98fc..50b92f4`. Item 2: 7 commit `4d57b4c..9ca62f5` — 3 AnalysisTab kartı tek satırlık verdict cümlesi ile açılıyor. Item 2d Dayanıklılık kartı Sprint 20'ye taşındı (skor bağımlılığı). Sprint 19 kalan: 3 Temettü Faz 2, 4 Stale fiyat uyarısı. TEFAS entegrasyon tasarımı + planı hazır → `docs/superpowers/specs/2026-05-13-tefas-integration-design.md` + `docs/superpowers/plans/2026-05-13-tefas-integration.md`.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -364,7 +364,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 ### Brand Fit & Jargon Temizliği (Grup A/B — Sprint-15 kapsamı)
 
 - [x] ~~**Finans jargonunu Türkçe kullanıcı diline çevir**~~ `[S]` `[P1]` (2026-05-13) — `Total Return → Toplam Getiri`, `Benchmark → Karşılaştırma`, `Trade → İşlem`, `XIRR → Yıllık Getiri` (detayda XIRR), `P/E/P/S → F/K/F/S`; 9 yer güncellendi.
-- [ ] **Karmaşık kartlara önce sonuç cümlesi ekle** `[S]` `[P1]` — Sağlık, Konsantrasyon, Kur Riski, Dayanıklılık, Başa Baş, Fundamental checklist → metrik tablosundan önce sade sonuç cümlesi. Nudge copy pattern yeniden kullanılır.
+- [x] **Karmaşık kartlara önce sonuç cümlesi ekle** `[S]` `[P1]` `Sprint-19` `2026-05-15` — Tamamlandı: Portföy Sağlık, Konsantrasyon Riski, Kur Riski kartlarında tek satırlık sinyal-renkli verdict cümlesi canlıda. 7 commit `4d57b4c..9ca62f5`. Dayanıklılık kartı Sprint 20'ye (skor bağımlılığı). Spec: `docs/superpowers/specs/2026-05-15-analysis-card-verdicts-design.md`, plan: `docs/superpowers/plans/2026-05-15-analysis-card-verdicts.md`.
 - [x] ~~**Formülleri ekrandan kaldır**~~ `[S]` `[P1]` (2026-05-13) — `HHI= Σ(ağırlık²) × 10000`, skor formülleri, `FUND_THRESHOLDS` string metinleri kaldırıldı; sonuç değerleri + açıklayıcı tooltip kaldı. `→ AnalysisTab.js:1290,1943,1126`
 - [ ] **Boş durum metinlerini kullanıcı diline çevir** `[S]` `[P2]` — `"snap. yok"` → `"Veri henüz oluşmadı"`; `"Bilinmiyor"` sektör → `"Henüz sınıflandırılmadı"`.
 - [ ] **"Potansiyel Kayıp Simülasyonu" → "Senaryo Analizi" veya "Stres Testi"** `[S]` `[P2]` — Daha az korkutucu framing; renk nötrleştirme. `→ AnalysisTab.js:1371`
@@ -463,7 +463,7 @@ Sprint 4–18 ✅ | **Sprint 19 aktif → 2026-05-28 → 2026-06-10** | Dosya: `
 **Sprint 19 scope (aktif, öncelik sırasıyla):**
 
 1. ~~**BES TickerDetailTab breakdown kartı** `[S][P1]` `Sprint-19`~~ — ✅ **Tamamlandı 2026-05-15**. 7-satır iki bölümlü kart + NULL guard canlıda.
-2. **Karmaşık kartlara önce sonuç cümlesi** `[S][P1]` `Sprint-19` — Portföy Sağlık, Konsantrasyon Riski, Kur Riski kartlarında tablo öncesi tek cümle özet; Brand Fit B3.
+2. ~~**Karmaşık kartlara önce sonuç cümlesi** `[S][P1]` `Sprint-19`~~ — ✅ **Tamamlandı 2026-05-15**. 3 kart, 7 commit canlıda.
 3. **Temettü Takvimi Faz 2** `[S][P2]` `Sprint-19` — Dashboard "Bu ay beklenen temettüler" özet satırı; `fund_cache.dividends` filtreleme; yeni fetch yok.
 4. **Stale Fiyat Uyarısı** `[S][P2]` `Sprint-19` — `price_cache.updated_at` 24h+ ticker'lara turuncu "Fiyat eski" badge; `isPriceStale()` yardımcısı; CASH/DEPOSIT exempt.
 
