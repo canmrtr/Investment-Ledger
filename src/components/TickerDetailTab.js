@@ -345,6 +345,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
   const [showCek,setShowCek]=useState(false);
   const [cekForm,setCekForm]=useState({date:today(),amount:""});
   const [savingCek,setSavingCek]=useState(false);
+  const [besModalOpen,setBesModalOpen]=React.useState(false);
 
   const startEditTx=t=>{
     setEditTxId(t.id);
@@ -596,6 +597,13 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
             </div>
           </div>
         )}
+        {isBes&&p&&(
+          <button
+            className="btn-sm pri"
+            onClick={()=>setBesModalOpen(true)}
+            style={{width:"100%",marginBottom:8,padding:"10px 16px",fontSize:13,fontWeight:600}}
+          >💰 Değer Güncelle</button>
+        )}
         {isBes&&(
           <div className="card" style={{marginBottom:8,padding:"14px 16px"}}>
             <div className="stitle" style={{marginBottom:10}}>BES Özeti</div>
@@ -662,6 +670,16 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
               );
             })()}
           </div>
+        )}
+        {isBes&&p&&besModalOpen&&(
+          <BesUpdateModal
+            pos={p}
+            prc={prc}
+            user={user}
+            portfolioId={portfolioId}
+            onClose={()=>setBesModalOpen(false)}
+            onSaved={()=>loadData&&loadData()}
+          />
         )}
         {!isDeposit&&!isBes&&<div className="g4" style={{marginBottom:8}}>
           <div className="card" data-tip="Pozisyondaki toplam adet (split-adjusted)" style={{cursor:"help"}}>
