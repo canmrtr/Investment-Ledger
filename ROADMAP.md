@@ -456,19 +456,18 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Sonraki Adım
 
-Sprint 4–19 ✅ | **Sprint 20 başlamaya hazır** | Önceki dosya: `sprints/sprint-19.md`
+Sprint 4–20 ✅ | **Sprint 21 başlamaya hazır** | Önceki dosya: `sprints/sprint-20.md` (planlanacak)
 
-**Sprint 19 ✅ kapandı (2026-05-15):**
-- ✅ Item 1 — BES TickerDetailTab breakdown kartı: 7-satır iki bölümlü kart + NULL guard, 6 commit canlıda.
-- ✅ Item 2 — Karmaşık kartlara verdict cümlesi: 3 kart (Portföy Sağlık, Konsantrasyon, Kur Riski), 7 commit canlıda.
-- ✅ Item 3 — Temettü Takvimi Faz 2: Dashboard "Bu Ay Beklenen Temettüler" `<details>` kartı (Faz 1 LS cache'i paylaşan `divCalByTicker` state + batch fetch). HistoryTab tablosu (3c) dahil edilmedi.
-- ✅ Item 4 — Stale Fiyat Uyarısı: `isPriceStale()` utils.js'te; `prcUpdatedAt` state; Dashboard pos-row (desktop+mobile) + WatchlistTab'da `.badge.stale` turuncu badge.
+**Sprint 20 ✅ kapandı (2026-05-16):**
+- ✅ Item 3 — BES "Değer Güncelle" butonu: `BesUpdateModal` component (2 alan: Kişisel Güncel + DK Güncel) + TickerDetailTab BES Özeti üstü full-width buton + Dashboard BES pos-row 💰 ikon (desktop+mobile, stopPropagation). `flash_` prop wiring fix dahil.
+- ✅ Item 4 — Tam Detay paylaşım UI fix: Settings privacy_level toggle'ları disabled + "💡 Tam detay paylaşımı sosyal güncellemesinde aktif olacak" copy; `togglePrivacyLevel` fonksiyonu + dead `privLevel` var kaldırıldı.
+- ✅ Item 5 — LS key user-scope hardening: `clearUserLocalKeys()` helper (`il_theme` + `il_fx` whitelist); 2 signOut call site (hamburger + Settings danger) refactor.
+- ⏭️ Item 6 (52W giriş kalitesi bar) Sprint 21'e ertelendi — `price_cache` migration + `fetch-prices` değişikliği gerektirdiği için Sprint 20 kapsamı dışında. `high_52w/low_52w` aslında fund_cache'te mevcut DEĞİL, yeni veri çekimi gerekli.
 
-**Sprint 20 adayları (öncelik sırasıyla):**
+**Sprint 21 adayları (öncelik sırası, 2026-05-16 grooming):**
 
 1. **Piyasa Dayanıklılık Skoru** `[M][P2]` — `resilienceScore` (3 metrik: Borç/Özk, FCF marjı, op marjı) + MV-weighted portföy skoru + AnalysisTab kartı + 2d verdict cümlesi (Sprint 19 Item 2'nin tamamlayıcısı). Tamamen frontend.
 2. **TEFAS WAF testi** `[S][P1]` — Bloker test adımı: endpoint `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` canlı ortamda dene; geçerse tam TEFAS entegrasyonu başlatılabilir. Aksi halde `fonbul.com` fallback planına geç.
-3. **BES güncel değer aylık güncelleme** `[S][P2]` — Pozisyon satırında "Değer Güncelle" butonu; `set-manual-price` endpoint hazır, yalnızca UI. Sprint 20'de Dayanıklılık Skoru ile birlikte alınabilir (her ikisi S).
-4. **Güvenlik: "Tam Detay" portföy paylaşımı UI ≠ veri katmanı** `[S][P1]` — Settings "Tam Detay" açıklaması ile gerçek render uyuşmuyor; Social Faz 2 olmadan da düzeltilebilir (sadece Settings metni düzeltmesi + `is_public` render doğrulaması).
-5. **LS key'leri user-scope değil** `[S][P2]` — `il_prc`, `il_hist`, `il_hide` user-specific prefix taşımıyor; kısa vade: signOut'ta `il_` temizliği (zaten kısmen var), uzun vade: `user.id` prefix.
-6. **Alım Fiyatı Bölgesi Analizi (52W Konumu)** `[S][P2]` — avg_cost'u 52W aralığına yerleştiren horizontal progress bar; `high_52w/low_52w` fundamentals cache'te mevcut, yeni fetch yok. Günlük kullanımda "iyi giriş mi?" sorusunu yanıtlar.
+3. **Alım Fiyatı Bölgesi Analizi (52W Konumu)** `[S→M][P2]` — avg_cost'u 52W aralığına yerleştiren horizontal progress bar. Sprint 20'den taşındı; `price_cache` migration + `fetch-prices` historical mode 52W high/low hesaplaması gerekiyor.
+4. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 ile birlikte: public view `is_public` + `privacy_level==="full"` modda gerçek `shares`/`avg_cost` render. Şu an UI disabled, "yakında" mesajıyla.
+5. **LS key user-scope prefix (uzun vade)** `[M][P3]` — Sprint 20'de signOut temizliği yapıldı; ek olarak `user.id` prefix migration (`il_${userId}_*` pattern) yapılabilir. Cross-account leak şu an yok ama daha güçlü izolasyon.
