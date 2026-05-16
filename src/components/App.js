@@ -569,7 +569,7 @@ function App({session}){
               </button>
               <div className="ham-divider"/>
               <button className="ham-menu-row danger" onClick={()=>{
-                ["il_hide","il_prc","il_hist","il_active_portfolio","il_recent_search",`il_recent_${user?.id}`].forEach(k=>k&&localStorage.removeItem(k));
+                clearUserLocalKeys();
                 sb.auth.signOut();
               }}>
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M6 8h7M10 5l3 3-3 3"/><path d="M10 3H4a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h6"/></svg>
@@ -1368,8 +1368,8 @@ function App({session}){
           {/* 7. Danger zone */}
           <div style={{borderTop:"1px solid var(--border)",marginTop:8,paddingTop:20,paddingBottom:16}}>
             <button className="danger" onClick={()=>{
-              // Cross-account leak'i önle: privacy mode + cache + portfolio LS key'lerini temizle.
-              ["il_hide","il_prc","il_hist","il_active_portfolio","il_recent_search",`il_recent_${user?.id}`].forEach(k=>k&&localStorage.removeItem(k));
+              // Cross-account leak'i önle: tüm il_* keylerini temizle (il_theme/il_fx hariç).
+              clearUserLocalKeys();
               sb.auth.signOut();
             }} style={{width:"100%"}}>Çıkış Yap</button>
           </div>

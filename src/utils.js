@@ -551,3 +551,15 @@ const COMMODITY_ICONS = {
   XPD: (s=16)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3 L21 7.5 V16.5 L12 21 L3 16.5 V7.5 Z"/><circle cx="12" cy="12" r="3"/></svg>,
 };
 
+// signOut'ta çağrılır — tüm il_* localStorage keylerini temizler ki kullanıcı
+// değişiminde state sızmasın. Whitelist: il_theme cihaz tercihi, il_fx paylaşımlı
+// FX cache.
+const clearUserLocalKeys = () => {
+  const PRESERVE = new Set(["il_theme", "il_fx"]);
+  Object.keys(localStorage).forEach(k => {
+    if (k.startsWith("il_") && !PRESERVE.has(k)) {
+      localStorage.removeItem(k);
+    }
+  });
+};
+
