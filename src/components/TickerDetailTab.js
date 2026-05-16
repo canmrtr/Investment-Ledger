@@ -345,7 +345,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
   const [showCek,setShowCek]=useState(false);
   const [cekForm,setCekForm]=useState({date:today(),amount:""});
   const [savingCek,setSavingCek]=useState(false);
-  const [besModalOpen,setBesModalOpen]=React.useState(false);
+  const [besModalOpen,setBesModalOpen]=useState(false);
 
   const startEditTx=t=>{
     setEditTxId(t.id);
@@ -677,6 +677,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
             prc={prc}
             user={user}
             portfolioId={portfolioId}
+            flash_={flash_}
             onClose={()=>setBesModalOpen(false)}
             onSaved={()=>loadData&&loadData()}
           />

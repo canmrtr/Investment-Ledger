@@ -3,7 +3,7 @@
 // pos = {ticker, name, avgCost, dkCurrent, dkPrincipal, portfolioId (opsiyonel)}
 // İki alan: Kişisel Güncel + DK Güncel. Anaparalar read-only badge.
 // Kaydet: set-manual-price (prc total) + positions.dk_current UPDATE → onSaved().
-function BesUpdateModal({pos, prc, user, portfolioId, onClose, onSaved}){
+function BesUpdateModal({pos, prc, user, portfolioId, flash_, onClose, onSaved}){
   const curTotal = prc?.[pos.ticker];
   const initKisGuncel = (curTotal!=null && pos.dkCurrent!=null)
     ? Math.max(0, curTotal - pos.dkCurrent)
