@@ -92,7 +92,7 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType,portfoli
 
       {mode==="manuel"&&(
         <div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+          <div className="form-grid-3">
             <div><div className="kk" style={{marginBottom:3}}>Tarih</div>
               <input className="finp sm" type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))} max={today()}/></div>
             <div><div className="kk" style={{marginBottom:3}}>İşlem</div>
@@ -1012,7 +1012,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                 {/* Edit form */}
                 {isEdit&&(
                   <div style={{padding:"12px 14px",background:"var(--bg3)",borderTop:"0.5px solid var(--border)"}}>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+                    <div className="form-grid-3">
                       <div><div className="kk" style={{marginBottom:3}}>Tarih</div><input className="finp sm" type="date" value={editForm.date} onChange={e=>setEditForm(f=>({...f,date:e.target.value}))} max={today()}/></div>
                       <div><div className="kk" style={{marginBottom:3}}>İşlem</div>
                         <select className="finp sm" value={editForm.way} onChange={e=>setEditForm(f=>({...f,way:e.target.value}))}>

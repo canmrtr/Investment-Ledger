@@ -578,6 +578,10 @@ function App({session}){
               </button>
             </div>
           )}
+          <button className="topbar-wordmark" onClick={()=>setTab("dashboard")} aria-label="Portfoi — Dashboard'a dön">
+            <img src="Logo/new/portfoi-wordmark-dark.png" className="theme-logo theme-logo-dark" alt="Portfoi"/>
+            <img src="Logo/new/portfoi-wordmark-light.png" className="theme-logo theme-logo-light" alt="Portfoi"/>
+          </button>
         </div>
         <nav className="topbar-nav">
           {TABS.filter(([id])=>id!=="add").map(([id,lbl])=>(

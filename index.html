@@ -8,7 +8,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="Portfoi"/>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📈</text></svg>"/>
+  <link rel="icon" type="image/svg+xml" href="/Investment-Ledger/favicon.svg"/>
+  <link rel="icon" type="image/png" sizes="32x32" href="/Investment-Ledger/favicon-32.png"/>
   <link rel="apple-touch-icon" href="/Investment-Ledger/icon-192.png"/>
   <link rel="manifest" href="/Investment-Ledger/manifest.json"/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -51,6 +52,9 @@
     .ham-menu-row.danger{color:var(--err);}
     .ham-menu-row.danger:hover{background:rgba(255,51,102,.08);}
     .ham-divider{height:1px;background:var(--border);margin:4px 0;}
+    .topbar-wordmark{background:transparent;border:none;padding:0 2px;cursor:pointer;display:inline-flex;align-items:center;height:40px;border-radius:6px;transition:opacity .12s;}
+    .topbar-wordmark:hover{opacity:0.8;}
+    .topbar-wordmark img{height:36px;width:auto;display:block;}
     .topbar-nav{display:flex;align-items:center;gap:4px;flex:1;}
     .topbar-nav .tab{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:transparent;border:none;border-radius:8px;color:var(--text2);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:400;cursor:pointer;white-space:nowrap;transition:color .12s,background .12s;}
     .topbar-nav .tab:hover{color:var(--text);}
@@ -84,6 +88,7 @@
     #fab:active{transform:scale(0.96);}
     @media (max-width:640px){
       .topbar-nav{display:none;}
+      .topbar-wordmark{display:none;}
       .logo-text{display:none;}
       #app-main{padding:16px 12px 130px;}
       #bottom-tabs{display:flex;}
@@ -95,6 +100,10 @@
          font'unu 16px'e çıkarmak bu davranışı engeller. */
       input,textarea,select,.finp,.finp.sm{font-size:16px;}
       .cur-seg button{min-height:44px;padding:4px 12px;}
+      /* Touch targets — row actions need ≥36×36 on mobile (design audit #5) */
+      .btn-xs,.btn-icon{min-height:36px;min-width:36px;padding:6px 10px;}
+      .btn-sm{min-height:36px;padding:6px 12px;}
+      .pos-row .btn-xs,table .btn-xs{padding:8px 10px;}
     }
     /* Base — ghost stil (default). Özel class'lı butonlar (.tab, .btab, .eye-btn, #fab vb.) cascade ile bunu override eder. */
     button{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;padding:7px 14px;transition:opacity .12s,background .12s;}
@@ -123,6 +132,13 @@
     .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:16px;}
     .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;}
     @media(max-width:500px){.g4{grid-template-columns:repeat(2,1fr);}.g3{grid-template-columns:1fr 1fr;}.g3>*:first-child{grid-column:1/-1;}}
+    /* Form grids — used by ManuelPosForm, TickerDetailTab quick-add, HistoryTab edit row.
+       Collapse to single column on mobile so labels + inputs don't squeeze. */
+    .form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+    .form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;}
+    @media(max-width:640px){
+      .form-grid-2,.form-grid-3{grid-template-columns:1fr;gap:10px;}
+    }
     .row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:0.5px solid var(--border);}
     .row:last-child{border-bottom:none;}
     .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
@@ -140,7 +156,7 @@
     .kv_{font-size:13px;font-weight:500;font-family:'DM Mono','Fira Code',monospace;}
     .sg{margin-bottom:20px;}
     .sg label{display:block;font-size:12px;color:var(--text2);margin-bottom:6px;}
-    .sg .hint{font-size:11px;color:var(--text3);margin-top:5px;}
+    .sg .hint{font-size:12px;color:var(--text3);margin-top:5px;}
     .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;}
     .dot.ok{background:var(--ok);}.dot.off{background:var(--text3);}
     .brow{display:flex;gap:8px;flex-wrap:wrap;}
@@ -188,19 +204,23 @@
     .mdl-bx .brow{justify-content:flex-end;}
     @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
     @keyframes popIn{from{opacity:0;transform:scale(.95);}to{opacity:1;transform:scale(1);}}
-    /* Empty state card */
+    /* Empty state card — copy raised 12->13 for better readability (design audit #3) */
     .empty-card{background:var(--bg2);border:0.5px dashed var(--border2);border-radius:var(--rl);padding:48px 20px;text-align:center;margin:20px 0;}
     .empty-card .ic{font-size:44px;margin-bottom:12px;opacity:.7;}
-    .empty-card .ttl{font-size:15px;font-weight:600;margin-bottom:6px;}
-    .empty-card .sub{font-size:12px;color:var(--text2);margin-bottom:18px;max-width:280px;margin-left:auto;margin-right:auto;line-height:1.5;}
-    /* Warning card (missing prices vs.) */
+    .empty-card .ttl{font-size:16px;font-weight:600;margin-bottom:6px;}
+    .empty-card .sub{font-size:13px;color:var(--text2);margin-bottom:18px;max-width:300px;margin-left:auto;margin-right:auto;line-height:1.5;}
+    /* Warning card — sub copy raised 11->12 (design audit #3) */
     .warn-card{background:rgba(255,159,10,.08);border:0.5px solid rgba(255,159,10,.35);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
     .warn-card .wc-ttl{font-size:13px;font-weight:600;color:var(--warn);margin-bottom:2px;}
-    .warn-card .wc-sub{font-size:11px;color:var(--text2);}
-    /* Size modifiers for buttons (used in list actions & toolbars) */
-    .btn-xs{font-size:11px;padding:3px 9px;}
-    .btn-sm{font-size:11px;padding:4px 9px;}
-    .btn-md{font-size:12px;padding:5px 12px;}
+    .warn-card .wc-sub{font-size:12px;color:var(--text2);}
+    /* Button tiers — see CLAUDE.md "Tasarım sistemi → Buton katmanları".
+       Tiers: btn-icon (square icon-only) < btn-xs < btn-sm < btn-md < btn-pri/pri (primary CTA).
+       Min-heights ensure consistent hierarchy without breaking dense rows. */
+    .btn-icon{display:inline-flex;align-items:center;justify-content:center;min-width:28px;min-height:28px;padding:0 6px;font-size:14px;line-height:1;}
+    .btn-xs{font-size:11px;padding:3px 9px;line-height:1.4;}
+    .btn-sm{font-size:11px;padding:5px 10px;min-height:30px;line-height:1.2;}
+    .btn-md{font-size:12px;padding:6px 12px;min-height:34px;line-height:1.2;}
+    .btn-pri{background:var(--info);border:none;color:#fff;font-weight:500;padding:8px 16px;min-height:38px;}
     .btn-danger-out{color:var(--err);border-color:var(--err);background:transparent;}
     /* Form input variant (inline-form fields inside rows) */
     .finp{background:var(--bg);border:0.5px solid var(--border2);border-radius:6px;color:var(--text);font-family:inherit;width:100%;padding:7px 9px;font-size:13px;}

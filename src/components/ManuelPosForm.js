@@ -162,7 +162,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
     <div>
       <div className="cbox" style={{marginBottom:16}}>
         <div className="lbl" style={{marginBottom:12}}>{editTk?`${editTk} — Düzenle`:"Yeni Pozisyon Ekle"}</div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:12}}>
+        <div className="form-grid-2">
           <div>
             <div className="kk" style={{marginBottom:4}}>Tarih</div>
             <input className="finp" type="date" value={form.date}

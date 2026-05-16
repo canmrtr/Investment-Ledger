@@ -1,8 +1,12 @@
-const CACHE = 'il-shell-v2';
+const CACHE = 'il-shell-v3';
 const SHELL = [
   '/Investment-Ledger/',
   '/Investment-Ledger/index.html',
   '/Investment-Ledger/manifest.json',
+  '/Investment-Ledger/favicon.svg',
+  '/Investment-Ledger/favicon-32.png',
+  '/Investment-Ledger/icon-192.png',
+  '/Investment-Ledger/icon-512.png',
 ];
 
 self.addEventListener('install', e => {

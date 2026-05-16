@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%; height: 100%; }
+    body { background: #0D1117; overflow: hidden; }
+
+    .v { display: none; align-items: center; justify-content: center; }
+    .v.active { display: flex; }
+
+    /* Wordmark banners */
+    #wm-dark  { width:960px; height:220px; background:#0D1117; }
+    #wm-light { width:960px; height:220px; background:#E8F4F8; }
+
+    /* Icons */
+    #icon-midnight { width:512px; height:512px; background:#0D1117; }
+    #icon-teal     { width:512px; height:512px; background:#005B4D; }
+
+    /* Lockups */
+    #lockup-dark  { width:720px; height:160px; background:#0D1117; gap:22px; padding:0 40px; }
+    #lockup-light { width:720px; height:160px; background:#E8F4F8; gap:22px; padding:0 40px; }
+
+    .wm {
+      font-family: 'DM Serif Display', serif;
+      font-size: 80px;
+      letter-spacing: -0.025em;
+      line-height: 1;
+      display: flex;
+      align-items: baseline;
+      user-select: none;
+    }
+    .wm-i { position: relative; display: inline-block; }
+
+    .lockup-wm {
+      font-family: 'DM Serif Display', serif;
+      font-size: 52px;
+      letter-spacing: -0.025em;
+      line-height: 1;
+      display: flex;
+      align-items: baseline;
+      user-select: none;
+    }
+    .lockup-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .lockup-tagline {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 11px;
+      font-weight: 400;
+      letter-spacing: 0.18em;
+    }
+  </style>
+</head>
+<body>
+
+<!-- 1: Wordmark Dark -->
+<div class="v active" id="wm-dark">
+  <div class="wm" style="color:#F5F3EE;">portfo<span class="wm-i" id="e-wm-dark">ı</span></div>
+</div>
+
+<!-- 2: Wordmark Light -->
+<div class="v" id="wm-light">
+  <div class="wm" style="color:#0D1117;">portfo<span class="wm-i" id="e-wm-light">ı</span></div>
+</div>
+
+<!-- 3: Icon Midnight -->
+<div class="v" id="icon-midnight">
+  <svg viewBox="0 0 512 512" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+    <rect width="512" height="512" fill="#0D1117"/>
+    <radialGradient id="gEM" cx="60%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#C9A84C" stop-opacity="0"/>
+    </radialGradient>
+    <rect width="512" height="512" fill="url(#gEM)"/>
+    <line x1="131" y1="277" x2="131" y2="439" stroke="#C9A84C" stroke-width="8" stroke-linecap="round"/>
+    <rect x="97"  y="291" width="68" height="130" fill="#C9A84C" rx="5"/>
+    <line x1="256" y1="183" x2="256" y2="345" stroke="#C9A84C" stroke-width="8" stroke-linecap="round"/>
+    <rect x="222" y="197" width="68" height="130" fill="#C9A84C" rx="5"/>
+    <text x="256" y="284" font-family="DM Serif Display, Georgia, serif" font-size="72" fill="#0D1117" text-anchor="middle">p</text>
+    <line x1="381" y1="89"  x2="381" y2="251" stroke="#C9A84C" stroke-width="8" stroke-linecap="round"/>
+    <rect x="347" y="103" width="68" height="130" fill="#C9A84C" rx="5"/>
+  </svg>
+</div>
+
+<!-- 4: Icon Teal -->
+<div class="v" id="icon-teal">
+  <svg viewBox="0 0 512 512" width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+    <rect width="512" height="512" fill="#005B4D"/>
+    <radialGradient id="gET" cx="60%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#C9A84C" stop-opacity="0"/>
+    </radialGradient>
+    <rect width="512" height="512" fill="url(#gET)"/>
+    <line x1="131" y1="277" x2="131" y2="439" stroke="#C9A84C" stroke-width="8" stroke-linecap="round"/>
+    <rect x="97"  y="291" width="68" height="130" fill="#C9A84C" rx="5"/>
+    <line x1="256" y1="183" x2="256" y2="345" stroke="#C9A84C" stroke-width="8" stroke-linecap="round"/>
+    <rect x="222" y="197" width="68" height="130" fill="#C9A84C" rx="5"/>
+    <text x="256" y="284" font-family="DM Serif Display, Georgia, serif" font-size="72" fill="#005B4D" text-anchor="middle">p</text>
+    <line x1="381" y1="89"  x2="381" y2="251" stroke="#C9A84C" stroke-width="8" stroke-linecap="round"/>
+    <rect x="347" y="103" width="68" height="130" fill="#C9A84C" rx="5"/>
+  </svg>
+</div>
+
+<!-- 5: Lockup Dark -->
+<div class="v" id="lockup-dark">
+  <svg viewBox="0 0 196 196" width="80" height="80" style="border-radius:18px; flex-shrink:0; display:block;" xmlns="http://www.w3.org/2000/svg">
+    <rect width="196" height="196" fill="#0D1117"/>
+    <radialGradient id="gELD" cx="60%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.11"/>
+      <stop offset="100%" stop-color="#C9A84C" stop-opacity="0"/>
+    </radialGradient>
+    <rect width="196" height="196" fill="url(#gELD)"/>
+    <line x1="50" y1="106" x2="50" y2="168" stroke="#C9A84C" stroke-width="3" stroke-linecap="round"/>
+    <rect x="37" y="112" width="26" height="50" fill="#C9A84C" rx="2"/>
+    <line x1="98" y1="70" x2="98" y2="132" stroke="#C9A84C" stroke-width="3" stroke-linecap="round"/>
+    <rect x="85" y="76" width="26" height="50" fill="#C9A84C" rx="2"/>
+    <text x="98" y="110" font-family="DM Serif Display, Georgia, serif" font-size="28" fill="#0D1117" text-anchor="middle">p</text>
+    <line x1="146" y1="34" x2="146" y2="96" stroke="#C9A84C" stroke-width="3" stroke-linecap="round"/>
+    <rect x="133" y="40" width="26" height="50" fill="#C9A84C" rx="2"/>
+  </svg>
+  <div class="lockup-meta">
+    <div class="lockup-wm" style="color:#F5F3EE;">portfo<span class="wm-i" id="e-lk-dark">ı</span></div>
+    <p class="lockup-tagline" style="color:#C9A84C;">Portföyün, cebinde.</p>
+  </div>
+</div>
+
+<!-- 6: Lockup Light -->
+<div class="v" id="lockup-light">
+  <svg viewBox="0 0 196 196" width="80" height="80" style="border-radius:18px; flex-shrink:0; display:block;" xmlns="http://www.w3.org/2000/svg">
+    <rect width="196" height="196" fill="#0D1117"/>
+    <rect width="196" height="196" fill="url(#gELD)"/>
+    <line x1="50" y1="106" x2="50" y2="168" stroke="#C9A84C" stroke-width="3" stroke-linecap="round"/>
+    <rect x="37" y="112" width="26" height="50" fill="#C9A84C" rx="2"/>
+    <line x1="98" y1="70" x2="98" y2="132" stroke="#C9A84C" stroke-width="3" stroke-linecap="round"/>
+    <rect x="85" y="76" width="26" height="50" fill="#C9A84C" rx="2"/>
+    <text x="98" y="110" font-family="DM Serif Display, Georgia, serif" font-size="28" fill="#0D1117" text-anchor="middle">p</text>
+    <line x1="146" y1="34" x2="146" y2="96" stroke="#C9A84C" stroke-width="3" stroke-linecap="round"/>
+    <rect x="133" y="40" width="26" height="50" fill="#C9A84C" rx="2"/>
+  </svg>
+  <div class="lockup-meta">
+    <div class="lockup-wm" style="color:#0D1117;">portfo<span class="wm-i" id="e-lk-light">ı</span></div>
+    <p class="lockup-tagline" style="color:#897544;">Portföyün, cebinde.</p>
+  </div>
+</div>
+
+<script>
+var NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs) {
+  var e = document.createElementNS(NS, tag);
+  if (attrs) Object.keys(attrs).forEach(function(k){ e.setAttribute(k, attrs[k]); });
+  return e;
+}
+
+function injectCandles(id, fontSize, gold) {
+  var wrap = document.getElementById(id);
+  if (!wrap) return;
+  wrap.style.cssText = 'position:relative; display:inline-block;';
+  var W = fontSize * 0.38, H = fontSize * 0.22, top = fontSize * 0.08;
+  var svg = svgEl('svg', { width:W, height:H, viewBox:'0 0 40 22' });
+  svg.style.cssText = 'position:absolute; left:50%; transform:translateX(-50%); top:' + top + 'px; pointer-events:none; overflow:visible;';
+  [
+    { cx:6,  wy1:11, wy2:21, by:13 },
+    { cx:20, wy1:7,  wy2:17, by:9  },
+    { cx:34, wy1:3,  wy2:13, by:5  },
+  ].forEach(function(c) {
+    svg.appendChild(svgEl('line',{ x1:c.cx, y1:c.wy1, x2:c.cx, y2:c.wy2, stroke:gold||'#C9A84C', 'stroke-width':'1', 'stroke-linecap':'round', opacity:'0.70' }));
+    svg.appendChild(svgEl('rect',{ x:c.cx-2.5, y:c.by, width:'5', height:'6', fill:gold||'#C9A84C', rx:'0.6' }));
+  });
+  wrap.appendChild(svg);
+}
+
+/* Show a variant */
+window.showVariant = function(id) {
+  document.querySelectorAll('.v').forEach(function(v){ v.classList.remove('active'); });
+  var el = document.getElementById(id);
+  if (el) {
+    el.classList.add('active');
+    document.body.style.background = el.style.background || '#0D1117';
+    var w = parseInt(el.style.width) || 960;
+    var h = parseInt(el.style.height) || 220;
+    document.body.style.width  = w + 'px';
+    document.body.style.height = h + 'px';
+    document.documentElement.style.width  = w + 'px';
+    document.documentElement.style.height = h + 'px';
+  }
+};
+
+document.fonts.ready.then(function() {
+  injectCandles('e-wm-dark',  80, '#C9A84C');
+  injectCandles('e-wm-light', 80, '#897544');
+  injectCandles('e-lk-dark',  52, '#C9A84C');
+  injectCandles('e-lk-light', 52, '#897544');
+  showVariant('wm-dark');
+});
+</script>
+</body>
+</html>

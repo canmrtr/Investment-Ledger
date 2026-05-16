@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-15** (Sprint 19 ✅ kapandı — 4 item tamamlandı: BES TickerDetailTab, analiz kartı verdict cümleleri, Temettü Faz 2 Dashboard kartı, Stale Fiyat badge. Sprint 20 başlamaya hazır.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-16** (Sprint 20 ✅ kapandı; **Sprint 21 = Brand & Design Polish** (logo refresh + design audit Phase-1) devrede; önceki S21 adayları (Dayanıklılık Skoru, TEFAS WAF, 52W bar) → Sprint 22.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -22,9 +22,22 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ---
 
+## Brand & Design — Sprint 21 (in progress, 2026-05-16)
+
+> Sprint 21 hedefi: "Yeni marka kimliğini uçtan uca yerleştir (logo, favicon, PWA icons, topbar wordmark) ve `design_audit.md` (2026-05-15) Phase-1 hijyenini halletim." Önceki S21 adayları (Dayanıklılık Skoru, TEFAS WAF, 52W bar) → Sprint 22.
+
+- [x] **Logo refresh end-to-end** `[M]` `[P0]` `Sprint-21` `2026-05-16` — Login lockup swap (linear-* → portfoi-lockup-*, 240→160px); topbar wordmark butonu (>640px, dashboard'a tıklanır); PWA icons (icon-192/512) Playwright rasterizer ile yeniden üretildi; favicon.svg + favicon-32.png eklendi; service-worker SHELL precache `il-shell-v3`'e bumped. Kaynak SVG `Logo/portfoi-icon.svg`. Eski Logo dosyaları (`linear-*`, `Full Name *`, `Logo Dark/Light`) rollback için `Logo/`'da kalır.
+- [x] **5-tier button system** `[M]` `[P1]` `Sprint-21` `2026-05-16` — `.btn-icon` (square icon-only) eklendi; `.btn-xs/.btn-sm/.btn-md/.btn-pri` min-height ile codified. `.pri` alias olarak korundu (back-compat). Doc: CLAUDE.md "Tasarım sistemi → Buton katmanları".
+- [x] **Mobile form grid classes** `[S]` `[P1]` `Sprint-21` `2026-05-16` — `.form-grid-2/3` reusable; ManuelPosForm + TickerDetailTab manuel quick-add + TickerDetailTab edit row + HistoryTab edit row migrate edildi; ≤640px tek kolona çöker.
+- [x] **Text size minimums** `[S]` `[P2]` `Sprint-21` `2026-05-16` — `.empty-card .sub` 12→13, `.ttl` 15→16, `.warn-card .wc-sub` 11→12, `.sg .hint` 11→12. `.lbl/.kk/.stitle` 10px ve tablo hücreleri 12px korundu (intentional dense labels).
+- [x] **Mobile touch targets ≥36px** `[S]` `[P1]` `Sprint-21` `2026-05-16` — `@media(max-width:640px)`: `.btn-xs/.btn-icon/.btn-sm` min 36×36; `.pos-row .btn-xs` ve `table .btn-xs` padding 8/10.
+- [ ] **Design audit Phase-2** `[M]` `[P2]` `Sprint-22+` — `design_audit.md` kalan 6 madde: #4 empty-state normalization, #6 button-like span→button, #7 card/panel consolidation, #8 tablet breakpoint, #9 tooltip consistency, #10 inline flash class.
+
+---
+
 ## Bekleyenler / Blokerli
 
-- [ ] **TEFAS WAF testi** `[S]` `[P1]` `Sprint-20 adayı` — Endpoint: `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` (POST, `X-Requested-With` header). Bloker: F5 WAF cloud IP'leri engelliyor (Nisan 2026 — yeniden test edilmedi). Test adımı: plan Task 1'e bakınız. Çalışırsa → TEFAS entegrasyonu tam akış; WAF hâlâ engelliyorsa `fonbul.com` fallback devreye girer (plan Task 4). Plan: `docs/superpowers/plans/2026-05-13-tefas-integration.md`
+- [ ] **TEFAS WAF testi** `[S]` `[P1]` `Sprint-22 adayı` — Endpoint: `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` (POST, `X-Requested-With` header). Bloker: F5 WAF cloud IP'leri engelliyor (Nisan 2026 — yeniden test edilmedi). Test adımı: plan Task 1'e bakınız. Çalışırsa → TEFAS entegrasyonu tam akış; WAF hâlâ engelliyorsa `fonbul.com` fallback devreye girer (plan Task 4). Plan: `docs/superpowers/plans/2026-05-13-tefas-integration.md`
 
 ---
 
@@ -456,7 +469,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Sonraki Adım
 
-Sprint 4–20 ✅ | **Sprint 21 başlamaya hazır** | Önceki dosya: `sprints/sprint-20.md` (planlanacak)
+Sprint 4–20 ✅ | **Sprint 21 = Brand & Design Polish (in progress, 2026-05-16)** — bkz. yukarıdaki "Brand & Design" bölümü | Önceki dosya: `sprints/sprint-20.md` (planlanacak)
 
 **Sprint 20 ✅ kapandı (2026-05-16):**
 - ✅ Item 3 — BES "Değer Güncelle" butonu: `BesUpdateModal` component (2 alan: Kişisel Güncel + DK Güncel) + TickerDetailTab BES Özeti üstü full-width buton + Dashboard BES pos-row 💰 ikon (desktop+mobile, stopPropagation). `flash_` prop wiring fix dahil.
@@ -464,7 +477,7 @@ Sprint 4–20 ✅ | **Sprint 21 başlamaya hazır** | Önceki dosya: `sprints/sp
 - ✅ Item 5 — LS key user-scope hardening: `clearUserLocalKeys()` helper (`il_theme` + `il_fx` whitelist); 2 signOut call site (hamburger + Settings danger) refactor.
 - ⏭️ Item 6 (52W giriş kalitesi bar) Sprint 21'e ertelendi — `price_cache` migration + `fetch-prices` değişikliği gerektirdiği için Sprint 20 kapsamı dışında. `high_52w/low_52w` aslında fund_cache'te mevcut DEĞİL, yeni veri çekimi gerekli.
 
-**Sprint 21 adayları (öncelik sırası, 2026-05-16 grooming):**
+**Sprint 22 adayları (öncelik sırası — eski S21 listesi, Brand & Design sprintine yer açmak için kaydı):**
 
 1. **Piyasa Dayanıklılık Skoru** `[M][P2]` — `resilienceScore` (3 metrik: Borç/Özk, FCF marjı, op marjı) + MV-weighted portföy skoru + AnalysisTab kartı + 2d verdict cümlesi (Sprint 19 Item 2'nin tamamlayıcısı). Tamamen frontend.
 2. **TEFAS WAF testi** `[S][P1]` — Bloker test adımı: endpoint `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` canlı ortamda dene; geçerse tam TEFAS entegrasyonu başlatılabilir. Aksi halde `fonbul.com` fallback planına geç.

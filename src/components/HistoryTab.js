@@ -209,7 +209,7 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,open
               <div key={t.id} style={{borderTop:"0.5px solid var(--border)"}}>
                 {editId===t.id?(
                   <div style={{padding:"12px 14px",background:"var(--bg3)"}}>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:8}}>
+                    <div className="form-grid-3">
                       <div><div className="kk" style={{marginBottom:3}}>Tarih</div><input className="finp sm" type="date" value={editForm.date} onChange={e=>setEditForm(f=>({...f,date:e.target.value}))} max={today()}/></div>
                       <div><div className="kk" style={{marginBottom:3}}>İşlem</div>
                         <select className="finp sm" value={editForm.way} onChange={e=>setEditForm(f=>({...f,way:e.target.value}))}>

@@ -2,6 +2,8 @@
 
 Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 
+> **Her session başında `Lessons.md`'yi oku.** Can'ın geçmişte düzelttiği veya itiraz ettiği konuların kuralları orada. Yeni bir düzeltme alırsan → `Lessons.md`'ye ekle.
+
 ## Mimari
 
 - **Frontend**: `index.html` (ince shell: CSS + CDN scripts + `<script src>` etiketleri) + `src/constants.js`, `src/utils.js`, `src/components/*.js` — React 18 UMD + Babel Standalone (tarayıcıda JSX). Build adımı yok; CDN script'leri. GitHub Pages deploy (`main` branch root). Live: `https://canmrtr.github.io/Investment-Ledger/`
@@ -66,7 +68,12 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 - **Font**: `DM Serif Display` (hero sayılar/başlıklar) + `DM Sans` (body 300-700) + `DM Mono` (sayılar/ticker). `--font-display`/`--font-body`/`--font-numeric` CSS değişkenleri. `.lbl`/`.stitle`/`.kk`: 10px uppercase `font-weight:500`.
 - **Aktif sekme**: pill `rgba(201,168,76,0.12)`, alt çizgi yok. **FAB**: 54px, `var(--info)` (gold), `bottom:76px`. **Dashboard hero**: Piyasa Değeri değeri 32px `var(--font-display)`.
 - **Kod içi font kullanımı**: inline style'larda hardcoded font string yok — `fontFamily:"var(--font-display)"` / `fontFamily:"var(--font-numeric)"` kullan.
-- **Logo dosyaları** (`Logo/` dizini): **Topbar** logo kullanmıyor (hamburger menü). **Login**: `linear-dark.png` + `linear-light.png` (Linear varyant — ikon + wordmark + tagline; 2000×2000) — kart dışında üstte, ortalı, 240px height; `.login-wrap` arka planı `var(--bg2)`. CSS `.theme-logo-dark`/`.theme-logo-light` sınıfları `[data-theme="light"]` selector ile otomatik geçiş yapar — JS gerekmez. Diğer alternatifler (`Logo Dark/Light.png`, `Full Name Dark/Light.png`) dizinde duruyor ama referanslı değil. `.logo-mark`/`.logo-text` ve `.login-logo`/`.login-title` kullanılmıyor.
+- **Logo dosyaları** (`Logo/` dizini, Sprint 21 brand refresh):
+  - **Aktif:** `Logo/new/portfoi-lockup-dark.png` + `portfoi-lockup-light.png` (ikon + wordmark + tagline lockup; 924×540) — **Login** için; kart dışında üstte, ortalı, **160px height**; `.login-wrap` arka planı `var(--bg2)`.
+  - **Aktif:** `Logo/new/portfoi-wordmark-dark.png` + `portfoi-wordmark-light.png` (yalnız wordmark; 924×540) — **Topbar** sol tarafta, hamburger butonun yanında; `.topbar-wordmark` butonu, 22px height, click → Dashboard. `@media(max-width:640px){.topbar-wordmark{display:none;}}` — mobilde gizli.
+  - **Kaynak SVG:** `Logo/portfoi-icon.svg` (512×512, midnight + gold candles + p glyph). PWA icons (`icon-192.png`, `icon-512.png`) ve `favicon.svg` / `favicon-32.png` bundan `scripts/generate-pwa-icons.mjs` (Playwright headless) ile regenerate edilir.
+  - **CSS:** `.theme-logo-dark`/`.theme-logo-light` sınıfları `[data-theme="light"]` selector ile otomatik geçiş — JS gerekmez (default `.theme-logo-light{display:none;}`).
+  - **Legacy (rollback için tutuluyor, referanslı değil):** `Logo/linear-{dark,light}.png` (eski Login lockup), `Logo/Logo {Dark,Light}.png` (eski ikon), `Logo/Full Name {Dark,Light}.png` (eski wordmark).
 
 ### Para & formatlama
 - `displaySym(cur)`: USD→`$`, TRY→`₺`, EUR→`€`
@@ -78,9 +85,12 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 - Storage: ISO `YYYY-MM-DD`. Görüntü: `DD/MM/YYYY` (`fmtDateTR`). Input: `<input type="date">`.
 
 ### CSS sınıfları
+- **Buton katmanları (Sprint 21):** `.btn-icon` (square icon-only, 28×28 desktop / 36×36 mobile) < `.btn-xs` (11px) < `.btn-sm` (11px, 30px min-height) < `.btn-md` (12px, 34px min) < `.btn-pri` / `button.pri` (12px gold CTA, 38px min). `@media(max-width:640px)`: `.btn-xs/.btn-icon/.btn-sm` 36×36 min, dense table/pos-row için 8/10 padding. Inline `<button style="...">` yerine bu sınıfları tercih et.
+- **Form grid'leri:** `.form-grid-2` / `.form-grid-3` — ≤640px tek kolona çöker. Inline `gridTemplateColumns` yerine bu sınıfları kullan (ManuelPosForm, TickerDetailTab quick-add/edit, HistoryTab edit row için).
 - `.btn-xs/sm/md`, `.btn-danger-out`, `.finp`/`.finp.sm`, `.empty-card`, `.warn-card`
 - `.pos-row`, `.badge.etf/cry/split/stale`, `.mdl-bd/bx`, `.seg`, `.mtab`, `.pie-row/pie-sw`, `[data-tip]`
 - `.theme-logo-dark`/`.theme-logo-light` — `[data-theme="light"]` ile otomatik logo geçişi; `.delta-pos`/`.delta-neg` — yeşil/kırmızı delta badge sınıfları
+- `.topbar-wordmark` — topbar sol wordmark butonu (Login.js olmayan tek logo placement). Mobilde gizli.
 - **`.pie-row`**: `flex:"0 0 70px"` ($) + `flex:"0 0 56px"` (%) sabit basis; label `flex:1,minWidth:0`. `minWidth` yetmez, truncate/ellipsis ekleme.
 - **`.fbar`**: `overflow-x:auto; scrollbar-width:none`; `.fbar .mtab`: `flex:0 0 auto; white-space:nowrap`. Wrapper'da `flexWrap:wrap` kullanma.
 

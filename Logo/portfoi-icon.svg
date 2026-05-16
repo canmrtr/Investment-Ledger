@@ -1,0 +1,17 @@
+<svg viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="gEM" cx="60%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#C9A84C" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#C9A84C" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="#0D1117"/>
+  <rect width="512" height="512" fill="url(#gEM)"/>
+  <line x1="131" y1="277" x2="131" y2="439" stroke="#C9A84C" stroke-width="8" stroke-linecap="round"/>
+  <rect x="97" y="291" width="68" height="130" fill="#C9A84C" rx="5"/>
+  <line x1="256" y1="183" x2="256" y2="345" stroke="#C9A84C" stroke-width="8" stroke-linecap="round"/>
+  <rect x="222" y="197" width="68" height="130" fill="#C9A84C" rx="5"/>
+  <text x="256" y="284" font-family="DM Serif Display, Georgia, 'Times New Roman', serif" font-size="72" fill="#0D1117" text-anchor="middle">p</text>
+  <line x1="381" y1="89" x2="381" y2="251" stroke="#C9A84C" stroke-width="8" stroke-linecap="round"/>
+  <rect x="347" y="103" width="68" height="130" fill="#C9A84C" rx="5"/>
+</svg>
