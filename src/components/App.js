@@ -103,6 +103,7 @@ function App({session}){
   const [statusOpen,setStatusOpen]=useState(false);
   const [nudgeDismissed,setNudgeDismissed]=useState(()=>LS.get('il_nudge_dismissed',{}));
   const [healthRedCount,setHealthRedCount]=useState(null);
+  const [besModalPos,setBesModalPos]=useState(null);
 
   const savePrc=(p,d)=>{setPrc_(p);setPdate(d);LS.set("il_prc",{p,d});};
   const saveHist=h=>{setHist_(h);LS.set("il_hist",h);};
@@ -960,6 +961,7 @@ function App({session}){
                           const curPrc=prc[p.ticker];
                           const isDeposit=p.type==="DEPOSIT";
                           const isCash=p.type==="CASH";
+                          const isBes=p.type==="BES";
                           // Gross interest = (factor-1)*principal; net = gross*(1-stopaj)
                           const grossInt=isDeposit&&curPrc!=null?(curPrc-1)*p.shares:0;
                           const netInt=grossInt*(1-DEPOSIT_TAX_RATE);
@@ -968,7 +970,7 @@ function App({session}){
                           const depSym=displaySym(p.currency||"TRY");
                           return(
                           <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
-                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span>{isPriceStale(prcUpdatedAt[p.ticker])&&<span className="badge stale" data-tip={"Fiyat "+fmtAge(new Date(prcUpdatedAt[p.ticker]).getTime())+" güncellendi"}>Fiyat eski</span>}{isDeposit&&p.maturityDate&&(()=>{const ms=new Date(p.maturityDate)-Date.now();const past=ms<0,soon=ms<30*86400000;const bg=past?"rgba(255,51,102,0.15)":soon?"rgba(255,184,0,0.15)":"rgba(0,217,126,0.08)";const col=past?"var(--err)":soon?"var(--warn)":"var(--ok)";return <span style={{fontSize:9,padding:"1px 5px",borderRadius:8,marginLeft:4,background:bg,color:col,whiteSpace:"nowrap"}}>Vade {fmtDateTR(p.maturityDate)}</span>;})()}</div></td>
+                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span>{isPriceStale(prcUpdatedAt[p.ticker])&&<span className="badge stale" data-tip={"Fiyat "+fmtAge(new Date(prcUpdatedAt[p.ticker]).getTime())+" güncellendi"}>Fiyat eski</span>}{isDeposit&&p.maturityDate&&(()=>{const ms=new Date(p.maturityDate)-Date.now();const past=ms<0,soon=ms<30*86400000;const bg=past?"rgba(255,51,102,0.15)":soon?"rgba(255,184,0,0.15)":"rgba(0,217,126,0.08)";const col=past?"var(--err)":soon?"var(--warn)":"var(--ok)";return <span style={{fontSize:9,padding:"1px 5px",borderRadius:8,marginLeft:4,background:bg,color:col,whiteSpace:"nowrap"}}>Vade {fmtDateTR(p.maturityDate)}</span>;})()}{isBes&&<button className="btn-xs" onClick={(e)=>{e.stopPropagation();setBesModalPos(p);}} data-tip="Aylık güncelle" style={{marginLeft:6,padding:"2px 6px",fontSize:11}}>💰</button>}</div></td>
                             {!hide&&<td className="r">{(()=>{if(isGU2){const lbl={g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit;return <>{fmtShares(p.shares/ozF2)}<span style={{fontSize:10,color:"var(--text2)",marginLeft:2}}>{lbl}</span></>;}if(isDeposit||isCash)return <span style={{fontSize:11,color:"var(--text2)"}}>{depSym}{fmt(p.shares,0)} anapara</span>;return fmtShares(p.shares);})()}</td>}
                             {!hide&&<td className="r mono" style={{color:"var(--text2)"}}>{(isDeposit||isCash)?"—":curPrc!=null?mask(cfg.sym+fmt(curPrc*ozF2,2)):"—"}</td>}
                             {!hide&&<td className="r">{p.mv?<>{mask((cfg.mixed?depSym:cfg.sym)+fmt(p.mv,0))}{isDeposit&&grossInt>0&&<div style={{fontSize:10,lineHeight:1.4,marginTop:1}}><span style={{color:"var(--text3)"}}>Brüt +{depSym}{fmt(grossInt,0)}</span><br/><span style={{color:"var(--ok)"}}>Net +{depSym}{fmt(netInt,0)}</span></div>}</>:"—"}</td>}
@@ -1005,7 +1007,7 @@ function App({session}){
                       return(
                         <div key={p.ticker} className="pcr" onClick={()=>openDetail(p.ticker)}>
                           <div className="pcr-left">
-                            <span className="pcr-ticker">{p.ticker}{isPriceStale(prcUpdatedAt[p.ticker])&&<span className="badge stale" data-tip={"Fiyat "+fmtAge(new Date(prcUpdatedAt[p.ticker]).getTime())+" güncellendi"}>Fiyat eski</span>}</span>
+                            <span className="pcr-ticker">{p.ticker}{isPriceStale(prcUpdatedAt[p.ticker])&&<span className="badge stale" data-tip={"Fiyat "+fmtAge(new Date(prcUpdatedAt[p.ticker]).getTime())+" güncellendi"}>Fiyat eski</span>}{p.type==="BES"&&<button className="btn-xs" onClick={(e)=>{e.stopPropagation();setBesModalPos(p);}} data-tip="Aylık güncelle" style={{marginLeft:6,padding:"2px 6px",fontSize:11}}>💰</button>}</span>
                             <span className="pcr-sub">{hide?"•••• | ••••":`${adetStr} | ${priceStr}`}</span>
                             {p.type==="DEPOSIT"&&grossIntM>0&&!hide&&<span style={{fontSize:10,color:"var(--ok)"}}>Net +{mSym}{fmt(netIntM,0)} faiz</span>}
                           </div>
@@ -1382,6 +1384,17 @@ function App({session}){
           <div style={{fontSize:11,fontWeight:600,color:"var(--info)",letterSpacing:"0.08em",textTransform:"uppercase"}}>Çok Yakında</div>
           <div style={{fontSize:13,color:"var(--text3)",maxWidth:280,lineHeight:1.6}}>Yatırım temelleri, portföy yönetimi ve kişisel finans rehberi burada olacak.</div>
         </div>
+      )}
+      {besModalPos && (
+        <BesUpdateModal
+          pos={besModalPos}
+          prc={prc}
+          user={user}
+          portfolioId={activePortfolioId}
+          flash_={flash_}
+          onClose={()=>setBesModalPos(null)}
+          onSaved={()=>loadData()}
+        />
       )}
       </main>
 
