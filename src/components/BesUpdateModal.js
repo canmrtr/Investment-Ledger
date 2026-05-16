@@ -19,6 +19,7 @@ function BesUpdateModal({pos, prc, user, portfolioId, onClose, onSaved}){
 
   const save = async () => {
     if(!valid || saving) return;
+    if(!portfolioId){ flash_("Portföy bulunamadı","err"); return; }
     setSaving(true);
     try{
       await edgePriceCall({mode:"set-manual-price", ticker:pos.ticker, price:total, asset_type:"BES"});
