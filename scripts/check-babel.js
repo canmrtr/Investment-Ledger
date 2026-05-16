@@ -10,6 +10,7 @@ const files = [
   'src/utils.js',
   'src/components/Login.js',
   'src/components/TickerDetailTab.js',
+  'src/components/BesUpdateModal.js',
   'src/components/AccountSection.js',
   'src/components/ConfirmBox.js',
   'src/components/HistoryTab.js',
