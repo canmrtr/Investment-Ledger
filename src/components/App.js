@@ -1176,7 +1176,6 @@ function App({session}){
             const portfolio = portfolios.find(p => p.id === activePortfolioId);
             if (!portfolio) return null;
             const isPublic = portfolio.is_public;
-            const privLevel = portfolio.privacy_level || "allocation_only";
             const togglePublic = async () => {
               if (!isPublic) {
                 const ok = await confirm_(
@@ -1242,7 +1241,6 @@ function App({session}){
                         <button
                           className="btn-xs"
                           disabled
-                          style={{opacity:0.5}}
                         >Tam Detay</button>
                       </div>
                     </div>
