@@ -1197,27 +1197,7 @@ function App({session}){
                 flash_("Güncelleme başarısız", "err");
               }
             };
-            const togglePrivacyLevel = async () => {
-              const toFull = privLevel !== "full";
-              if (toFull) {
-                const ok = await confirm_(
-                  "Maliyet ve adet bilgileri de herkesle paylaşılacak. Emin misiniz?",
-                  {okLbl:"Tam Detay Paylaş", cancelLbl:"İptal", danger:true}
-                );
-                if (!ok) return;
-              }
-              try {
-                const {error} = await sb.from("portfolios")
-                  .update({privacy_level: toFull ? "full" : "allocation_only"})
-                  .eq("id", activePortfolioId)
-                  .eq("user_id", user.id);
-                if (error) throw error;
-                await loadData();
-                flash_(toFull ? "Tam detay paylaşımı açık" : "Sadece dağılım paylaşılıyor", "ok");
-              } catch(e) {
-                flash_("Güncelleme başarısız", "err");
-              }
-            };
+
             return (
               <div key="portfolio-section" className="sg">
                 <label>Portföy</label>
@@ -1245,26 +1225,29 @@ function App({session}){
                   </div>
                 </div>
                 {isPublic&&(
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderTop:"1px solid var(--border)"}}>
-                    <div>
-                      <div style={{fontSize:12,color:"var(--text2)"}}>Detay Paylaşımı</div>
-                      <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>
-                        {privLevel==="full" ? "Adet ve maliyet bilgileri görünür" : "Sadece ticker + yüzde dağılımı görünür"}
+                  <div style={{padding:"8px 0",borderTop:"1px solid var(--border)"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                      <div>
+                        <div style={{fontSize:12,color:"var(--text2)"}}>Detay Paylaşımı</div>
+                        <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>
+                          Sadece ticker + yüzde dağılımı görünür
+                        </div>
+                      </div>
+                      <div style={{display:"flex",gap:6,flexShrink:0}}>
+                        <button
+                          className="btn-xs on"
+                          style={{background:"rgba(201,168,76,0.15)",color:"var(--info)",border:"1px solid rgba(201,168,76,0.3)"}}
+                          disabled
+                        >Sadece Dağılım</button>
+                        <button
+                          className="btn-xs"
+                          disabled
+                          style={{opacity:0.5}}
+                        >Tam Detay</button>
                       </div>
                     </div>
-                    <div style={{display:"flex",gap:6,flexShrink:0}}>
-                      <button
-                        className={"btn-xs"+(privLevel!=="full"?" on":"")}
-                        style={privLevel!=="full"?{background:"rgba(201,168,76,0.15)",color:"var(--info)",border:"1px solid rgba(201,168,76,0.3)"}:{}}
-                        onClick={privLevel==="full"?togglePrivacyLevel:undefined}
-                        disabled={privLevel!=="full"}
-                      >Sadece Dağılım</button>
-                      <button
-                        className={"btn-xs"+(privLevel==="full"?" on":"")}
-                        style={privLevel==="full"?{background:"rgba(201,168,76,0.15)",color:"var(--info)",border:"1px solid rgba(201,168,76,0.3)"}:{}}
-                        onClick={privLevel!=="full"?togglePrivacyLevel:undefined}
-                        disabled={privLevel==="full"}
-                      >Tam Detay</button>
+                    <div style={{fontSize:10,color:"var(--text3)",marginTop:8,lineHeight:1.5}}>
+                      💡 Tam detay paylaşımı sosyal güncellemesinde aktif olacak.
                     </div>
                   </div>
                 )}
