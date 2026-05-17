@@ -4,6 +4,8 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 
 > **Her session başında `Lessons.md`'yi oku.** Can'ın geçmişte düzelttiği veya itiraz ettiği konuların kuralları orada. Yeni bir düzeltme alırsan → `Lessons.md`'ye ekle.
 
+> **Her commit + push, ilgili `.md` dosyalarını da güncellemek zorunda.** Kod davranışı / schema / convention / sprint durumu / feature değişikliği varsa **aynı commit'te** şu dosyalardan ilgili olanları güncelle: `ROADMAP.md`, `CLAUDE.md`, `FEATURE_DETAILS.md`, `GOTCHAS.md`, `Lessons.md`, `docs/superpowers/plans/*.md`. Doküman güncellemesini "sonraya" bırakma — drift sessizdir.
+
 ## Mimari
 
 - **Frontend**: `index.html` (ince shell: CSS + CDN scripts + `<script src>` etiketleri) + `src/constants.js`, `src/utils.js`, `src/components/*.js` — React 18 UMD + Babel Standalone (tarayıcıda JSX). Build adımı yok; CDN script'leri. GitHub Pages deploy (`main` branch root). Live: `https://canmrtr.github.io/Investment-Ledger/`
