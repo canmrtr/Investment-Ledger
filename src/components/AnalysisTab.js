@@ -2029,8 +2029,33 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                   </div>
                 </div>
 
+                {/* Sprint 19 Item 2d (closed in Sprint 22): tek satır verdict cümlesi —
+                    güçlü ≥ 7 · orta ≥ 5 · kırılgan < 5. Skor hesaplanamadıysa nötr. */}
+                {(()=>{
+                  const verdictSignal = portfolioScore == null ? "neutral"
+                    : portfolioScore >= 7 ? "good"
+                    : portfolioScore >= 5 ? "neutral"
+                    : "bad";
+                  const verdictWord = verdictSignal === "good" ? "güçlü"
+                    : verdictSignal === "bad" ? "kırılgan"
+                    : portfolioScore == null ? "veri bekleniyor" : "orta";
+                  const verdictIcon = verdictSignal === "good" ? "🟢"
+                    : verdictSignal === "bad" ? "🔴" : "🟡";
+                  const verdictColor = verdictSignal === "good" ? "var(--ok)"
+                    : verdictSignal === "bad" ? "var(--err)" : "var(--warn)";
+                  return (
+                    <div style={{marginTop:8,display:"flex",alignItems:"center",gap:8,fontSize:12,color:"var(--text2)"}}>
+                      <span style={{fontSize:13}}>{verdictIcon}</span>
+                      <span>
+                        <strong style={{color:"var(--text)",fontWeight:500}}>Portföyün piyasa düşüşlerine karşı dayanıklılığı</strong>{" "}
+                        <span style={{color:verdictColor}}>{verdictWord}</span>.
+                      </span>
+                    </div>
+                  );
+                })()}
+
                 {resilientPct != null && (
-                  <div style={{fontSize:12,color:"var(--text2)",marginTop:8}}>
+                  <div style={{fontSize:12,color:"var(--text2)",marginTop:6}}>
                     Portföyünüzün{" "}
                     <span style={{color:resilientPct>=60?"var(--ok)":resilientPct>=40?"var(--warn)":"var(--err)",fontWeight:600}}>
                       %{resilientPct.toFixed(0)}

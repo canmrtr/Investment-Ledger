@@ -488,7 +488,7 @@ Sprint 4–20 ✅ | **Sprint 21 = Brand & Design Polish (in progress, 2026-05-16
 
 **Sprint 22 adayları (öncelik sırası — eski S21 listesi, Brand & Design sprintine yer açmak için kaydı):**
 
-1. **Piyasa Dayanıklılık Skoru** `[M][P2]` — `resilienceScore` (3 metrik: Borç/Özk, FCF marjı, op marjı) + MV-weighted portföy skoru + AnalysisTab kartı + 2d verdict cümlesi (Sprint 19 Item 2'nin tamamlayıcısı). Tamamen frontend.
+1. ~~**Piyasa Dayanıklılık Skoru**~~ `[M][P2]` `Sprint-22` `2026-05-19` ✅ — Skor + MV-weighted portföy skoru + composition kartı önceki sprintlerde implement edilmişti. Sprint 22'de Sprint 19 spec Item 2d ("Portföyün piyasa düşüşlerine karşı dayanıklılığı güçlü/orta/kırılgan") tek-satır verdict cümlesi `var(--ok)/--warn/--err` renkli `🟢/🟡/🔴` ikonla eklendi (Sprint 19 paterni — `goodCount/badCount` verdict cümleleriyle aynı stil). Eşik: ≥7 güçlü · ≥5 orta · <5 kırılgan; null skor → "veri bekleniyor" nötr.
 2. **TEFAS WAF testi** `[S][P1]` — Bloker test adımı: endpoint `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` canlı ortamda dene; geçerse tam TEFAS entegrasyonu başlatılabilir. Aksi halde `fonbul.com` fallback planına geç.
 3. **Alım Fiyatı Bölgesi Analizi (52W Konumu)** `[S→M][P2]` — avg_cost'u 52W aralığına yerleştiren horizontal progress bar. Sprint 20'den taşındı; `price_cache` migration + `fetch-prices` historical mode 52W high/low hesaplaması gerekiyor.
 4. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 ile birlikte: public view `is_public` + `privacy_level==="full"` modda gerçek `shares`/`avg_cost` render. Şu an UI disabled, "yakında" mesajıyla.
