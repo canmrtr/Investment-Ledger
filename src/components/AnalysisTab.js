@@ -1,5 +1,13 @@
 // ── Aylık Özet helper fonksiyonları ─────────────────────────────
 
+// İş Yatırım XI_29 finansal şeması ile fundamentals okunamayan BIST bankaları
+// (UFRS grubu Roman numeral itemCode mapping eklenmedi). `fetch-fundamentals`
+// edge fn aynı sabite sahip ve istek gelirse 422 döner — gereksiz network
+// noise'unu önlemek için Portföy Sağlık ve Dayanıklılık Skoru'ndan hariç tut.
+const ISY_KNOWN_BANKS = new Set([
+  "GARAN","AKBNK","YKBNK","ISCTR","HALKB","VAKBN","ALBRK","QNBFB","TSKB","ICBCT","SKBNK"
+]);
+
 const TR_MONTHS = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran',
                    'Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
 
@@ -340,6 +348,10 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   // Aktif tip filtresi — global chip bar
   const atAll = BLOCK_TYPES.filter(cfg=>pos.some(p=>p.type===cfg.type)).map(cfg=>cfg.type);
   const filteredPos = activeTypes.length >= atAll.length ? pos : pos.filter(p=>activeTypes.includes(p.type));
+  // Fund-fetch için eligibility: US_STOCK + BIST, ama BIST bankaları edge fn'de
+  // XI_29 mapping olmadığı için 422 döndürüyor — hariç tut.
+  const isFundEligible = (p) =>
+    (p.type === "US_STOCK" || p.type === "BIST") && !ISY_KNOWN_BANKS.has(p.ticker);
   const filteredTxs = (() => {
     if (filteredPos === pos) return txs;
     const tickers = new Set(filteredPos.map(p=>p.ticker));
@@ -351,7 +363,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   const [fundCache,setFundCache]=useState(()=>{
     const c={};
     pos.forEach(p=>{
-      if(p.type!=="US_STOCK"&&p.type!=="BIST")return;
+      if(!isFundEligible(p))return;
       const v=fundCacheGet(p.ticker);
       if(v?.metrics)c[p.ticker]=v;
     });
@@ -368,7 +380,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
     setFundCache(prev=>{
       const next={...prev};
       pos.forEach(p=>{
-        if(p.type!=="US_STOCK"&&p.type!=="BIST")return;
+        if(!isFundEligible(p))return;
         if(next[p.ticker])return;
         const v=fundCacheGet(p.ticker);
         if(v?.metrics)next[p.ticker]=v;
@@ -378,7 +390,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
 
     // 2) Supabase fund_cache — pg_cron ile güncellenen merkezi veri
     const tickers=pos
-      .filter(p=>p.type==="US_STOCK"||p.type==="BIST")
+      .filter(isFundEligible)
       .map(p=>p.ticker);
     if(!tickers.length)return;
 
@@ -443,12 +455,12 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
     ["liabToEquity",      "Borç/Özk",     "x"],
     ["netDebtToFcf",      "NetBorç/FCF",  "x"],
   ];
-  const healthEligible = filteredPos.filter(p=>p.type==="US_STOCK"||p.type==="BIST");
+  const healthEligible = filteredPos.filter(isFundEligible);
   const healthFiltered = healthFilter==="all" ? healthEligible : healthEligible.filter(p=>p.type===healthFilter);
   useEffect(()=>{
     if(!onHealthSummary)return;
     let redCount=0;
-    const eligible=pos.filter(p=>p.type==="US_STOCK"||p.type==="BIST");
+    const eligible=pos.filter(isFundEligible);
     eligible.forEach(p=>{
       const m=fundCache[p.ticker]?.metrics;
       if(!m)return;
@@ -459,11 +471,8 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
     onHealthSummary(redCount);
   },[fundCache,pos]);
   const healthMissing = healthFiltered.filter(p=>!fundCache[p.ticker]);
-  // Piyasa Düşüşü Dayanıklılık Skoru
-  const ISY_KNOWN_BANKS = new Set(["GARAN","AKBNK","YKBNK","ISCTR","HALKB","VAKBN","ALBRK","QNBFB","TSKB","ICBCT","SKBNK"]);
-  const resilienceEligible = filteredPos.filter(p =>
-    (p.type === "US_STOCK" || p.type === "BIST") && !ISY_KNOWN_BANKS.has(p.ticker)
-  );
+  // Piyasa Düşüşü Dayanıklılık Skoru — eligibility = US_STOCK + non-bank BIST (`isFundEligible`).
+  const resilienceEligible = filteredPos.filter(isFundEligible);
   const resilienceMissing = resilienceEligible.filter(p => !fundCache[p.ticker]);
   const resilienceScore = (m) => {
     if (!m) return null;
