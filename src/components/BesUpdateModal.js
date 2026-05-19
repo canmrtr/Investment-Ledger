@@ -2,7 +2,9 @@
 // Kullanım: <BesUpdateModal pos={p} prc={prc} user={user} onClose={...} onSaved={...}/>
 // pos = {ticker, name, avgCost, dkCurrent, dkPrincipal, portfolioId (opsiyonel)}
 // İki alan: Kişisel Güncel + DK Güncel. Anaparalar read-only badge.
-// Kaydet: set-manual-price (prc total) + positions.dk_current UPDATE → onSaved().
+// Kaydet: `bes_update_atomic` RPC — positions.dk_current + price_cache total
+// aynı transaction'da. Audit fix (2026-05-17): eski iki-adımlı yazım partial-commit
+// bırakabiliyordu; RPC atomikliği garantiler.
 function BesUpdateModal({pos, prc, user, portfolioId, flash_, onClose, onSaved}){
   const curTotal = prc?.[pos.ticker];
   const initKisGuncel = (curTotal!=null && pos.dkCurrent!=null)
@@ -21,22 +23,14 @@ function BesUpdateModal({pos, prc, user, portfolioId, flash_, onClose, onSaved})
     if(!valid || saving) return;
     if(!portfolioId){ flash_("Portföy bulunamadı","err"); return; }
     setSaving(true);
-    try{
-      await edgePriceCall({mode:"set-manual-price", ticker:pos.ticker, price:total, asset_type:"BES"});
-    }catch(e){
-      console.warn("[BesUpdateModal set-manual-price]", e);
-      flash_("Fiyat güncelleme başarısız", "err");
-      setSaving(false);
-      return;
-    }
-    const {error} = await sb.from("positions")
-      .update({dk_current: dkNum})
-      .eq("user_id", user.id)
-      .eq("ticker", pos.ticker)
-      .eq("portfolio_id", portfolioId);
+    const {error} = await sb.rpc("bes_update_atomic", {
+      p_ticker: pos.ticker,
+      p_total: total,
+      p_dk_current: dkNum,
+    });
     if(error){
-      console.warn("[BesUpdateModal dk_current update]", error);
-      flash_("DK güncel kaydedilemedi (fiyat güncellendi)", "err");
+      console.warn("[BesUpdateModal bes_update_atomic]", error);
+      flash_("BES güncellenemedi", "err");
       setSaving(false);
       return;
     }

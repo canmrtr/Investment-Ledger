@@ -1,5 +1,9 @@
 // Piecewise daily-compounding interest for DEPOSIT positions.
-// Handles partial withdrawals by computing interest segment-by-segment.
+// Handles partial withdrawals: at SELL time, accumulated grossInterest is scaled
+// by newBalance/oldBalance — meaning the withdrawal pays out withdrawn principal
+// plus its proportional share of accrued interest. Audit fix (2026-05-17):
+// without this scaling, interest accrued on withdrawn principal stayed on the
+// remaining balance and overstated the deposit's current value.
 // effectiveRate: annual rate after reserve deduction (e.g. 0.378 for 42% × 0.9)
 // maturityDate: "YYYY-MM-DD" or null for perpetual
 const computeDepositGrossInterest=(txs,effectiveRate,maturityDate)=>{
@@ -13,7 +17,14 @@ const computeDepositGrossInterest=(txs,effectiveRate,maturityDate)=>{
       const days=(Math.min(txMs,capMs)-prevMs)/86400000;
       if(days>0)grossInterest+=balance*(Math.pow(1+effectiveRate/365,days)-1);
     }
-    balance+=tx.way==="BUY"?+tx.shares*+tx.price:-+tx.shares*+tx.price;
+    if(tx.way==="BUY"){
+      balance+=+tx.shares*+tx.price;
+    }else{
+      const oldBal=balance;
+      balance-=+tx.shares*+tx.price;
+      // SELL pays out proportional accrued interest with the withdrawn principal.
+      if(oldBal>0&&balance>=0)grossInterest*=balance/oldBal;
+    }
     prevMs=Math.min(txMs,capMs);
     if(txMs>=capMs)break;
   }
@@ -313,15 +324,13 @@ function App({session}){
     (async()=>{
       const{data:pf}=await sb.from("portfolios").select("id,name,is_public,privacy_level,user_id").eq("id",publicViewId).eq("is_public",true).maybeSingle();
       if(!pf){flash_("Bu portföy bulunamadı veya gizli","err");setPublicViewId(null);return;}
+      // Audit fix (2026-05-17 Medium): tüm public view'lar allocation_only RPC'sine
+      // düşer. `full` modu UI henüz yok — settings'teki "Tam Detay" butonu da disabled.
+      // Database column'u + RLS sakla (sosyal full-detail UI gelince yeniden açılacak).
       let positions=[];
-      if(pf.privacy_level==="full"){
-        const{data}=await sb.from("positions").select("ticker,name,type,shares,avg_cost,currency").eq("portfolio_id",publicViewId);
-        positions=data||[];
-      } else if(pf.privacy_level==="allocation_only"){
-        const{data,error}=await sb.rpc("get_allocation_only_positions",{p_portfolio_id:publicViewId});
-        if(error||data?.error){flash_("Portföy yüklenemedi","err");setPublicViewId(null);return;}
-        positions=Array.isArray(data)?data:[];  // guard against null/unexpected shape from RPC
-      }
+      const{data,error}=await sb.rpc("get_allocation_only_positions",{p_portfolio_id:publicViewId});
+      if(error||data?.error){flash_("Portföy yüklenemedi","err");setPublicViewId(null);return;}
+      positions=Array.isArray(data)?data:[];  // guard against null/unexpected shape from RPC
       const{data:owner}=await sb.from("profiles").select("username,display_name,avatar_emoji").eq("user_id",pf.user_id).maybeSingle();
       setPublicViewData({portfolio:pf,positions,owner:owner||{}});
       setTab("publicview");
@@ -1122,16 +1131,9 @@ function App({session}){
       {/* PUBLIC PORTFOLIO VIEW — ?portfolio=<uuid> */}
       {tab==="publicview"&&publicViewData&&(()=>{
         const{portfolio,positions,owner}=publicViewData;
-        const isFull=portfolio.privacy_level==="full";
-        const rows=isFull
-          ? (()=>{
-              const totalVal=positions.reduce((a,p)=>a+(p.avg_cost||0)*p.shares,0);
-              return positions.map(p=>({
-                ...p,
-                pct:totalVal>0?(p.avg_cost||0)*p.shares/totalVal*100:0,
-              })).sort((a,b)=>b.pct-a.pct);
-            })()
-          : [...positions].sort((a,b)=>b.pct-a.pct);
+        // pct daima allocation_only RPC'den gelir (market-value bazlı). `full` modu
+        // şimdilik kapalı; UI hep "Varlık Dağılımı" olarak render eder.
+        const rows=[...positions].sort((a,b)=>b.pct-a.pct);
         return(
           <div>
             {/* Banner */}
@@ -1163,7 +1165,7 @@ function App({session}){
               ):(
                 <div className="card" style={{padding:"14px 16px"}}>
                   <div className="stitle" style={{marginBottom:12}}>
-                    {isFull?"Pozisyonlar":"Varlık Dağılımı"}
+                    Varlık Dağılımı
                     {" "}<span style={{fontWeight:400,color:"var(--text3)"}}>{rows.length} varlık</span>
                   </div>
                   {rows.map((p,i)=>(

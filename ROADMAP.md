@@ -6,7 +6,7 @@ Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
 ### Uzun Vadeli Platform Vizyonu
 
-Detay için bkz. `portfoi-product-vision.md`. **Özet — 4 Katman:**
+Detay için bkz. `docs/strategy/product-vision.md`. **Özet — 4 Katman:**
 - **Katman 1 (Mevcut)** — Tracker: portföyü görünür kılar.
 - **Katman 2 (+1 ay)** — Davranışsal Nudge'lar: tetikleyici→mesaj, karar sürtünmesi yaratır.
 - **Katman 3 (+3 ay)** — Koç Sekmesi: kullanıcının yatırım felsefesini tanımlar, uyum skoru verir.
@@ -57,15 +57,23 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [x] **`fetch-fundamentals:820-821` `bist.raw?.annual` → `bist.annual`** `[S]` `[P2]` `Sprint-15` — `bist.raw?.annual` her zaman `undefined`; fund_cache'e BIST annual `null` yazılıyor. Önceki sprint'te zaten düzeltilmişti; audit sırasında teyit edildi. `→ fetch-fundamentals-edge-function.js:820-821`
 - [x] **`fetch-fundamentals` dividend-calendar ticker validation yok** `[S]` `[P2]` `Sprint-15` — `dividend-calendar` modunda `ticker` doğrulanmıyor; injection riski. Allowlist regex ekle. `→ fetch-fundamentals-edge-function.js:703-728`
 
+### Denetim Turu 5 Bulguları — 2026-05-17 (audit.md)
+
+> Tümü 2026-05-19'da kapatıldı. Detay: `audit.md` (status stamp'li).
+
+- [x] **`set-manual-price` shared `price_cache` overwrite** `[S]` `[P0]` `2026-05-19` — High finding. Edge fn artık `asset_type==="BES"` + `auth.uid()` BES pozisyon ownership doğruluyor; non-BES tickers veya başkasının BES'i için 403. `→ fetch-prices-edge-function.js:325`
+- [x] **BES update atomicity** `[S]` `[P1]` `2026-05-19` — Medium. Migration 019 `bes_update_atomic` RPC (SECURITY DEFINER): positions.dk_current + price_cache aynı transaction. `BesUpdateModal` artık RPC çağırıyor; iki-adımlı yazım kaldırıldı. `→ supabase/migrations/019_bes_update_atomic.sql; BesUpdateModal.js`
+- [x] **DEPOSIT kısmi çekim sonrası faiz mat.** `[S]` `[P1]` `2026-05-19` — Medium. `computeDepositGrossInterest` SELL'de `grossInterest *= newBal/oldBal` ile orantılı faiz çıkışı uygular; çekilen anaparayla orantılı biriken faiz yanında gider. `→ App.js:5-30`
+
 **P2 — Sprint-16:**
 
 - [x] **`get_allocation_only_positions` çoklu-para birimi sorunu** `[M]` `[P1]` `Sprint-16` ✅ — Migration 014: price_cache FX oranı ile USD'ye normalize; avg_cost fallback yok; anon GRANT kaldırıldı.
-- [ ] **"Tam Detay" portföy paylaşımı: UI ≠ veri katmanı** `[S]` `[P1]` — Settings "Tam Detay" → "Adet ve maliyet bilgileri görünür" diyor; public render her zaman yalnızca ticker/isim/yüzde bar gösteriyor. Social Faz 2 ile birlikte ele alınacak. `→ App.js:944,960,982,1082`
+- [x] **"Tam Detay" portföy paylaşımı: UI ≠ veri katmanı** `[S]` `[P1]` `2026-05-19` — Audit fix (Medium): public view load logic her durumda `get_allocation_only_positions` RPC'sine düşer; cost-basis pct fallback kaldırıldı. `privacy_level='full'` column + RLS gelecekteki social full-detail UI için saklı.
 - [x] **CSP/SRI: `html2canvas` integrity hash eksik** `[S]` `[P2]` `Sprint-16` ✅ — `index.html` sha512 integrity attribute eklendi.
 - [x] **`watchlist_own` policy `FOR ALL` — UPDATE riski** `[S]` `[P2]` `Sprint-16` ✅ — Migration 015: FOR INSERT/SELECT/DELETE ayrı policy; UPDATE DB seviyesinde engelli.
 - [x] **`fetch-prices` historical upsert hatası sessizce yutuluyor** `[S]` `[P2]` `Sprint-16` ✅ — PostgREST + network hataları console.error ile loglanıyor.
 - [ ] **LS key'leri user-scope değil** `[S]` `[P2]` `Sprint-16` — `il_prc`, `il_hist`, `il_hide` vb. user-specific prefix taşımıyor. Kısa vade: signOut'ta tüm `il_` key'leri temizle. Uzun vade: key'lere `user.id` prefix ekle.
-- [ ] **`price_snapshots` policy `TO anon, authenticated` eksik** `[S]` `[P3]` — Role kısıtlaması belirtilmemiş; davranış aynı ama dokümantasyon netleşmeli. (Sprint-16'da yapılmadı; düşük aciliyet — P3'e indirildi 2026-05-15.)
+- [x] **`price_snapshots` policy `TO anon, authenticated` eksik** `[S]` `[P3]` `2026-05-19` — Migration 020: DROP + CREATE policy explicit `TO anon, authenticated USING (true)`. `fund_cache`/`adr_bist_map` pattern'ine hizalandı.
 
 ---
 
@@ -332,6 +340,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ### Aktif Buglar / P1
 
+- [ ] **`fetch-fundamentals` Analiz tab'da 422 dönüyor** `[S]` `[P1]` — Sprint 22 e2e test (2026-05-19) sırasında prod'da gözlemlendi: Analiz tab açılışında `fetch-fundamentals` edge fn 422 Unprocessable Entity dönüyor. JS console error yok; sessiz fail. Olası sebep: bazı ticker'larda payload validation hatası (eksik `asset_type`, BIST→US mapping, ya da `mode` parametresi). Fundamentals tablosu boş gözükebilir. Adım: edge fn loguna bak → 422 dönen request body'i incele → input schema'yı sağlamlaştır. `→ fetch-fundamentals-edge-function.js`
 - [ ] **AI parse kaydetme: `way` istemci doğrulaması eksik** `[S]` `[P2]` — CSV `BUY|SELL|DIV` normalize ediyor; AI parse yalnızca sayısal kontrol yapıp `way`'i insert ediyor. `saveTx`'e `way`/`asset_type`/tarih/para birimi doğrulaması ekle. `→ AddTab.js:73,79`
 - [ ] **İşlem türü kart ikonları yeniden ele alınacak** `[S]` `[P1]` — AddTab asset type picker ikonları marka diliyle tam örtüşmüyor. Brand kit uyumlu SVG/logo yaklaşımı seçilecek.
 - [x] **ManuelPosForm sadece USD pozisyonları listeler** `[S]` `[P2]` `Sprint-16` ✅ — `shares > CFG.DUST_THRESHOLD` filtresi; currency sembolü otomatik (₺/€/$).

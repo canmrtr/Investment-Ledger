@@ -300,17 +300,21 @@ Deno.serve(async (req) => {
   });
 
   // ── JWT doğrulama ──────────────────────────────────────────────────────────
+  // user + supaAuth handler-scope: set-manual-price branch ihtiyaç duyar.
+  let authedUserId: string | null = null;
+  let supaAuth: ReturnType<typeof createClient> | null = null;
   try {
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace(/^Bearer\s+/i, "");
     if (!token) return json({ error: "Kimlik doğrulama gerekli" }, 401);
     const supaUrl = Deno.env.get("SUPABASE_URL")!;
     const supaAnon = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supaAuth = createClient(supaUrl, supaAnon, {
+    supaAuth = createClient(supaUrl, supaAnon, {
       global: { headers: { Authorization: `Bearer ${token}` } },
     });
     const { data: { user }, error: authErr } = await supaAuth.auth.getUser(token);
     if (authErr || !user) return json({ error: "Geçersiz oturum" }, 401);
+    authedUserId = user.id;
   } catch (_authEx) {
     return json({ error: "Kimlik doğrulama başarısız" }, 401);
   }
@@ -322,14 +326,34 @@ Deno.serve(async (req) => {
     // Ticker format validation — path traversal / SSRF prevention
     if (!/^[A-Z0-9:.\-_]{1,30}$/i.test(ticker)) return json({ error: "Geçersiz ticker formatı" }, 400);
 
-    // Manual price set — BES ve benzer manuel varlıklar için price_cache'e kullanıcı değeri yazar.
+    // Manual price set — sadece BES için, ve sadece kendi pozisyonu olan kullanıcı yazabilir.
+    // Audit fix (2026-05-17 High): non-BES tickers (AAPL/THYAO/...) shared price_cache'e
+    // yazılamasın diye asset_type ve ownership doğrulaması zorunlu. Atomik BES update
+    // için `bes_update_atomic` RPC tercih edilir; bu mod ManuelPosForm ilk-oluştur akışı
+    // için legacy fallback olarak kalır.
     if (mode === "set-manual-price") {
+      if (asset_type !== "BES") {
+        return json({ error: "set-manual-price yalnızca BES için kullanılabilir" }, 403);
+      }
       if (!price || +price <= 0) return json({ error: "Geçerli bir tutar girin" }, 400);
+      if (!authedUserId || !supaAuth) return json({ error: "Kimlik doğrulama başarısız" }, 401);
+      const upperTicker = ticker.toUpperCase();
+      const { data: owned, error: ownerErr } = await supaAuth
+        .from("positions")
+        .select("id")
+        .eq("user_id", authedUserId)
+        .eq("ticker", upperTicker)
+        .eq("type", "BES")
+        .limit(1);
+      if (ownerErr) return json({ error: ownerErr.message }, 500);
+      if (!owned || owned.length === 0) {
+        return json({ error: "Bu ticker için BES pozisyonunuz yok" }, 403);
+      }
       const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
       if (!serviceKey) return json({ error: "Service key eksik" }, 500);
       const supa = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
       const { error: upsertErr } = await supa.from("price_cache").upsert(
-        { ticker: ticker.toUpperCase(), price: +price, updated_at: new Date().toISOString() },
+        { ticker: upperTicker, price: +price, updated_at: new Date().toISOString() },
         { onConflict: "ticker" }
       );
       if (upsertErr) return json({ error: upsertErr.message }, 500);

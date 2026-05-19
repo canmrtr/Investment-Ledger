@@ -10,6 +10,8 @@
 - Supabase CLI bağlantı: `npx supabase link --project-ref jfetubcilmuthpddkodg`
 - Edge fn deploy yapısı: `supabase/functions/<fn-name>/index.ts` gerekli (`.js` + rename).
 - `fetch-fundamentals` ticker regex: `^[A-Z0-9.\-]{1,12}$/i` — nokta ve tire dahil.
+- **`set-manual-price` artık BES-only + ownership guard'lı** (audit 2026-05-17 High fix): non-BES `asset_type` → 403, caller `auth.uid()` için eşleşen BES pozisyonu yoksa → 403. Atomik BES update için `bes_update_atomic` RPC kullan; bu mode yalnızca ManuelPosForm ilk-oluştur akışında çağrılır (pozisyon insert sonrası ownership check pas geçer).
+- **`bes_update_atomic` RPC** (`positions.dk_current` + `price_cache` aynı transaction): SECURITY DEFINER + `auth.uid()` ownership check. Hata kodları: `unauthenticated`, `invalid total`, `invalid dk_current`, `no BES position for this ticker`. Negative dk_current veya 0/negative total reddedilir — UI bunu validation'la yakalamalı.
 
 ## Frontend / React
 
