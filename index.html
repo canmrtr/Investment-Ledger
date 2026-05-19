@@ -86,6 +86,16 @@
     #fab{display:none;position:fixed;bottom:76px;right:20px;width:54px;height:54px;border-radius:50%;background:var(--info);border:none;color:#0D1117;box-shadow:0 6px 20px rgba(201,168,76,0.45);z-index:101;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s,box-shadow .12s;}
     #fab:hover{transform:scale(1.05);box-shadow:0 8px 28px rgba(201,168,76,0.55);}
     #fab:active{transform:scale(0.96);}
+    /* Tablet breakpoint: 641–880px — desktop layout but compact.
+       Compresses nav tabs and hides freshness text so topbar doesn't overflow. */
+    @media (max-width:880px) and (min-width:641px){
+      .topbar-nav .tab{padding:6px 8px;font-size:12px;}
+      .topbar-left{margin-right:18px;gap:6px;}
+      .topbar-wordmark{height:36px;}
+      .topbar-wordmark img{height:32px;}
+      .topbar-freshness{display:none;}
+      #topbar{padding:0 16px;}
+    }
     @media (max-width:640px){
       .topbar-nav{display:none;}
       .topbar-wordmark{display:none;}
@@ -222,6 +232,24 @@
     .btn-md{font-size:12px;padding:6px 12px;min-height:34px;line-height:1.2;}
     .btn-pri{background:var(--info);border:none;color:#fff;font-weight:500;padding:8px 16px;min-height:38px;}
     .btn-danger-out{color:var(--err);border-color:var(--err);background:transparent;}
+    /* Link-button: text-only inline button styled as link (gold, no border/bg).
+       Use for "show more / toggle login mode / view full" small text actions. */
+    .link-btn{background:transparent;border:none;color:var(--info);font-size:13px;font-family:inherit;cursor:pointer;padding:0;text-decoration:none;}
+    .link-btn:hover{text-decoration:underline;}
+    .link-btn.sm{font-size:12px;}
+    /* Type-picker grid: AddTab asset type cards, auto-fit on desktop, 2-col at ≤480px */
+    .type-picker-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;}
+    @media(max-width:480px){.type-picker-grid{grid-template-columns:1fr 1fr;}}
+    /* Metric mini-card: small flat KPI card on bg4 — AnalysisTab Aylık Özet, generic metric pills */
+    .metric-mini{background:var(--bg4);border-radius:10px;padding:10px 12px;}
+    .metric-mini .lbl{margin-bottom:0;}
+    .metric-mini .val{font-family:var(--font-numeric);font-size:15px;font-weight:700;margin-top:4px;}
+    /* Inline-alert: form/section-scoped error/success badge.
+       NOT a substitute for .flash (which is fixed top banner).
+       Use for parse errors, validation summaries, in-form feedback. */
+    .inline-alert{display:block;border-radius:var(--r);padding:8px 12px;font-size:12px;margin-top:10px;line-height:1.45;}
+    .inline-alert.err{background:rgba(255,69,58,.10);color:var(--err);border:1px solid rgba(255,69,58,.25);}
+    .inline-alert.ok{background:rgba(48,209,88,.10);color:var(--ok);border:1px solid rgba(48,209,88,.25);}
     /* Form input variant (inline-form fields inside rows) */
     .finp{background:var(--bg);border:0.5px solid var(--border2);border-radius:6px;color:var(--text);font-family:inherit;width:100%;padding:7px 9px;font-size:13px;}
     .finp.sm{padding:5px 8px;font-size:12px;}

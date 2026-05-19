@@ -735,30 +735,28 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
             </div>
 
             {/* 2×2 metrik grid */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-              <div style={{background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
+            <div className="form-grid-2" style={{marginBottom:14}}>
+              <div className="metric-mini">
                 <div className="lbl">Portföy Değeri</div>
-                <div style={{fontFamily:"var(--font-numeric)",fontSize:15,fontWeight:700,marginTop:4,color:"var(--info)"}}>
+                <div className="val" style={{color:"var(--info)"}}>
                   {hide ? mask() : fmtAmt(totalMV)}
                 </div>
               </div>
-              <div style={{background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
+              <div className="metric-mini">
                 <div className="lbl">Aylık Getiri {isApprox&&<span style={{color:"var(--text3)"}}>~</span>}</div>
-                <div style={{fontFamily:"var(--font-numeric)",fontSize:15,fontWeight:700,marginTop:4,
-                             color:monthReturn==null?"var(--text3)":monthReturn>=0?"var(--ok)":"var(--err)"}}>
+                <div className="val" style={{color:monthReturn==null?"var(--text3)":monthReturn>=0?"var(--ok)":"var(--err)"}}>
                   {monthReturn!=null ? fmtPct(monthReturn) : '—'}
                 </div>
               </div>
-              <div style={{background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
+              <div className="metric-mini">
                 <div className="lbl">YTD {ytd==null&&<span style={{fontSize:9,color:"var(--text3)"}}>snap. yok</span>}</div>
-                <div style={{fontFamily:"var(--font-numeric)",fontSize:15,fontWeight:700,marginTop:4,
-                             color:ytd==null?"var(--text3)":ytd>=0?"var(--ok)":"var(--err)"}}>
+                <div className="val" style={{color:ytd==null?"var(--text3)":ytd>=0?"var(--ok)":"var(--err)"}}>
                   {ytd!=null ? fmtPct(ytd) : '—'}
                 </div>
               </div>
-              <div style={{background:"var(--bg4)",borderRadius:10,padding:"10px 12px"}}>
+              <div className="metric-mini">
                 <div className="lbl">Temettü</div>
-                <div style={{fontFamily:"var(--font-numeric)",fontSize:15,fontWeight:700,marginTop:4,color:"var(--info)"}}>
+                <div className="val" style={{color:"var(--info)"}}>
                   {hide ? mask() : fmtAmt(dividends)}
                 </div>
               </div>
@@ -898,7 +896,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
               <button className={assetDistMode==="cost"?"on":""} onClick={()=>setAssetDistMode("cost")}>Maliyet</button>
               <button className={assetDistMode==="mv"?"on":""} onClick={()=>setAssetDistMode("mv")}>Piyasa</button>
             </div>
-            <button className="btn-xs" onClick={()=>setAssetPieOpen(o=>!o)}>{assetPieOpen?"▴":"▾"}</button>
+            <button className="btn-xs" onClick={()=>setAssetPieOpen(o=>!o)} aria-label={assetPieOpen?"Kapat":"Aç"} aria-expanded={assetPieOpen}>{assetPieOpen?"▴":"▾"}</button>
           </div>
         </div>
         {slices.arr.length > 0 && (
@@ -956,7 +954,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
             Bölge Dağılımı
             {etfCwBusy && <span style={{color:"var(--text3)",fontSize:11,marginLeft:6,fontWeight:400}}>Yükleniyor…</span>}
           </div>
-          <button className="btn-xs" onClick={()=>setRegionPieOpen(o=>!o)}>{regionPieOpen?"▴":"▾"}</button>
+          <button className="btn-xs" onClick={()=>setRegionPieOpen(o=>!o)} aria-label={regionPieOpen?"Kapat":"Aç"} aria-expanded={regionPieOpen}>{regionPieOpen?"▴":"▾"}</button>
         </div>
         {regionSlices.arr.length > 0 && (
           <div style={{height:12,borderRadius:6,overflow:"hidden",display:"flex",gap:1,marginTop:12}}>
@@ -1021,7 +1019,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
               <span className="hp hp-ok" data-tip="Eşiği geçen (iyi) metrik sayısı">🟢 {aggGood}</span>
               <span className="hp hp-warn" data-tip="Orta seviye metrik sayısı">🟡 {aggWarn}</span>
               <span className="hp hp-err" data-tip="Eşiğin altında kalan (zayıf) metrik sayısı">🔴 {aggBad}</span>
-              <button className="btn-xs" onClick={()=>setHealthOpen(o=>!o)} style={{fontSize:11}}>
+              <button className="btn-xs" onClick={()=>setHealthOpen(o=>!o)} aria-expanded={healthOpen} style={{fontSize:11}}>
                 {healthOpen?"Detay ▴":"Detay ▾"}
               </button>
             </div>
@@ -1951,7 +1949,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
             {perf6m.length===0 ? (
               <div className="dim" style={{fontSize:12}}>Yeterli tarihi veri yok — fiyatları güncelle.</div>
             ):(
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+              <div className="form-grid-2" style={{gap:12,marginBottom:0}}>
                 <div>
                   <div className="lbl" style={{marginBottom:8,color:"var(--ok)"}}>En İyi</div>
                   {gainers.slice(0,3).map(p=>(

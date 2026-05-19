@@ -64,18 +64,21 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 ## Önemli Konvansiyonlar
 
 ### Tasarım sistemi
+
+> Tüm marka & tasarım dokümantasyonu için tek giriş noktası: **`docs/brand/README.md`**. Brand kit (`docs/brand/brand-kit.md`), design audit, logo asset path'leri, generation script'leri ve `src/styles/tokens.css` token katmanı oradan indekslenir. UI işine başlamadan önce oraya bak.
+
+Sık başvurulan operasyonel kurallar (quick-ref):
 - **Tema**: dark (default) + light (`[data-theme="light"]`).
 - **Dark renk tokenleri**: `--bg #000` / `--bg2 #0c0c0c` / `--bg3 #141414` / `--bg4 #1c1c1c`; `--text #f0ede8`, `--text2 #b8b8b8`, `--text3 #888888`; `--info #C9A84C` (Portfoi Gold), `--ok #00d97e`, `--err #ff3366`, `--warn #ffb800`; `--border rgba(255,255,255,0.06)` 1px solid; `--border2 rgba(201,168,76,0.28)`.
-- **Light tema** (`portfoi-brand-kit.md` Section 7): `--bg #F5F3EE` (Arctic, beyaz değil) / `--text #0D1117` (Midnight, wordmark rengi) / `--info #8A6A1F` (Gold Muted) / `--topbar-bg rgba(245,243,238,0.90)`. İkon ve border gold her iki temada aynı kalır.
+- **Light tema** (detay: `docs/brand/brand-kit.md` Section 7): `--bg #F5F3EE` (Arctic) / `--text #0D1117` (Midnight) / `--info #8A6A1F` (Gold Muted). İkon ve border gold her iki temada aynı kalır.
 - **Font**: `DM Serif Display` (hero sayılar/başlıklar) + `DM Sans` (body 300-700) + `DM Mono` (sayılar/ticker). `--font-display`/`--font-body`/`--font-numeric` CSS değişkenleri. `.lbl`/`.stitle`/`.kk`: 10px uppercase `font-weight:500`.
 - **Aktif sekme**: pill `rgba(201,168,76,0.12)`, alt çizgi yok. **FAB**: 54px, `var(--info)` (gold), `bottom:76px`. **Dashboard hero**: Piyasa Değeri değeri 32px `var(--font-display)`.
 - **Kod içi font kullanımı**: inline style'larda hardcoded font string yok — `fontFamily:"var(--font-display)"` / `fontFamily:"var(--font-numeric)"` kullan.
-- **Logo dosyaları** (`Logo/` dizini, Sprint 21 brand refresh):
-  - **Aktif:** `Logo/new/portfoi-wordmark-dark.png` + `portfoi-wordmark-light.png` (yalnız wordmark, transparan; 580×264 RGBA) — **Login** kart dışında üstte, ortalı, **120px height**; `.login-wrap` arka planı `var(--bg2)`. Aynı varlık **Topbar** sol tarafta `.topbar-wordmark` butonu içinde, **36px image** / 40px button, click → Dashboard. `@media(max-width:640px){.topbar-wordmark{display:none;}}` — mobilde gizli.
-  - **Hazır ama referanssız:** `Logo/new/portfoi-lockup-dark.png` + `portfoi-lockup-light.png` (icon + wordmark + tagline lockup; 620×264 RGBA) — şu an UI'da kullanılmıyor; marketing veya app-store splash gerekirse hazır.
-  - **Kaynak SVG:** `Logo/portfoi-icon.svg` (512×512, midnight + gold candles + p glyph). PWA icons (`icon-192.png`, `icon-512.png`) ve `favicon.svg` / `favicon-32.png` bundan `scripts/generate-pwa-icons.mjs` (Playwright headless) ile regenerate edilir.
-  - **CSS:** `.theme-logo-dark`/`.theme-logo-light` sınıfları `[data-theme="light"]` selector ile otomatik geçiş — JS gerekmez (default `.theme-logo-light{display:none;}`).
-  - **Legacy (rollback için tutuluyor, referanslı değil):** `Logo/linear-{dark,light}.png` (eski Login lockup), `Logo/Logo {Dark,Light}.png` (eski ikon), `Logo/Full Name {Dark,Light}.png` (eski wordmark).
+- **Logo path özeti** (tüm detay `docs/brand/README.md`'de):
+  - Aktif wordmark: `Logo/new/portfoi-wordmark-{dark,light}.png` — Login 120px height, Topbar `.topbar-wordmark` 36px (mobilde gizli).
+  - Tema CSS: `.theme-logo-dark`/`.theme-logo-light` — `[data-theme="light"]` ile otomatik geçiş.
+  - Kaynak SVG: `Logo/portfoi-icon.svg` → PWA icons + favicon `scripts/generate-pwa-icons.mjs` ile.
+  - Legacy (rollback): `Logo/legacy/` altında.
 
 ### Para & formatlama
 - `displaySym(cur)`: USD→`$`, TRY→`₺`, EUR→`€`
@@ -87,9 +90,14 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 - Storage: ISO `YYYY-MM-DD`. Görüntü: `DD/MM/YYYY` (`fmtDateTR`). Input: `<input type="date">`.
 
 ### CSS sınıfları
-- **Buton katmanları (Sprint 21):** `.btn-icon` (square icon-only, 28×28 desktop / 36×36 mobile) < `.btn-xs` (11px) < `.btn-sm` (11px, 30px min-height) < `.btn-md` (12px, 34px min) < `.btn-pri` / `button.pri` (12px gold CTA, 38px min). `@media(max-width:640px)`: `.btn-xs/.btn-icon/.btn-sm` 36×36 min, dense table/pos-row için 8/10 padding. Inline `<button style="...">` yerine bu sınıfları tercih et.
-- **Form grid'leri:** `.form-grid-2` / `.form-grid-3` — ≤640px tek kolona çöker. Inline `gridTemplateColumns` yerine bu sınıfları kullan (ManuelPosForm, TickerDetailTab quick-add/edit, HistoryTab edit row için).
-- `.btn-xs/sm/md`, `.btn-danger-out`, `.finp`/`.finp.sm`, `.empty-card`, `.warn-card`
+- **Buton katmanları (Sprint 21):** `.btn-icon` (square icon-only, 28×28 desktop / 36×36 mobile) < `.btn-xs` (11px) < `.btn-sm` (11px, 30px min-height) < `.btn-md` (12px, 34px min) < `.btn-pri` / `button.pri` (12px gold CTA, 38px min). `@media(max-width:640px)`: `.btn-xs/.btn-icon/.btn-sm` 36×36 min, dense table/pos-row için 8/10 padding. Inline `<button style="...">` yerine bu sınıfları tercih et. Icon-only emoji/sembol butonlar (✎, ×, 💰, ↻) **`.btn-icon`** + `aria-label` + `data-tip`.
+- **`.link-btn`** (Sprint 22, design audit): transparent inline button gold text — login mode toggle, "devamı / daha az", "Temizle" gibi link-stil tekstler. `.link-btn.sm` 12px varyant.
+- **Form grid'leri:** `.form-grid-2` / `.form-grid-3` — ≤640px tek kolona çöker. Inline `gridTemplateColumns` yerine bu sınıfları kullan (ManuelPosForm, TickerDetailTab quick-add/edit, HistoryTab edit row, AnalysisTab metric grid için).
+- **`.type-picker-grid`** (Sprint 22): AddTab asset-type cards; `auto-fit minmax(150px,1fr)` desktop, `1fr 1fr` ≤480px.
+- **`.metric-mini`** (Sprint 22): `bg4` flat KPI card 10×12; içinde `.lbl` (üst) + `.val` (numeric 15/700). AnalysisTab Aylık Özet, custom metric pill için.
+- **`.inline-alert.err / .ok`** (Sprint 22): form/section scoped flow-positioned alert. `.flash`'ı form içinde inline kullanma — `.inline-alert` kullan (parse errors, validation summaries, in-form feedback).
+- **Tablet breakpoint (Sprint 22, 641–880px):** `.topbar-nav .tab` compact, `.topbar-freshness` gizli, `.topbar-wordmark` 36→32 height. Topbar overflow'unu önler.
+- `.btn-xs/sm/md`, `.btn-danger-out`, `.finp`/`.finp.sm`, `.empty-card` (`.ic` + `.ttl` + `.sub` + CTA), `.warn-card`, `.cbox`
 - `.pos-row`, `.badge.etf/cry/split/stale`, `.mdl-bd/bx`, `.seg`, `.mtab`, `.pie-row/pie-sw`, `[data-tip]`
 - `.theme-logo-dark`/`.theme-logo-light` — `[data-theme="light"]` ile otomatik logo geçişi; `.delta-pos`/`.delta-neg` — yeşil/kırmızı delta badge sınıfları
 - `.topbar-wordmark` — topbar sol wordmark butonu (Login.js olmayan tek logo placement). Mobilde gizli.
@@ -122,7 +130,7 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 `US_STOCK:#8B5CF6`, `FUND:#3B82F6`, `CRYPTO:#06B6D4`, `BIST:#F97316`, `GOLD:#C9A84C`, `FX:#10B981`, `BES:#EC4899`, `CASH:#64748B`, `DEPOSIT:#6366F1`
 
 ### Brand kit token dosyası
-`src/styles/tokens.css` — tüm brand kit CSS custom property'leri (category colors, badge tokens, component tokens, extended palette). Kaynak: `portfoi-brand-kit.md`. `index.html`'deki mevcut `--bg/--text/--info/--font-*` tokenleri tekrarlanmaz.
+`src/styles/tokens.css` — tüm brand kit CSS custom property'leri (category colors, badge tokens, component tokens, extended palette). Kaynak: `docs/brand/brand-kit.md`. `index.html`'deki mevcut `--bg/--text/--info/--font-*` tokenleri tekrarlanmaz.
 
 ### Flash & Confirm
 - `flash_(msg, "ok"|"err")` — 3.5 sn otomatik kapanır.
@@ -144,15 +152,25 @@ Kritik pitfall'lar → **`GOTCHAS.md`**
 `.claude/settings.local.json` `PostToolUse` hook:
 - **`babel-check.sh`** — `src/*.js` veya `src/components/*.js` edit sonrası ilgili dosyayı otomatik JSX parse eder; fail = exit 2. `index.html` artık inline Babel içermiyor (skip). Build adımı yok — broken parse = broken production.
 
-## Agent Kuralları
+## Agent & Skill Kuralları
 
-Tetikleyicide **kullanıcıya sormadan** çağır:
-- **`edge-reviewer`** — `*-edge-function.js` edit sonrası, deploy öncesi
-- **`ui-builder`** — yeni UI component (tab/card/form/modal/tablo) veya görsel değişiklik; 1-2 satır tweak için skip OK
-- **`sql-writer`** — migration, RLS policy, pg_cron, schema SQL
-- **`rls-auditor`** — yeni tablo veya RLS policy değişikliği, SQL uygulanmadan önce
-- **`client-security-auditor`** — auth/form/kullanıcı girdi render eden `index.html` değişikliği sonrası
-- **`test-runner`** — major feature / deploy öncesi; **"DO NOT modify any source files. Report only."** talimatını ver
+**Agents** (izole alt-süreç, raporlama/audit/test için):
+- **`edge-reviewer`** (sonnet) — `*-edge-function.js` edit sonrası, deploy öncesi
+- **`rls-auditor`** (sonnet) — yeni tablo veya RLS policy değişikliği, SQL uygulanmadan önce; policy **text** auditi
+- **`rls-empirical-tester`** (sonnet) — `rls-auditor` sonrası schema/RLS migration apply edildiğinde; gerçek cross-user query'lerle RLS'i deneyimsel doğrular
+- **`client-security-auditor`** (sonnet) — auth/form/kullanıcı girdi render eden `index.html` değişikliği sonrası
+- **`test-runner`** (haiku) — major feature / deploy öncesi; **"DO NOT modify any source files. Report only."** talimatını ver
+- **`commit-helper`** (haiku) — Can "commit hazırla" derse; İngilizce commit message draft + docs-sync (.md güncelleme) listesi üretir
+- **`price-debugger`** (sonnet) — Can "X tickerının fiyatı yanlış / eski" derse; provider cascade'i (Massive/Yahoo/Twelve/borsa-mcp/İş Yatırım) manuel traverse eder
+
+Tetikleyicide **kullanıcıya sormadan** çağır (commit-helper ve price-debugger explicit istek üzerine).
+
+**Skills** (ana thread'e yüklenen methodology paketleri — `.claude/skills/<name>/SKILL.md`):
+- **`ui-builder`** — yeni UI component (tab/card/form/modal/tablo) veya görsel değişiklik; 1-2 satır tweak için skip OK. Babel parse'ı PostToolUse hook otomatik yapar.
+- **`sql-writer`** — migration, RLS policy, pg_cron, schema SQL. Schema değişikliği sonrası `rls-auditor` agent'ını çağır.
+- **`product-owner`** — roadmap grooming, sprint planlama, fikir üretimi, önceliklendirme
+
+Babel parse otomatize: `.claude/hooks/babel-check.sh` PostToolUse hook'u `src/*.js` ve `src/components/*.js` edit sonrası çalışır.
 
 ## Pre-Deploy Checklist
 
@@ -171,3 +189,8 @@ E2E: `IL_EMAIL=... IL_PASS=... node e2e/smoke.mjs`
 ## Yol Haritası
 
 Tamamlananlar + açık konular → **`ROADMAP.md`**
+
+## Ürün Stratejisi & Marka
+
+- Vizyon, positioning, GTM → **`docs/strategy/README.md`** (product-vision, launch-plan)
+- Marka, tasarım sistemi, logo asset'leri → **`docs/brand/README.md`** (brand-kit, design-audit, tokens.css)

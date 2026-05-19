@@ -80,9 +80,17 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
         <span style={{flex:1,fontSize:12,color:"var(--text2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name||"—"}</span>
         {ex==="XIST"&&<span className="badge cry" style={{fontSize:9}}>BIST</span>}
         {held&&<span className="badge etf" style={{fontSize:9}}>açık</span>}
-        {!held&&onToggleWatchlist&&<span onClick={e=>{e.stopPropagation();onToggleWatchlist(ticker,at);}} style={{padding:"2px 7px",borderRadius:5,fontSize:11,fontWeight:500,cursor:"pointer",background:watchlistItems?.some(w=>w.ticker===ticker)?"rgba(201,168,76,0.15)":"rgba(255,255,255,0.06)",color:watchlistItems?.some(w=>w.ticker===ticker)?"var(--info)":"var(--text2)"}}>
-          {watchlistItems?.some(w=>w.ticker===ticker)?"✓ İzleniyor":"+ İzle"}
-        </span>}
+        {!held&&onToggleWatchlist&&(()=>{
+          const isOn=watchlistItems?.some(w=>w.ticker===ticker);
+          return <button type="button" onClick={e=>{e.stopPropagation();onToggleWatchlist(ticker,at);}}
+            aria-label={isOn?"İzleme listesinden çıkar":"İzleme listesine ekle"} aria-pressed={isOn}
+            style={{padding:"2px 7px",borderRadius:5,fontSize:11,fontWeight:500,cursor:"pointer",
+              border:"none",lineHeight:1.2,
+              background:isOn?"rgba(201,168,76,0.15)":"rgba(255,255,255,0.06)",
+              color:isOn?"var(--info)":"var(--text2)"}}>
+            {isOn?"✓ İzleniyor":"+ İzle"}
+          </button>;
+        })()}
         <span style={{color:"var(--text3)",fontSize:14}}>›</span>
       </div>
     );
@@ -106,7 +114,7 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
             <div style={{marginBottom:16}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
                 <span className="stitle" style={{marginBottom:0}}>Son Aramalar</span>
-                <button onClick={clearRecent} style={{fontSize:11,color:"var(--text3)",background:"transparent",border:"none",cursor:"pointer",padding:"2px 4px"}}>Temizle</button>
+                <button className="link-btn sm" onClick={clearRecent} style={{color:"var(--text3)"}}>Temizle</button>
               </div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                 {recent.map(t=>(

@@ -36,10 +36,10 @@ function Login(){
         {errMsg&&<div style={{background:"rgba(255,51,102,0.10)",border:"1px solid rgba(255,51,102,0.20)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"var(--err)",marginTop:8}}>✕ {errMsg}</div>}
         {okMsg&&<div style={{background:"rgba(0,217,126,0.10)",border:"1px solid rgba(0,217,126,0.20)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"var(--ok)",marginTop:8}}>✓ {okMsg}</div>}
         <div style={{marginTop:20,display:"flex",flexDirection:"column",gap:10}}>
-          <button className="pri" style={{minHeight:44}} onClick={submit} disabled={loading||!email||!pw}>
+          <button className="pri btn-pri" onClick={submit} disabled={loading||!email||!pw}>
             {loading?<div className="spin" style={{width:14,height:14,margin:"0 auto"}}></div>:(isReg?"Kayıt Ol":"Giriş Yap")}
           </button>
-          <button style={{background:"transparent",border:"none",color:"var(--info)",fontSize:13,cursor:"pointer",padding:0}} onClick={()=>{setIsReg(!isReg);setErrMsg("");setOkMsg("");}}>
+          <button className="link-btn" onClick={()=>{setIsReg(!isReg);setErrMsg("");setOkMsg("");}}>
             {isReg?"Hesabım var → Giriş Yap":"Hesabım yok → Kayıt Ol"}
           </button>
         </div>

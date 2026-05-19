@@ -5,9 +5,10 @@ function WatchlistTab({items,prc,hist,prcUpdatedAt,onToggle,openDetail,setTab,hi
   },[]);
   if(!items.length)return(
     <div className="empty-card" style={{margin:"32px 16px"}}>
-      <b>İzleme listeniz boş</b>
-      <p style={{marginTop:6,marginBottom:14,color:"var(--text2)",fontSize:13}}>Arama sayfasında hisse bulup izlemeye ekleyebilirsiniz.</p>
-      <button className="btn-sm" onClick={()=>setTab("search")}>Ara →</button>
+      <div className="ic">👀</div>
+      <div className="ttl">İzleme listeniz boş</div>
+      <div className="sub">Arama sayfasında hisse bulup izlemeye ekleyebilirsiniz.</div>
+      <button className="pri btn-pri" onClick={()=>setTab("search")}>+ Hisse ara</button>
     </div>
   );
   return(

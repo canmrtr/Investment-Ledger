@@ -196,10 +196,15 @@ function App({session}){
       clearTimeout(hideTimer);
       const target=e.target.closest("[data-tip]");
       if(!target)return;
-      // button ve a tag'leri için gösterme — bunlar zaten tıklanabilir (data-tip-force ile override edilebilir)
+      // button ve a tag'leri için: text içeriği varsa tooltip atla (zaten label kendisi);
+      // ikon-only (≤2 görünür karakter, emoji/sembol) ise tooltip göster.
+      // data-tip-force her durumda gösterir; data-tip-skip her durumda atlar.
       const tag=target.tagName.toLowerCase();
-      const isInteractive=(tag==="button"||tag==="a")&&!target.dataset.tipForce;
-      if(isInteractive)return;
+      if(target.dataset.tipSkip!=null)return;
+      if((tag==="button"||tag==="a")&&!target.dataset.tipForce){
+        const txt=(target.textContent||"").trim();
+        if(txt.length>2)return; // text button → atla
+      }
       target.setAttribute("data-tip-visible","");
       hideTimer=setTimeout(()=>target.removeAttribute("data-tip-visible"),2500);
     };
@@ -599,7 +604,7 @@ function App({session}){
             </button>
           )}
           {!(busy.p||busy.h)&&lastFetchAt&&(
-            <span style={{fontSize:11,color:"var(--text3)",padding:"4px 4px",whiteSpace:"nowrap"}}
+            <span className="topbar-freshness" style={{fontSize:11,color:"var(--text3)",padding:"4px 4px",whiteSpace:"nowrap"}}
               data-tip="Fiyatlar otomatik yenilenir · Ayarlar'dan manuel güncelle">
               {fmtAge(lastFetchAt)}
             </span>
@@ -930,7 +935,10 @@ function App({session}){
               return(
                 <div key={cfg.type} style={{marginTop:idx===0?0:20}}>
                   {/* Blok başlık — tıklanınca collapse; Alt B: accent-line pattern */}
-                  <div onClick={toggleBlock} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",background:"var(--bg3)",borderRadius:isOpen?"10px 10px 0 0":"10px",cursor:"pointer",userSelect:"none"}}>
+                  <div role="button" tabIndex={0} aria-expanded={isOpen} aria-label={cfg.label+" bloğu"}
+                    onClick={toggleBlock}
+                    onKeyDown={e=>{ if(e.key==="Enter"||e.key===" "){e.preventDefault();toggleBlock();} }}
+                    style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 16px",background:"var(--bg3)",borderRadius:isOpen?"10px 10px 0 0":"10px",cursor:"pointer",userSelect:"none"}}>
                     <span style={{fontSize:17,fontWeight:700,color:"var(--text)",letterSpacing:"-0.3px"}}>{cfg.label}</span>
                     <div style={{display:"flex",alignItems:"center",gap:8}}>
                       {blockDeltaPct!=null&&(
@@ -974,7 +982,7 @@ function App({session}){
                           const depSym=displaySym(p.currency||"TRY");
                           return(
                           <tr key={p.ticker} className="pos-row" onClick={()=>openDetail(p.ticker)}>
-                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span>{isPriceStale(prcUpdatedAt[p.ticker])&&<span className="badge stale" data-tip={"Fiyat "+fmtAge(new Date(prcUpdatedAt[p.ticker]).getTime())+" güncellendi"}>Fiyat eski</span>}{isDeposit&&p.maturityDate&&(()=>{const ms=new Date(p.maturityDate)-Date.now();const past=ms<0,soon=ms<30*86400000;const bg=past?"rgba(255,51,102,0.15)":soon?"rgba(255,184,0,0.15)":"rgba(0,217,126,0.08)";const col=past?"var(--err)":soon?"var(--warn)":"var(--ok)";return <span style={{fontSize:9,padding:"1px 5px",borderRadius:8,marginLeft:4,background:bg,color:col,whiteSpace:"nowrap"}}>Vade {fmtDateTR(p.maturityDate)}</span>;})()}{isBes&&<button className="btn-xs" onClick={(e)=>{e.stopPropagation();setBesModalPos(p);}} data-tip="Aylık güncelle" style={{marginLeft:6,padding:"2px 6px",fontSize:11}}>💰</button>}</div></td>
+                            <td className="l"><div className="tcell"><span className="tsym">{p.ticker}</span><span className="tname">{p.name}</span>{isPriceStale(prcUpdatedAt[p.ticker])&&<span className="badge stale" data-tip={"Fiyat "+fmtAge(new Date(prcUpdatedAt[p.ticker]).getTime())+" güncellendi"}>Fiyat eski</span>}{isDeposit&&p.maturityDate&&(()=>{const ms=new Date(p.maturityDate)-Date.now();const past=ms<0,soon=ms<30*86400000;const bg=past?"rgba(255,51,102,0.15)":soon?"rgba(255,184,0,0.15)":"rgba(0,217,126,0.08)";const col=past?"var(--err)":soon?"var(--warn)":"var(--ok)";return <span style={{fontSize:9,padding:"1px 5px",borderRadius:8,marginLeft:4,background:bg,color:col,whiteSpace:"nowrap"}}>Vade {fmtDateTR(p.maturityDate)}</span>;})()}{isBes&&<button className="btn-icon" onClick={(e)=>{e.stopPropagation();setBesModalPos(p);}} data-tip="Aylık güncelle" aria-label="BES aylık güncelle" style={{marginLeft:6}}>💰</button>}</div></td>
                             {!hide&&<td className="r">{(()=>{if(isGU2){const lbl={g:"g",quarter:"çeyrek",half:"yarım",full:"tam",republic:"Cumh."}[p.unit]||p.unit;return <>{fmtShares(p.shares/ozF2)}<span style={{fontSize:10,color:"var(--text2)",marginLeft:2}}>{lbl}</span></>;}if(isDeposit||isCash)return <span style={{fontSize:11,color:"var(--text2)"}}>{depSym}{fmt(p.shares,0)} anapara</span>;return fmtShares(p.shares);})()}</td>}
                             {!hide&&<td className="r mono" style={{color:"var(--text2)"}}>{(isDeposit||isCash)?"—":curPrc!=null?mask(cfg.sym+fmt(curPrc*ozF2,2)):"—"}</td>}
                             {!hide&&<td className="r">{p.mv?<>{mask((cfg.mixed?depSym:cfg.sym)+fmt(p.mv,0))}{isDeposit&&grossInt>0&&<div style={{fontSize:10,lineHeight:1.4,marginTop:1}}><span style={{color:"var(--text3)"}}>Brüt +{depSym}{fmt(grossInt,0)}</span><br/><span style={{color:"var(--ok)"}}>Net +{depSym}{fmt(netInt,0)}</span></div>}</>:"—"}</td>}
@@ -1011,7 +1019,7 @@ function App({session}){
                       return(
                         <div key={p.ticker} className="pcr" onClick={()=>openDetail(p.ticker)}>
                           <div className="pcr-left">
-                            <span className="pcr-ticker">{p.ticker}{isPriceStale(prcUpdatedAt[p.ticker])&&<span className="badge stale" data-tip={"Fiyat "+fmtAge(new Date(prcUpdatedAt[p.ticker]).getTime())+" güncellendi"}>Fiyat eski</span>}{p.type==="BES"&&<button className="btn-xs" onClick={(e)=>{e.stopPropagation();setBesModalPos(p);}} data-tip="Aylık güncelle" style={{marginLeft:6,padding:"2px 6px",fontSize:11}}>💰</button>}</span>
+                            <span className="pcr-ticker">{p.ticker}{isPriceStale(prcUpdatedAt[p.ticker])&&<span className="badge stale" data-tip={"Fiyat "+fmtAge(new Date(prcUpdatedAt[p.ticker]).getTime())+" güncellendi"}>Fiyat eski</span>}{p.type==="BES"&&<button className="btn-icon" onClick={(e)=>{e.stopPropagation();setBesModalPos(p);}} data-tip="Aylık güncelle" aria-label="BES aylık güncelle" style={{marginLeft:6}}>💰</button>}</span>
                             <span className="pcr-sub">{hide?"•••• | ••••":`${adetStr} | ${priceStr}`}</span>
                             {p.type==="DEPOSIT"&&grossIntM>0&&!hide&&<span style={{fontSize:10,color:"var(--ok)"}}>Net +{mSym}{fmt(netIntM,0)} faiz</span>}
                           </div>
@@ -1147,7 +1155,11 @@ function App({session}){
               </div>
               {/* Pozisyon listesi */}
               {rows.length===0?(
-                <div className="empty-card"><div className="ttl">Bu portföyde pozisyon yok</div></div>
+                <div className="empty-card">
+                  <div className="ic">📭</div>
+                  <div className="ttl">Bu portföyde pozisyon yok</div>
+                  <div className="sub">Henüz görüntülenecek varlık eklenmemiş.</div>
+                </div>
               ):(
                 <div className="card" style={{padding:"14px 16px"}}>
                   <div className="stitle" style={{marginBottom:12}}>
@@ -1290,7 +1302,7 @@ function App({session}){
               </div>}
             <div className="hint">Ticker başına ~8 sn · "Bağlantı Test" ile önce tek ticker dene</div>
             {connTest&&(
-              <div style={{marginTop:8,background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:8,padding:"10px 12px"}}>
+              <div className="cbox" style={{marginTop:8,marginBottom:0,padding:"10px 12px"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                   <span className="lbl">Test Sonucu</span>
                   <button className="btn-xs" onClick={()=>setConnTest(null)}>Kapat</button>

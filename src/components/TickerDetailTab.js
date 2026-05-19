@@ -131,7 +131,7 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType,portfoli
             <button className="pri btn-md" onClick={parseAI} disabled={aiParsing||!aiText.trim()}>{aiParsing?"Parse...":"AI Parse"}</button>
             <button className="btn-md" onClick={onClose} disabled={aiParsing}>İptal</button>
           </div>
-          {aiErr&&<div className="flash err" style={{fontSize:12}}>{aiErr}</div>}
+          {aiErr&&<div className="inline-alert err">{aiErr}</div>}
           <ConfirmBox data={aiParsed} onSave={saveAI} onCancel={()=>setAiParsed(null)}/>
         </div>
       )}
@@ -814,7 +814,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                   <div style={{fontSize:12,lineHeight:1.55,color:"var(--text2)"}}>
                     {showFullDesc?meta.description:meta.description.slice(0,260)+(meta.description.length>260?"…":"")}
                     {meta.description.length>260&&(
-                      <button onClick={()=>setShowFullDesc(s=>!s)} style={{background:"none",border:"none",color:"var(--info)",fontSize:12,cursor:"pointer",padding:"0 0 0 4px"}}>
+                      <button className="link-btn sm" onClick={()=>setShowFullDesc(s=>!s)} style={{marginLeft:4}}>
                         {showFullDesc?"daha az":"devamı"}
                       </button>
                     )}

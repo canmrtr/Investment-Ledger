@@ -183,8 +183,9 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
                 onBlur={e=>e.target.value&&form.type!=="CASH"&&form.type!=="DEPOSIT"&&fetchPrice(e.target.value)}
                 placeholder={form.type==="BES"?"AH, GARANTI...":form.type==="CASH"?"ZIRAAT_TRY":form.type==="DEPOSIT"?"AKBANK_VAD_1":"AAPL"} disabled={!!editTk}/>
               {form.type!=="BES"&&form.type!=="CASH"&&form.type!=="DEPOSIT"&&(
-                <button style={{whiteSpace:"nowrap",fontSize:12,padding:"7px 10px"}}
-                  onClick={()=>fetchPrice()} disabled={fetchP||!form.ticker}>
+                <button className="btn-sm" style={{whiteSpace:"nowrap"}}
+                  onClick={()=>fetchPrice()} disabled={fetchP||!form.ticker}
+                  aria-label="Fiyatı yenile">
                   {fetchP?<div className="spin" style={{width:12,height:12}}></div>:"↻"}
                 </button>
               )}
@@ -195,8 +196,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
                 <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
                   {CRYPTO_SYMBOLS.map(({sym,name})=>(
                     <button key={sym} type="button" className="btn-xs"
-                      onClick={()=>{set({ticker:sym,name});setCurPrice(null);fetchPrice(sym);}}
-                      style={{fontSize:10,padding:"3px 8px"}}>{sym}</button>
+                      onClick={()=>{set({ticker:sym,name});setCurPrice(null);fetchPrice(sym);}}>{sym}</button>
                   ))}
                 </div>
               </div>
@@ -366,7 +366,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               <input className="finp" type="number" step="any" min="0" max="100" value={form.reserveRatio}
                 onChange={e=>set({reserveRatio:e.target.value})}
                 placeholder="0"/>
-              <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>Kazanç dışı talep hesabı (örn. Serbest Plus: 10)</div>
+              <div style={{fontSize:12,color:"var(--text3)",marginTop:3}}>Kazanç dışı talep hesabı (örn. Serbest Plus: 10)</div>
             </div>
           )}
           {form.type==="DEPOSIT"&&(
@@ -375,7 +375,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               <input className="finp" type="date" value={form.maturityDate}
                 onChange={e=>set({maturityDate:e.target.value})}
                 min={today()}/>
-              <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>Boş bırakın = süresiz hesap (Serbest Plus vb.)</div>
+              <div style={{fontSize:12,color:"var(--text3)",marginTop:3}}>Boş bırakın = süresiz hesap (Serbest Plus vb.)</div>
             </div>
           )}
           {form.type==="DEPOSIT"&&form.shares&&+form.shares>0&&form.interestRate&&+form.interestRate>0&&form.date&&(()=>{

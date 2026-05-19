@@ -207,8 +207,8 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
       <div>
         <div className="cbox" style={{padding:18}}>
           <div className="lbl" style={{marginBottom:6,fontSize:13}}>Hangi tür işlem ekliyorsun?</div>
-          <div style={{fontSize:11,color:"var(--text2)",marginBottom:14}}>Devam etmek için varlık türünü seç. Sonradan değiştirebilirsin.</div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(150px,1fr))",gap:10}}>
+          <div style={{fontSize:12,color:"var(--text2)",marginBottom:14}}>Devam etmek için varlık türünü seç. Sonradan değiştirebilirsin.</div>
+          <div className="type-picker-grid">
             {ADD_TYPES.map(({type,label,desc})=>(
               <button key={type} data-test={`pick-${type}`} className="pick-card"
                 onClick={()=>{setPickedType(type);if(MANUEL_ONLY_TYPES.has(type))setMode("manuel");}}>
@@ -251,7 +251,7 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
           <button className="pri" onClick={parseText} disabled={parsing||!textInput.trim()}>
             {parsing?"Parse ediliyor...":"AI ile Parse Et"}
           </button>
-          {parseErr&&<div className="flash err" style={{marginTop:10}}>{parseErr}</div>}
+          {parseErr&&<div className="inline-alert err">{parseErr}</div>}
           <ConfirmBox data={parsed} onSave={saveTx} onCancel={()=>setParsed(null)}/>
         </div>
       )}
@@ -261,12 +261,12 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
           <div style={{marginBottom:12}}>
             <div className="lbl" style={{marginBottom:8}}>Broker ekran görüntüsü</div>
             <input type="file" accept="image/*" onChange={e=>setImgFile(e.target.files[0])} style={{fontSize:13}}/>
-            {imgFile&&<div style={{fontSize:11,color:"var(--text2)",marginTop:6}}>{imgFile.name} · {(imgFile.size/1024).toFixed(0)} KB</div>}
+            {imgFile&&<div style={{fontSize:12,color:"var(--text2)",marginTop:6}}>{imgFile.name} · {(imgFile.size/1024).toFixed(0)} KB</div>}
           </div>
           <button className="pri" onClick={parseImage} disabled={parsing||!imgFile}>
             {parsing?"Okunuyor...":"Görüntüyü Oku"}
           </button>
-          {parseErr&&<div className="flash err" style={{marginTop:10}}>{parseErr}</div>}
+          {parseErr&&<div className="inline-alert err">{parseErr}</div>}
           <ConfirmBox data={parsed} onSave={saveTx} onCancel={()=>setParsed(null)}/>
         </div>
       )}

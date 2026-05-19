@@ -75,10 +75,12 @@ function ConfirmBox({data,onSave,onCancel}){
                   {!tx._priceFallback&&tx._priceAutoFilled&&<span style={{fontSize:10,padding:"1px 5px",borderRadius:10,background:"rgba(0,217,126,0.12)",color:"var(--ok)",fontWeight:600}}>↻ otomatik</span>}
                 </span>
                 <span className="mono" style={{fontSize:12,fontWeight:600,marginLeft:"auto"}}>{c}{fmt(total,0)}</span>
-                <button onClick={()=>setEditIdx(isEdit?null:idx)} data-tip={isEdit?"Düzenlemeyi kapat":"Bu işlemi düzenle"}
-                  style={{padding:"3px 7px",fontSize:12,color:isEdit?"var(--info)":"var(--text3)",borderColor:"var(--border)",background:"transparent"}}>✎</button>
-                <button onClick={()=>remove(idx)} data-tip="Bu işlemi listeden çıkar"
-                  style={{padding:"3px 8px",fontSize:14,lineHeight:1,color:"var(--err)",borderColor:"rgba(255,51,102,0.25)",background:"transparent"}}>×</button>
+                <button className="btn-icon" onClick={()=>setEditIdx(isEdit?null:idx)}
+                  data-tip={isEdit?"Düzenlemeyi kapat":"Bu işlemi düzenle"} aria-label={isEdit?"Düzenlemeyi kapat":"Bu işlemi düzenle"}
+                  style={{color:isEdit?"var(--info)":"var(--text3)",background:"transparent"}}>✎</button>
+                <button className="btn-icon btn-danger-out" onClick={()=>remove(idx)}
+                  data-tip="Bu işlemi listeden çıkar" aria-label="Bu işlemi listeden çıkar"
+                  style={{background:"transparent"}}>×</button>
               </div>
               {isEdit&&(
                 <div style={{padding:"8px 12px 10px",borderTop:"1px solid var(--border)",display:"flex",flexWrap:"wrap",gap:8,alignItems:"flex-end"}}>

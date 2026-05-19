@@ -159,7 +159,7 @@ function AccountSection({user,profile,flash_,confirm_,onSaved}){
         <div style={{background:"var(--bg3)",borderRadius:8,padding:"10px 12px",marginTop:8}}>
           <div className="kk" style={{marginBottom:4}}>Kullanıcı adı</div>
           <input className="finp sm" value={uname} onChange={e=>setUname(e.target.value.toLowerCase())} placeholder="ornek_user" maxLength={20} style={{marginBottom:4}}/>
-          <div style={{fontSize:10,color:"var(--text3)",marginBottom:8}}>3-20 karakter · küçük harf, rakam, alt tire</div>
+          <div style={{fontSize:12,color:"var(--text3)",marginBottom:8}}>3-20 karakter · küçük harf, rakam, alt tire</div>
           <div className="brow">
             <button className="pri btn-md" onClick={saveUname} disabled={busy||!uname}>{busy?"Kaydediliyor...":"Kaydet"}</button>
             <button className="btn-md" onClick={cancel} disabled={busy}>İptal</button>
