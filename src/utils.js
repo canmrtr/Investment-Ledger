@@ -552,14 +552,47 @@ const COMMODITY_ICONS = {
 };
 
 // signOut'ta çağrılır — tüm il_* localStorage keylerini temizler ki kullanıcı
-// değişiminde state sızmasın. Whitelist: il_theme cihaz tercihi, il_fx paylaşımlı
-// FX cache.
+// değişiminde state sızmasın. Whitelist: il_theme + il_disp_cur cihaz tercihi,
+// il_fx paylaşımlı FX cache. User-scoped suffix'li key'ler (il_prc_<uid> vs.)
+// startsWith("il_") ile zaten yakalanır.
 const clearUserLocalKeys = () => {
-  const PRESERVE = new Set(["il_theme", "il_fx"]);
+  const PRESERVE = new Set(["il_theme", "il_fx", "il_disp_cur"]);
   Object.keys(localStorage).forEach(k => {
     if (k.startsWith("il_") && !PRESERVE.has(k)) {
       localStorage.removeItem(k);
     }
   });
+};
+
+// Sprint 22 #5: User-scope LS key prefix. Pattern `il_<base>_<userId>` matches
+// the existing SearchTab `il_recent_${userId}` convention so all user-scoped
+// keys share one shape. Device-pref keys (`il_theme`, `il_fx`, `il_disp_cur`)
+// stay global — they're not in this list.
+const USER_SCOPED_LS_BASES = [
+  "il_prc",
+  "il_hist",
+  "il_hide",
+  "il_last_fetch",
+  "il_nudge_dismissed",
+  "il_active_portfolio",
+];
+
+const userLSKey = (base, uid) => (uid ? `${base}_${uid}` : base);
+
+// One-time migrator: copies legacy non-scoped value to `il_<base>_<uid>` on
+// first login post-deploy. Idempotent — runs every App mount; no-op once the
+// legacy key is gone. Existing user-scoped data is never overwritten (per-user
+// key wins). Call at the top of App before useState initializers so reads pick
+// up the migrated values immediately.
+const migrateUserLSKeys = (uid) => {
+  if (!uid) return;
+  for (const base of USER_SCOPED_LS_BASES) {
+    const scopedKey = `${base}_${uid}`;
+    if (localStorage.getItem(scopedKey) !== null) continue; // already migrated
+    const legacy = localStorage.getItem(base);
+    if (legacy === null) continue;
+    localStorage.setItem(scopedKey, legacy);
+    localStorage.removeItem(base);
+  }
 };
 

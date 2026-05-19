@@ -40,6 +40,10 @@ const DEPOSIT_TAX_RATE=0.175; // TRY mevduat stopaj oranı
 // ── Main App ─────────────────────────────────────────────────────
 function App({session}){
   const user=session.user;
+  // Sprint 22 #5: hoist legacy il_<base> keys to il_<base>_<uid> before any
+  // useState reads from LS. No-op after first migration; safe on every render.
+  migrateUserLSKeys(user.id);
+  const _uk=(base)=>userLSKey(base,user.id);
   const [tab,setTab]=useState("dashboard");
   const [navTicker,setNavTicker]=useState("");
   const [selectedTicker,setSelectedTicker]=useState(null); // detay sayfası için
@@ -79,12 +83,12 @@ function App({session}){
   });
   const [publicViewData,setPublicViewData]=useState(null);
   const [activePortfolioId,setActivePortfolioId]=useState(null); // set by loadData after server validation
-  const [prc,setPrc_]=useState(()=>{const p=LS.get("il_prc",null);return p?p.p:{};});
-  const [pdate,setPdate]=useState(()=>{const p=LS.get("il_prc",null);return p?p.d:"—";});
+  const [prc,setPrc_]=useState(()=>{const p=LS.get(_uk("il_prc"),null);return p?p.p:{};});
+  const [pdate,setPdate]=useState(()=>{const p=LS.get(_uk("il_prc"),null);return p?p.d:"—";});
   const [prcUpdatedAt,setPrcUpdatedAt]=useState({}); // {ticker: ISO} — price_cache.updated_at; synthetic tipler için boş.
   const [divCalByTicker,setDivCalByTicker]=useState({}); // {ticker: [{ex_date,amount,...}]} — dividend-calendar in-memory mirror of LS cache.
-  const [hist,setHist_]=useState(()=>LS.get("il_hist",{}));
-  const [hide,setHide_]=useState(()=>LS.get("il_hide",false));
+  const [hist,setHist_]=useState(()=>LS.get(_uk("il_hist"),{}));
+  const [hide,setHide_]=useState(()=>LS.get(_uk("il_hide"),false));
   const [displayCur,setDisplayCur_]=useState(()=>LS.get("il_disp_cur","USD"));
   const [themeMode,setThemeMode_]=useState(()=>LS.get("il_theme","system"));
   const [fxRates,setFxRates]=useState(()=>{const c=fxCacheGet();return c?c.rates:null;});
@@ -97,8 +101,8 @@ function App({session}){
   const [distMode,setDistMode]=useState("mv"); // "cost" | "mv" — pie chart mode
   const [busy,setBusy]=useState({p:false,h:false,d:false});
   const [pprog,setPprog]=useState("");
-  const [lastFetchAt,setLastFetchAt_]=useState(()=>LS.get("il_last_fetch",null));
-  const setLastFetchAt=ts=>{setLastFetchAt_(ts);LS.set("il_last_fetch",ts);};
+  const [lastFetchAt,setLastFetchAt_]=useState(()=>LS.get(_uk("il_last_fetch"),null));
+  const setLastFetchAt=ts=>{setLastFetchAt_(ts);LS.set(_uk("il_last_fetch"),ts);};
   const [flash,setFlash]=useState(null);
   const [menuOpen,setMenuOpen]=useState(false);
   useEffect(()=>{
@@ -112,13 +116,13 @@ function App({session}){
   const [watchlistItems,setWatchlistItems]=useState([]);
   const [connTest,setConnTest]=useState(null);  // {ok:bool, status:int, body:str} — Settings → Bağlantı Test çıktısı
   const [statusOpen,setStatusOpen]=useState(false);
-  const [nudgeDismissed,setNudgeDismissed]=useState(()=>LS.get('il_nudge_dismissed',{}));
+  const [nudgeDismissed,setNudgeDismissed]=useState(()=>LS.get(_uk('il_nudge_dismissed'),{}));
   const [healthRedCount,setHealthRedCount]=useState(null);
   const [besModalPos,setBesModalPos]=useState(null);
 
-  const savePrc=(p,d)=>{setPrc_(p);setPdate(d);LS.set("il_prc",{p,d});};
-  const saveHist=h=>{setHist_(h);LS.set("il_hist",h);};
-  const saveHide=v=>{setHide_(v);LS.set("il_hide",v);};
+  const savePrc=(p,d)=>{setPrc_(p);setPdate(d);LS.set(_uk("il_prc"),{p,d});};
+  const saveHist=h=>{setHist_(h);LS.set(_uk("il_hist"),h);};
+  const saveHide=v=>{setHide_(v);LS.set(_uk("il_hide"),v);};
   const setDisplayCur=v=>{setDisplayCur_(v);LS.set("il_disp_cur",v);};
   const applyTheme=(mode)=>{
     let resolved=mode;
@@ -229,9 +233,9 @@ function App({session}){
     const pfls=await sb.from("portfolios").select("id,name,is_public,privacy_level").eq("user_id",user.id).order("created_at");
     const plist=pfls.data||[];
     setPortfolios(plist);
-    let pid=localStorage.getItem("il_active_portfolio");
+    let pid=localStorage.getItem(_uk("il_active_portfolio"));
     const pids=plist.map(p=>p.id);
-    if(!pid||!pids.includes(pid)){pid=plist[0]?.id||null;if(pid)localStorage.setItem("il_active_portfolio",pid);}
+    if(!pid||!pids.includes(pid)){pid=plist[0]?.id||null;if(pid)localStorage.setItem(_uk("il_active_portfolio"),pid);}
     setActivePortfolioId(pid);
     if(!pid){setBusy(b=>({...b,d:false}));return;}
     // Adım 2: portfolio-scoped data paralel çek
@@ -752,7 +756,7 @@ function App({session}){
               const dismiss=(id)=>{
                 const next={...nudgeDismissed,[id]:now+7*24*60*60*1000};
                 setNudgeDismissed(next);
-                LS.set('il_nudge_dismissed',next);
+                LS.set(_uk('il_nudge_dismissed'),next);
               };
               const activeNudges=computeNudges(allDisp,txs,healthRedCount,annualRate,displayCur)
                 .filter(n=>!nudgeDismissed[n.id]||nudgeDismissed[n.id]<now)
