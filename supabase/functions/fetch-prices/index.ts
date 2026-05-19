@@ -66,6 +66,13 @@ async function yfPrice(ticker, date) {
   return { price: c.close[bestIdx], currency: c.meta?.currency || "TRY" };
 }
 
+// Sprint 22 "Giriş Kalitesi" bar: closes-only 52W high/low (conservative vs intraday).
+function compute52w(bars) {
+  const closes = bars.map(b => b.c).filter(c => c != null);
+  if (!closes.length) return { h_52w: null, l_52w: null };
+  return { h_52w: Math.max(...closes), l_52w: Math.min(...closes) };
+}
+
 async function yfHistorical(ticker) {
   const c = await yfChart(ticker, "1y");
   if (c.error) return { error: `yfHistorical: ${c.error}` };
@@ -84,7 +91,8 @@ async function yfHistorical(ticker) {
     price: last,
     currency: c.meta?.currency || "TRY",
     d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1),
-    p_d1, p_w1, p_m1, p_m3, p_m6, p_y1
+    p_d1, p_w1, p_m1, p_m3, p_m6, p_y1,
+    ...compute52w(bars)
   };
 }
 
@@ -107,7 +115,8 @@ async function yfHistoricalUS(ticker) {
     price: last,
     currency: "USD",
     d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1),
-    p_d1, p_w1, p_m1, p_m3, p_m6, p_y1
+    p_d1, p_w1, p_m1, p_m3, p_m6, p_y1,
+    ...compute52w(bars)
   };
 }
 
@@ -257,7 +266,7 @@ async function massiveHistorical(ticker, from, to, apiKey) {
   const chg = (old) => (old != null ? (last / old - 1) * 100 : null);
   const p_d1 = get(n-2), p_w1 = get(n-6), p_m1 = get(n-22);
   const p_m3 = get(n-66), p_m6 = get(n-132), p_y1 = get(0);
-  return { price: last, d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1), p_d1, p_w1, p_m1, p_m3, p_m6, p_y1 };
+  return { price: last, d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1), p_d1, p_w1, p_m1, p_m3, p_m6, p_y1, ...compute52w(bars) };
 }
 
 async function massiveMeta(ticker, apiKey) {
@@ -501,6 +510,7 @@ Deno.serve(async (req) => {
             { ticker, price: result.price, d1: result.d1, w1: result.w1, m1: result.m1,
               y1: result.y1, p_d1: result.p_d1, p_w1: result.p_w1, p_m1: result.p_m1,
               p_m3: result.p_m3, p_m6: result.p_m6, p_y1: result.p_y1,
+              h_52w: result.h_52w ?? null, l_52w: result.l_52w ?? null,
               updated_at: new Date().toISOString() },
             { onConflict: "ticker" }
           );

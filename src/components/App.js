@@ -256,7 +256,7 @@ function App({session}){
       const nUpd={};
       let latestDate=pdate;
       for(const c of pc.data){
-        nh[c.ticker]={last:num(c.price),d1:num(c.d1),w1:num(c.w1),m1:num(c.m1),y1:num(c.y1),p_d1:num(c.p_d1),p_w1:num(c.p_w1),p_m1:num(c.p_m1),p_m3:num(c.p_m3),p_m6:num(c.p_m6),p_y1:num(c.p_y1)};
+        nh[c.ticker]={last:num(c.price),d1:num(c.d1),w1:num(c.w1),m1:num(c.m1),y1:num(c.y1),p_d1:num(c.p_d1),p_w1:num(c.p_w1),p_m1:num(c.p_m1),p_m3:num(c.p_m3),p_m6:num(c.p_m6),p_y1:num(c.p_y1),h_52w:num(c.h_52w),l_52w:num(c.l_52w)};
         if(c.price!=null)np[c.ticker]=+c.price;
         if(c.updated_at)nUpd[c.ticker]=c.updated_at;
         const d=c.updated_at?.split("T")[0];

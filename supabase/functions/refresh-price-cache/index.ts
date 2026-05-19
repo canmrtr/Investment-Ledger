@@ -47,7 +47,12 @@ const yfHistoricalUS = async (ticker) => {
   const chg = (old) => (old != null ? (last / old - 1) * 100 : null);
   const p_d1 = get(n - 2), p_w1 = get(n - 6), p_m1 = get(n - 22);
   const p_m3 = get(n - 66), p_m6 = get(n - 132), p_y1 = get(0);
-  return { price: last, d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1), p_d1, p_w1, p_m1, p_m3, p_m6, p_y1 };
+  // 52W high/low from daily closes (Sprint 22 "Giriş Kalitesi" bar). Closes-only
+  // is conservative vs. intraday extremes but matches what we already have.
+  const closes = bars.map(b => b.c).filter(c => c != null);
+  const h_52w = closes.length ? Math.max(...closes) : null;
+  const l_52w = closes.length ? Math.min(...closes) : null;
+  return { price: last, d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1), p_d1, p_w1, p_m1, p_m3, p_m6, p_y1, h_52w, l_52w };
 };
 
 // Massive.com historical — Yahoo başarısız olursa yedek.
@@ -65,7 +70,11 @@ const massiveHistorical = async (ticker, massiveKey) => {
   const chg = (old) => (old != null ? (last / old - 1) * 100 : null);
   const p_d1 = get(n - 2), p_w1 = get(n - 6), p_m1 = get(n - 22);
   const p_m3 = get(n - 66), p_m6 = get(n - 132), p_y1 = get(0);
-  return { price: last, d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1), p_d1, p_w1, p_m1, p_m3, p_m6, p_y1 };
+  // 52W high/low — see Sprint 22 note in yfHistoricalUS above.
+  const closes = bars.map(b => b.c).filter(c => c != null);
+  const h_52w = closes.length ? Math.max(...closes) : null;
+  const l_52w = closes.length ? Math.min(...closes) : null;
+  return { price: last, d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1), p_d1, p_w1, p_m1, p_m3, p_m6, p_y1, h_52w, l_52w };
 };
 
 // Yahoo birincil, Massive yedek.

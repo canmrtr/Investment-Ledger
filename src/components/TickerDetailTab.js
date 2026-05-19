@@ -734,6 +734,46 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
         </React.Fragment>
       )}
 
+      {/* Giriş Kalitesi (52W) — avg_cost'u 52W close aralığına yerleştiren bar.
+          Held US_STOCK + TRY-cinsli BIST için; h_52w/l_52w/avgCost hepsi mevcutsa render. */}
+      {p&&!isDeposit&&!isBes&&(p.type==="US_STOCK"||(p.type==="BIST"&&p.currency==="TRY"))&&hist[ticker]?.h_52w!=null&&hist[ticker]?.l_52w!=null&&p.avgCost>0&&(()=>{
+        const h=hist[ticker].h_52w, l=hist[ticker].l_52w, cost=p.avgCost, cur=prc[ticker];
+        if(h<=l)return null;
+        const range=h-l;
+        const clamp=(v)=>Math.max(0,Math.min(100,v));
+        const costPct=clamp(((cost-l)/range)*100);
+        const curPct=cur!=null?clamp(((cur-l)/range)*100):null;
+        const sig=costPct<33?"good":costPct>66?"bad":"neutral";
+        const word=sig==="good"?"düşük bantta":sig==="bad"?"zirveye yakın":"orta bantta";
+        const icon=sig==="good"?"🟢":sig==="bad"?"🔴":"🟡";
+        const wColor=sig==="good"?"var(--ok)":sig==="bad"?"var(--err)":"var(--warn)";
+        const cSym=p.type==="BIST"?"₺":(p.currency==="EUR"?"€":"$");
+        return (
+          <div style={{padding:"10px 14px",background:"var(--bg2)",borderRadius:8,border:"0.5px solid var(--border)",marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:10,fontSize:12,flexWrap:"wrap"}}>
+              <span style={{color:"var(--text2)"}}>
+                <span style={{fontSize:13,marginRight:4}}>{icon}</span>
+                <strong style={{color:"var(--text)",fontWeight:500}}>Giriş Kalitesi</strong>{" "}
+                <span style={{color:wColor}}>{word}</span>
+                <span style={{color:"var(--text3)",marginLeft:6,fontSize:11}}>(52H)</span>
+              </span>
+              <span className="mono" style={{fontSize:11,color:"var(--text3)"}}>
+                {cSym}{fmt(l,2)} – {cSym}{fmt(h,2)}
+              </span>
+            </div>
+            <div style={{position:"relative",height:8,background:"linear-gradient(90deg,var(--ok) 0%,var(--warn) 50%,var(--err) 100%)",borderRadius:4,opacity:0.65}}>
+              <div data-tip={`Ort. Maliyet: ${cSym}${fmt(cost,2)}`} style={{position:"absolute",left:`calc(${costPct}% - 1.5px)`,top:-4,bottom:-4,width:3,background:"var(--text)",borderRadius:1.5,cursor:"help"}}/>
+              {curPct!=null&&(
+                <div data-tip={`Güncel: ${cSym}${fmt(cur,2)}`} style={{position:"absolute",left:`calc(${curPct}% - 5px)`,top:-2,width:10,height:10,background:"var(--text)",border:"2px solid var(--bg2)",borderRadius:"50%",cursor:"help"}}/>
+              )}
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:10,color:"var(--text3)"}}>
+              <span>52H düşük</span><span>orta</span><span>52H yüksek</span>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Detay satırı — Ort. Maliyet · Realized · Unrealized · Komisyon (sadece held için) */}
       {p&&!isDeposit&&!isBes&&(
         <div style={{display:"flex",flexWrap:"wrap",gap:14,padding:"8px 14px",marginBottom:14,fontSize:11,color:"var(--text2)",background:"var(--bg2)",borderRadius:8,border:"0.5px solid var(--border)"}}>

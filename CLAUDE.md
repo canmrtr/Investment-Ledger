@@ -27,7 +27,7 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 | `transactions` | user (RLS) | BUY/SELL/DIV kayıtları; `way` CHECK `ANY(ARRAY['BUY','SELL','DIV'])`; **portfolio_id FK** |
 | `splits` | user (RLS) | ticker, split_date, ratio; **portfolio_id FK** |
 | `profiles` | user (RLS, public read) | user_id PK, username, display_name, parse_calls_today/date (20/gün limit, `increment_parse_calls` RPC ile) |
-| `price_cache` | paylaşımlı (service_role write only) | ticker PK, price + d1/w1/m1/y1 + p_d1…p_y1 + updated_at |
+| `price_cache` | paylaşımlı (service_role write only) | ticker PK, price + d1/w1/m1/y1 + p_d1…p_y1 + h_52w/l_52w (Sprint 22, closes-only) + updated_at |
 | `portfolios` | user (RLS) | id PK, user_id FK, name, privacy_level (`full` \| `allocation_only`; `private` değer geçersiz); "Ana Portföy" backfill migration uygulandı |
 | `watchlist` | user (RLS) | id PK, user_id FK, ticker, asset_type, added_at |
 | `follows` | user (RLS) | follower_id + followee_id FK; Social Faz 1 altyapısı |
@@ -56,7 +56,7 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 - **AnalysisTab**: 4 bölüm başlığı (Performans & Getiri / Dağılım / Fundamentals / Risk Değerlendirmesi); Varlık/Bölge/Sektör Dağılımı (pie, collapsible); **Portföy Sağlık** (Portföy F/K KPI + 6 portföy seviyesi sonuç cümlesi "🟢 Borçlanma seviyesi sağlıklı" + "Detay ▾" toggle ile 8 metrik dense tablo, lazy-fetch); Komisyon (broker×yıl), Kazanan/Kaybeden, Konsantrasyon Riski, Break-Even, Potansiyel Kayıp, Dönem Bazlı Getiri (benchmark), FX Risk, 6 Aylık Performans, **Piyasa Düşüşü Dayanıklılığı** (MV-weighted 1-10 skor + tek-satır verdict "güçlü ≥7 / orta ≥5 / kırılgan <5" + composition "%X dayanıklı şirket" satırı + collapsible per-ticker bar grid; BIST bankaları + non-equity `isFundEligible` ile kapsam dışı), Temettü Özeti; global asset-type filtre (.fbar)
 - **SearchTab**: ~11k ticker (US + BIST); autofocus sadece desktop'ta (`!('ontouchstart' in window)`); portföy + discovery; "+ İzle" / "✓ İzleniyor" non-held toggle
 - **AddTab**: 8 asset type picker → text/image/csv/manuel; CASH/DEPOSIT Manuel-only (text/image/csv gizli); ConfirmBox + ManuelPosForm
-- **TickerDetailTab**: held + discovery mode; "İzleniyor" badge + toggle buton; FAB context-aware
+- **TickerDetailTab**: held + discovery mode; "İzleniyor" badge + toggle buton; FAB context-aware; held US_STOCK/BIST için "Giriş Kalitesi" 52W bar (gradient + avg_cost vertical marker + güncel fiyat disk marker; h_52w/l_52w NULL ise gizli)
 - **HistoryTab**: filtre toolbar, accordion ticker gruplu — ana nav'da yok; Settings → "İşlem Geçmişi" → "Tüm İşlemleri Gör →"
 - **Rehber** (yeni, hamburger nav): coming soon placeholder — yatırım temelleri + portföy yönetimi rehberi
 - **Settings** (hamburger menüden açılır): İşlem Geçmişi, Fiyat&Veri, Bakım, Export CSV, Account, Durum
