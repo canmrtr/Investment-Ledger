@@ -37,7 +37,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Bekleyenler / Blokerli
 
-- [ ] **TEFAS WAF testi** `[S]` `[P1]` `Sprint-22 adayı` — Endpoint: `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` (POST, `X-Requested-With` header). Bloker: F5 WAF cloud IP'leri engelliyor (Nisan 2026 — yeniden test edilmedi). Test adımı: plan Task 1'e bakınız. Çalışırsa → TEFAS entegrasyonu tam akış; WAF hâlâ engelliyorsa `fonbul.com` fallback devreye girer (plan Task 4). Plan: `docs/superpowers/plans/2026-05-13-tefas-integration.md`
+- [x] **TEFAS WAF testi** `[S]` `[P1]` `Sprint-22` `2026-05-19` — Bloker temizlendi. Legacy `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` (form-encoded POST) 2026'da retire edildi (404 "Method not found or disabled"); WAF değil, endpoint silinmiş. Yeni JSON API: `https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir` (POST, `Content-Type: application/json`, payload `{fonKodu, periyod}`). Local test 200 + resultList döndü, herhangi bir WAF/IP ban yok. Plan dosyası yeni endpoint için güncellendi; full integration (~L, 9 sub-task) Sprint 23+ adayı olarak "Asset Type Genişletme" bölümünde duruyor. Plan: `docs/superpowers/plans/2026-05-13-tefas-integration.md`
 
 ---
 

@@ -31,48 +31,65 @@
 
 ---
 
-## Task 1: WAF Test
+## Task 1: WAF Test ✅ COMPLETED (2026-05-19)
 
-Before writing any code, verify whether the TEFAS endpoint is reachable from Supabase cloud IPs. This determines whether the primary or fallback is used.
+**Result: Endpoint reachable, no WAF block.** Legacy `/api/DB/BindHistoryInfo`
+(form-encoded) was retired in 2026 (`tefas-crawler` lib changelog). New
+JSON endpoints are live:
 
-**Files:** none (test only)
+- **Price (per-fund, periyod-based):** `POST https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir`
+- **Listing (kind-filtered):** `POST https://www.tefas.gov.tr/api/funds/fonGetiriBazliBilgiGetir`
 
-- [ ] **Step 1: Open Supabase Edge Function test tab**
+Headers required:
 
-  Go to Supabase Dashboard → Edge Functions → `fetch-prices` → Test tab.
-  Send this JSON body and observe the response:
+```
+Content-Type: application/json
+Accept: application/json, text/plain, */*
+User-Agent: Mozilla/5.0 ... (any browser UA)
+```
 
-  ```json
-  { "ticker": "AAK", "mode": "price", "asset_type": "TEFAS" }
-  ```
+Smoke test (2026-05-19 local IP):
 
-  Expected at this point: error (TEFAS branch not yet implemented). This is just to confirm the test tab is accessible.
+```bash
+curl -s -X POST "https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir" \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/plain, */*" \
+  -H "User-Agent: Mozilla/5.0" \
+  -d '{"fonKodu":"YAC","periyod":1}'
+```
 
-- [ ] **Step 2: Test TEFAS endpoint directly via curl**
+Response shape:
 
-  Run from your local terminal to simulate what the edge function would do:
+```json
+{
+  "errorCode": null,
+  "errorMessage": null,
+  "resultList": [
+    {
+      "fonKodu": "YAC",
+      "fonUnvan": "YAPI KREDİ PORTFÖY İKİNCİ FON SEPETİ FONU",
+      "kategoriDerece": 59,
+      "kategoriFonSay": 98,
+      "tarih": "2026-04-20",
+      "fiyat": 13.92976
+    },
+    ...
+  ]
+}
+```
 
-  ```bash
-  curl -s -X POST "https://www.tefas.gov.tr/api/DB/BindHistoryInfo" \
-    -H "Content-Type: application/x-www-form-urlencoded" \
-    -H "X-Requested-With: XMLHttpRequest" \
-    -H "User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" \
-    -d "fonkod=AAK&bastarih=13.05.2026&bittarih=13.05.2026"
-  ```
+`periyod` = months back (1 = last month, 12 = last 12 months). NAV in `fiyat`,
+date in `tarih` (`YYYY-MM-DD`). `market_cap`, `number_of_shares`,
+`number_of_investors` and asset-allocation breakdown columns are **no longer
+exposed** by the new API.
 
-  **If response contains `"data"` array with `FIYAT` field → primary source works, proceed.**
-  **If 403/empty/timeout → WAF is blocking, fallback source needed (see Task 3 note).**
-
-- [ ] **Step 3: Note result in GOTCHAS.md**
-
-  Append to `GOTCHAS.md`:
-
-  ```
-  ## TEFAS WAF status (2026-05-13)
-  - Primary: https://www.tefas.gov.tr/api/DB/BindHistoryInfo
-  - Tested: [PASS / BLOCKED]
-  - Fallback if blocked: fonbul.com (same fund codes, check endpoint in Task 3)
-  ```
+**Implication for downstream tasks:**
+- Task 3 (edge fn routing) uses the new endpoint directly; `fonbul.com` fallback
+  is no longer the primary contingency — keep as defensive fallback for hard
+  outages.
+- Task 4 (catalog sync) needs to enumerate `kind` ∈ {YAT, EMK, BYF} via the
+  listing endpoint, then iterate per-fund for category metadata.
+- Add `User-Agent` to every request; bare/missing UA may be filtered.
 
 ---
 
