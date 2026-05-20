@@ -382,6 +382,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 - [ ] **`today` değişkeni üst-seviye fonksiyonu gölgeliyor** `[S]` `[P3]` — CAGR bileşeninde `const today = new Date().toISOString()...` (string) üst seviye `today` fonksiyonunu gölgeliyor. `todayStr` olarak adlandır. `→ App.js:~4195`
 - [ ] **PublicView çift padding** `[S]` `[P3]` — `app-main` zaten `padding:24px 20px 60px`; PublicView iç `padding:16px 16px 80px` ile birleşince alt ~140px. `→ App.js:~5235`
+- [ ] **`scripts/check-edge.sh`'a `deno check` adımı ekle** `[S]` `[P2]` — Sprint 22 bulgusu: `node --check` arrow function body'sinde aynı scope'ta `const` redeclaration'ı **sessizce** kabul ediyor (exit 0). Sprint 22 #4'te `refresh-price-cache` `yfHistoricalUS`'ta ikinci `const closes` çakışması yerel `npm run check:edge` gate'inden geçti, prod'da Deno+ESZIP runtime'da `BOOT_ERROR`/HTTP 503 olarak patladı. `deno check <fn>` strict ESM parse ile bu kör noktayı kapatır — `check-edge.sh`'a `node --check` yanına ekle. Detay: `Lessons.md` 2026-05-19 entry.
 
 ### Brand Fit & Jargon Temizliği (Grup A/B — Sprint-15 kapsamı)
 
@@ -430,6 +431,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **Frankfurter API fallback** `[S]` `[P2]` — Ücretsiz, SLA yok; ECB doğrudan XML feed (`sdw-wsrest.ecb.europa.eu`) fallback.
 - [ ] **İş Yatırım MaliTablo resmi olmayan endpoint izleme** `[S]` `[P2]` — Anti-bot değişikliğinde BIST fundamentals sessizce kırılır; response boş/HTML gelince kullanıcıya açık hata göster.
 - [ ] **Auto-fetch opt-in** `[S]` `[P2]` — Çok kullanıcıda rate limit zorlar; "otomatik güncelleme aralığı" kullanıcı ayarı ileride eklenebilir.
+- [ ] **`refresh-price-cache-6h` pg_cron secret'ını vault-okumaya migrate et** `[S]` `[P2]` — Sprint 22 bulgusu: `refresh-price-cache-6h` job command'ında `Authorization` header'a `Bearer <CRON_SECRET>` **literal string** olarak hardcoded yazılı. Secret rotation iki ayrı noktada (Edge Functions secret store + `cron.job.command` SQL) güncelleme gerektiriyor; Management API `/secrets` ile pg_cron literal'i diverge edebilir. `refresh-fund-cache-weekly` doğru pattern'i kullanıyor: `'Bearer ' || (SELECT value FROM vault.decrypted_secrets WHERE name = 'CRON_SECRET')`. `refresh-price-cache-6h` job'ı bu vault-okumalı forma migrate et — rotation tek noktaya iner. Detay: `Lessons.md` 2026-05-19 entry.
 
 ---
 
