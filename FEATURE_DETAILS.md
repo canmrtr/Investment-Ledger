@@ -90,6 +90,13 @@ Dashboard'daki 4 özet kart (hepsi **display currency**'de — toggle ile $ veya
 - **Cache**: LS `fund_${ticker}` 7 gün TTL; BIST'te edge function instance Map 6h TTL.
 - **Kapsam**: `US_STOCK` (held + discovery) + `BIST` (held + discovery, banka hariç). FUND/CRYPTO/GOLD'da hidden.
 
+### DCF Hızlı Değerleme (US-only)
+
+- **Veri**: `fetchFmp` 7. paralel URL — FMP `/stable/discounted-cash-flow?symbol=…` → `[{symbol,date,dcf,"Stock Price"}]`. `dcf` (hisse başı tahmini adil değer) edge fn cevabının **top-level alanı** — `metrics` jsonb'sine konmaz (checklist `totalN=Object.keys(metrics).length` ile 21 kriter sayar; `dcf` eklenseydi 22 olurdu). `raw` alanı gibi response-only — `fund_cache` tablosuna yazılmaz, migration yok.
+- **Negatif/sıfır DCF** (zararda şirket — FMP negatif döndürür) → `dcf:null`.
+- **BIST/EDGAR**: FMP DCF BIST'i desteklemez (HTTP 402); EDGAR fallback'te de yok. Bu modlarda `dcf` undefined → kart gizli.
+- **Frontend**: `TickerDetailTab` "Hızlı Değerleme (DCF)" kartı, fundamental checklist'in hemen üstünde. Guard: `effectiveType==="US_STOCK" && displayCurrency==="USD" && fund?.dcf>0 && price!=null`. Yükseliş potansiyeli `(dcf−price)/price×100`; eşik `≥%50` 🟢 "belirgin iskontolu" / `≥%25` 🟡 "hafif iskontolu" / `0–25` 🔴 "adil değere yakın" / `<0` 🔴 "pahalı". Held'de `price=prc[ticker]`, discovery'de `livePrice`. Zorunlu "tahmini" disclaimer satırı.
+
 ---
 
 ## Analiz Tab Kartları

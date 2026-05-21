@@ -548,6 +548,7 @@ async function fetchFmp(ticker, fmpKey) {
     bs:     `${base}/balance-sheet-statement?symbol=${ticker}&period=annual&limit=1&apikey=${fmpKey}`,
     cf:     `${base}/cash-flow-statement?symbol=${ticker}&period=annual&limit=1&apikey=${fmpKey}`,
     grade:  `${base}/grade?symbol=${ticker}&limit=5&apikey=${fmpKey}`,
+    dcf:    `${base}/discounted-cash-flow?symbol=${ticker}&apikey=${fmpKey}`,
   };
 
   const fetchSafe = (u) => fetch(u, { signal: AbortSignal.timeout(8000) }).then(async r => {
@@ -556,7 +557,7 @@ async function fetchFmp(ticker, fmpKey) {
     catch (_) { return { _err: "non-JSON", _status: r.status, _body: t.slice(0, 240) }; }
   }).catch(e => ({ _err: e.message }));
 
-  const [kmR, raR, incR, bsR, cfR, gradeR] = await Promise.all(Object.values(urls).map(fetchSafe));
+  const [kmR, raR, incR, bsR, cfR, gradeR, dcfR] = await Promise.all(Object.values(urls).map(fetchSafe));
 
   const km  = Array.isArray(kmR)  && kmR.length  ? kmR[0]  : null;
   const ra  = Array.isArray(raR)  && raR.length  ? raR[0]  : null;
@@ -601,6 +602,12 @@ async function fetchFmp(ticker, fmpKey) {
   const revGrowth  = cagr(incOldest?.revenue, revenue, yearsBack);
   const earnGrowth = cagr(incOldest?.netIncome, netIncome, yearsBack);
 
+  // DCF adil değer — FMP /stable/discounted-cash-flow; [{symbol,date,dcf,"Stock Price"}].
+  // metrics jsonb'sine KOYULMAZ (checklist totalN=Object.keys(metrics).length sayar).
+  // Negatif/sıfır DCF (zararda şirket) → null.
+  const dcfRow = Array.isArray(dcfR) && dcfR.length ? dcfR[0] : null;
+  const dcf = dcfRow && typeof dcfRow.dcf === "number" && dcfRow.dcf > 0 ? dcfRow.dcf : null;
+
   const metrics = {
     revenueGrowth5Y: revGrowth,
     earningsGrowth5Y: earnGrowth,
@@ -640,6 +647,7 @@ async function fetchFmp(ticker, fmpKey) {
     ok: true,
     metrics,
     grades,
+    dcf,
     annual: inc.slice(0,5).reverse().map(y=>({
       year: y.calendarYear||y.fiscalYear||y.date?.slice(0,4),
       revenue: y.revenue??null,
@@ -930,6 +938,7 @@ Deno.serve(async (req) => {
         metrics: fmp.metrics,
         grades: fmp.grades,
         annual: fmp.annual,
+        dcf: fmp.dcf,
         raw: fmp.raw,
       });
     }

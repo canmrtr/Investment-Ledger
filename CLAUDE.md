@@ -15,7 +15,7 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
   - `parse-transaction` — Claude Haiku 4.5, metin/görüntü → `{transactions:[...]}` array
   - `fetch-prices` — Massive (US/FX/Crypto/GOLD), Yahoo (BIST price/hist), Twelve Data + borsa-mcp (BIST meta)
   - `refresh-price-cache` — pg_cron 6h, stale-first batch
-  - `fetch-fundamentals` — FMP + EDGAR (US); İş Yatırım (BIST); 21 metrik + annual + grades; `mode:"ticker-list"` → ~11k ticker DB; `mode:"refresh-fund-cache"` → pg_cron haftalık stale refresh; `mode:"etf-country"` → FMP country-weightings (planlı)
+  - `fetch-fundamentals` — FMP + EDGAR (US); İş Yatırım (BIST); 21 metrik + annual + grades + `dcf` (FMP `/stable/discounted-cash-flow` adil değer, cevapta top-level — metrics jsonb'sine konmaz; US-only); `mode:"ticker-list"` → ~11k ticker DB; `mode:"refresh-fund-cache"` → pg_cron haftalık stale refresh; `mode:"etf-country"` → FMP country-weightings (planlı)
 - **PWA**: `manifest.json` + `service-worker.js` (root); `index.html`'de SW kayıt; icon-192/512.png mevcut.
 - **Secrets** (`Deno.env.get`): `MASSIVE_KEY`, `FMP_KEY`, `TWELVEDATA_KEY`, `ANTHROPIC_KEY`
 
@@ -57,7 +57,7 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 - **AnalysisTab**: 4 bölüm başlığı (Performans & Getiri / Dağılım / Fundamentals / Risk Değerlendirmesi); Varlık/Bölge/Sektör Dağılımı (pie, collapsible); **Portföy Sağlık** (Portföy F/K KPI + 6 portföy seviyesi sonuç cümlesi "🟢 Borçlanma seviyesi sağlıklı" + "Detay ▾" toggle ile 8 metrik dense tablo, lazy-fetch); Komisyon (broker×yıl), Kazanan/Kaybeden, Konsantrasyon Riski, Break-Even, Potansiyel Kayıp, Dönem Bazlı Getiri (benchmark), FX Risk, 6 Aylık Performans, **Piyasa Düşüşü Dayanıklılığı** (MV-weighted 1-10 skor + tek-satır verdict "güçlü ≥7 / orta ≥5 / kırılgan <5" + composition "%X dayanıklı şirket" satırı + collapsible per-ticker bar grid; BIST bankaları + non-equity `isFundEligible` ile kapsam dışı), Temettü Özeti; global asset-type filtre (.fbar)
 - **SearchTab**: ~11k ticker (US + BIST); autofocus sadece desktop'ta (`!('ontouchstart' in window)`); portföy + discovery; "+ İzle" / "✓ İzleniyor" non-held toggle
 - **AddTab**: 8 asset type picker → text/image/csv/manuel; CASH/DEPOSIT Manuel-only (text/image/csv gizli); ConfirmBox + ManuelPosForm
-- **TickerDetailTab**: held + discovery mode; "İzleniyor" badge + toggle buton; FAB context-aware; held US_STOCK/BIST için "Giriş Kalitesi" 52W bar (gradient + avg_cost vertical marker + güncel fiyat disk marker; h_52w/l_52w NULL ise gizli)
+- **TickerDetailTab**: held + discovery mode; "İzleniyor" badge + toggle buton; FAB context-aware; held US_STOCK/BIST için "Giriş Kalitesi" 52W bar (gradient + avg_cost vertical marker + güncel fiyat disk marker; h_52w/l_52w NULL ise gizli); US_STOCK/USD için fundamental checklist üstünde "Hızlı Değerleme (DCF)" kartı (`fund.dcf` adil değer + yükseliş potansiyeli `(dcf−price)/price`; renkli verdict ≥%50 🟢 / ≥%25 🟡 / <%25 🔴; `fund.dcf>0` yoksa gizli)
 - **HistoryTab**: filtre toolbar, accordion ticker gruplu — ana nav'da yok; Settings → "İşlem Geçmişi" → "Tüm İşlemleri Gör →"
 - **Rehber** (yeni, hamburger nav): coming soon placeholder — yatırım temelleri + portföy yönetimi rehberi
 - **Settings** (hamburger menüden açılır): İşlem Geçmişi, Fiyat&Veri, Bakım, Export CSV, Account, Durum

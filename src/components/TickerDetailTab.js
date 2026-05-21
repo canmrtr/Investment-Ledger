@@ -867,6 +867,41 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
         );
       })()}
 
+      {/* Hızlı Değerleme (DCF) — FMP discounted-cash-flow adil değeri.
+          Sadece US_STOCK/USD; fund.dcf yoksa (BIST, EDGAR fallback, zararda şirket) gizli. */}
+      {effectiveType==="US_STOCK"&&displayCurrency==="USD"&&fund?.dcf>0&&price!=null&&(()=>{
+        const fair=fund.dcf;
+        const upside=(fair-price)/price*100;
+        const sig=upside>=50?"good":upside>=25?"neutral":"bad";
+        const icon=sig==="good"?"🟢":sig==="neutral"?"🟡":"🔴";
+        const vColor=sig==="good"?"var(--ok)":sig==="neutral"?"var(--warn)":"var(--err)";
+        const word=upside>=50?"belirgin iskontolu":upside>=25?"hafif iskontolu":upside>=0?"adil değere yakın":"pahalı";
+        return(
+          <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
+              <div className="stitle" style={{marginBottom:0}}>Hızlı Değerleme (DCF)</div>
+              <span style={{fontSize:12,color:vColor,fontWeight:500,whiteSpace:"nowrap"}}>
+                <span style={{marginRight:4}}>{icon}</span>{word}
+              </span>
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:14,fontSize:12,color:"var(--text2)"}}>
+              <span data-tip="FMP indirgenmiş nakit akışı (DCF) modelinin hesapladığı hisse başı tahmini adil değer" style={{cursor:"help"}}>
+                Adil Değer (tahmini): <span className="mono" style={{color:"var(--text)"}}>{sym+fmt(fair,2)}</span>
+              </span>
+              <span>
+                Güncel Fiyat: <span className="mono" style={{color:"var(--text)"}}>{sym+fmt(price,2)}</span>
+              </span>
+              <span>
+                Yükseliş Potansiyeli: <span className="mono" style={{color:vColor,fontWeight:600}}>{(upside>=0?"+":"")+fmt(upside,1)}%</span>
+              </span>
+            </div>
+            <div style={{fontSize:10,color:"var(--text3)",marginTop:10,lineHeight:1.5}}>
+              DCF, geleceğe dönük nakit akışı tahminlerine dayanır; kesin değer değil, kaba bir referanstır.
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Fundamental — değer yatırımı checklist (US_STOCK + BIST) */}
       {supportsFund&&!isDeposit&&(
         <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
