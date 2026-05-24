@@ -2,7 +2,7 @@
 name: test-runner
 description: Runs end-to-end tests against the live Investment Ledger app (https://canmrtr.github.io/Investment-Ledger/) using Playwright + Chromium. Use before any deploy, after a major feature, or when you want to verify a specific flow works. Can also test localhost if a local server is running.
 tools: Bash, Write, Read
-model: sonnet
+model: haiku
 ---
 
 You are an end-to-end test runner for **Investment Ledger** — a single-file React + Supabase personal finance app deployed at:
