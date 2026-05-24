@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-16** (Sprint 20 ✅ kapandı; **Sprint 21 = Brand & Design Polish** (logo refresh + design audit Phase-1) devrede; önceki S21 adayları (Dayanıklılık Skoru, TEFAS WAF, 52W bar) → Sprint 22.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-21** (Sprint 21–22 ✅ kapandı; **Sprint 23 = UI Yapı Temizliği** (AnalysisTab Özet/Detay split + design audit Phase-2 kısmi) devrede. Plan: `sprints/sprint-23.md`.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -31,7 +31,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [x] **Mobile form grid classes** `[S]` `[P1]` `Sprint-21` `2026-05-16` — `.form-grid-2/3` reusable; ManuelPosForm + TickerDetailTab manuel quick-add + TickerDetailTab edit row + HistoryTab edit row migrate edildi; ≤640px tek kolona çöker.
 - [x] **Text size minimums** `[S]` `[P2]` `Sprint-21` `2026-05-16` — `.empty-card .sub` 12→13, `.ttl` 15→16, `.warn-card .wc-sub` 11→12, `.sg .hint` 11→12. `.lbl/.kk/.stitle` 10px ve tablo hücreleri 12px korundu (intentional dense labels).
 - [x] **Mobile touch targets ≥36px** `[S]` `[P1]` `Sprint-21` `2026-05-16` — `@media(max-width:640px)`: `.btn-xs/.btn-icon/.btn-sm` min 36×36; `.pos-row .btn-xs` ve `table .btn-xs` padding 8/10.
-- [ ] **Design audit Phase-2** `[M]` `[P2]` `Sprint-22+` — `design_audit.md` kalan 6 madde: #4 empty-state normalization, #6 button-like span→button, #7 card/panel consolidation, #8 tablet breakpoint, #9 tooltip consistency, #10 inline flash class.
+- [ ] **Design audit Phase-2** `[M]` `[P2]` `Sprint-23+` — `design_audit.md` kalan maddeler. ✅ #8 tablet breakpoint + #10 inline flash class Sprint 22'de kapandı. `Sprint-23` kapsamı: #4 empty-state normalization + #6 button-like span→button. Kalan (Sprint 24+): #7 card/panel consolidation, #9 tooltip consistency.
 
 ---
 
@@ -201,9 +201,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 - [x] **Dashboard: Kripto getirisi gösterilmiyor** `[S]` `[P1]` ✅ — Düzeltildi.
 
-- [ ] **Başabaş tablosu ve potansiyel kayıp bölümleri — Detay katmanına taşı** `[S]` `[P3]` — PO kararı (2026-05-15): Kaldırılmıyor; value-investing için başabaş noktası kritik. "AnalysisTab Özet/Detay iki katman" item'ı tamamlandığında otomatik Detay katmanına geçer. Bağımlılık: `AnalysisTab Özet / Detay iki katmana bölünsün`.
+- [x] ~~**Başabaş tablosu ve potansiyel kayıp bölümleri — Detay katmanına taşı**~~ `[S]` `[P3]` `Sprint-23` `2026-05-22` — Özet/Detay split ile birlikte tamamlandı: Başa Baş Analizi (order:32) ve Potansiyel Kayıp Simülasyonu (order:33) Detay katmanına taşındı.
 
-- [ ] **Aylık özet yerleşimi — sayfada daha aşağı** `[S]` `[P3]` — PO kararı (2026-05-15): (b) seçeneği — ekranda daha aşağıya kaydır (Dağılım kartlarının altı). Hamburger değil; görünürlük kaybolmamalı. `ui-builder` düzen güncelleme.
+- [x] ~~**Aylık özet yerleşimi — sayfada daha aşağı**~~ `[S]` `[P3]` `Sprint-23` `2026-05-22` — Özet/Detay split ile tamamlandı: Aylık Özet (order:13) Dağılım kartlarının (Varlık 10 / Bölge 11 / Sektör 12) altına yerleşti; Özet katmanında görünür kalır.
 
 - [ ] **Win/Loss time horizon seçimi** `[S]` `[P2]` — şu an bugünkü fiyat; 1A/3A/6A/1Y window chip.
 - [ ] **Win/Loss sold-out ticker live price** `[S]` `[P2]` — cache'te yoksa "noPrice" sayım dışı; live fetch seçeneği.
@@ -393,7 +393,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **"Potansiyel Kayıp Simülasyonu" → "Senaryo Analizi" veya "Stres Testi"** `[S]` `[P2]` — Daha az korkutucu framing; renk nötrleştirme. `→ AnalysisTab.js:1371`
 - [ ] **Potansiyel Kayıp Simülasyonu — altın pozisyonlarını filtrele** `[S]` `[P2]` — "Piyasa −%10/20/30" GOLD tipi pozisyonları kapsamalı mı? (a) `type!=='GOLD'` filtresi + "Hisse & Fon Değeri" alt başlığı, veya (b) footnote ile açıkla.
 - [ ] **Başa Baş "Uzaklık" kolonuna tooltip ekle** `[S]` `[P2]` — `data-tip="Güncel fiyatın başa baş noktasına yüzde uzaklığı. Pozitif = kâr bölgesinde."` `→ AnalysisTab.js:1333`
-- [ ] **AnalysisTab Özet / Detay iki katmana bölünsün** `[L]` `[P2]` — Özet (default): Aylık Özet, Dağılım kartları, 6 Aylık Performans, Kur Riski. Detay (toggle): Sağlık Tablosu, Konsantrasyon/HHI, Başa Baş, Kazanan/Kaybeden, Dayanıklılık, Dönem Bazlı Getiri.
+- [x] ~~**AnalysisTab Özet / Detay iki katmana bölünsün**~~ `[L]` `[P2]` `Sprint-23` `2026-05-22` — Root `<div>` flex-column; kartlar CSS `order` ile konumlanır. Özet katmanı (order 10–16, default görünür): Varlık/Bölge/Sektör Dağılımı, Aylık Özet, 6 Aylık Performans, Kur Riski, Temettü Özeti. "Detaylı Analiz" toggle (`detailOpen`, order:20) altında Detay katmanı (order 30–37, `display:none` ile gizli): Portföy Sağlık, Konsantrasyon/HHI, Başa Baş, Potansiyel Kayıp, Kazanan/Kaybeden, Dönem Bazlı Getiri, Dayanıklılık, Toplam Komisyon. `fund_cache` lazy-fetch yalnız Detay açıkken (`useEffect` deps `[pos,detailOpen]`). Eski 4 bölüm başlığı kaldırıldı. Playwright doğrulandı: Detay kapalıyken 0 `fund_cache` isteği, toggle'da 1. `→ src/components/AnalysisTab.js`
 - [ ] **Toplam Komisyon kartını AnalysisTab'dan taşı** `[S]` `[P2]` — Settings → İşlem Geçmişi altı veya "Maliyet Özeti" bölümü daha anlamlı.
 - [ ] **Konsantrasyon Riski — HHI sonucu → trafik ışığı + cümle** `[S]` `[P2]` — "Konsantrasyon: Yüksek" pill + cümle yeterli; HHI sayısı detay/tooltip'e.
 - [ ] **Fundamental Checklist'i şirket özeti + detay modeline çevir** `[M]` `[P2]` — TickerDetailTab önce plain-language özet: "Kârlılık güçlü · Borç makul · Değerleme pahalı". Ardından mevcut metrik grupları detay olarak kalır.
@@ -480,19 +480,17 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Sonraki Adım
 
-Sprint 4–20 ✅ | **Sprint 21 = Brand & Design Polish (in progress, 2026-05-16)** — bkz. yukarıdaki "Brand & Design" bölümü | Önceki dosya: `sprints/sprint-20.md` (planlanacak)
+Sprint 4–22 ✅ | **Sprint 23 = UI Yapı Temizliği (devrede, 2026-05-21 → 2026-06-04)** — plan: `sprints/sprint-23.md`.
 
-**Sprint 20 ✅ kapandı (2026-05-16):**
-- ✅ Item 3 — BES "Değer Güncelle" butonu: `BesUpdateModal` component (2 alan: Kişisel Güncel + DK Güncel) + TickerDetailTab BES Özeti üstü full-width buton + Dashboard BES pos-row 💰 ikon (desktop+mobile, stopPropagation). `flash_` prop wiring fix dahil.
-- ✅ Item 4 — Tam Detay paylaşım UI fix: Settings privacy_level toggle'ları disabled + "💡 Tam detay paylaşımı sosyal güncellemesinde aktif olacak" copy; `togglePrivacyLevel` fonksiyonu + dead `privLevel` var kaldırıldı.
-- ✅ Item 5 — LS key user-scope hardening: `clearUserLocalKeys()` helper (`il_theme` + `il_fx` whitelist); 2 signOut call site (hamburger + Settings danger) refactor.
-- ⏭️ Item 6 (52W giriş kalitesi bar) Sprint 21'e ertelendi — `price_cache` migration + `fetch-prices` değişikliği gerektirdiği için Sprint 20 kapsamı dışında. `high_52w/low_52w` aslında fund_cache'te mevcut DEĞİL, yeni veri çekimi gerekli.
+**Sprint 23 kapsamı:**
+1. **AnalysisTab Özet / Detay iki katmana bölünsün** `[L][P2]` — Özet (Aylık Özet, Dağılım, 6A Performans, Kur Riski) default görünür; Detay (Sağlık, HHI, Başa Baş, Kazanan/Kaybeden, Dayanıklılık, Dönem Getirisi, Komisyon) tek toggle ile açılır. `fund_cache` lazy-fetch yalnız Detay açıldığında tetiklenir.
+2. **Design audit Phase-2 kısmi** `[S×2][P2]` — #4 empty-state normalizasyonu (`.empty-card` patternine hizala) + #6 button-like `<span>`→`<button>` (a11y).
 
-**Sprint 22 adayları (öncelik sırası — eski S21 listesi, Brand & Design sprintine yer açmak için kaydı):**
+**Sprint 23 sonrası aday havuzu (öncelik sırası — her sprint başında gözden geçir):**
 
-1. ~~**Piyasa Dayanıklılık Skoru**~~ `[M][P2]` `Sprint-22` `2026-05-19` ✅ — Skor + MV-weighted portföy skoru + composition kartı önceki sprintlerde implement edilmişti. Sprint 22'de Sprint 19 spec Item 2d ("Portföyün piyasa düşüşlerine karşı dayanıklılığı güçlü/orta/kırılgan") tek-satır verdict cümlesi `var(--ok)/--warn/--err` renkli `🟢/🟡/🔴` ikonla eklendi (Sprint 19 paterni — `goodCount/badCount` verdict cümleleriyle aynı stil). Eşik: ≥7 güçlü · ≥5 orta · <5 kırılgan; null skor → "veri bekleniyor" nötr.
-2. **TEFAS WAF testi** `[S][P1]` — Bloker test adımı: endpoint `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` canlı ortamda dene; geçerse tam TEFAS entegrasyonu başlatılabilir. Aksi halde `fonbul.com` fallback planına geç.
-3. ~~**Alım Fiyatı Bölgesi Analizi (52W Konumu)**~~ `[S→M][P2]` `Sprint-22` `2026-05-19` ✅ — Migration 021 (Management API üzerinden), `fetch-prices` + `refresh-price-cache` edge fn deploy + 4 batch trigger (25/25 active position'a `h_52w`/`l_52w` doldu). Closes-only 52W high/low (`compute52w` helper, 3 historical fn'e eklendi); price_cache upsert payload'u genişletildi. TickerDetailTab "Giriş Kalitesi" bar: held US_STOCK ve TRY-cinsli BIST için gradient bar (yeşil→sarı→kırmızı) + avg_cost dikey marker + güncel fiyat disk marker + verdict ("düşük bantta/orta/zirveye yakın"). Eşik: cost <33% iyi, 33-66% orta, >66% zirveye yakın. E2E doğrulandı (AAPL "düşük bantta" verdict prod'da render ediliyor).
-4. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 ile birlikte: public view `is_public` + `privacy_level==="full"` modda gerçek `shares`/`avg_cost` render. Şu an UI disabled, "yakında" mesajıyla.
-5. ~~**LS key user-scope prefix (uzun vade)**~~ `[M][P3]` `Sprint-22` `2026-05-19` ✅ — `utils.js`'e `USER_SCOPED_LS_BASES` listesi (il_prc, il_hist, il_hide, il_last_fetch, il_nudge_dismissed, il_active_portfolio) + `userLSKey(base, uid)` helper + `migrateUserLSKeys(uid)` idempotent migrator eklendi. App mount'unda `migrateUserLSKeys(user.id)` legacy non-scoped key'leri `il_<base>_<userId>` formatına hoist eder. App.js'deki ilgili useState init'leri ve write helper'ları (`savePrc`/`saveHist`/`saveHide`/`setLastFetchAt`/nudge dismiss/active portfolio getItem+setItem) `_uk(base)` aracılığıyla user-scoped key kullanır. Whitelist: `il_theme` + `il_fx` + `il_disp_cur` (device pref). Cross-account leak artık double-defense: signOut'ta `clearUserLocalKeys()` siler + login sırasında zaten user-prefixed yazılır. Pattern SearchTab `il_recent_${userId}` ile aynı.
-6. ~~**Voice-Add (PWA + Telegram bot)**~~ `[L][P2]` — **İptal edildi (2026-05-21).** Sesli işlem ekleme kapsamdan çıkarıldı. Spec arşivde duruyor (`docs/superpowers/specs/2026-05-17-voice-add-design.md`); ileride yeniden değerlendirilirse oradan başlanır.
+1. **TEFAS Yatırım Fonu entegrasyonu** `[L][P1]` — bloker temizlendi (yeni JSON endpoint `fonFiyatBilgiGetir` çalışıyor); 9 `[S]` alt-task, en büyük asset gap. Tek sprintlik bütünlüklü iş.
+2. **Değerleme okunabilirliği** `[M][P1/P2]` — Fundamental Checklist'i özet+detay modeline çevir, ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma cümlesi, sektör-aware F/K eşikleri. Yeni provider yok.
+3. **Layer-2 davranışsal nudge** `[M][P2]` — piyasa düşüş nudge'ı, büyük kazanç tez-kontrolü nudge'ı, SearchTab FOMO banner'ı. Mevcut `price_cache` verisi, yeni fetch yok.
+4. **Design audit Phase-2 kalanı** `[S×2][P2]` — #7 kart/panel konsolidasyon, #9 tooltip tutarlılığı.
+5. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 ile birlikte; public view `privacy_level==="full"` modda gerçek `shares`/`avg_cost`.
+6. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı.
