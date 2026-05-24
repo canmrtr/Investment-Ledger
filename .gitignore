@@ -17,6 +17,9 @@ supabase/.temp/
 # Playwright MCP session logs (auto-generated, not for tracking)
 .playwright-mcp/
 
+# E2E debug screenshots (scripts tracked, PNG outputs ignored)
+e2e/*.png
+
 # Environment / secrets (never commit)
 .env
 .env.local
