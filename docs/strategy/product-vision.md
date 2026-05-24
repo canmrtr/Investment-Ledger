@@ -178,7 +178,7 @@ Portfoi, finansal özgürlüğe giden yolda sana rakamları gösterir, davranı�
 
 ## Related Files
 
-- `portfoi-brand-kit.md` — Renk, tipografi, logo token'ları
+- `docs/brand/README.md` — Marka & tasarım indeksi (brand-kit, renk, tipografi, logo token'ları)
 - `Investment-Guide.md` — Yatırım felsefesi ve 20-kriter checklist
 - `ROADMAP.md` — Teknik geliştirme planı
 - `CLAUDE.md` — Claude Code bağlamı

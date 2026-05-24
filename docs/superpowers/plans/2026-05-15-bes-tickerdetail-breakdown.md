@@ -57,10 +57,25 @@ Find:
 ```
 Change to:
 ```js
-  useEffect(()=>{if(isBes||!meta)return;fetchMeta(false);},[ticker,effectiveType]);
+  useEffect(()=>{if(!isBes&&!meta)fetchMeta(false);},[ticker,effectiveType]);
 ```
 
-- [ ] **Step 3: Guard divCal useEffect**
+This preserves the original "fetch when meta is missing" semantics and adds `!isBes` so BES skips it. (Do NOT use `if(isBes||!meta)return;` — that inverts the original logic and silently breaks meta fetch for all non-BES tickers on cache miss.)
+
+- [ ] **Step 3: Hide "↻ Meta" button for BES**
+
+The header at line 522 currently shows the meta refresh button unconditionally. Pressing it on a BES ticker would fire the same spurious edge call we just guarded.
+
+Find:
+```jsx
+        <button className="btn-sm" onClick={()=>fetchMeta(true)} disabled={metaLoading}>{metaLoading?"...":"↻ Meta"}</button>
+```
+Change to:
+```jsx
+        {!isBes&&<button className="btn-sm" onClick={()=>fetchMeta(true)} disabled={metaLoading}>{metaLoading?"...":"↻ Meta"}</button>}
+```
+
+- [ ] **Step 4: Guard divCal useEffect**
 
 Find:
 ```js
@@ -71,14 +86,14 @@ Change to:
     if(isBist||isBes||!p||divCal!==null)return;
 ```
 
-- [ ] **Step 4: Run babel check**
+- [ ] **Step 5: Run babel check**
 
 ```bash
 npm run check:babel
 ```
 Expected: no errors.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 git add src/components/TickerDetailTab.js
