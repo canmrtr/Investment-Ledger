@@ -31,7 +31,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [x] **Mobile form grid classes** `[S]` `[P1]` `Sprint-21` `2026-05-16` — `.form-grid-2/3` reusable; ManuelPosForm + TickerDetailTab manuel quick-add + TickerDetailTab edit row + HistoryTab edit row migrate edildi; ≤640px tek kolona çöker.
 - [x] **Text size minimums** `[S]` `[P2]` `Sprint-21` `2026-05-16` — `.empty-card .sub` 12→13, `.ttl` 15→16, `.warn-card .wc-sub` 11→12, `.sg .hint` 11→12. `.lbl/.kk/.stitle` 10px ve tablo hücreleri 12px korundu (intentional dense labels).
 - [x] **Mobile touch targets ≥36px** `[S]` `[P1]` `Sprint-21` `2026-05-16` — `@media(max-width:640px)`: `.btn-xs/.btn-icon/.btn-sm` min 36×36; `.pos-row .btn-xs` ve `table .btn-xs` padding 8/10.
-- [ ] **Design audit Phase-2** `[M]` `[P2]` `Sprint-23+` — `design_audit.md` kalan maddeler. ✅ #8 tablet breakpoint + #10 inline flash class Sprint 22'de kapandı. `Sprint-23` kapsamı: #4 empty-state normalization + #6 button-like span→button. Kalan (Sprint 24+): #7 card/panel consolidation, #9 tooltip consistency.
+- [ ] **Design audit Phase-2** `[M]` `[P2]` `Sprint-25+` — `design_audit.md` kalan maddeler. ✅ #8 tablet breakpoint + #10 inline flash class Sprint 22'de kapandı; ✅ #4 empty-state normalization + #6 button-like span→button Sprint 23 carry-over'da kapandı (2026-05-25, commits `710857a` + `8a54c56`). Kalan (Sprint 25+): #7 card/panel consolidation, #9 tooltip consistency.
 
 ---
 
@@ -356,8 +356,8 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ### Boş Durum & Mikrokopi
 
-- [ ] **TickerDetailTab "işlem yok" div.dim** `[S]` `[P3]` — `.empty-card` ile tutarlı hale getir. `→ AnalysisTab.js:~1514`
-- [ ] **AnalysisTab grafik alanları `.empty` sınıfı** `[S]` `[P3]` — `.empty-card` farkı kasıtlıysa CSS'e yorum ekle. `→ AnalysisTab.js:~3264/3304/3600/3665`
+- [x] **TickerDetailTab "işlem yok" div.dim** `[S]` `[P3]` `Sprint-23` `2026-05-25` — `.empty-card` (📋 + ttl + sub) pattern'e dönüştürüldü; padding HistoryTab section-level empty pattern'e hizalandı. `→ TickerDetailTab.js:1027`
+- [x] **AnalysisTab grafik alanları `.empty` sınıfı** `[S]` `[P3]` `Sprint-23` `2026-05-25` — `index.html:173` `.empty` rule'una "in-card subsection placeholder, distinct from .empty-card" comment eklendi. AnalysisTab 8 `.empty` lokasyonu (lines 917/974/1237/1298/1309/1347/1435/1658) kasıtlı olarak korundu — full-section empty değil.
 - [ ] **Temettü Özeti `dSym` EUR'u atlıyor** `[S]` `[P2]` — `dSym=displayCur==="TRY"?"₺":"$"` EUR'u dikkate almıyor. `displaySym(displayCur)` kullan. `→ AnalysisTab.js:~4068`
 - [ ] **HistoryTab "tot" negatif format** `[S]` `[P2]` — `$-1,234` → `-$1,234`.
 

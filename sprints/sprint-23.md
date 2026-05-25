@@ -38,6 +38,12 @@
 
 ---
 
-## Retro (sprint sonunda doldurulacak)
+## Retro (2026-05-25, sprint window'undan 10 gün önce kapandı)
 
-_(Ne çıktı, ne kaldı, neden — bir paragraf.)_
+Sprint, planlanandan çok daha hızlı kapandı. Headline iş (AnalysisTab Özet / Detay iki katmana bölünmesi) sprint başlangıcının ertesi günü 2026-05-22'de shipped — `fund_cache` lazy-fetch dahil Playwright ile doğrulanmış (Detay kapalıyken 0 fetch, ilk toggle'da 1). Carry-over Phase-2 maddeleri (#4 empty-state + #6 button-like span→button) bugün (2026-05-25) iki ayrı commit'te ship edildi: `710857a` TickerDetailTab "işlem yok" `.dim` → `.empty-card` + `.empty` CSS comment, `8a54c56` HistoryTab ticker link span + AnalysisTab konsantrasyon row → `<button>` (a11y).
+
+**Sürprizler**: (1) SearchTab.js:85 watchlist toggle audit-grep'te `cursor:pointer` ile yakalanmıştı ama zaten `<button type="button" aria-label="…" aria-pressed={…}>` — false positive, conversion gerekmedi. İlk plan 4 conversion içeriyordu, gerçekte 2 yetti. (2) AnalysisTab `.empty` (8 lokasyon) ilk plan'da "muhtemelen `.empty-card`'a hizalanmalı" sayılmıştı, exploration'da bunların **bilinçli olarak farklı** olduğu (in-card subsection placeholder vs full-section empty) netleşti — CSS comment ile distinction lock'landı.
+
+**Carry-over**: Phase-2 #7 (kart/panel konsolidasyon) ve #9 (tooltip tutarlılığı) Sprint 25+ adayı olarak ROADMAP'te kaldı. Sprint 24 = TEFAS entegrasyonu olarak ayrı planlandı (`sprints/sprint-24.md`). Total Sprint 23 commit sayısı: ~3 (headline `67f24da` + Phase-2 `710857a`+`8a54c56`).
+
+**Capacity öğrenmesi**: 12h tahminli sprint ~4-5h'de bitti. Headline `[L]` etiketli olmasına rağmen tek bir yapısal CSS `order`-based split olarak ele alındığında modular işti. Gelecek `[L]` item'larda "bütün'i tek seferde refactor mu, slice mı" ayrımını daha net yapmak gerek.
