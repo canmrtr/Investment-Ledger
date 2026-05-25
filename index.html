@@ -170,6 +170,7 @@
     .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;}
     .dot.ok{background:var(--ok);}.dot.off{background:var(--text3);}
     .brow{display:flex;gap:8px;flex-wrap:wrap;}
+    /* In-card subsection placeholder (no border/icon, dense). Distinct from .empty-card (full-section empty with ic+ttl+sub) — keep separate; do not unify. */
     .empty{color:var(--text2);font-size:13px;padding:3rem 0;text-align:center;}
     .spin{width:18px;height:18px;border:2px solid var(--border2);border-top-color:var(--info);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;}
     @keyframes spin{to{transform:rotate(360deg);}}

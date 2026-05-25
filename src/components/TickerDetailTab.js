@@ -1025,7 +1025,11 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
         <AddTxInline ticker={ticker} user={user} pos={pos} loadData={loadData} flash_={flash_} onClose={()=>setShowAdd(false)} assetType={effectiveType} portfolioId={portfolioId}/>
       )}
       {tickerTxs.length===0?(
-        <div className="dim" style={{fontSize:13,padding:"14px 0"}}>Bu ticker için işlem yok.</div>
+        <div className="empty-card" style={{padding:"28px 20px",margin:"8px 0 0"}}>
+          <div className="ic">📋</div>
+          <div className="ttl">Henüz işlem yok</div>
+          <div className="sub">Bu ticker için kayıtlı bir alım, satım veya temettü işlemi bulunmuyor.</div>
+        </div>
       ):(
         <div style={{border:"0.5px solid var(--border)",borderRadius:12,overflow:"hidden"}}>
           {tickerTxs.map(t=>{
