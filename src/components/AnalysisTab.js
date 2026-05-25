@@ -1380,7 +1380,10 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                 {weights.slice(0,3).map((p,i)=>{
                   const isFund=p.type==="FUND";
                   return(
-                    <div key={p.ticker} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>openDetail(p.ticker,p.type,"analysis")}>
+                    <button key={p.ticker} type="button"
+                      onClick={()=>openDetail(p.ticker,p.type,"analysis")}
+                      aria-label={`${p.ticker} detayını aç`}
+                      style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",background:"none",border:"none",padding:0,width:"100%",textAlign:"left",font:"inherit",color:"inherit"}}>
                       <span style={{color:"var(--text3)",fontSize:11,minWidth:14}}>{i+1}.</span>
                       <div style={{display:"flex",alignItems:"center",gap:4,minWidth:60}}>
                         <span className="mono" style={{fontSize:13,fontWeight:600}}>{p.ticker}</span>
@@ -1390,7 +1393,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
                         <div style={{width:(p.w*100)+"%",height:"100%",background:isFund?"var(--info)":color,borderRadius:3,opacity:isFund?0.5:1}}/>
                       </div>
                       <span className="mono" style={{fontSize:12,color:"var(--text2)",minWidth:40,textAlign:"right"}}>{fmt(p.w*100,1)}%</span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>

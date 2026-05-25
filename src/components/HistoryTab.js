@@ -193,11 +193,11 @@ function HistoryTab({txs,user,loadData,flash_,confirm_,mask,hideAmts,setTab,open
           <div key={tk} style={{marginBottom:8,border:"0.5px solid var(--border)",borderRadius:12,overflow:"hidden"}}>
             <div onClick={()=>setOpen(o=>({...o,[tk]:!o[tk]}))} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",background:"var(--bg2)",cursor:"pointer"}}>
               <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:13,fontWeight:700,fontFamily:"DM Mono,monospace",color:"var(--info)",cursor:"pointer",textDecoration:"underline",textDecorationColor:"transparent"}}
-                  onMouseEnter={e=>e.currentTarget.style.textDecorationColor="var(--info)"}
-                  onMouseLeave={e=>e.currentTarget.style.textDecorationColor="transparent"}
+                <button type="button" className="link-btn"
+                  style={{fontSize:13,fontWeight:700,fontFamily:"DM Mono,monospace"}}
                   onClick={e=>{e.stopPropagation();openDetail&&openDetail(tk,undefined,"history");}}
-                  data-tip="Detay sayfasını aç">{tk}</span>
+                  aria-label={`${tk} detayını aç`}
+                  data-tip="Detay sayfasını aç">{tk}</button>
                 <span className="dim" style={{fontSize:11}}>{items.length} işlem</span>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:12}}>
