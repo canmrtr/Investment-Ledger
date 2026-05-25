@@ -243,102 +243,77 @@ The primary source is `tefas.gov.tr` direct API. If WAF blocks (Task 1 result), 
 
   In `fetch-prices-edge-function.js`, after the Yahoo Finance helper block and before the Twelve Data block (~line 134), add:
 
+  > **Pre-flight 2026-05-25 correction**: Original code targeted retired legacy `/api/DB/BindHistoryInfo` + `/api/DB/BindFundInfo` (HTTP 404 — confirmed retired 2026). New JSON API `/api/funds/fonFiyatBilgiGetir` + catalog endpoint `/api/funds/fonGetir` (Task 5) replace them. Field names are camelCase (`fonKodu`, `fonUnvan`, `fiyat`, `tarih`), not uppercase. Response wrapper is `{errorCode, errorMessage, resultList}` — list is newest-LAST. Per-fund endpoint takes `periyod` (months back: 1/3/6/12), not a date range.
+
   ```js
   // ── TEFAS (Turkish mutual fund NAV) ─────────────────────────────
-  // Primary: tefas.gov.tr/api/DB/BindHistoryInfo (POST form-encoded)
-  // Fallback: fonbul.com (same fund codes, no WAF)
-  // Date format for TEFAS: DD.MM.YYYY
-  const isoToTefas = (iso) => {
-    if (!iso) return null;
-    const [y, m, d] = iso.split("-");
-    return `${d}.${m}.${y}`;
+  // Endpoint: POST https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir
+  // Payload : { "fonKodu": "<code>", "periyod": <1|3|6|12> }  // months back
+  // Response: { resultList: [{ tarih:"YYYY-MM-DD", fiyat:<num>, fonUnvan:"...", ... }, ...] }
+  //           — newest-LAST (oldest-first); ~14-22 trading days for periyod=1.
+  //           — errorCode/errorMessage non-null → fund not found or other API err.
+  // Legacy /api/DB/BindHistoryInfo + BindFundInfo retired 2026-04; this is the replacement.
+  const TEFAS_HEADERS = {
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/plain, */*",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
   };
 
-  async function tefasPrice(fonkod, dateISO) {
-    const tarih = isoToTefas(dateISO) || isoToTefas(yesterdayISO());
-    // Try up to 5 previous days in case of holidays/weekends
-    for (let offset = 0; offset < 5; offset++) {
-      const d = new Date(Date.parse(dateISO || yesterdayISO()) - offset * 86400000);
-      const dd = String(d.getDate()).padStart(2, "0");
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const yyyy = d.getFullYear();
-      const t = `${dd}.${mm}.${yyyy}`;
-      try {
-        const r = await fetch("https://www.tefas.gov.tr/api/DB/BindHistoryInfo", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-Requested-With": "XMLHttpRequest",
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-          },
-          body: `fonkod=${encodeURIComponent(fonkod)}&bastarih=${t}&bittarih=${t}`,
-        });
-        if (!r.ok) continue;
-        const data = await r.json();
-        const row = data?.data?.[0];
-        if (row?.FIYAT) {
-          return { price: parseFloat(row.FIYAT), date: `${yyyy}-${mm}-${dd}`, currency: "TRY" };
-        }
-      } catch (e) { /* try next day */ }
-    }
-    return { error: "TEFAS: fiyat bulunamadı (son 5 gün)" };
-  }
-
-  async function tefasHistorical(fonkod, fromISO, toISO) {
+  async function tefasFetchSeries(fonKodu, periyod = 1) {
     try {
-      const r = await fetch("https://www.tefas.gov.tr/api/DB/BindHistoryInfo", {
+      const r = await fetch("https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "X-Requested-With": "XMLHttpRequest",
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        },
-        body: `fonkod=${encodeURIComponent(fonkod)}&bastarih=${isoToTefas(fromISO)}&bittarih=${isoToTefas(toISO)}`,
+        headers: TEFAS_HEADERS,
+        body: JSON.stringify({ fonKodu, periyod }),
       });
       if (!r.ok) return { error: `TEFAS HTTP ${r.status}` };
       const data = await r.json();
-      if (!Array.isArray(data?.data) || data.data.length === 0) {
-        return { error: "TEFAS: tarihsel veri yok" };
-      }
-      // TEFAS returns newest-first; reverse for chart (oldest-first)
-      const results = data.data.reverse().map(row => {
-        const [dd, mm, yyyy] = row.TARIH.split(".");
-        return { t: `${yyyy}-${mm}-${dd}`, c: parseFloat(row.FIYAT) };
-      });
-      return { results };
+      if (data?.errorCode) return { error: `TEFAS: ${data.errorMessage || data.errorCode}` };
+      return { list: data?.resultList || [] };
     } catch (e) {
       return { error: "TEFAS fetch hatası: " + (e?.message ?? e) };
     }
   }
 
-  async function tefasMeta(fonkod) {
-    // Returns fund name + category from tefas_funds table (populated by fetch-fundamentals)
-    // This is called only on discovery (not-held) — held positions already have name from DB.
+  async function tefasPrice(fonKodu) {
+    // Latest NAV — periyod=1 returns ~14-22 daily NAVs over last month (trading days).
+    // Take the most recent (last element); no holiday loop needed — API already skips them.
+    const r = await tefasFetchSeries(fonKodu, 1);
+    if (r.error) return r;
+    if (!r.list.length) return { error: "TEFAS: fiyat bulunamadı" };
+    const last = r.list[r.list.length - 1];
+    return { price: parseFloat(last.fiyat), date: last.tarih, name: last.fonUnvan };
+  }
+
+  async function tefasHistorical(fonKodu, fromISO, toISO) {
+    // periyod = months back; pick smallest periyod that covers fromISO.
+    const monthsBack = Math.max(1, Math.ceil((Date.now() - Date.parse(fromISO)) / (30 * 86400000)));
+    const periyod = monthsBack <= 1 ? 1 : monthsBack <= 3 ? 3 : monthsBack <= 6 ? 6 : 12;
+    const r = await tefasFetchSeries(fonKodu, periyod);
+    if (r.error) return r;
+    const results = (r.list || [])
+      .filter(row => row.tarih >= fromISO && row.tarih <= toISO)
+      .map(row => ({ t: row.tarih, c: parseFloat(row.fiyat) }));
+    if (!results.length) return { error: "TEFAS: tarihsel veri yok" };
+    return { results };
+  }
+
+  async function tefasMeta(fonKodu, supa) {
+    // Prefer tefas_funds catalog (populated by fetch-fundamentals tefas-catalog mode).
+    // Fallback: per-fund price endpoint includes fonUnvan in each row.
     try {
-      const r = await fetch("https://www.tefas.gov.tr/api/DB/BindFundInfo", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "X-Requested-With": "XMLHttpRequest",
-          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        },
-        body: `fonkod=${encodeURIComponent(fonkod)}`,
-      });
-      if (!r.ok) return { error: `TEFAS meta HTTP ${r.status}` };
-      const data = await r.json();
-      const row = data?.data?.[0];
-      if (!row) return { error: "TEFAS: fon bulunamadı" };
-      return {
-        name: row.FONUNVAN || fonkod,
-        category: row.FONTUR || null,
-        currency: "TRY",
-        locale: "tr",
-        primary_exchange: "TEFAS",
-        type: "Mutual Fund",
-      };
-    } catch (e) {
-      return { error: "TEFAS meta hatası: " + (e?.message ?? e) };
-    }
+      const { data } = await supa.from("tefas_funds")
+        .select("name, category").eq("code", fonKodu).maybeSingle();
+      if (data) {
+        return { name: data.name, category: data.category, currency: "TRY",
+                 locale: "tr", primary_exchange: "TEFAS", type: "Mutual Fund" };
+      }
+    } catch (_) { /* fall through to API */ }
+    const r = await tefasFetchSeries(fonKodu, 1);
+    if (r.error) return r;
+    if (!r.list.length) return { error: "TEFAS: fon bulunamadı" };
+    return { name: r.list[0].fonUnvan || fonKodu, category: null, currency: "TRY",
+             locale: "tr", primary_exchange: "TEFAS", type: "Mutual Fund" };
   }
   ```
 
@@ -352,31 +327,31 @@ The primary source is `tefas.gov.tr` direct API. If WAF blocks (Task 1 result), 
 
   After the `isGold` block (around line 383), add an early return for TEFAS before the provider key check:
 
+  > **Pre-flight 2026-05-25 correction**: `price_cache` schema confirmed via Supabase MCP — columns are `{ticker, updated_at, price, d1/w1/m1/y1, p_d1…p_y1, h_52w, l_52w}`. **No `source` and no `currency` columns.** Existing `fetch-prices` upsert at line 207 of `refresh-price-cache-edge-function.js` only writes `{ticker, price, updated_at}` — TEFAS branch must match. Currency is implied by `positions.currency='TRY'` at read time.
+
   ```js
   // TEFAS: Turkish mutual fund NAV — tefas.gov.tr direct API
   if (isTefas) {
     let result = {};
-    let source = "tefas";
     if (mode === "historical") {
       result = await tefasHistorical(ticker, fromDate, toDate);
     } else if (mode === "meta") {
-      result = await tefasMeta(ticker);
+      result = await tefasMeta(ticker, supa);
     } else {
-      result = await tefasPrice(ticker, date);
+      result = await tefasPrice(ticker);
     }
-    // Cache price result
+    // Cache price result. price_cache has no `source` or `currency` columns —
+    // only persist {ticker, price, updated_at} per existing schema.
     if ((mode === "price" || !mode) && result.price != null) {
       try {
         await supa.from("price_cache").upsert({
           ticker,
           price: result.price,
-          currency: "TRY",
-          source,
           updated_at: new Date().toISOString(),
         }, { onConflict: "ticker" });
       } catch (e) { console.error("[fetch-prices] TEFAS price_cache upsert failed:", e?.message ?? e); }
     }
-    return json({ ticker, result, date: result.date || toDate, source });
+    return json({ ticker, result, date: result.date || toDate, source: "tefas" });
   }
   ```
 
@@ -408,13 +383,13 @@ The primary source is `tefas.gov.tr` direct API. If WAF blocks (Task 1 result), 
   Supabase Dashboard → Edge Functions → `fetch-prices` → Test tab.
   Send:
   ```json
-  { "ticker": "AAK", "mode": "price", "asset_type": "TEFAS" }
+  { "ticker": "YAC", "mode": "price", "asset_type": "TEFAS" }
   ```
   Expected response:
   ```json
-  { "ticker": "AAK", "result": { "price": 1.234567, "date": "2026-05-12", "currency": "TRY" }, "source": "tefas" }
+  { "ticker": "YAC", "result": { "price": 1.234567, "date": "2026-05-12", "currency": "TRY" }, "source": "tefas" }
   ```
-  If `result.error` contains "WAF" or HTTP 403: the fallback needs to be wired. Add a `fonbulPrice` helper using `https://api.fonbul.com/fund/history?code=AAK` (investigate endpoint from fonbul.com network tab) and call it when `tefasPrice` returns an error.
+  If `result.error` contains "WAF" or HTTP 403: the fallback needs to be wired. Add a `fonbulPrice` helper using `https://api.fonbul.com/fund/history?code=YAC` (investigate endpoint from fonbul.com network tab) and call it when `tefasPrice` returns an error.
 
 - [ ] **Step 7: Commit**
 
@@ -435,34 +410,41 @@ The primary source is `tefas.gov.tr` direct API. If WAF blocks (Task 1 result), 
 
   In `fetch-fundamentals-edge-function.js`, after the `skipJwt` check block (around line 669), add:
 
+  > **Pre-flight 2026-05-25 correction**: Catalog endpoint is `/api/funds/fonGetir` (JSON POST), NOT the retired `/api/DB/BindFundInfo` (HTTP 404). Note: `fonGetiriBazliBilgiGetir` (referenced in Task 1's discovery note) returns null `resultList` regardless of payload — it's the wrong endpoint for full catalog enumeration. `fonGetir` ignores its payload body and always returns the full catalog. **Catalog size: 3510 funds** (verified 2026-05-25 — 3.5× the spec's "~1000" estimate). Field names are camelCase; category lives in `fonTurAciklama`. Batch size raised 100→500 to keep total roundtrips manageable at this size (~7 batches instead of 36).
+
   ```js
-  // Mode: tefas-catalog — fetch all TEFAS funds from tefas.gov.tr and upsert into tefas_funds table.
-  // Run once on deploy; re-triggerable from Settings → Fiyat & Veri.
+  // Mode: tefas-catalog — fetch ALL TEFAS funds (~3500) from tefas.gov.tr and
+  // upsert into tefas_funds table. Endpoint /api/funds/fonGetir; payload body
+  // is ignored — always returns full catalog. Run once on deploy; re-triggerable
+  // from Settings → Fiyat & Veri.
   if (body.mode === "tefas-catalog") {
     let fetched = 0, failed = 0;
     try {
-      const r = await fetch("https://www.tefas.gov.tr/api/DB/BindFundInfo", {
+      const r = await fetch("https://www.tefas.gov.tr/api/funds/fonGetir", {
         method: "POST",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "X-Requested-With": "XMLHttpRequest",
+          "Content-Type": "application/json",
+          "Accept": "application/json, text/plain, */*",
           "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         },
-        body: "",  // empty body = all funds
+        body: JSON.stringify({}),
       });
       if (!r.ok) return json({ error: `TEFAS catalog HTTP ${r.status}` }, 502);
       const data = await r.json();
-      if (!Array.isArray(data?.data)) return json({ error: "TEFAS: unexpected response format" }, 502);
+      if (data?.errorCode) return json({ error: `TEFAS: ${data.errorMessage || data.errorCode}` }, 502);
+      const list = data?.resultList;
+      if (!Array.isArray(list)) return json({ error: "TEFAS: unexpected response format" }, 502);
 
-      // Batch upsert in chunks of 100
-      const rows = data.data.map(f => ({
-        code:       (f.FONKODU || "").toUpperCase().trim(),
-        name:       f.FONUNVAN || f.FONKODU || "",
-        category:   f.FONTUR || null,
+      const rows = list.map(f => ({
+        code:       (f.fonKodu || "").toUpperCase().trim(),
+        name:       f.fonUnvan || f.fonKodu || "",
+        category:   f.fonTurAciklama || null,
         updated_at: new Date().toISOString(),
       })).filter(f => f.code.length > 0);
 
-      const CHUNK = 100;
+      // ~3500 funds at chunk=500 → ~7 sequential upserts; PostgREST default
+      // payload limit (~1MB) is well above 500 small rows.
+      const CHUNK = 500;
       for (let i = 0; i < rows.length; i += CHUNK) {
         const chunk = rows.slice(i, i + CHUNK);
         const { error } = await supa.from("tefas_funds").upsert(chunk, { onConflict: "code" });
@@ -505,13 +487,15 @@ The primary source is `tefas.gov.tr` direct API. If WAF blocks (Task 1 result), 
   ```
   Expected response:
   ```json
-  { "fetched": 950, "failed": 0, "total": 950 }
+  { "fetched": 3510, "failed": 0, "total": 3510 }
   ```
+  (Actual count verified 2026-05-25; will drift slightly as new funds list and others retire.)
+
   Then verify:
   ```sql
   select count(*), min(code), max(code) from tefas_funds;
   ```
-  Expected: `count > 900`.
+  Expected: `count > 3000`.
 
 - [ ] **Step 5: Commit**
 
@@ -532,7 +516,7 @@ The primary source is `tefas.gov.tr` direct API. If WAF blocks (Task 1 result), 
   In `src/components/AddTab.js`, `ADD_TYPES` at line 5. Insert after the `BES` entry (line 12), before `CASH`:
 
   ```js
-  {type:"TEFAS",    label:"TEFAS Fonu",  desc:"Yatırım fonu — AAK, MAC, YKB"},
+  {type:"TEFAS",    label:"TEFAS Fonu",  desc:"Yatırım fonu — YAC, MAC, GAH"},
   ```
 
   Full updated `ADD_TYPES`:
@@ -545,7 +529,7 @@ The primary source is `tefas.gov.tr` direct API. If WAF blocks (Task 1 result), 
     {type:"GOLD",     label:"Altın",          desc:"Spot ons (XAUUSD)"},
     {type:"FX",       label:"Döviz",          desc:"USDTRY, EURUSD"},
     {type:"BES",      label:"BES Fonu",       desc:"Bireysel Emeklilik — AGS001, PEB011"},
-    {type:"TEFAS",    label:"TEFAS Fonu",     desc:"Yatırım fonu — AAK, MAC, YKB"},
+    {type:"TEFAS",    label:"TEFAS Fonu",     desc:"Yatırım fonu — YAC, MAC, GAH"},
     {type:"CASH",     label:"Nakit",          desc:"Banka hesabı — TRY, USD, EUR"},
     {type:"DEPOSIT",  label:"Vadeli Mevduat", desc:"Faizli sabit vadeli hesap"},
   ];
@@ -665,7 +649,7 @@ The primary source is `tefas.gov.tr` direct API. If WAF blocks (Task 1 result), 
   ```bash
   npx serve .
   ```
-  Open `http://localhost:3000` → Ara tab → type "AAK" → confirm TEFAS result appears with lime badge. Type "ata portföy" → confirm name search works.
+  Open `http://localhost:3000` → Ara tab → type "YAC" → confirm TEFAS result appears with lime badge. Type "ata portföy" → confirm name search works.
 
 - [ ] **Step 9: Commit**
 
@@ -788,32 +772,28 @@ The cron job runs every 6h and refreshes stale prices. TEFAS must be in `REFRESH
 
   In `refresh-price-cache-edge-function.js`, after `normalizeTicker` (around line 106), add:
 
+  > **Pre-flight 2026-05-25 correction**: Same endpoint + payload + field migration as Task 4. Return shape: the existing refresh-price-cache main loop (line 207) does `upsert({ ticker: t, ...data, updated_at: ... })` — so `data` must contain only `price_cache` columns. **Drop `currency` and `source`** from the return (no such columns). Holiday loop is unnecessary too: `fonFiyatBilgiGetir` with `periyod=1` returns ~14-22 trading days and we just take the last one.
+
   ```js
-  // TEFAS: fetch latest NAV from tefas.gov.tr — tries last 5 days for holidays.
-  const fetchTefasPrice = async (fonkod) => {
-    for (let offset = 0; offset < 5; offset++) {
-      const d = new Date(Date.now() - offset * 86400000);
-      const dd = String(d.getDate()).padStart(2,"0");
-      const mm = String(d.getMonth()+1).padStart(2,"0");
-      const yyyy = d.getFullYear();
-      const t = `${dd}.${mm}.${yyyy}`;
-      try {
-        const r = await fetch("https://www.tefas.gov.tr/api/DB/BindHistoryInfo", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "X-Requested-With": "XMLHttpRequest",
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-          },
-          body: `fonkod=${encodeURIComponent(fonkod)}&bastarih=${t}&bittarih=${t}`,
-        });
-        if (!r.ok) continue;
-        const data = await r.json();
-        const row = data?.data?.[0];
-        if (row?.FIYAT) return { price: parseFloat(row.FIYAT), currency: "TRY", source: "tefas" };
-      } catch (_) { /* next day */ }
-    }
-    throw new Error("TEFAS: fiyat bulunamadı");
+  // TEFAS: fetch latest NAV from tefas.gov.tr — /api/funds/fonFiyatBilgiGetir.
+  // Returns only fields that exist in price_cache schema (no source/currency cols).
+  const fetchTefasPrice = async (fonKodu) => {
+    const r = await fetch("https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json, text/plain, */*",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      },
+      body: JSON.stringify({ fonKodu, periyod: 1 }),
+    });
+    if (!r.ok) throw new Error(`TEFAS HTTP ${r.status}`);
+    const data = await r.json();
+    if (data?.errorCode) throw new Error(`TEFAS: ${data.errorMessage || data.errorCode}`);
+    const list = data?.resultList || [];
+    if (!list.length) throw new Error("TEFAS: fiyat bulunamadı");
+    const last = list[list.length - 1];
+    return { price: parseFloat(last.fiyat) };
   };
   ```
 
@@ -828,7 +808,7 @@ The cron job runs every 6h and refreshes stale prices. TEFAS must be in `REFRESH
 
   In `normalizeTicker` (line 84-106), before `return ticker;`, add:
   ```js
-  if (type === "TEFAS") return ticker;  // TEFAS codes are passed as-is (AAK, MAC…)
+  if (type === "TEFAS") return ticker;  // TEFAS codes are passed as-is (YAC, MAC…)
   ```
 
 - [ ] **Step 4: Branch TEFAS in the main refresh loop**
@@ -886,7 +866,7 @@ The cron job runs every 6h and refreshes stale prices. TEFAS must be in `REFRESH
 
 - [ ] **Step 2: Add a test TEFAS position manually**
 
-  `http://localhost:3000` → "+ Ekle" → "TEFAS Fonu" → Manuel → enter code `AAK`, name `ATA PORTFÖY ÇOKLU VARLIK`, shares `100`, price `1.5` → Kaydet.
+  `http://localhost:3000` → "+ Ekle" → "TEFAS Fonu" → Manuel → enter code `YAC`, name `YAPI KREDİ PORTFÖY İKİNCİ FON SEPETİ FONU`, shares `100`, price `14.00` → Kaydet.
 
 - [ ] **Step 3: Verify Dashboard block**
 
@@ -894,7 +874,7 @@ The cron job runs every 6h and refreshes stale prices. TEFAS must be in `REFRESH
 
 - [ ] **Step 4: Verify price fetch**
 
-  Settings → "Fiyat Yenile" → confirm AAK price updates from TEFAS API (check source in price_cache: `select ticker, price, source, currency from price_cache where ticker='AAK'`).
+  Settings → "Fiyat Yenile" → confirm YAC price updates from TEFAS API (check source in price_cache: `select ticker, price, source, currency from price_cache where ticker='YAC'`).
 
 - [ ] **Step 5: Verify search**
 
@@ -902,7 +882,7 @@ The cron job runs every 6h and refreshes stale prices. TEFAS must be in `REFRESH
 
 - [ ] **Step 6: Verify AnalysisTab**
 
-  Analiz → Varlık Dağılımı → lime slice for TEFAS. Bölge → TEFAS under Türkiye. Portföy Sağlık → AAK not listed.
+  Analiz → Varlık Dağılımı → lime slice for TEFAS. Bölge → TEFAS under Türkiye. Portföy Sağlık → YAC not listed.
 
 - [ ] **Step 7: Run e2e smoke test**
 

@@ -15,7 +15,7 @@
      - AnalysisTab: Varlık Dağılımı'nda lime dilim; Bölge Dağılımı'nda Türkiye altında; Fundamentals checklist'inden hariç (US/BIST hisse benzeri metrikler yok).
      - `fetch-prices` `asset_type:"TEFAS"` routing'i çalışır; günlük NAV fiyatı `tefas.gov.tr` API'sinden `price_cache`'e yazılır.
      - `refresh-price-cache-6h` cron job'ı `type IN (...)` allowlist'ine `TEFAS` ekler — 6 saatte bir otomatik güncellenir.
-     - Settings → Bakım'da "TEFAS Katalog Yenile" butonu (~1000 fon, `fetch-fundamentals mode:"tefas-catalog"`).
+     - Settings → Bakım'da "TEFAS Katalog Yenile" butonu (~3500 fon, `fetch-fundamentals mode:"tefas-catalog"`).
    - Alt-task'lar (sırayla):
      1. `fetch-prices isTefas` routing + tek-fon NAV fetch'i `[S]` (~1.5h, backend)
      2. `tefas_funds` SQL migration + RLS (paylaşımlı, anon+auth read, service_role write) `[S]` (~1h, `sql-writer` skill + `rls-auditor` agent)
@@ -26,10 +26,11 @@
      7. AnalysisTab `REGION_OF`, `priceCurOf`, Fundamentals exclusion `[S]` (~1h)
      8. Settings "Katalog Yenile" butonu `[S]` (~0.5h)
      9. `refresh-price-cache` cron allowlist'ine TEFAS ekleme + deploy `[S]` (~1h)
-   - Risk:
+   - Risk (pre-flight 2026-05-25 sonrası, `docs/superpowers/plans/2026-05-13-tefas-integration.md` patched):
      - **WAF rebound**: Yeni JSON endpoint TEFAS tarafında geri kapatılırsa cron job sessizce kırılır. Mitigation: edge fn'ye `null` NAV durumunda console.error + `price_cache.price` güncellemesini skip (eski fiyat görünür kalsın, kullanıcıya açık hata mesajı). Sprint 22 `İş Yatırım izleme` pattern'i.
-     - **Katalog büyüklüğü**: ~1000 fon tek seferde insert → potansiyel Supabase batch limit. Mitigation: 100'erli batch insert; `fetch-fundamentals` `tefas-catalog` mode'unda chunk loop.
-     - **`type` enum check constraint**: `positions.type` ve `transactions.asset_type` CHECK varsa migration gerekir. **Önce DB schema kontrol et.**
+     - **Katalog büyüklüğü**: Pre-flight'ta gerçek katalog **3510 fon** olarak ölçüldü (~1000 tahmini 3.5×). Plan body chunk size 100→500'e çıkarıldı (~7 sequential upsert). Hâlâ tek seferde patlamasın diye chunk loop kalıcı.
+     - ~~**`type` enum check constraint**~~ ✅ **Pre-flight 2026-05-25**: `information_schema.check_constraints` sorgusu — `positions.type`/`transactions.asset_type`/`watchlist.asset_type` üzerinde CHECK YOK (tek constraint `transactions.way`). TEFAS değeri sorunsuz INSERT edilir; alt-task 2'ye migration eklemeye gerek yok.
+     - ⚠ **`price_cache` schema farkı (pre-flight 2026-05-25)**: Tablo şeması `{ticker, updated_at, price, d1…y1, p_d1…p_y1, h_52w, l_52w}` — **`source` ve `currency` kolonu YOK**. Plan body'deki upsert'ten her ikisi düşürüldü; TEFAS NAV yalnızca `{ticker, price, updated_at}` olarak yazılır. Currency `positions.currency='TRY'` ile read-time'da implied.
      - **`edge-reviewer` agent**: `fetch-prices` ve `fetch-fundamentals` edit sonrası mutlaka çağır (deploy öncesi).
 
 2. **Boş durum metinlerini kullanıcı diline çevir** — ROADMAP "Brand Fit & Jargon Temizliği" `[S]` `[P2]` (companion)
