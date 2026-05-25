@@ -480,16 +480,18 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Sonraki Adım
 
-Sprint 4–22 ✅ | **Sprint 23 = UI Yapı Temizliği (devrede, 2026-05-21 → 2026-06-04)** — plan: `sprints/sprint-23.md`.
+Sprint 4–22 ✅ | **Sprint 23 = UI Yapı Temizliği** (2026-05-21 → 2026-06-04) — headline AnalysisTab Özet/Detay split shipped 2026-05-22 ✅; Phase-2 #4 empty-state + #6 button-like span→button kalan iş, sprint window'unda kapanmalı. Plan: `sprints/sprint-23.md`.
 
-**Sprint 23 kapsamı:**
-1. **AnalysisTab Özet / Detay iki katmana bölünsün** `[L][P2]` — Özet (Aylık Özet, Dağılım, 6A Performans, Kur Riski) default görünür; Detay (Sağlık, HHI, Başa Baş, Kazanan/Kaybeden, Dayanıklılık, Dönem Getirisi, Komisyon) tek toggle ile açılır. `fund_cache` lazy-fetch yalnız Detay açıldığında tetiklenir.
-2. **Design audit Phase-2 kısmi** `[S×2][P2]` — #4 empty-state normalizasyonu (`.empty-card` patternine hizala) + #6 button-like `<span>`→`<button>` (a11y).
+**Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu** (2026-06-05 → 2026-06-18) — plan: `sprints/sprint-24.md`.
 
-**Sprint 23 sonrası aday havuzu (öncelik sırası — her sprint başında gözden geçir):**
+**Sprint 24 kapsamı:**
+1. **TEFAS Yatırım Fonu entegrasyonu** `[L][P1]` — 9 alt-task uçtan uca: NAV fetch routing, `tefas_funds` katalog tablosu, AddTab picker, Dashboard ₺ bloğu, SearchTab birleşik arama, AnalysisTab lime dilim + Türkiye bölge, Settings katalog yenile butonu, 6h cron allowlist. WAF bloker Sprint 22'de temizlendi (yeni JSON endpoint `fonFiyatBilgiGetir`).
+2. **Boş durum metinlerini kullanıcı diline çevir** `[S][P2]` — `"snap. yok"` → `"Veri henüz oluşmadı"`, `"Bilinmiyor"` → `"Henüz sınıflandırılmadı"`; TEFAS empty state'leri.
 
-1. **TEFAS Yatırım Fonu entegrasyonu** `[L][P1]` — bloker temizlendi (yeni JSON endpoint `fonFiyatBilgiGetir` çalışıyor); 9 `[S]` alt-task, en büyük asset gap. Tek sprintlik bütünlüklü iş.
-2. **Değerleme okunabilirliği** `[M][P1/P2]` — Fundamental Checklist'i özet+detay modeline çevir, ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma cümlesi, sektör-aware F/K eşikleri. Yeni provider yok.
+**Sprint 24 sonrası aday havuzu (öncelik sırası — her sprint başında gözden geçir):**
+
+1. **Değerleme okunabilirliği** `[M][P1/P2]` — Fundamental Checklist'i özet+detay modeline çevir, ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma cümlesi, sektör-aware F/K eşikleri. Yeni provider yok.
+2. **TEFAS historical NAV + sparkline** `[M][P2]` — Sprint 24 sonrası iterasyonu: `price_cache.p_d1/w1/m1/y1` doldurma, sparkline desteği. TEFAS API historical endpoint test gerektirir.
 3. **Layer-2 davranışsal nudge** `[M][P2]` — piyasa düşüş nudge'ı, büyük kazanç tez-kontrolü nudge'ı, SearchTab FOMO banner'ı. Mevcut `price_cache` verisi, yeni fetch yok.
 4. **Design audit Phase-2 kalanı** `[S×2][P2]` — #7 kart/panel konsolidasyon, #9 tooltip tutarlılığı.
 5. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 ile birlikte; public view `privacy_level==="full"` modda gerçek `shares`/`avg_cost`.
