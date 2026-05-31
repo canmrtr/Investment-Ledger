@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-21** (Sprint 21–22 ✅ kapandı; **Sprint 23 = UI Yapı Temizliği** (AnalysisTab Özet/Detay split + design audit Phase-2 kısmi) devrede. Plan: `sprints/sprint-23.md`.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-31** (Sprint 21–23 ✅ kapandı; Sprint 23 retro 2026-05-25, headline AnalysisTab Özet/Detay split shipped 2026-05-22. **Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu** hazır, başlangıç 2026-06-05. Plan: `sprints/sprint-24.md`.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -22,9 +22,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ---
 
-## Brand & Design — Sprint 21 (in progress, 2026-05-16)
+## Brand & Design — Sprint 21 (closed 2026-05-16)
 
-> Sprint 21 hedefi: "Yeni marka kimliğini uçtan uca yerleştir (logo, favicon, PWA icons, topbar wordmark) ve `design_audit.md` (2026-05-15) Phase-1 hijyenini halletim." Önceki S21 adayları (Dayanıklılık Skoru, TEFAS WAF, 52W bar) → Sprint 22.
+> Sprint 21 hedefi: "Yeni marka kimliğini uçtan uca yerleştir (logo, favicon, PWA icons, topbar wordmark) ve `design_audit.md` (2026-05-15) Phase-1 hijyenini halletim." ✅ kapandı. Phase-2 carry-over Sprint 23'te #4 + #6 ile devam etti; #7 + #9 Sprint 25+ adayı olarak `## UI Polish` altında izlenir.
 
 - [x] **Logo refresh end-to-end** `[M]` `[P0]` `Sprint-21` `2026-05-16` — Login lockup swap (linear-* → portfoi-lockup-*, 240→160px); topbar wordmark butonu (>640px, dashboard'a tıklanır); PWA icons (icon-192/512) Playwright rasterizer ile yeniden üretildi; favicon.svg + favicon-32.png eklendi; service-worker SHELL precache `il-shell-v3`'e bumped. Kaynak SVG `Logo/portfoi-icon.svg`. Eski Logo dosyaları (`linear-*`, `Full Name *`, `Logo Dark/Light`) rollback için `Logo/`'da kalır.
 - [x] **5-tier button system** `[M]` `[P1]` `Sprint-21` `2026-05-16` — `.btn-icon` (square icon-only) eklendi; `.btn-xs/.btn-sm/.btn-md/.btn-pri` min-height ile codified. `.pri` alias olarak korundu (back-compat). Doc: CLAUDE.md "Tasarım sistemi → Buton katmanları".
@@ -32,12 +32,6 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [x] **Text size minimums** `[S]` `[P2]` `Sprint-21` `2026-05-16` — `.empty-card .sub` 12→13, `.ttl` 15→16, `.warn-card .wc-sub` 11→12, `.sg .hint` 11→12. `.lbl/.kk/.stitle` 10px ve tablo hücreleri 12px korundu (intentional dense labels).
 - [x] **Mobile touch targets ≥36px** `[S]` `[P1]` `Sprint-21` `2026-05-16` — `@media(max-width:640px)`: `.btn-xs/.btn-icon/.btn-sm` min 36×36; `.pos-row .btn-xs` ve `table .btn-xs` padding 8/10.
 - [ ] **Design audit Phase-2** `[M]` `[P2]` `Sprint-25+` — `design_audit.md` kalan maddeler. ✅ #8 tablet breakpoint + #10 inline flash class Sprint 22'de kapandı; ✅ #4 empty-state normalization + #6 button-like span→button Sprint 23 carry-over'da kapandı (2026-05-25, commits `710857a` + `8a54c56`). Kalan (Sprint 25+): #7 card/panel consolidation, #9 tooltip consistency.
-
----
-
-## Bekleyenler / Blokerli
-
-- [x] **TEFAS WAF testi** `[S]` `[P1]` `Sprint-22` `2026-05-19` — Bloker temizlendi. Legacy `https://www.tefas.gov.tr/api/DB/BindHistoryInfo` (form-encoded POST) 2026'da retire edildi (404 "Method not found or disabled"); WAF değil, endpoint silinmiş. Yeni JSON API: `https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir` (POST, `Content-Type: application/json`, payload `{fonKodu, periyod}`). Local test 200 + resultList döndü, herhangi bir WAF/IP ban yok. Plan dosyası yeni endpoint için güncellendi; full integration (~L, 9 sub-task) Sprint 23+ adayı olarak "Asset Type Genişletme" bölümünde duruyor. Plan: `docs/superpowers/plans/2026-05-13-tefas-integration.md`
 
 ---
 
@@ -98,7 +92,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **FX/GOLD ham ticker normalize** `[S]` `[P2]` — `asset_type:"FX"` prefix'siz `USDTRY` gelince 404; `C:` autoprefix + format guard.
 - [x] **BES (Bireysel Emeklilik) temel giriş** `[S]` `[P1]` `Hotfix-2026-05-11` ✅ — ManuelPosForm BES için pay adedi/NAV kaldırıldı; "Yatırılan Toplam Tutar" + "Güncel Değer" alanları eklendi. `shares=1, avg_cost=yatırılan`; güncel değer `fetch-prices mode:"set-manual-price"` → `price_cache`. Devlet katkısı farklı hesap kodu ile ayrı pozisyon.
 - [x] **BES TickerDetailTab breakdown kartı** `[S]` `[P1]` `Sprint-19` `2026-05-15` — Tamamlandı: 7-satır iki bölümlü kart (Kişisel Portföy + tinted Devlet Katkısı + Toplam Değer footer). 6 commit `45d98fc..50b92f4`. NULL guard ile eski BES pozisyonları "⚠ DK bilgisi güncellenmeli" nudge gösteriyor. ↻ Meta butonu BES için gizlendi; meta/divCal edge fetch'leri skiplendi. Spec: `docs/superpowers/specs/2026-05-15-bes-tickerdetail-breakdown-design.md`, plan: `docs/superpowers/plans/2026-05-15-bes-tickerdetail-breakdown.md`.
-- [ ] **BES güncel değer aylık güncelleme** `[S]` `[P2]` — Pozisyon satırında "Değer Güncelle" butonu; `set-manual-price` endpoint hazır, yalnızca UI gerekli.
+- [x] **BES güncel değer aylık güncelleme** `[S]` `[P2]` `Sprint-19` `2026-05-19` ✅ — 💰 buton Dashboard pos-row (desktop+mobile) + TickerDetailTab "💰 Değer Güncelle"; `BesUpdateModal` `bes_update_atomic` RPC üzerinden positions.dk_current + price_cache aynı transaction'da yazar. Migration 019.
 - [x] **Nakit & Vadeli Mevduat (CASH/DEPOSIT)** `[M]` `[P2]` `Hotfix-2026-05-11` ✅ — CASH (banka bakiyesi) + DEPOSIT (vadeli mevduat) first-class asset type eklendi. Faiz oranı, vade tarihi, basit faiz hesabı (cap at maturity). DB: `interest_rate`, `maturity_date` kolonları + `rebuild_positions_atomic` RPC. Dashboard mixed-currency blokları; vade tarihi badge (kırmızı/sarı/yeşil); HHI konsantrasyon riskinden hariç. 11 commit, migration 016–017.
 - [x] **DEPOSIT/CASH Dashboard blok değeri ₺ göster** `[S]` `[P1]` `Sprint-18` ✅ (2026-05-13) — Dashboard'da Vadeli Mevduat bloğu değer toplamı `$30,127` gösteriyor; DEPOSIT ve CASH pozisyonlar TRY cinsinden olduğu için blok toplamı ve bireysel pozisyon satırı `₺` sembolüyle gösterilmeli. Display currency toggle ($/ ₺) değişince döviz bazında çevrilmeli, ama default `$` seçiliyken bile bu blok ₺ olarak kalmalı ya da açıkça ₺ değeri göstermeli.
 - [x] **DEPOSIT TickerDetailTab özel görünümü** `[S]` `[P1]` `Sprint-18` ✅ (2026-05-13) — DEPOSIT pozisyonlarında "Adet/Ort. Maliyet/Piyasa Değeri/P&L/Şirket Bilgisi" yerine mevduata özgü bilgi kartı göster. Şema değişikliği yok — `maturity_date` varlığına göre iki varyant:
@@ -215,6 +209,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 ## Otomasyon & Raporlama
 
 - [ ] **Haftalık Portföy Özeti E-postası** `[M]` `[P2]` — Her Pazar pg_cron: haftanın getirisi, en iyi/en kötü 3 ticker. Resend API. `portfolio_weekly_snapshot` tablosu (user_id, week_start, mv_usd, mv_try, top_gainer, top_loser). Bağımlılık: Resend API key.
+  - [ ] (a) `portfolio_weekly_snapshot` tablosu + pg_cron Pazar sabahı toplama `[S]`
+  - [ ] (b) Resend API entegrasyonu + temel template (getiri + top/bottom 3) `[S]`
+  - [ ] (c) AI özet katmanı — Haiku ile 4-5 cümle Türkçe yorum (eski "Haftalık AI Portföy Özeti" P3 item'ı buraya kaymış) `[M]`
 - [x] **Stale Fiyat Uyarısı (price_cache yaşı)** `[S]` `[P2]` `Sprint-19` `2026-05-15` — `isPriceStale(updatedAtISO, 24)` `src/utils.js`'te; App.js `prcUpdatedAt` state'i `price_cache.updated_at`'i map'liyor; `.badge.stale` Dashboard desktop+mobile pos-row'da ve WatchlistTab ticker hücresinde; hover'da `data-tip` ile "Fiyat X sa önce güncellendi". CASH/DEPOSIT/BES synthetic tipler `prcUpdatedAt` map'inde yok → badge görünmez.
 - [ ] **Otomatik Split Tespiti** `[L]` `[P3]` — FMP adjusted fiyatla avg_cost karşılaştırma; >50% sapmada "split olmuş olabilir" uyarısı.
 
@@ -226,7 +223,6 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **Katman 2 — Yeni pozisyon ekleme checklist sorusu** `[S]` `[P2]` — AddTab'da asset tipi seçiminden önce "Yatırım tezini belirledin mi? (Investment Guide 20-kriter)" nudge/modal. Yeni API yok.
 - [ ] **Katman 2 — Popüler hisse FOMO uyarısı** `[M]` `[P2]` — SearchTab'da `price_cache.p_m1 > 30%` ise "Bu hisse son 30 günde çok konuşuluyor. FOMO mu, tez mi?" banner. Basit versiyon: tamamen frontend, yeni fetch yok.
 - [ ] **Katman 2 — Büyük kazanç tez kontrolü nudge** `[S]` `[P2]` — Pozisyon son 1 ayda >%25 artmışsa "TICKER %X büyüdü. Orijinal tezin hâlâ geçerli mi?" nudge; aynı ticker 30 gün susturulur.
-- [ ] **Haftalık AI Portföy Özeti (Push/Email Nudge)** `[M]` `[P3]` — Pazar sabahı pg_cron + Haiku; 4-5 cümle Türkçe özet; Resend e-posta. Bağımlılık: `portfolio_snapshots` tablosu + Resend API key. `→ "Haftalık Portföy Özeti E-postası" item'ı ile birleştirilebilir.`
 
 ---
 
@@ -274,6 +270,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 - [ ] **Kişisel Yatırım Notu** `[M]` `[P2]` — Ticker bazında "neden aldım / çıkış stratejim / öğrenilen ders" serbest metin. Yeni `notes` Supabase tablosu (user_id, ticker nullable, date, content).
 - [ ] **Hedef Fiyat & Değerleme Notu** `[M]` `[P2]` — Kullanıcı tanımlı hedef fiyat + kısa not; "THYAO hedef ₺380 — %17 uzakta". Yeni `target_prices` Supabase tablosu.
+  - [ ] (a) `target_prices` migration + RLS + TickerDetailTab "Hedef Fiyat" satırı `[S]`
+  - [ ] (b) Watchlist row'unda hedef fiyat + uzaklık + kısa not gösterimi (eski "Watchlist'e niyet katmanı" item'ı buraya katıldı) `[S]`
+  - [ ] (c) Bildirim/alarm tetikleyici — fiyat hedefe değdiğinde nudge veya email (Yaklaşan Etkinlikler Merkezi'ne feed) `[M]`
 - [ ] **FIRE / Hedef Portföy Büyüklüğü Takibi** `[M]` `[P2]` — Hedef büyüklük girer; XIRR projeksiyonu + progress bar. `profiles.goal_amount` + `goal_currency` kolonu.
 - [ ] **Yaklaşan Etkinlikler Merkezi** `[M]` `[P2]` — Önümüzdeki 30/90 günde temettü, bilanço, DCA hatırlatıcısı ve hedef fiyat alarmı tek kronolojik listede. Veri kaynakları: Temettü Takvimi, Kazanç Takvimi, DCA Planı, Hedef Fiyat Bildirimi.
 - [ ] **Portföy Zaman Çizelgesi (Timeline)** `[M]` `[P3]` — Tüm BUY/SELL kronolojik vertical timeline. `transactions` tablosu yeterli.
@@ -290,7 +289,6 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **Social Portfolios Faz 3 — Takip sistemi** `[M]` `[P2]` — `follows` tablosu; follow/unfollow UI; `portfolio_activities` feed. Faz 2 sonrası.
 - [ ] **Social Portfolios Faz 4 — Sosyal Feed tab** `[L]` `[P2]` — Yeni "Portföyler" sekmesi; public portföyler listesi + aktivite feed. Faz 3 sonrası.
 - [ ] **Social Portfolios Faz 5 — Grup Portföyleri** `[L]` `[P3]` — Eşlerle/aile ile ortak portföy takibi; `groups` + `group_members` tabloları; davet kodu akışı; konsolide dashboard. Faz 2+3 sonrası.
-- [ ] **Yatırımcı risk profili** `[M]` `[P2]` — anket → muhafazakar / dengeli / agresif. Koç Sekmesi "Yatırımcı felsefesi onboarding" item'ı ile birleştirilebilir.
 - [ ] **Portföy Performans Karşılaştırma (Anonim Leaderboard)** `[L]` `[P3]` — Opt-in; anonim getiri sıralaması; Faz 3 tamamlanınca anlamlı.
 
 ---
@@ -397,7 +395,6 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **Toplam Komisyon kartını AnalysisTab'dan taşı** `[S]` `[P2]` — Settings → İşlem Geçmişi altı veya "Maliyet Özeti" bölümü daha anlamlı.
 - [ ] **Konsantrasyon Riski — HHI sonucu → trafik ışığı + cümle** `[S]` `[P2]` — "Konsantrasyon: Yüksek" pill + cümle yeterli; HHI sayısı detay/tooltip'e.
 - [ ] **Fundamental Checklist'i şirket özeti + detay modeline çevir** `[M]` `[P2]` — TickerDetailTab önce plain-language özet: "Kârlılık güçlü · Borç makul · Değerleme pahalı". Ardından mevcut metrik grupları detay olarak kalır.
-- [ ] **Watchlist'e niyet katmanı ekle** `[M]` `[P2]` — Watchlist row'unda hedef fiyat, uzaklık ve kısa not gösterimi. "Hedef Fiyat & Değerleme Notu" + "Hedef Fiyat Bildirimi" item'larıyla birleştir.
 - [ ] **Sağlık Tablosu 🟢🟡🔴 sayılarına inline açıklama** `[S]` `[P2]` — "7 sağlıklı · 3 orta · 2 dikkat" formatı; tooltip touch'ta çalışmıyor. `→ AnalysisTab.js:1001-1007`
 
 ---
@@ -480,19 +477,19 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Sonraki Adım
 
-Sprint 4–22 ✅ | **Sprint 23 = UI Yapı Temizliği** (2026-05-21 → 2026-06-04) — headline AnalysisTab Özet/Detay split shipped 2026-05-22 ✅; Phase-2 #4 empty-state + #6 button-like span→button kalan iş, sprint window'unda kapanmalı. Plan: `sprints/sprint-23.md`.
+Sprint 4–23 ✅ | Sprint 23 ✅ kapandı (2026-05-25 — headline AnalysisTab Özet/Detay split + Phase-2 #4 + #6); retro `sprints/sprint-23.md`.
 
-**Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu** (2026-06-05 → 2026-06-18) — plan: `sprints/sprint-24.md`.
+**Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu** (2026-06-05 → 2026-06-18) — plan hazır + pre-flight 2026-05-25 yapıldı (3510 fon, JSON endpoint `fonFiyatBilgiGetir` doğrulandı, `price_cache` şeması netleşti). 5 gün sonra başlıyor. Plan: `sprints/sprint-24.md`.
 
 **Sprint 24 kapsamı:**
-1. **TEFAS Yatırım Fonu entegrasyonu** `[L][P1]` — 9 alt-task uçtan uca: NAV fetch routing, `tefas_funds` katalog tablosu, AddTab picker, Dashboard ₺ bloğu, SearchTab birleşik arama, AnalysisTab lime dilim + Türkiye bölge, Settings katalog yenile butonu, 6h cron allowlist. WAF bloker Sprint 22'de temizlendi (yeni JSON endpoint `fonFiyatBilgiGetir`).
+1. **TEFAS Yatırım Fonu entegrasyonu** `[L][P1]` — 9 alt-task uçtan uca: NAV fetch routing, `tefas_funds` katalog tablosu, AddTab picker, Dashboard ₺ bloğu, SearchTab birleşik arama, AnalysisTab lime dilim + Türkiye bölge, Settings katalog yenile butonu, 6h cron allowlist.
 2. **Boş durum metinlerini kullanıcı diline çevir** `[S][P2]` — `"snap. yok"` → `"Veri henüz oluşmadı"`, `"Bilinmiyor"` → `"Henüz sınıflandırılmadı"`; TEFAS empty state'leri.
 
-**Sprint 24 sonrası aday havuzu (öncelik sırası — her sprint başında gözden geçir):**
+**Sprint 25+ aday havuzu (2026-05-31 grooming'de yeniden sıralandı — her sprint başında gözden geçir):**
 
-1. **Değerleme okunabilirliği** `[M][P1/P2]` — Fundamental Checklist'i özet+detay modeline çevir, ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma cümlesi, sektör-aware F/K eşikleri. Yeni provider yok.
-2. **TEFAS historical NAV + sparkline** `[M][P2]` — Sprint 24 sonrası iterasyonu: `price_cache.p_d1/w1/m1/y1` doldurma, sparkline desteği. TEFAS API historical endpoint test gerektirir.
-3. **Layer-2 davranışsal nudge** `[M][P2]` — piyasa düşüş nudge'ı, büyük kazanç tez-kontrolü nudge'ı, SearchTab FOMO banner'ı. Mevcut `price_cache` verisi, yeni fetch yok.
-4. **Design audit Phase-2 kalanı** `[S×2][P2]` — #7 kart/panel konsolidasyon, #9 tooltip tutarlılığı.
-5. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 ile birlikte; public view `privacy_level==="full"` modda gerçek `shares`/`avg_cost`.
-6. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı.
+1. **Değerleme okunabilirliği** `[M][P1/P2]` — Fundamental Checklist'i özet+detay modeline çevir, ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma cümlesi, sektör-aware F/K eşikleri. Yeni provider yok. **Neden 1**: Value-investing core fit + günlük driver delta + Sprint 23 verdict pattern'inin doğal devamı.
+2. **Layer-2 davranışsal nudge** `[M][P2]` — piyasa düşüş nudge'ı, büyük kazanç tez-kontrolü nudge'ı, SearchTab FOMO banner'ı. Mevcut `price_cache` verisi, yeni fetch yok. **Neden 2**: Platform vizyonu Katman 2'ye ilk somut adım; mevcut data leverage, ucuz effort.
+3. **TEFAS historical NAV + sparkline** `[M][P2]` — Sprint 24 sonrası iterasyonu: `price_cache.p_d1/w1/m1/y1` doldurma, sparkline desteği. TEFAS API historical endpoint test gerektirir. **Neden 3**: Sprint 24'ün doğal devamı ama önce Can'ın gerçek TEFAS kullanım feedback'i lazım — sıra ona göre değişebilir.
+4. **Design audit Phase-2 kalanı** `[S×2][P2]` — #7 kart/panel konsolidasyon, #9 tooltip tutarlılığı. **Neden 4**: Polish companion; başka headline'a yorulduğunda yarım gün'lük doldurma işi.
+5. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı. **Neden 5**: Going-live tarihi netleşmediği için şu an erkenci, ama hazırlık fazına başlamak akıllıca.
+6. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; public view `privacy_level==="full"` modda gerçek `shares`/`avg_cost`. **Neden 6 (sona)**: Social Faz 2 ship etmeden tek başına değer yaratmaz; coupling sebebiyle erken yapmanın anlamı yok.
