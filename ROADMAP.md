@@ -380,7 +380,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 - [ ] **`today` değişkeni üst-seviye fonksiyonu gölgeliyor** `[S]` `[P3]` — CAGR bileşeninde `const today = new Date().toISOString()...` (string) üst seviye `today` fonksiyonunu gölgeliyor. `todayStr` olarak adlandır. `→ App.js:~4195`
 - [ ] **PublicView çift padding** `[S]` `[P3]` — `app-main` zaten `padding:24px 20px 60px`; PublicView iç `padding:16px 16px 80px` ile birleşince alt ~140px. `→ App.js:~5235`
-- [ ] **`scripts/check-edge.sh`'a `deno check` adımı ekle** `[S]` `[P2]` — Sprint 22 bulgusu: `node --check` arrow function body'sinde aynı scope'ta `const` redeclaration'ı **sessizce** kabul ediyor (exit 0). Sprint 22 #4'te `refresh-price-cache` `yfHistoricalUS`'ta ikinci `const closes` çakışması yerel `npm run check:edge` gate'inden geçti, prod'da Deno+ESZIP runtime'da `BOOT_ERROR`/HTTP 503 olarak patladı. `deno check <fn>` strict ESM parse ile bu kör noktayı kapatır — `check-edge.sh`'a `node --check` yanına ekle. Detay: `Lessons.md` 2026-05-19 entry.
+- [x] **`scripts/check-edge.sh`'a `deno check` adımı ekle** `[S]` `[P2]` `2026-05-31` ✅ — Conditional gate eklendi: Deno PATH'de varsa `deno check <fn>` her edge fn için çalışır, yoksa "deno not installed — install: brew install deno" warning'i basılır + node-only flow korunur. Forward-compatible: Can `brew install deno` çalıştırınca strict ESM gate kendiliğinden devreye girer. Detay: `Lessons.md` 2026-05-19 entry.
 
 ### Brand Fit & Jargon Temizliği (Grup A/B — Sprint-15 kapsamı)
 
