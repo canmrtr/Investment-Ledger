@@ -115,6 +115,7 @@ function App({session}){
   },[menuOpen]);
   const [watchlistItems,setWatchlistItems]=useState([]);
   const [connTest,setConnTest]=useState(null);  // {ok:bool, status:int, body:str} — Settings → Bağlantı Test çıktısı
+  const [tefasCatBusy,setTefasCatBusy]=useState(false);  // TEFAS katalog yenileme in-flight (~20s)
   const [statusOpen,setStatusOpen]=useState(false);
   const [nudgeDismissed,setNudgeDismissed]=useState(()=>LS.get(_uk('il_nudge_dismissed'),{}));
   const [healthRedCount,setHealthRedCount]=useState(null);
@@ -1297,6 +1298,17 @@ function App({session}){
               :<div className="brow">
                 <button onClick={fetchPrices}>↻ Şimdi Güncelle{lastFetchAt&&<span className="dim" style={{fontSize:10,marginLeft:6}}>{fmtAge(lastFetchAt)}</span>}</button>
                 <button onClick={fetchHist}>Tarihi Veri (1G/1H/1A/1Y)</button>
+                <button disabled={tefasCatBusy} onClick={async()=>{
+                  setTefasCatBusy(true);
+                  flash_("TEFAS katalogu yükleniyor… (~20 sn)","ok");
+                  try{
+                    const r=await edgeCallAuth("fetch-fundamentals",{mode:"tefas-catalog"});
+                    const d=await r.json();
+                    if(d.error)flash_("Katalog hatası: "+d.error,"err");
+                    else flash_(`TEFAS katalogu güncellendi: ${d.fetched} fon`,"ok");
+                  }catch(e){flash_("Katalog hatası: "+e.message,"err");}
+                  finally{setTefasCatBusy(false);}
+                }}>{tefasCatBusy?"TEFAS yükleniyor…":"TEFAS Katalogu Yenile"}</button>
                 <button onClick={async()=>{
                   setConnTest({loading:true});
                   try{
