@@ -300,6 +300,88 @@ async function massiveMeta(ticker, apiKey) {
   };
 }
 
+// ── TEFAS (Turkish mutual fund NAV) ─────────────────────────────────
+// Endpoint: POST https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir
+// Payload : { "fonKodu": "<code>", "periyod": <1|3|6|12> }  // months back
+// Response: { resultList: [{ tarih:"YYYY-MM-DD", fiyat:<num>, fonUnvan:"...", ... }, ...] }
+//           — newest-LAST (oldest-first); ~14-22 trading days for periyod=1.
+//           — errorCode/errorMessage non-null → fund not found or other API err.
+// Legacy /api/DB/BindHistoryInfo + BindFundInfo retired 2026-04; this is the replacement.
+const TEFAS_HEADERS = {
+  "Content-Type": "application/json",
+  "Accept": "application/json, text/plain, */*",
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+};
+
+async function tefasFetchSeries(fonKodu, periyod = 1) {
+  try {
+    const r = await fetch("https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir", {
+      method: "POST",
+      headers: TEFAS_HEADERS,
+      body: JSON.stringify({ fonKodu, periyod }),
+      signal: AbortSignal.timeout(10000),  // gov portalı asılabilir; diğer provider'larla aynı timeout pattern'i
+    });
+    if (!r.ok) return { error: `TEFAS HTTP ${r.status}` };
+    const data = await r.json();
+    if (data?.errorCode) return { error: `TEFAS: ${data.errorMessage || data.errorCode}` };
+    return { list: data?.resultList || [] };
+  } catch (e) {
+    return { error: "TEFAS fetch hatası: " + (e?.message ?? e) };
+  }
+}
+
+async function tefasPrice(fonKodu) {
+  // Latest NAV — periyod=1 returns ~14-22 daily NAVs over last month (trading days).
+  // Take the most recent (last element); no holiday loop needed — API already skips them.
+  const r = await tefasFetchSeries(fonKodu, 1);
+  if (r.error) return r;
+  if (!r.list.length) return { error: "TEFAS: fiyat bulunamadı" };
+  const last = r.list[r.list.length - 1];
+  const price = parseFloat(last.fiyat);
+  if (isNaN(price)) return { error: "TEFAS: geçersiz fiyat formatı" };  // NaN paylaşımlı cache'i zehirlemesin
+  return { price, date: last.tarih, name: last.fonUnvan };
+}
+
+async function tefasHistorical(fonKodu, fromISO, toISO) {
+  // periyod = months back; pick smallest periyod that covers fromISO.
+  const parsedFrom = Date.parse(fromISO);
+  if (isNaN(parsedFrom)) return { error: "TEFAS: geçersiz başlangıç tarihi" };  // aksi halde sessizce 12 aya düşer
+  const monthsBack = Math.max(1, Math.ceil((Date.now() - parsedFrom) / (30 * 86400000)));
+  const periyod = monthsBack <= 1 ? 1 : monthsBack <= 3 ? 3 : monthsBack <= 6 ? 6 : 12;
+  const r = await tefasFetchSeries(fonKodu, periyod);
+  if (r.error) return r;
+  const results = (r.list || [])
+    .filter(row => row.tarih >= fromISO && row.tarih <= toISO)
+    .map(row => ({ t: row.tarih, c: parseFloat(row.fiyat) }))
+    .filter(row => !isNaN(row.c));  // bozuk NAV satırlarını ele
+  if (!results.length) return { error: "TEFAS: tarihsel veri yok" };
+  return { results };
+}
+
+async function tefasMeta(fonKodu, supa) {
+  // Prefer tefas_funds catalog (populated by fetch-fundamentals tefas-catalog mode).
+  // Fallback: per-fund price endpoint includes fonUnvan in each row.
+  // NOTE: supa null (env eksik) veya tablo yoksa hatalar sessizce yutulur ve API
+  // fallback'ine düşülür; migration 20260513000000_tefas_funds.sql deploy öncesi uygulanmalı.
+  if (supa) {
+    try {
+      const { data } = await supa.from("tefas_funds")
+        .select("name, category").eq("code", fonKodu).maybeSingle();
+      if (data) {
+        return { name: data.name, category: data.category, currency: "TRY",
+                 locale: "tr", primary_exchange: "TEFAS", type: "Mutual Fund" };
+      }
+    } catch (_) { /* fall through to API */ }
+  } else {
+    console.warn("[fetch-prices] tefasMeta: supa client null — katalog atlanıyor, API'ye düşülüyor");
+  }
+  const r = await tefasFetchSeries(fonKodu, 1);
+  if (r.error) return r;
+  if (!r.list.length) return { error: "TEFAS: fon bulunamadı" };
+  return { name: r.list[0].fonUnvan || fonKodu, category: null, currency: "TRY",
+           locale: "tr", primary_exchange: "TEFAS", type: "Mutual Fund" };
+}
+
 // ── Handler ──────────────────────────────────────────────────────────
 
 Deno.serve(async (req) => {
@@ -374,6 +456,7 @@ Deno.serve(async (req) => {
 
     // Routing: BIST için asset_type veya .IS suffix
     const isBist = asset_type === "BIST" || /\.IS$/i.test(ticker);
+    const isTefas = asset_type === "TEFAS";
     const cleanTicker = ticker.replace(/\.IS$/i, "");
     // CRYPTO normalize: BTC/eth/eth-usd/BTC/USDT → X:{BASE}USD (Massive formatı).
     // X:/C:/I: ile başlıyorsa sadece uppercase. Quote currency (USDT/USDC/USD) strip:
@@ -415,6 +498,34 @@ Deno.serve(async (req) => {
       }
     }
     const massiveTicker = isCrypto ? cryptoTicker : isGold ? goldTicker : ticker;
+
+    // TEFAS: Turkish mutual fund NAV — tefas.gov.tr direct API. No provider key
+    // needed; routed before the Massive/BIST key checks below. price_cache has no
+    // `source`/`currency` columns — persist only {ticker, price, updated_at}.
+    if (isTefas) {
+      const supaUrl2 = Deno.env.get("SUPABASE_URL");
+      const serviceKey2 = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      const supa = (supaUrl2 && serviceKey2)
+        ? createClient(supaUrl2, serviceKey2, { auth: { persistSession: false } })
+        : null;
+      let result = {};
+      if (mode === "historical") {
+        result = await tefasHistorical(ticker, from || yearAgoISO(), to || yesterdayISO());
+      } else if (mode === "meta") {
+        result = await tefasMeta(ticker, supa);
+      } else {
+        result = await tefasPrice(ticker);
+      }
+      if ((mode === "price" || !mode) && result.price != null && supa) {
+        try {
+          await supa.from("price_cache").upsert(
+            { ticker: ticker.toUpperCase(), price: result.price, updated_at: new Date().toISOString() },
+            { onConflict: "ticker" }
+          );
+        } catch (e) { console.error("[fetch-prices] TEFAS price_cache upsert failed:", e?.message ?? e); }
+      }
+      return json({ ticker, result, date: result.date || to || yesterdayISO(), source: "tefas" });
+    }
 
     // Provider key check
     if (!isBist && !massiveKey) {
