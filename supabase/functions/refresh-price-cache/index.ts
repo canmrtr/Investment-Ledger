@@ -113,7 +113,35 @@ const normalizeTicker = (ticker, type) => {
     if (/\.IS$/i.test(ticker)) return ticker.toUpperCase();
     return `${ticker.toUpperCase()}.IS`;
   }
+  if (type === "TEFAS") return ticker;  // TEFAS kodları olduğu gibi (YAC, MAC…)
   return ticker;
+};
+
+// TEFAS: en güncel NAV — tefas.gov.tr /api/funds/fonFiyatBilgiGetir.
+// price_cache şemasında olmayan kolon döndürmez (source/currency yok); sadece {price}.
+// periyod=1 son ~14-22 işlem gününü döner; son elemanı al (tatil loop'u gereksiz).
+const fetchTefasPrice = async (fonKodu) => {
+  const r = await fetch("https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Accept": "application/json, text/plain, */*",
+      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      "Referer": "https://www.tefas.gov.tr/",  // WAF dayanıklılığı (sprint #1 riski rebound)
+      "Origin": "https://www.tefas.gov.tr",
+    },
+    body: JSON.stringify({ fonKodu, periyod: 1 }),
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!r.ok) throw new Error(`TEFAS HTTP ${r.status}`);
+  const data = await r.json();
+  if (data?.errorCode) throw new Error(`TEFAS: ${data.errorMessage || data.errorCode}`);
+  const list = data?.resultList || [];
+  if (!list.length) throw new Error("TEFAS: fiyat bulunamadı");
+  // fiyat JSON number döner (smoke test: 13.92976); String+replace TR-locale string'e karşı defansif.
+  const price = parseFloat(String(list[list.length - 1].fiyat).replace(",", "."));
+  if (isNaN(price)) throw new Error("TEFAS: geçersiz fiyat formatı");  // NaN cache'i zehirlemesin
+  return { price };
 };
 
 Deno.serve(async (req) => {
@@ -163,7 +191,7 @@ Deno.serve(async (req) => {
     // 1) Tüm user'lardan unique ticker listesi (RLS bypass).
     // FX hariç tüm desteklenen asset tipleri dahil edilir.
     // `type` alıyoruz — CRYPTO/GOLD tickers Massive formatına normalize etmek için gerekli.
-    const REFRESHABLE_TYPES = ["US_STOCK", "FUND", "CRYPTO", "GOLD", "BIST"];
+    const REFRESHABLE_TYPES = ["US_STOCK", "FUND", "CRYPTO", "GOLD", "BIST", "TEFAS"];
     const { data: posList, error: posErr } = await supa
       .from("positions")
       .select("ticker, type")
@@ -202,8 +230,14 @@ Deno.serve(async (req) => {
     for (let i = 0; i < batch.length; i++) {
       const t = batch[i];
       try {
-        const apiTicker = normalizeTicker(t, tickerTypes[t]);
-        const data = await fetchHistorical(apiTicker, massiveKey);
+        const type = tickerTypes[t];
+        let data;
+        if (type === "TEFAS") {
+          data = await fetchTefasPrice(t);
+        } else {
+          const apiTicker = normalizeTicker(t, type);
+          data = await fetchHistorical(apiTicker, massiveKey);
+        }
         const { error: upErr } = await supa.from("price_cache").upsert(
           { ticker: t, ...data, updated_at: new Date().toISOString() },
           { onConflict: "ticker" }
