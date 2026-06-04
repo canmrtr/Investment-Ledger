@@ -15,7 +15,7 @@ function AddTxInline({ticker,user,pos,loadData,flash_,onClose,assetType,portfoli
   // Effective asset type: pozisyondan, yoksa parent'tan gelen hint'ten, yoksa US_STOCK default.
   // Non-held BIST detayından eklemede asset_type doğru olsun diye kritik.
   const effType = tkPos?.type || assetType || "US_STOCK";
-  const effCur  = tkPos?.currency || (effType==="BIST" ? "TRY" : "USD");
+  const effCur  = tkPos?.currency || ((effType==="BIST"||effType==="TEFAS") ? "TRY" : "USD");
 
   const saveManual=async()=>{
     const sh=+form.shares,pr=+form.price;
@@ -403,7 +403,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
   const _depBuyMs=(()=>{if(!isDeposit)return null;const ds=tickerTxs.filter(t=>t.way==="BUY").map(t=>new Date(t.date).getTime());return ds.length>0?Math.min(...ds):_depNow;})();
   const depositElapsed=_depBuyMs!=null?Math.max(1,Math.round((_depNow-_depBuyMs)/86400000)):1;
   const isBist = effectiveType==="BIST";
-  const displayCurrency = p?.currency || (isBist ? "TRY" : "USD");
+  const displayCurrency = p?.currency || ((isBist||effectiveType==="TEFAS") ? "TRY" : "USD");
   const sym = displayCurrency==="TRY" ? "₺" : displayCurrency==="EUR" ? "€" : "$";
 
   // Non-held için canlı fiyat (search'ten açıldı, prc[ticker] yok). Held için prc cache'ten.
@@ -466,7 +466,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
 
   // Dividend calendar — yalnızca held US_STOCK için; BIST'te FMP temettü güvenilir değil
   useEffect(()=>{
-    if(isBist||isBes||!p||divCal!==null)return;
+    if(isBist||isBes||effectiveType==="TEFAS"||!p||divCal!==null)return;  // TEFAS fonlarında US temettü takvimi yok
     edgeCallAuth("fetch-fundamentals",{mode:"dividend-calendar",tickers:[ticker]})
       .then(r=>r.json())
       .then(data=>{
