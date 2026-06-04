@@ -693,6 +693,54 @@ Deno.serve(async (req) => {
     }
     // ─────────────────────────────────────────────────────────────────────────
 
+    // Mode: tefas-catalog — fetch ALL TEFAS funds (~3500) from tefas.gov.tr and
+    // upsert into tefas_funds table. Endpoint /api/funds/fonGetir; payload body
+    // is ignored — always returns full catalog. JWT-protected (authenticated only) —
+    // Settings → Bakım butonundan edgeCallAuth ile manuel tetiklenir; cron yok.
+    // skipJwt'ye EKLENMEZ: anon tetiklemesi TEFAS kotasını/DB write'ı suistimal edebilir.
+    if (body.mode === "tefas-catalog") {
+      const supa = getServiceClient();
+      if (!supa) return json({ error: "Service key eksik" }, 500);
+      let fetched = 0, failed = 0;
+      try {
+        const r = await fetch("https://www.tefas.gov.tr/api/funds/fonGetir", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/plain, */*",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          },
+          body: JSON.stringify({}),
+          signal: AbortSignal.timeout(20000),  // ~3500 fonluk yanıt; gov portalı yavaş olabilir
+        });
+        if (!r.ok) return json({ error: `TEFAS catalog HTTP ${r.status}` }, 502);
+        const data = await r.json();
+        if (data?.errorCode) return json({ error: `TEFAS: ${data.errorMessage || data.errorCode}` }, 502);
+        const list = data?.resultList;
+        if (!Array.isArray(list)) return json({ error: "TEFAS: beklenmeyen yanıt formatı" }, 502);
+
+        const rows = list.map(f => ({
+          code:       (f?.fonKodu || "").toUpperCase().trim(),
+          name:       f?.fonUnvan || f?.fonKodu || "",
+          category:   f?.fonTurAciklama || null,
+          updated_at: new Date().toISOString(),
+        })).filter(f => f.code.length > 0);  // optional-chaining: null/non-object eleman map'i patlatmaz
+
+        // ~3500 fon, chunk=500 → ~7 sıralı upsert; PostgREST ~1MB payload limiti
+        // 500 küçük satırın çok üstünde.
+        const CHUNK = 500;
+        for (let i = 0; i < rows.length; i += CHUNK) {
+          const chunk = rows.slice(i, i + CHUNK);
+          const { error } = await supa.from("tefas_funds").upsert(chunk, { onConflict: "code" });
+          if (error) { failed += chunk.length; console.error("[tefas-catalog] upsert error:", error.message); }
+          else fetched += chunk.length;
+        }
+      } catch (e) {
+        return json({ error: "TEFAS catalog hatası: " + (e?.message ?? e) }, 500);
+      }
+      return json({ fetched, failed, total: fetched + failed });
+    }
+
     // Mode: ticker-list — US (SEC EDGAR) + BIST (Twelve Data) merged.
     // Browser SEC'e direkt fetch yapamaz (User-Agent zorunluluğu); edge
     // function proxy görevi görür. BIST için Twelve Data /stocks reference
