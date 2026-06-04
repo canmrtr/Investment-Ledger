@@ -13,9 +13,9 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 - **Backend**: Supabase (auth, PostgreSQL, RLS, Edge Functions, pg_cron).
 - **Edge Functions** (hepsi `--no-verify-jwt`):
   - `parse-transaction` — Claude Haiku 4.5, metin/görüntü → `{transactions:[...]}` array
-  - `fetch-prices` — Massive (US/FX/Crypto/GOLD), Yahoo (BIST price/hist), Twelve Data + borsa-mcp (BIST meta)
-  - `refresh-price-cache` — pg_cron 6h, stale-first batch
-  - `fetch-fundamentals` — FMP + EDGAR (US); İş Yatırım (BIST); 21 metrik + annual + grades + `dcf` (FMP `/stable/discounted-cash-flow` adil değer, cevapta top-level — metrics jsonb'sine konmaz; US-only); `mode:"ticker-list"` → ~11k ticker DB; `mode:"refresh-fund-cache"` → pg_cron haftalık stale refresh; `mode:"etf-country"` → FMP country-weightings (planlı)
+  - `fetch-prices` — Massive (US/FX/Crypto/GOLD), Yahoo (BIST price/hist), Twelve Data + borsa-mcp (BIST meta), **TEFAS** (`asset_type:"TEFAS"` → `tefas.gov.tr/api/funds/fonFiyatBilgiGetir` NAV; price/historical/meta; provider-key kontrolünden önce route; price_cache'e yalnız `{ticker,price,updated_at}` yazar)
+  - `refresh-price-cache` — pg_cron 6h, stale-first batch; `REFRESHABLE_TYPES` US_STOCK/FUND/CRYPTO/GOLD/BIST/**TEFAS** (TEFAS `fetchTefasPrice` ile fetch loop'ta branch'lenir)
+  - `fetch-fundamentals` — FMP + EDGAR (US); İş Yatırım (BIST); 21 metrik + annual + grades + `dcf` (FMP `/stable/discounted-cash-flow` adil değer, cevapta top-level — metrics jsonb'sine konmaz; US-only); `mode:"ticker-list"` → ~11k ticker DB; `mode:"refresh-fund-cache"` → pg_cron haftalık stale refresh; `mode:"etf-country"` → FMP country-weightings (planlı); `mode:"tefas-catalog"` → ~3510 fonu `/api/funds/fonGetir`'den `tefas_funds`'a upsert (500'lük chunk; **JWT-protected, skipJwt'de DEĞİL** — anon suistimali engellenir)
 - **PWA**: `manifest.json` + `service-worker.js` (root); `index.html`'de SW kayıt; icon-192/512.png mevcut.
 - **Secrets** (`Deno.env.get`): `MASSIVE_KEY`, `FMP_KEY`, `TWELVEDATA_KEY`, `ANTHROPIC_KEY`
 
@@ -57,8 +57,8 @@ pg_cron: `refresh-price-cache-6h` — `0 */6 * * *`; `refresh-fund-cache-weekly`
 - **Dashboard**: KPI (TR + XIRR), "Bu Ay Beklenen Temettüler" `<details>` kart (held US_STOCK için ex_date ∈ [today, today+30]; empty state'te gizli), 6 BLOCK_TYPE pozisyon bloğu (başlangıçta kapalı); pos-row'da ticker yanında `.badge.stale` (24h+ eski `price_cache.updated_at`)
 - **WatchlistTab**: fiyat/günlük değişim tablosu, "Çıkar" per row (async `confirm_` prop'u App'ten gelir), empty-card CTA; ticker yanında `.badge.stale`; `watchlist` Supabase tablosu (id, user_id, ticker, asset_type, added_at)
 - **AnalysisTab** (Sprint 23 — **Özet / Detay iki katman**): root `<div>` flex-column; kartlar CSS `order` ile konumlanır (kaynak DOM sırası ≠ görsel sıra). **Özet katmanı** (`order` 10–16, default görünür): Varlık/Bölge/Sektör Dağılımı (stacked bar, collapsible), Aylık Özet, 6 Aylık Performans, Kur Riski, Temettü Özeti. **Detaylı Analiz toggle** (`detailOpen` state, `order:20`) altında **Detay katmanı** (`order` 30–37, `display:detailOpen?undefined:"none"`): **Portföy Sağlık** (Portföy F/K KPI + 6 portföy seviyesi sonuç cümlesi + "Detay ▾" toggle ile 8 metrik dense tablo), Konsantrasyon Riski, Break-Even, Potansiyel Kayıp, Kazanan/Kaybeden, Dönem Bazlı Getiri (benchmark), **Piyasa Düşüşü Dayanıklılığı** (MV-weighted 1-10 skor + tek-satır verdict "güçlü ≥7 / orta ≥5 / kırılgan <5" + composition satırı + per-ticker bar grid; BIST bankaları + non-equity `isFundEligible` ile kapsam dışı), Toplam Komisyon (broker×yıl). **fund_cache lazy-fetch**: Supabase `fund_cache` SELECT + edge auto-fetch yalnız `detailOpen===true` iken (`useEffect` deps `[pos,detailOpen]`); Detay hiç açılmazsa hiçbir fundamentals ağ isteği yok. Eski 4 bölüm başlığı (Performans/Dağılım/Fundamentals/Risk) kaldırıldı. Global asset-type filtre (`.fbar`) iki katmanın da üstünde.
-- **SearchTab**: ~11k ticker (US + BIST); autofocus sadece desktop'ta (`!('ontouchstart' in window)`); portföy + discovery; "+ İzle" / "✓ İzleniyor" non-held toggle
-- **AddTab**: 8 asset type picker → text/image/csv/manuel; CASH/DEPOSIT Manuel-only (text/image/csv gizli); ConfirmBox + ManuelPosForm
+- **SearchTab**: ~11k ticker (US + BIST) + **~3510 TEFAS fonu** (`tefas_funds` 5×1000 sayfalı fetch, 24h LS cache `tefas_fund_db_v1`); ayrı "TEFAS fonları" sonuç bölümü + lime badge; autofocus sadece desktop'ta (`!('ontouchstart' in window)`); portföy + discovery; "+ İzle" / "✓ İzleniyor" non-held toggle
+- **AddTab**: 9 asset type picker (US_STOCK/BIST/FUND/CRYPTO/GOLD/FX/BES/**TEFAS**/CASH/DEPOSIT) → text/image/csv/manuel; CASH/DEPOSIT Manuel-only (text/image/csv gizli); TEFAS tüm sekmeler açık (BES gibi); ConfirmBox + ManuelPosForm
 - **TickerDetailTab**: held + discovery mode; "İzleniyor" badge + toggle buton; FAB context-aware; held US_STOCK/BIST için "Giriş Kalitesi" 52W bar (gradient + avg_cost vertical marker + güncel fiyat disk marker; h_52w/l_52w NULL ise gizli); US_STOCK/USD için fundamental checklist üstünde "Hızlı Değerleme (DCF)" kartı (`fund.dcf` adil değer + yükseliş potansiyeli `(dcf−price)/price`; renkli verdict ≥%50 🟢 / ≥%25 🟡 / <%25 🔴; `fund.dcf>0` yoksa gizli)
 - **HistoryTab**: filtre toolbar, accordion ticker gruplu — ana nav'da yok; Settings → "İşlem Geçmişi" → "Tüm İşlemleri Gör →"
 - **Rehber** (yeni, hamburger nav): coming soon placeholder — yatırım temelleri + portföy yönetimi rehberi
@@ -131,7 +131,7 @@ Sık başvurulan operasyonel kurallar (quick-ref):
 `RATE_LIMIT_MS=7500`, `DUST_THRESHOLD=0.0001`, `CSV_BATCH_SIZE=50`, `FLASH_MS=3500`
 
 ### Renk paleti (TYPE_COLORS)
-`US_STOCK:#8B5CF6`, `FUND:#3B82F6`, `CRYPTO:#06B6D4`, `BIST:#F97316`, `GOLD:#C9A84C`, `FX:#10B981`, `BES:#EC4899`, `CASH:#64748B`, `DEPOSIT:#6366F1`
+`US_STOCK:#8B5CF6`, `FUND:#3B82F6`, `CRYPTO:#06B6D4`, `BIST:#F97316`, `GOLD:#C9A84C`, `FX:#10B981`, `BES:#EC4899`, `TEFAS:#84CC16`, `CASH:#64748B`, `DEPOSIT:#6366F1`
 
 ### Brand kit token dosyası
 `src/styles/tokens.css` — tüm brand kit CSS custom property'leri (category colors, badge tokens, component tokens, extended palette). Kaynak: `docs/brand/brand-kit.md`. `index.html`'deki mevcut `--bg/--text/--info/--font-*` tokenleri tekrarlanmaz.

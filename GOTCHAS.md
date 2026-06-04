@@ -51,6 +51,10 @@
 - **BIST `fmtD`**: hardcoded `$` döner — BIST için `fmtSign(n, sym)` kullan.
 - **Yahoo Finance**: BIST ticker `THYAO.IS` formatı edge fn'de yapılır; frontend ham ticker geçer.
 - **borsa-mcp**: ilk handshake ~500ms; 401/404'te oturum yeniler.
+- **TEFAS NAV (`fonFiyatBilgiGetir`)**: `{fonKodu, periyod}` (periyod = ay sayısı: 1/3/6/12) POST eder; `resultList` **eski→yeni** sıralı, son eleman en güncel NAV (`fiyat` JSON number, `tarih` `YYYY-MM-DD`). `periyod=1` ~14-22 işlem günü döner — tatil loop'u gereksiz. Legacy `/api/DB/BindHistoryInfo` 2026-04'te kaldırıldı. UA + Referer/Origin header zorunlu (WAF). `fiyat` defansif `String(x).replace(",",".")` ile parse edilir.
+- **TEFAS price_cache yazımı**: `price_cache`'de **`source`/`currency` kolonu YOK** — TEFAS upsert'i yalnız `{ticker, price, updated_at}` yazar (d1/w1/m1/y1 NULL kalır; sparkline/% delta Sprint 25+). Currency read-time'da `positions.currency='TRY'` ile implied.
+- **`tefas_funds` SELECT sayfalama**: ~3510 satır, PostgREST default 1000 limitli — plain `.select()` ilk 1000 fonu keser; SearchTab `5×1000 range()` paralel sayfalar. Yeni TEFAS okuması yazarken sayfalamayı unutma.
+- **`tefas-catalog` modu JWT-protected**: `skipJwt`'ye EKLEME — anon kullanıcı 3510-fonluk fetch + DB write tetikleyebilir (Sprint 15 auth açığı). Settings butonu `edgeCallAuth` ile authenticated çağırır.
 
 ## Agent
 

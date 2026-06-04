@@ -61,6 +61,29 @@
 
 ---
 
+## Deploy Runbook (Can çalıştırır — canlı ops)
+
+Kod tamamlandı + commit'lendi (2026-06-04); aşağıdakiler Can'ın elinde. Sırayla:
+
+1. **Migration apply** — Supabase Dashboard → SQL Editor'e `supabase/migrations/20260513000000_tefas_funds.sql` içeriğini yapıştır + Run. Doğrula:
+   ```sql
+   select count(*) from tefas_funds;   -- 0 (henüz boş)
+   ```
+2. **Edge fn deploy** (3 fonksiyon — sırası önemsiz):
+   ```bash
+   npx supabase functions deploy fetch-prices --no-verify-jwt
+   npx supabase functions deploy fetch-fundamentals --no-verify-jwt
+   npx supabase functions deploy refresh-price-cache --no-verify-jwt
+   ```
+3. **Katalog yükle** — uygulamada Settings → Fiyat & Veri → **"TEFAS Katalogu Yenile"** (authenticated; ~20 sn). Veya Dashboard test:
+   `fetch-fundamentals` Test tab → `{ "mode": "tefas-catalog" }` (Authorization: Bearer <user JWT>). Beklenen: `{ fetched: ~3510, failed: 0 }`. Doğrula:
+   ```sql
+   select count(*), min(code), max(code) from tefas_funds;   -- count > 3000
+   ```
+4. **NAV testi** — `fetch-prices` Test tab → `{ "ticker":"YAC", "mode":"price", "asset_type":"TEFAS" }` → `{ result:{ price:<num>, date:"..." }, source:"tefas" }`.
+5. **Uçtan uca** — AddTab → TEFAS Fonu → Manuel → kod `YAC`, 100 pay, NAV → Kaydet → Dashboard "TEFAS Fonları" bloğu ₺ değer; Ara "kalkınma" → lime badge; Analiz → lime dilim + Türkiye bölge.
+6. **Cron doğrula** (opsiyonel) — `refresh-price-cache`'i `CRON_SECRET` Bearer ile manuel çağır; TEFAS pozisyonu için `price_cache.updated_at` bumped.
+
 ## Retro (sprint sonunda doldurulacak)
 
-_(Ne çıktı, ne kaldı, neden — bir paragraf.)_
+**Kod fazı (2026-06-04):** 9/9 alt-task tek oturumda tamamlandı (executing-plans skill). Plandan 2 bilinçli sapma: (a) `tefas-catalog` modu **JWT arkasında** bırakıldı (plan `skipJwt` öneriyordu) — anon kotа suistimalini önlemek için, Sprint 15 auth-hardening paritesi; (b) SearchTab `tefas_funds` fetch'i **5×1000 sayfalandı** (plan tek `.select()` idi, PostgREST 1k limiti ~3510 fonun çoğunu keserdi). 3 edge fn `edge-reviewer`'dan geçti; fetch-prices'ta HIGH/MEDIUM bulgular (AbortSignal.timeout, NaN guard, ticker.toUpperCase) düzeltildi; tüm TEFAS fetch'lerine Referer/Origin (WAF dayanıklılığı) + defansif decimal normalizasyon eklendi. `tefas_funds` RLS `rls-auditor`'dan PASS. babel/edge/drift yeşil. **Deploy/migration/katalog Can'da bekliyor** (yukarıdaki runbook). _(Deploy sonrası canlı doğrulama notu buraya eklenecek.)_

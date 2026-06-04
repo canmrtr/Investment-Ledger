@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-31** (Sprint 21–23 ✅ kapandı; Sprint 23 retro 2026-05-25, headline AnalysisTab Özet/Detay split shipped 2026-05-22. **Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu** hazır, başlangıç 2026-06-05. Plan: `sprints/sprint-24.md`.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-31** (Sprint 21–23 ✅ kapandı; Sprint 23 retro 2026-05-25, headline AnalysisTab Özet/Detay split shipped 2026-05-22. **Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu — kod tamamlandı 2026-06-04 (9/9 alt-task commit'lendi, babel/edge/drift yeşil); deploy + migration + katalog Can'da bekliyor.** Runbook + retro: `sprints/sprint-24.md`.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -73,16 +73,16 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Asset Type Genişletme
 
-- [ ] **TEFAS Yatırım Fonu entegrasyonu** `[L]` `[P1]` — Yeni `TEFAS` asset type (`#84CC16` lime, TRY cinsinden). Günlük NAV fiyatı `tefas.gov.tr` API'sinden; WAF engeli varsa `fonbul.com` fallback. ~1000 fonluk `tefas_funds` Supabase tablosu (katalog); SearchTab'da kod + isim araması. Dashboard "TEFAS Fonları" bloğu (₺). AnalysisTab: Varlık Dağılımı lime dilimi, Bölge Dağılımı → Türkiye. 6h cron refresh. Tasarım + plan hazır; önce WAF testi gerekli. Spec: `docs/superpowers/specs/2026-05-13-tefas-integration-design.md` · Plan: `docs/superpowers/plans/2026-05-13-tefas-integration.md`
-  - [ ] (1) WAF testi + `fetch-prices` `isTefas` routing `[S]`
-  - [ ] (2) `tefas_funds` SQL migration + RLS `[S]`
-  - [ ] (3) Frontend sabitler: TYPE_COLORS, TL, BLOCK_TYPES, ASSET_ICONS `[S]`
-  - [ ] (4) `fetch-fundamentals mode:"tefas-catalog"` + katalog yükleme `[S]`
-  - [ ] (5) AddTab TEFAS Fonu picker girişi `[S]`
-  - [ ] (6) SearchTab `tefas_funds` birleşik arama + lime badge `[S]`
-  - [ ] (7) AnalysisTab REGION_OF, priceCurOf, Fundamentals hariç `[S]`
-  - [ ] (8) Settings katalogu yenile butonu `[S]`
-  - [ ] (9) `refresh-price-cache` cron'a TEFAS ekleme `[S]`
+- [ ] **TEFAS Yatırım Fonu entegrasyonu** `[L]` `[P1]` `Sprint-24` — Yeni `TEFAS` asset type (`#84CC16` lime, TRY cinsinden). Günlük NAV fiyatı `tefas.gov.tr` `/api/funds/fonFiyatBilgiGetir`'den. ~3510 fonluk `tefas_funds` Supabase tablosu (katalog); SearchTab'da kod + isim araması. Dashboard "TEFAS Fonları" bloğu (₺). AnalysisTab: Varlık Dağılımı lime dilimi, Bölge Dağılımı → Türkiye. 6h cron refresh. **Kod tamamlandı 2026-06-04 (9/9 alt-task commit'lendi, babel/edge/drift yeşil); deploy + migration apply + katalog yükleme Can'da bekliyor → runbook `sprints/sprint-24.md`.** Spec: `docs/superpowers/specs/2026-05-13-tefas-integration-design.md` · Plan: `docs/superpowers/plans/2026-05-13-tefas-integration.md`
+  - [x] (1) `fetch-prices` `isTefas` routing (price/historical/meta) `[S]` `2026-06-04`
+  - [x] (2) `tefas_funds` SQL migration + public-read RLS (rls-auditor PASS) `[S]` `2026-06-04`
+  - [x] (3) Frontend sabitler: TYPE_COLORS, TL, BLOCK_TYPES, ASSET_ICONS, cache helper `[S]` `2026-06-04`
+  - [x] (4) `fetch-fundamentals mode:"tefas-catalog"` (JWT-protected, anon değil) `[S]` `2026-06-04`
+  - [x] (5) AddTab TEFAS Fonu picker girişi `[S]` `2026-06-04`
+  - [x] (6) SearchTab `tefas_funds` birleşik arama + lime badge (5×1000 sayfalama) `[S]` `2026-06-04`
+  - [x] (7) AnalysisTab REGION_OF (tr), TYPE_LBL, priceCurOf, Fundamentals hariç `[S]` `2026-06-04`
+  - [x] (8) Settings "TEFAS Katalogu Yenile" butonu `[S]` `2026-06-04`
+  - [x] (9) `refresh-price-cache` cron'a TEFAS ekleme `[S]` `2026-06-04`
 - [x] ~~**BES Devlet Katkısı (DK) entegrasyonu**~~ `[M]` `[P0]` `Sprint-18` ✅ (2026-05-13) — 4 form alanı (kişisel yatırılan, kişisel portföy güncel, DK anaparası, DK portföy güncel); `positions` tablosuna `dk_principal` + `dk_current` kolonları eklendi; `rebuild_positions_atomic` RPC güncellendi; cost basis = yalnızca kişisel yatırılan, DK+getiri tamamı kazanç; hint kaldırıldı. Migration 018. `→ utils.js, App.js, ManuelPosForm.js`
 - [x] ~~**AI parse temettü desteği (DIV way)**~~ `[S]` `[P1]` (2026-05-13) — `parse-transaction` sözleşmesi `BUY|SELL|DIV` oldu; Türkçe temettü ifadesi örnekleri eklendi; `saveTx` way allowlist doğrulaması eklendi. `→ parse-transaction-edge-function.js; AddTab.js`
 - [ ] **Sektör-aware fundamental eşikler** `[M]` `[P1]` — tech P/E ≤30, utility ≤15 vs.; `sic_description` veya FMP `sector` ile profil seç. TR enflasyonu CAGR eşiklerini de etkiliyor.
