@@ -709,6 +709,8 @@ Deno.serve(async (req) => {
             "Content-Type": "application/json",
             "Accept": "application/json, text/plain, */*",
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Referer": "https://www.tefas.gov.tr/",  // WAF dayanıklılığı (sprint #1 riski rebound)
+            "Origin": "https://www.tefas.gov.tr",
           },
           body: JSON.stringify({}),
           signal: AbortSignal.timeout(20000),  // ~3500 fonluk yanıt; gov portalı yavaş olabilir

@@ -311,6 +311,8 @@ const TEFAS_HEADERS = {
   "Content-Type": "application/json",
   "Accept": "application/json, text/plain, */*",
   "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Referer": "https://www.tefas.gov.tr/",  // WAF dayanıklılığı (sprint #1 riski rebound)
+  "Origin": "https://www.tefas.gov.tr",
 };
 
 async function tefasFetchSeries(fonKodu, periyod = 1) {
@@ -337,7 +339,8 @@ async function tefasPrice(fonKodu) {
   if (r.error) return r;
   if (!r.list.length) return { error: "TEFAS: fiyat bulunamadı" };
   const last = r.list[r.list.length - 1];
-  const price = parseFloat(last.fiyat);
+  // fiyat JSON number döner (smoke test: 13.92976); String+replace TR-locale string'e karşı defansif.
+  const price = parseFloat(String(last.fiyat).replace(",", "."));
   if (isNaN(price)) return { error: "TEFAS: geçersiz fiyat formatı" };  // NaN paylaşımlı cache'i zehirlemesin
   return { price, date: last.tarih, name: last.fonUnvan };
 }
@@ -352,7 +355,7 @@ async function tefasHistorical(fonKodu, fromISO, toISO) {
   if (r.error) return r;
   const results = (r.list || [])
     .filter(row => row.tarih >= fromISO && row.tarih <= toISO)
-    .map(row => ({ t: row.tarih, c: parseFloat(row.fiyat) }))
+    .map(row => ({ t: row.tarih, c: parseFloat(String(row.fiyat).replace(",", ".")) }))
     .filter(row => !isNaN(row.c));  // bozuk NAV satırlarını ele
   if (!results.length) return { error: "TEFAS: tarihsel veri yok" };
   return { results };
