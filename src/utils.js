@@ -183,6 +183,7 @@ const BLOCK_TYPES = [
   {type:"GOLD",     label:"Altın",     cur:"USD", sym:"$", badge:null,  icon:(s=14)=>ASSET_ICONS.GOLD(s)},
   {type:"FX",       label:"Döviz",     cur:"USD", sym:"$", badge:null,  icon:(s=14)=>ASSET_ICONS.FX(s)},
   {type:"BES",      label:"BES Fonları",cur:"TRY", sym:"₺", badge:"bes",  icon:(s=14)=>ASSET_ICONS.BES(s)},
+  {type:"TEFAS",    label:"TEFAS Fonları",cur:"TRY", sym:"₺", badge:"bes", icon:(s=14)=>ASSET_ICONS.TEFAS(s)},
   {type:"CASH",     label:"Nakit",      cur:"",    sym:"",  mixed:true, badge:null, icon:(s=14)=>ASSET_ICONS.CASH(s)},
   {type:"DEPOSIT",  label:"Vadeli Mevduat",cur:"", sym:"",  mixed:true, badge:null, icon:(s=14)=>ASSET_ICONS.DEPOSIT(s)},
 ];
@@ -250,6 +251,17 @@ const tickerDbCacheGet = () => {
 const tickerDbCacheSet = (list) => {
   _tickerDbMem = list;  // her durumda memory'de tut
   LS.set("sec_ticker_db_v3", { list, t: Date.now() });  // LS try-catch içinde, fail sessiz
+};
+
+// TEFAS fon kataloğu LS cache (24h TTL) — SearchTab birleşik araması besler.
+// Ticker-keyed paylaşımlı veri; user-scope prefix gerekmez.
+const tefasFundCacheGet = () => {
+  const c = LS.get("tefas_fund_db_v1", null);
+  if (!c || !c.list || Date.now() - c.t > 24 * 3600 * 1000) return null;
+  return c.list;
+};
+const tefasFundCacheSet = (list) => {
+  LS.set("tefas_fund_db_v1", { list, t: Date.now() });
 };
 
 const edgeCall = (fn, body) => fetch(`${SUPA_URL}/functions/v1/${fn}`, {
@@ -541,6 +553,7 @@ const ASSET_ICONS = {
   BES:      (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L4 6v6c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V6L12 2z"/><path d="M9 12l2 2 4-4"/></svg>,
   CASH:     (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12h.01M18 12h.01"/></svg>,
   DEPOSIT:  (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 14h2m2 0h4"/><path d="M8 17h2"/></svg>,
+  TEFAS:    (s=24)=><svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 12h8M12 8v8"/></svg>,
 };
 
 // Emtia SVG ikonları (COMMODITY_SYMBOLS için)
