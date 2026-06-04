@@ -380,7 +380,8 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 - [ ] **`today` değişkeni üst-seviye fonksiyonu gölgeliyor** `[S]` `[P3]` — CAGR bileşeninde `const today = new Date().toISOString()...` (string) üst seviye `today` fonksiyonunu gölgeliyor. `todayStr` olarak adlandır. `→ App.js:~4195`
 - [ ] **PublicView çift padding** `[S]` `[P3]` — `app-main` zaten `padding:24px 20px 60px`; PublicView iç `padding:16px 16px 80px` ile birleşince alt ~140px. `→ App.js:~5235`
-- [x] **`scripts/check-edge.sh`'a `deno check` adımı ekle** `[S]` `[P2]` `2026-05-31` ✅ — Conditional gate eklendi: Deno PATH'de varsa `deno check <fn>` her edge fn için çalışır, yoksa "deno not installed — install: brew install deno" warning'i basılır + node-only flow korunur. Forward-compatible: Can `brew install deno` çalıştırınca strict ESM gate kendiliğinden devreye girer. Detay: `Lessons.md` 2026-05-19 entry.
+- [x] **`scripts/check-edge.sh`'a `deno check` adımı ekle** `[S]` `[P2]` `2026-05-31` ✅ — Conditional gate eklendi: Deno PATH'de varsa `deno check <fn>` her edge fn için çalışır, yoksa "deno not installed — install: brew install deno" warning'i basılır + node-only flow korunur. Forward-compatible: Can `brew install deno` çalıştırınca strict ESM gate kendiliğinden devreye girer. Detay: `Lessons.md` 2026-05-19 entry. `2026-06-04` follow-up: repo-root `deno.json` + import map eklendi (npm dep'leri pin'li, `checkJs:false`); gate config'i deterministik hale getirildi.
+- [ ] **`deno.lock` commit et (offline-safe edge gate)** `[S]` `[P3]` — `deno check` ilk çalıştırmada `npm:` dep'leri network'ten indirir; offline/CI'da yeşil node gate'ini kırmızıya çevirebilir. `brew install deno` sonrası `deno cache *-edge-function.js` ile lock üret + commit et. Detay: `Lessons.md` 2026-06-04 entry.
 
 ### Brand Fit & Jargon Temizliği (Grup A/B — Sprint-15 kapsamı)
 

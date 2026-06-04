@@ -1,0 +1,10 @@
+{
+  "//": "Local config for the `deno check` gate in scripts/check-edge.sh — NOT used by Supabase deploy (the edge functions self-resolve their inline `npm:` specifiers). Auto-discovered when `npm run check:edge` runs `deno check` from the repo root. Mirror these versions exactly with the inline imports in *-edge-function.js to avoid version skew.",
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2",
+    "@anthropic-ai/sdk": "npm:@anthropic-ai/sdk"
+  },
+  "compilerOptions": {
+    "checkJs": false
+  }
+}

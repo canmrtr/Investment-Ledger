@@ -29,6 +29,12 @@ Bu dosya, Can'ın benimle aynı fikirde olmadığı veya bana "tekrar kontrol et
 
 <!-- Yeni entry'ler buraya, en üste. -->
 
+### 2026-06-04 — `deno check` syntax parse değil, network'lü module-graph resolve
+**Bağlam:** `check-edge.sh`'a eklenen `deno check` gate'ini güçlendirmek için repo-root `deno.json` + import map ekledim (npm:@supabase/supabase-js@2, npm:@anthropic-ai/sdk pin'li).
+**Hatam:** Script comment'inde `deno check`'i "Deno-strict ESM parse" diye tanımlamıştım — sanki saf bir syntax gate'iymiş gibi. Aslında `deno check` tüm module-graph'ı resolve eder: edge fn'lerin inline `npm:` import'larını **ilk çalıştırmada network'ten indirir** ve typed dep'leri type-check eder. Offline/CI'da veya fresh cache'de bu, node'un geçtiği yeşil gate'i kırmızıya çevirebilir.
+**Doğrusu:** `.js` body'leri default type-check edilmez (checkJs:false) ama graph yine de resolve edilir. Tam offline güvence için commit'li `deno.lock` gerekir — o da ancak deno kurulduktan sonra (`deno cache`/ilk `deno check`) üretilebilir. deno.json import map'i versiyonları tek yerde pin'ler ama inline `npm:` specifier'lar zaten kendi kendine resolve olduğundan map şu an advisory.
+**Kural:** Bir local gate eklerken "ne yapıyor" ile "ne yaptığını sandığım" arasını doğrula — `deno check` = resolve+typecheck, parse-only değil. deno kurulunca ilk iş `deno.lock` commit et (offline-safe gate); edge fn import'larını bare-specifier'a çevirirsen `supabase/functions/*/index.ts` mirror'ını da güncelle yoksa `check:edge-drift` patlar.
+
 ### 2026-05-19 — `node --check` arrow fn içindeki `const` redeclaration'ı atlıyor
 **Bağlam:** Sprint 22 #4'te `refresh-price-cache` edge fn'inin `yfHistoricalUS` arrow fn'ine 52W block ekledim. Aynı fn body'sinde `const closes = res.indicators?.quote?.[0]?.close || [];` (Yahoo response array) zaten vardı; ben 52W için ikinci `const closes = bars.map(b => b.c)...` ekledim. `npm run check:edge` (= her edge fn dosyasına `node --check`) ✅ yeşil geçti.
 **Hatam:** Babel + `node --check` yerel syntax gate'lerini "deploy edebilirim" sinyali olarak kabul ettim. Deploy edip cron tetiklediğimde HTTP 503 `BOOT_ERROR` aldım — Deno+ESZIP runtime'da `SyntaxError: Identifier 'closes' has already been declared`.
