@@ -5,6 +5,7 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
   const recentKey=userId?`il_recent_${userId}`:"il_recent_search";
   const [q,setQ]=useState("");
   const [tickerDb,setTickerDb]=useState(()=>tickerDbCacheGet());
+  const [tefasDb,setTefasDb]=useState(()=>tefasFundCacheGet());
   const [loading,setLoading]=useState(false);
   const [recent,setRecent]=useState(()=>LS.get(recentKey,[]));
   const inputRef=React.useRef(null);
@@ -43,6 +44,24 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
     .finally(()=>setLoading(false));
   },[]);
 
+  // TEFAS fon kataloğu (tefas_funds, ~3500 satır) — paylaşımlı public-read tablo.
+  // 24h LS cache; boşsa Supabase'den çek. PostgREST 1k satır limiti aşmak için
+  // paralel sayfalama (5 × 1000 = 5k kapsam). ticker_db'den bağımsız.
+  useEffect(()=>{
+    if(tefasDb)return;
+    const PAGE=1000;
+    Promise.all(
+      Array.from({length:5},(_,i)=>
+        sb.from("tefas_funds").select("code,name,category").range(i*PAGE,(i+1)*PAGE-1)
+      )
+    ).then(results=>{
+      const all=results.flatMap(r=>r.data||[]);
+      if(!all.length)return;
+      tefasFundCacheSet(all);
+      setTefasDb(all);
+    }).catch(()=>{});
+  },[]);
+
   const qTrim=q.trim();
   const qLower=qTrim.toLowerCase();
   const qUpper=qTrim.toUpperCase();
@@ -62,11 +81,16 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
     !portfolioSet.has(ticker)&&(ticker.startsWith(qUpper)||(name||"").toLowerCase().includes(qLower))
   ).slice(0,50):[];
 
+  // TEFAS fonları — kod prefix veya isim eşleşmesi; portföyde olmayanlar.
+  const tefasMatches=qTrim&&tefasDb?tefasDb.filter(({code,name})=>
+    !portfolioSet.has(code)&&(code.startsWith(qUpper)||(name||"").toLowerCase().includes(qLower))
+  ).slice(0,30).map(f=>({ticker:f.code,name:f.name,type:"TEFAS",exchange:"TEFAS",category:f.category})):[];
+
   // exchange → asset_type mapping (openDetail'e geçirilir)
   const exchToType = (ex) => ex==="XIST" ? "BIST" : "US_STOCK";
 
-  const nameFor=(ticker)=>{const pm=portfolioMap.get(ticker);if(pm?.name)return pm.name;return tickerDb?.find(x=>x.ticker===ticker)?.name||"";};
-  const typeFor=(ticker)=>{const pm=portfolioMap.get(ticker);if(pm?.type)return pm.type;return tickerDb?.find(x=>x.ticker===ticker)?.exchange==="XIST"?"BIST":"US_STOCK";};
+  const nameFor=(ticker)=>{const pm=portfolioMap.get(ticker);if(pm?.name)return pm.name;const td=tickerDb?.find(x=>x.ticker===ticker)?.name;if(td)return td;return tefasDb?.find(x=>x.code===ticker)?.name||"";};
+  const typeFor=(ticker)=>{const pm=portfolioMap.get(ticker);if(pm?.type)return pm.type;if(tefasDb?.some(x=>x.code===ticker))return "TEFAS";return tickerDb?.find(x=>x.ticker===ticker)?.exchange==="XIST"?"BIST":"US_STOCK";};
 
   const Row=({ticker,name,held,exchange,type})=>{
     const ex = exchange || (type==="BIST"?"XIST":"US");
@@ -79,6 +103,7 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
         <span style={{fontFamily:"'DM Mono',monospace",fontWeight:600,fontSize:13,minWidth:72}}>{ticker}</span>
         <span style={{flex:1,fontSize:12,color:"var(--text2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name||"—"}</span>
         {ex==="XIST"&&<span className="badge cry" style={{fontSize:9}}>BIST</span>}
+        {at==="TEFAS"&&<span className="badge" style={{fontSize:9,background:"rgba(132,204,22,0.15)",color:"#84CC16"}}>TEFAS</span>}
         {held&&<span className="badge etf" style={{fontSize:9}}>açık</span>}
         {!held&&onToggleWatchlist&&(()=>{
           const isOn=watchlistItems?.some(w=>w.ticker===ticker);
@@ -133,14 +158,15 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
             {tickerDb&&(()=>{
               const us=tickerDb.filter(x=>x.exchange!=="XIST").length;
               const bist=tickerDb.filter(x=>x.exchange==="XIST").length;
-              return <div style={{fontSize:11,marginTop:6,color:"var(--text3)"}}>{us.toLocaleString("tr-TR")} US + {bist.toLocaleString("tr-TR")} BIST hisse aranabilir</div>;
+              const tefas=tefasDb?.length||0;
+              return <div style={{fontSize:11,marginTop:6,color:"var(--text3)"}}>{us.toLocaleString("tr-TR")} US + {bist.toLocaleString("tr-TR")} BIST hisse{tefas?` + ${tefas.toLocaleString("tr-TR")} TEFAS fonu`:""} aranabilir</div>;
             })()}
           </div>
         </div>
       )}
 
       {qTrim&&!loading&&(()=>{
-        const noResults=portfolioMatches.length===0&&allMatches.length===0;
+        const noResults=portfolioMatches.length===0&&allMatches.length===0&&tefasMatches.length===0;
         if(noResults){
           return(
             <div className="empty-card" style={{padding:"30px 20px"}}>
@@ -159,9 +185,15 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
               </div>
             )}
             {allMatches.length>0&&(
-              <div style={{border:"0.5px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+              <div style={{border:"0.5px solid var(--border)",borderRadius:10,overflow:"hidden",marginBottom:tefasMatches.length>0?18:0}}>
                 <div className="stitle" style={{padding:"10px 14px",margin:0,background:"var(--bg3)"}}>Tüm hisseler · {allMatches.length}{allMatches.length===50?"+":""}</div>
                 {allMatches.map(m=><Row key={m.ticker} {...m} held={false}/>)}
+              </div>
+            )}
+            {tefasMatches.length>0&&(
+              <div style={{border:"0.5px solid var(--border)",borderRadius:10,overflow:"hidden"}}>
+                <div className="stitle" style={{padding:"10px 14px",margin:0,background:"var(--bg3)"}}>TEFAS fonları · {tefasMatches.length}{tefasMatches.length===30?"+":""}</div>
+                {tefasMatches.map(m=><Row key={m.ticker} {...m} held={false}/>)}
               </div>
             )}
           </div>
