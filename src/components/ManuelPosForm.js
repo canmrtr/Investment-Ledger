@@ -5,7 +5,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
   // istediği zaman değiştirebilir; type değişimi `onChange`'de currency'i de
   // BIST'e göre günceller (mevcut davranış korunuyor).
   const initType = prefillType || "US_STOCK";
-  const initCurrency = (initType==="BIST"||initType==="BES"||initType==="CASH"||initType==="DEPOSIT") ? "TRY" : "USD";
+  const initCurrency = (initType==="BIST"||initType==="BES"||initType==="TEFAS"||initType==="CASH"||initType==="DEPOSIT") ? "TRY" : "USD";
   const E={ticker:"",name:"",type:initType,shares:"",avgCost:"",currency:initCurrency,broker:"",commission:"",date:today(),unit:"oz",currentValue:"",interestRate:"",maturityDate:"",reserveRatio:"",dkPrincipal:"",dkCurrent:""};
   const [form,setForm]=useState(E);
   const [curPrice,setCurPrice]=useState(null);
@@ -176,12 +176,12 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               max={today()}/>
           </div>
           <div>
-            <div className="kk" style={{marginBottom:4}}>{form.type==="BES"?"Hesap Kodu *":form.type==="CASH"||form.type==="DEPOSIT"?"Hesap Etiketi *":"Ticker *"}</div>
+            <div className="kk" style={{marginBottom:4}}>{form.type==="BES"?"Hesap Kodu *":form.type==="CASH"||form.type==="DEPOSIT"?"Hesap Etiketi *":form.type==="TEFAS"?"Fon Kodu *":"Ticker *"}</div>
             <div style={{display:"flex",gap:6}}>
               <input className="finp" style={{textTransform:"uppercase"}} maxLength={20} value={form.ticker}
                 onChange={e=>{set({ticker:e.target.value.toUpperCase(),name:"",avgCost:""});setCurPrice(null);setPriceNote(null);}}
                 onBlur={e=>e.target.value&&form.type!=="CASH"&&form.type!=="DEPOSIT"&&fetchPrice(e.target.value)}
-                placeholder={form.type==="BES"?"AH, GARANTI...":form.type==="CASH"?"ZIRAAT_TRY":form.type==="DEPOSIT"?"AKBANK_VAD_1":"AAPL"} disabled={!!editTk}/>
+                placeholder={form.type==="BES"?"AH, GARANTI...":form.type==="CASH"?"ZIRAAT_TRY":form.type==="DEPOSIT"?"AKBANK_VAD_1":form.type==="TEFAS"?"YAC, MAC, GAH...":"AAPL"} disabled={!!editTk}/>
               {form.type!=="BES"&&form.type!=="CASH"&&form.type!=="DEPOSIT"&&(
                 <button className="btn-sm" style={{whiteSpace:"nowrap"}}
                   onClick={()=>fetchPrice()} disabled={fetchP||!form.ticker}
@@ -253,7 +253,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               const newType=e.target.value;
               const upd={type:newType};
               // Currency varsayılanları — kullanıcı manuel override edebilir
-              if(newType==="BIST"||newType==="BES"||newType==="CASH"||newType==="DEPOSIT")upd.currency="TRY";
+              if(newType==="BIST"||newType==="BES"||newType==="TEFAS"||newType==="CASH"||newType==="DEPOSIT")upd.currency="TRY";
               else if(newType==="CRYPTO"||newType==="US_STOCK"||newType==="FUND"||newType==="GOLD")upd.currency="USD";
               set(upd);
               // Type değişince eski fiyat geçersiz; ticker varsa yeniden çek
@@ -267,6 +267,7 @@ function ManuelPosForm({session,user,pos,loadData,flash_,confirm_,prefillType,po
               <option value="GOLD">Altın</option>
               <option value="FX">Döviz</option>
               <option value="BES">BES Fonu</option>
+              <option value="TEFAS">TEFAS Fonu</option>
               <option value="CASH">Nakit</option>
               <option value="DEPOSIT">Vadeli Mevduat</option>
             </select>
