@@ -10,6 +10,7 @@ const ADD_TYPES = [
   {type:"GOLD",     label:"Altın",      desc:"Spot ons (XAUUSD)"},
   {type:"FX",       label:"Döviz",      desc:"USDTRY, EURUSD"},
   {type:"BES",      label:"BES Fonu",        desc:"Bireysel Emeklilik — AGS001, PEB011"},
+  {type:"TEFAS",    label:"TEFAS Fonu",      desc:"Yatırım fonu — YAC, MAC, GAH"},
   {type:"CASH",     label:"Nakit",           desc:"Banka hesabı — TRY, USD, EUR"},
   {type:"DEPOSIT",  label:"Vadeli Mevduat",  desc:"Faizli sabit vadeli hesap"},
 ];
