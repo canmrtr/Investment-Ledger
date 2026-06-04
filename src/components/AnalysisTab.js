@@ -36,7 +36,7 @@ function calcMonthlyMetrics({ ym, pos, txs, prc, hist, snapshots, cnv }) {
     ? `${y + 1}-01-01`
     : `${y}-${String(m + 1).padStart(2, '0')}-01`;
 
-  const priceCurOf = p => p.type === 'BIST' ? 'TRY' : (p.currency === 'EUR' ? 'EUR' : 'USD');
+  const priceCurOf = p => (p.type === 'BIST' || p.type === 'TEFAS') ? 'TRY' : (p.currency === 'EUR' ? 'EUR' : 'USD');
   const snapKey    = (ticker, date) => `${ticker}_${date}`;
   const snapPrice  = (ticker, date) => snapshots[snapKey(ticker, date)];
 
@@ -112,7 +112,7 @@ function calcMonthlyMetrics({ ym, pos, txs, prc, hist, snapshots, cnv }) {
   };
   const benchmarks = { spy: benchDelta('SPY'), xu100: benchDelta('XU100') };
 
-  const TYPE_LBL = { US_STOCK:'ABD', BIST:'BIST', FUND:'ETF', CRYPTO:'Kripto', GOLD:'Altın', FX:'Döviz' };
+  const TYPE_LBL = { US_STOCK:'ABD', BIST:'BIST', FUND:'ETF', CRYPTO:'Kripto', GOLD:'Altın', FX:'Döviz', TEFAS:'TEFAS' };
   const allocMap = {};
   pos.forEach(p => {
     const pr = prc[p.ticker];
@@ -210,7 +210,7 @@ const TICKER_PIE_COLORS = ["#8B5CF6","#3B82F6","#06B6D4","#F97316","#C9A84C","#1
 // için ileride per-ticker override gerekebilir; şu an asset_type → region.
 const REGION_OF = {
   US_STOCK:"us", FUND:"us",
-  BIST:"tr",
+  BIST:"tr", TEFAS:"tr",
   CRYPTO:"crypto", GOLD:"emtia",
   FX:"fx",
 };
