@@ -394,7 +394,7 @@ function App({session}){
     const rawCost=p.shares*p.avgCost;
     // price_cache is TRY for BIST/BES, position currency for CASH/DEPOSIT (factor-based), USD otherwise.
     // Normalize cost to match price currency so pl/plPct are same-currency.
-    const priceCur=(p.type==="BIST"||p.type==="BES")?"TRY":
+    const priceCur=(p.type==="BIST"||p.type==="BES"||p.type==="TEFAS")?"TRY":
                    (p.type==="CASH"||p.type==="DEPOSIT")?(p.currency||"TRY"):"USD";
     const cost=(p.currency!==priceCur&&fxRates)?(convert(rawCost,p.currency,priceCur,fxRates)??rawCost):rawCost;
     const mv=price!=null?p.shares*price:null,pl=mv!=null?mv-cost:null;
@@ -418,7 +418,7 @@ function App({session}){
   const allDisp=filteredPos.map(p=>{
     const cur=p.currency||"USD";
     // price_cache stores TRY for BIST/BES (Yahoo/EGM), USD for all other asset types (Massive).
-    const priceCur = (p.type==="BIST"||p.type==="BES") ? "TRY" :
+    const priceCur = (p.type==="BIST"||p.type==="BES"||p.type==="TEFAS") ? "TRY" :
                      (p.type==="CASH"||p.type==="DEPOSIT") ? (p.currency||"TRY") : "USD";
     const price=prc[p.ticker];
     const rawCost=p.shares*p.avgCost;
@@ -476,7 +476,7 @@ function App({session}){
   const fetchPrices=async()=>{
     setBusy(b=>({...b,p:true}));
     const posSet=new Set(pos.map(p=>p.ticker));
-    const posFetchable=pos.filter(p=>p.type!=="CASH"&&p.type!=="DEPOSIT"&&(p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO"))
+    const posFetchable=pos.filter(p=>p.type!=="CASH"&&p.type!=="DEPOSIT"&&(p.currency==="USD"||p.type==="BIST"||p.type==="GOLD"||p.type==="CRYPTO"||p.type==="TEFAS"))
       .map(p=>({ticker:p.ticker,type:p.type}));
     const wlFetchable=watchlistItems.filter(w=>!posSet.has(w.ticker)&&(w.asset_type||"US_STOCK")!=="FX")
       .map(w=>({ticker:w.ticker,type:w.asset_type||"US_STOCK"}));
@@ -924,7 +924,7 @@ function App({session}){
                 if(bt?.mixed)return ps.reduce((s,p)=>s+(cnv(p.mv??p.cost,p.currency||"TRY")??0),0);
                 return ps.reduce((s,p)=>s+(p.mv??p.cost),0);
               };
-              const toUsd=(mv,t)=>(t==="BIST"||t==="BES")?(convert(mv,"TRY","USD",fxRates)??0):
+              const toUsd=(mv,t)=>(t==="BIST"||t==="BES"||t==="TEFAS")?(convert(mv,"TRY","USD",fxRates)??0):
                            (t==="CASH"||t==="DEPOSIT")?(convert(mv,displayCur,"USD",fxRates)??0):mv;
               return toUsd(mvOf(b.type),b.type)-toUsd(mvOf(a.type),a.type);
             }).map((cfg, idx) => {
