@@ -555,9 +555,13 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   const mvDisp = (p) => {
     const raw = (prc[p.ticker] || 0) * p.shares;
     if (raw <= 0) return 0;
-    // price_cache stores TRY for BIST (Yahoo), USD for everything else (Massive).
-    // Use asset-type-based currency, not p.currency which may be stale.
-    const priceCur = p.type === "BIST" ? "TRY" : "USD";
+    // price_cache is TRY for BIST/BES (Yahoo/EGM), position currency for
+    // CASH/DEPOSIT (factor-based synthetic, defaults TRY), USD otherwise (Massive).
+    // Must mirror App.js wrapPos/allDisp — assuming USD for DEPOSIT inflates TRY
+    // deposits by the USDTRY rate and lets them dominate the asset breakdown.
+    const priceCur = (p.type === "BIST" || p.type === "BES") ? "TRY"
+      : (p.type === "CASH" || p.type === "DEPOSIT") ? (p.currency || "TRY")
+      : "USD";
     return cnv(raw, priceCur) || 0;
   };
   // Pozisyon maliyet (avg_cost × shares, orijinal currency'de) → display cur'a çevir
@@ -1501,7 +1505,9 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           const totalMV = filteredPos.reduce((a, p) => a + mvDisp(p), 0);
           const hasFx = fxRates && fxRates.USDTRY > 0;
           const needsFx = filteredPos.some(p => {
-            const priceCur = p.type === "BIST" ? "TRY" : "USD";
+            const priceCur = (p.type === "BIST" || p.type === "BES") ? "TRY"
+              : (p.type === "CASH" || p.type === "DEPOSIT") ? (p.currency || "TRY")
+              : "USD";
             return priceCur !== displayCur;
           });
           if (totalMV <= 0 || (needsFx && !hasFx)) {
@@ -1694,7 +1700,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           { key:"m6",  label:"6A",  fn:(h,p,pr)=>h?.p_m6&&pr?(pr-h.p_m6)/h.p_m6*100:null },
           { key:"y1",  label:"1Y",  fn:(h,p,pr)=>h?.y1 },
         ];
-        const priceCurOf = p => p.type==="BIST" ? "TRY" : (p.currency==="EUR" ? "EUR" : "USD");
+        const priceCurOf = p => (p.type==="BIST"||p.type==="BES") ? "TRY" : (p.type==="CASH"||p.type==="DEPOSIT") ? (p.currency||"TRY") : (p.currency==="EUR" ? "EUR" : "USD");
         const posMV = filteredPos.map(p=>{
           const pr = prc[p.ticker];
           const mv = pr!=null ? cnv(p.shares*pr, priceCurOf(p)) : null;
@@ -1756,7 +1762,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
 
       {/* ── Kart: Kur Riski ──────────────────────────────────────── */}
       {(()=>{
-        const priceCurOf = p => p.type==="BIST" ? "TRY" : (p.currency==="EUR" ? "EUR" : "USD");
+        const priceCurOf = p => (p.type==="BIST"||p.type==="BES") ? "TRY" : (p.type==="CASH"||p.type==="DEPOSIT") ? (p.currency||"TRY") : (p.currency==="EUR" ? "EUR" : "USD");
         const fxGroups = {USD:0, TRY:0, EUR:0};
         filteredPos.forEach(p=>{
           const pr = prc[p.ticker];
@@ -1867,7 +1873,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           annualEstCount++;
         });
         // Total MV for current yield
-        const priceCurOf=p=>p.type==="BIST"?"TRY":(p.currency==="EUR"?"EUR":"USD");
+        const priceCurOf=p=>(p.type==="BIST"||p.type==="BES")?"TRY":(p.type==="CASH"||p.type==="DEPOSIT")?(p.currency||"TRY"):(p.currency==="EUR"?"EUR":"USD");
         const totalMVAll=pos.reduce((a,p)=>{
           const pr=prc[p.ticker]; if(pr==null) return a;
           return a+(cnv(p.shares*pr,priceCurOf(p))||0);
@@ -1922,7 +1928,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
 
       {/* ── Kart: 6 Aylık Performans ─────────────────────────────── */}
       {(()=>{
-        const priceCurOf = p => p.type==="BIST" ? "TRY" : (p.currency==="EUR" ? "EUR" : "USD");
+        const priceCurOf = p => (p.type==="BIST"||p.type==="BES") ? "TRY" : (p.type==="CASH"||p.type==="DEPOSIT") ? (p.currency||"TRY") : (p.currency==="EUR" ? "EUR" : "USD");
         const perf6m = filteredPos.map(p=>{
           const pr = prc[p.ticker];
           const h = hist[p.ticker];

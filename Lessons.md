@@ -29,6 +29,12 @@ Bu dosya, Can'ın benimle aynı fikirde olmadığı veya bana "tekrar kontrol et
 
 <!-- Yeni entry'ler buraya, en üste. -->
 
+### 2026-06-04 — `mvDisp` BIST-dışını "USD" sayınca TL mevduat ~38x şişti
+**Bağlam:** Can "Varlık Dağılımı" kartında Vadeli Mevduat'ın %88 göründüğünü, bunun olamayacağını söyledi. İlk turda bar ile listenin tutarlı olduğunu (ikisi de `slices.frac`) ölçüp "hata yok" dedim.
+**Hatam:** Tutarlılığı doğruluk sandım. `AnalysisTab.mvDisp` (ve 5 `priceCurOf` kopyası) BIST dışındaki her şeyi `"USD"` kabul ediyordu: `p.type==="BIST"?"TRY":"USD"`. TL vadeli mevduatın synthetic değeri (`anapara+brüt faiz`, TL) USD sanılıp display cur'a çevrilince USDTRY kuru kadar (~38x) şişiyor, tüm dağılımı eziyordu. Maliyet modu `p.currency` kullandığından doğruydu — bug yalnız Piyasa modunda.
+**Doğrusu:** Can haklıydı, %87 gerçek değildi. Dashboard (App.js `wrapPos`/`allDisp`) zaten doğru priceCur mantığını kullanıyordu; AnalysisTab onu kopyalamamıştı.
+**Kural:** Para-değer hesabında priceCur'u **daima** App.js ile aynı yaz: `(BIST||BES)?"TRY":(CASH||DEPOSIT)?(p.currency||"TRY"):"USD"`. "Bar ile liste tutarlı" ≠ "değer doğru" — bir KPI mantıksız görünüyorsa kaynak değeri Dashboard ile çapraz doğrula, sadece iç tutarlılığa bakma.
+
 ### 2026-06-04 — `deno check` syntax parse değil, network'lü module-graph resolve
 **Bağlam:** `check-edge.sh`'a eklenen `deno check` gate'ini güçlendirmek için repo-root `deno.json` + import map ekledim (npm:@supabase/supabase-js@2, npm:@anthropic-ai/sdk pin'li).
 **Hatam:** Script comment'inde `deno check`'i "Deno-strict ESM parse" diye tanımlamıştım — sanki saf bir syntax gate'iymiş gibi. Aslında `deno check` tüm module-graph'ı resolve eder: edge fn'lerin inline `npm:` import'larını **ilk çalıştırmada network'ten indirir** ve typed dep'leri type-check eder. Offline/CI'da veya fresh cache'de bu, node'un geçtiği yeşil gate'i kırmızıya çevirebilir.
