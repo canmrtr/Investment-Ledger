@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-31** (Sprint 21–23 ✅ kapandı; Sprint 23 retro 2026-05-25, headline AnalysisTab Özet/Detay split shipped 2026-05-22. **Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu — kod tamamlandı 2026-06-04 (9/9 alt-task commit'lendi, babel/edge/drift yeşil); deploy + migration + katalog Can'da bekliyor.** Runbook + retro: `sprints/sprint-24.md`.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-05-31** (Sprint 21–23 ✅. **Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ SHIPPED 2026-06-05** — migration + 3 edge fn deploy + 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sıradaki: Sprint 25 aday havuzu aşağıda** — #1 Değerleme okunabilirliği veya #3 TEFAS historical NAV+sparkline.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -73,7 +73,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Asset Type Genişletme
 
-- [ ] **TEFAS Yatırım Fonu entegrasyonu** `[L]` `[P1]` `Sprint-24` — Yeni `TEFAS` asset type (`#84CC16` lime, TRY cinsinden). Günlük NAV fiyatı `tefas.gov.tr` `/api/funds/fonFiyatBilgiGetir`'den. ~3510 fonluk `tefas_funds` Supabase tablosu (katalog); SearchTab'da kod + isim araması. Dashboard "TEFAS Fonları" bloğu (₺). AnalysisTab: Varlık Dağılımı lime dilimi, Bölge Dağılımı → Türkiye. 6h cron refresh. **Kod tamamlandı 2026-06-04 (9/9 alt-task commit'lendi, babel/edge/drift yeşil); deploy + migration apply + katalog yükleme Can'da bekliyor → runbook `sprints/sprint-24.md`.** Spec: `docs/superpowers/specs/2026-05-13-tefas-integration-design.md` · Plan: `docs/superpowers/plans/2026-05-13-tefas-integration.md`
+- [x] ~~**TEFAS Yatırım Fonu entegrasyonu**~~ `[L]` `[P1]` `Sprint-24` `2026-06-05` ✅ — Yeni `TEFAS` asset type (`#84CC16` lime, TRY). Günlük NAV `tefas.gov.tr/api/funds/fonFiyatBilgiGetir`'den; `tefas_funds` katalog (**3509 fon canlıda**); SearchTab kod+isim araması (lime badge); Dashboard "TEFAS Fonları" bloğu (₺); AnalysisTab lime dilim + Türkiye bölge; 6h cron. **Canlı: migration (MCP) + 3 edge fn deploy + katalog yüklendi + NAV doğrulandı (YAC=14.05).** Canlı doğrulamada NAV bug yakalandı (bugünün entry'si yayına kadar 0) → `tefasLastPublished` fix'lendi. 17 commit. Retro + runbook: `sprints/sprint-24.md`. Spec/Plan: `docs/superpowers/{specs,plans}/2026-05-13-tefas-integration*`
   - [x] (1) `fetch-prices` `isTefas` routing (price/historical/meta) `[S]` `2026-06-04`
   - [x] (2) `tefas_funds` SQL migration + public-read RLS (rls-auditor PASS) `[S]` `2026-06-04`
   - [x] (3) Frontend sabitler: TYPE_COLORS, TL, BLOCK_TYPES, ASSET_ICONS, cache helper `[S]` `2026-06-04`
