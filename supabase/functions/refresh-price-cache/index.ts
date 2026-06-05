@@ -138,9 +138,14 @@ const fetchTefasPrice = async (fonKodu) => {
   if (data?.errorCode) throw new Error(`TEFAS: ${data.errorMessage || data.errorCode}`);
   const list = data?.resultList || [];
   if (!list.length) throw new Error("TEFAS: fiyat bulunamadı");
-  // fiyat JSON number döner (smoke test: 13.92976); String+replace TR-locale string'e karşı defansif.
-  const price = parseFloat(String(list[list.length - 1].fiyat).replace(",", "."));
-  if (isNaN(price)) throw new Error("TEFAS: geçersiz fiyat formatı");  // NaN cache'i zehirlemesin
+  // resultList eski→yeni; BUGÜNÜN entry'si NAV yayınlanana kadar fiyat:0 döner (TEFAS akşam yayınlar).
+  // Sondan başlayıp fiyat>0 olan son yayınlanmış NAV'ı al. String+replace TR-locale'e karşı defansif.
+  let price = null;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const px = parseFloat(String(list[i].fiyat).replace(",", "."));
+    if (!isNaN(px) && px > 0) { price = px; break; }
+  }
+  if (price == null) throw new Error("TEFAS: geçerli fiyat yok");  // 0/NaN cache'i zehirlemesin
   return { price };
 };
 

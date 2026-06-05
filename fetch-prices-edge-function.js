@@ -332,17 +332,26 @@ async function tefasFetchSeries(fonKodu, periyod = 1) {
   }
 }
 
+// fiyat JSON number döner (smoke test: 13.92976); String+replace TR-locale string'e karşı defansif.
+const tefasParse = (v) => parseFloat(String(v).replace(",", "."));
+// resultList eski→yeni sıralı; BUGÜNÜN entry'si NAV yayınlanana kadar fiyat:0 döner
+// (TEFAS akşam yayınlar). Sondan başlayıp fiyat>0 olan SON YAYINLANMIŞ NAV'ı al.
+const tefasLastPublished = (list) => {
+  for (let i = list.length - 1; i >= 0; i--) {
+    const px = tefasParse(list[i].fiyat);
+    if (!isNaN(px) && px > 0) return { px, row: list[i] };
+  }
+  return null;
+};
+
 async function tefasPrice(fonKodu) {
   // Latest NAV — periyod=1 returns ~14-22 daily NAVs over last month (trading days).
-  // Take the most recent (last element); no holiday loop needed — API already skips them.
   const r = await tefasFetchSeries(fonKodu, 1);
   if (r.error) return r;
   if (!r.list.length) return { error: "TEFAS: fiyat bulunamadı" };
-  const last = r.list[r.list.length - 1];
-  // fiyat JSON number döner (smoke test: 13.92976); String+replace TR-locale string'e karşı defansif.
-  const price = parseFloat(String(last.fiyat).replace(",", "."));
-  if (isNaN(price)) return { error: "TEFAS: geçersiz fiyat formatı" };  // NaN paylaşımlı cache'i zehirlemesin
-  return { price, date: last.tarih, name: last.fonUnvan };
+  const found = tefasLastPublished(r.list);
+  if (!found) return { error: "TEFAS: geçerli fiyat yok" };  // 0/NaN paylaşımlı cache'i zehirlemesin
+  return { price: found.px, date: found.row.tarih, name: found.row.fonUnvan };
 }
 
 async function tefasHistorical(fonKodu, fromISO, toISO) {
@@ -355,8 +364,8 @@ async function tefasHistorical(fonKodu, fromISO, toISO) {
   if (r.error) return r;
   const results = (r.list || [])
     .filter(row => row.tarih >= fromISO && row.tarih <= toISO)
-    .map(row => ({ t: row.tarih, c: parseFloat(String(row.fiyat).replace(",", ".")) }))
-    .filter(row => !isNaN(row.c));  // bozuk NAV satırlarını ele
+    .map(row => ({ t: row.tarih, c: tefasParse(row.fiyat) }))
+    .filter(row => !isNaN(row.c) && row.c > 0);  // bozuk/yayınlanmamış (0) NAV satırlarını ele
   if (!results.length) return { error: "TEFAS: tarihsel veri yok" };
   return { results };
 }
