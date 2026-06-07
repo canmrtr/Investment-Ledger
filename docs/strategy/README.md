@@ -8,6 +8,7 @@ engineering tickets (those live in `ROADMAP.md` and `sprints/`).
 | File | What it is |
 |------|------------|
 | [product-vision.md](product-vision.md) | 4-layer product vision (Tracker → Nudge → Coach → Advisor), target persona, what Portfoi is *not* |
+| [product-brief.md](product-brief.md) | Short-form product register — user, purpose, brand personality, anti-references, design principles, accessibility target. Condensed companion to product-vision.md |
 | [launch-plan.md](launch-plan.md) | Go-to-market strategy, positioning vs Midas / Fintables / FinAi, distribution & messaging |
 
 ## Related but lives elsewhere

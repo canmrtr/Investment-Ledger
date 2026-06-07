@@ -39,7 +39,13 @@ Dashboard'daki 4 özet kart (hepsi **display currency**'de — toggle ile $ veya
 - TickerDetailTab: `effectiveType = p?.type ?? assetTypeHint ?? "US_STOCK"`; `displayCurrency = p?.currency ?? (effectiveType==="BIST" ? "TRY" : "USD")`.
 - Manuel form: type=BIST seçilince currency otomatik TRY.
 - Storage: `transactions.price` ve `positions.avg_cost` ham değer; `currency` field ayrıca tutuluyor.
-- MV hesaplarken (`mvDisp`, `allDisp`) `priceCur = p.type==="BIST"?"TRY":"USD"` kullan (price_cache: BIST→TRY Yahoo, diğer→USD Massive). Cost hesaplarken `p.currency` doğru.
+- **`priceCur` — canonical kaynak (buradan kopyala).** MV / para-değer hesaplarında (`mvDisp`, `allDisp`, `wrapPos`, AnalysisTab `priceCurOf`) `price_cache`'in hangi para biriminde olduğunu **daima** şöyle yaz:
+  ```
+  priceCur = (p.type==="BIST"||p.type==="BES") ? "TRY"
+           : (p.type==="CASH"||p.type==="DEPOSIT") ? (p.currency||"TRY")
+           : "USD"
+  ```
+  price_cache: BIST/BES→TRY (Yahoo/synthetic), CASH/DEPOSIT→pozisyon currency'si (synthetic, default TRY), diğer→USD (Massive). **Kısayol `p.type==="BIST"?"TRY":"USD"` YANLIŞ** — TL mevduatı USD sayıp USDTRY kuru kadar (~38x) şişirir (2026-06-04 bug'ı; bkz. `Lessons.md`). Cost hesaplarken `p.currency` doğru.
 - `rebuildPositions` normCur: `BIST→TRY`, `EUR→EUR`, diğer→`USD`.
 
 ---
@@ -74,7 +80,7 @@ Dashboard'daki 4 özet kart (hepsi **display currency**'de — toggle ile $ veya
 
 ### Search Tab Ticker DB
 
-`fetch-fundamentals` mode:`"ticker-list"` → SEC EDGAR (~10.348 US) + Twelve Data /stocks XIST (~636 BIST) merged. Frontend artık Supabase `ticker_db` tablosundan SELECT eder (haftalık cron sync). LS cache `sec_ticker_db_v2` 24h TTL.
+`fetch-fundamentals` mode:`"ticker-list"` → SEC EDGAR (~10.348 US) + Twelve Data /stocks XIST (~636 BIST) merged. Frontend artık Supabase `ticker_db` tablosundan SELECT eder (haftalık cron sync). LS cache `sec_ticker_db_v3` 24h TTL.
 
 ---
 
@@ -159,7 +165,7 @@ Sticky pos.3 nav (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar).
 
 ## Search Tab
 
-- **Veri**: Supabase `ticker_db` tablosu (10.980 satır; haftalık `sync-ticker-db-weekly` pg_cron). LS cache `sec_ticker_db_v2` 24h TTL.
+- **Veri**: Supabase `ticker_db` tablosu (10.980 satır; haftalık `sync-ticker-db-weekly` pg_cron). LS cache `sec_ticker_db_v3` 24h TTL.
 - **Match**: ticker prefix (büyük harf) + şirket adı substring (case-insensitive).
 - **Render**: 2 bölüm — "Portföyünden" (held + geçmiş tx ticker'ları, "açık" badge) + "Tüm hisseler" (max 50 sonuç). Click → `openDetail(ticker)`.
 - **Discovery mode**: TickerDetailTab `!p` durumunda pozisyon kartları gizli; `YOK` badge + warn-card + meta + fundamental + "+ Ekle" CTA. Live price auto-fetch edilir.

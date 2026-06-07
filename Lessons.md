@@ -22,6 +22,21 @@ Bu dosya, Can'ın benimle aynı fikirde olmadığı veya bana "tekrar kontrol et
 - En yeni en üstte (ters kronolojik).
 - "Kural" tek cümle, eyleme dönük.
 - Tekrar eden mesele varsa eski entry'yi güncelle, yenisini yazma.
+- Yeni entry eklerken aşağıdaki **Konu İndeksi**'ne de bir satır ekle (tag → tarih).
+
+---
+
+## Konu İndeksi
+
+Konuya göre hızlı bulma (entry'nin kendisi aşağıda, tarihiyle):
+
+| Tag | Entry (tarih) |
+|-----|---------------|
+| `priceCur` / para-değer | 2026-06-04 (`mvDisp` ~38x) |
+| `edge` / `deno` / local-gate | 2026-06-04 (`deno check`), 2026-05-19 (`node --check` const redecl.) |
+| `pg_cron` / secrets / vault | 2026-05-19 (hardcoded Bearer) |
+| `docs` / arşivleme / `docs/<topic>/` | 2026-05-19 (README pattern) |
+| `agent` vs `skill` | 2026-05-17 (seçim kriteri) |
 
 ---
 

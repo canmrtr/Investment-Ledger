@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-05-31** (Sprint 21–23 ✅. **Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ SHIPPED 2026-06-05** — migration + 3 edge fn deploy + 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sıradaki: Sprint 25 aday havuzu aşağıda** — #1 Değerleme okunabilirliği veya #3 TEFAS historical NAV+sparkline.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-06-05** (Sprint 21–24 ✅. **Sprint 24 = TEFAS ✅ SHIPPED 2026-06-05** — 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sprint 25 = Değerleme Okunabilirliği** (2026-06-05 → 2026-06-18) planlandı: Fundamental Checklist özet+detay modeli + ağırlıklı portföy F/K vs S&P 500 + Design audit Phase-2 polish. Plan: `sprints/sprint-25.md`. Detay "Sonraki Adım"da.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -140,7 +140,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **FMP rate limit guard** `[S]` `[P2]` — free tier sınırını test et + guard ekle.
 - [x] **DCF Hızlı Değerleme** `[M]` `[P3]` `2026-05-21` ✅ — TickerDetailTab'da 21-maddelik fundamental checklist'in üstünde "Hızlı Değerleme (DCF)" kartı. `fetch-fundamentals` `fetchFmp` 7. paralel URL olarak FMP `/stable/discounted-cash-flow` çeker; `dcf` cevabın top-level alanı (metrics jsonb'sine konmaz — checklist kriter sayısı 21 kalır). Kart: adil değer + güncel fiyat + yükseliş potansiyeli `(dcf−price)/price`; renk eşiği `≥%50` 🟢 / `≥%25` 🟡 / `<%25` 🔴. Sadece US_STOCK/USD + `fund.dcf>0`; BIST/EDGAR-fallback/zararda şirket → kart gizli. Migration yok. `→ fetch-fundamentals-edge-function.js; src/components/TickerDetailTab.js`
 - [ ] **Snowflake Skor (Çok Boyutlu)** `[L]` `[P3]` — Simply Wall St benzeri 5-boyut skor (Değer/Büyüme/Kalite/Borç/Temettü); `FUND_THRESHOLDS` üstünden; 5-dilimli radar SVG. Önce diğer fundamentals tamamlanmalı.
-- [ ] **Fundamental checklist gruplarını Investment-Guide'a hizala** `[S]` `[P2]` — `FUND_GROUPS` 7 başlığı → Investment-Guide.md Part 5'in 5 başlığına eşitlenir: (a) `fcfMargin` "Cash Flow Strength" grubuna taşı; (b) Büyüme+Kâr Marjları+Gider Disiplini → "Income Quality". Eşikler aynen kalır; sadece grup yapısı değişir.
+- [ ] **Fundamental checklist gruplarını Investment-Guide'a hizala** `[S]` `[P2]` — `FUND_GROUPS` 7 başlığı → `docs/guide/investment-guide.md` Part 5'in 5 başlığına eşitlenir: (a) `fcfMargin` "Cash Flow Strength" grubuna taşı; (b) Büyüme+Kâr Marjları+Gider Disiplini → "Income Quality". Eşikler aynen kalır; sadece grup yapısı değişir.
 
 ---
 
@@ -241,7 +241,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## AI Asistan (Katman 4)
 
-- [ ] **Investment Guide → Claude system prompt dönüşümü** `[S]` `[P2]` — `Investment-Guide.md` içeriğini tüm AI etkileşimlerinin felsefesi olarak `SYSTEM_PROMPT` constant'a dönüştür; `parse-transaction` zaten bu pattern'i kullanıyor.
+- [ ] **Investment Guide → Claude system prompt dönüşümü** `[S]` `[P2]` — `docs/guide/investment-guide.md` içeriğini tüm AI etkileşimlerinin felsefesi olarak `SYSTEM_PROMPT` constant'a dönüştür; `parse-transaction` zaten bu pattern'i kullanıyor.
 - [ ] **Portföy bağlamı entegrasyonu (AI için)** `[M]` `[P2]` — AI prompt'a `philosophy` + `positions` özeti + `fund_cache` kritik metrikleri ekle. `buildAiContext()` helper `src/utils.js`'e.
 - [ ] **AI Yatırım Koçu — Sohbet Arayüzü** `[L]` `[P3]` — Yeni "Koç" tab; Claude Sonnet API; portföy bağlamıyla yanıt. Günde 5 mesaj rate limit. Önkoşul: Portföy bağlamı entegrasyonu.
   - [ ] (a) `ai-coach` edge function — Sonnet + sistem prompt `[L]`
@@ -478,19 +478,23 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Sonraki Adım
 
-Sprint 4–23 ✅ | Sprint 23 ✅ kapandı (2026-05-25 — headline AnalysisTab Özet/Detay split + Phase-2 #4 + #6); retro `sprints/sprint-23.md`.
+Sprint 4–23 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (2026-06-05 — 3509 fon canlıda, NAV doğrulandı); retro `sprints/sprint-24.md`.
 
-**Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu** (2026-06-05 → 2026-06-18) — plan hazır + pre-flight 2026-05-25 yapıldı (3510 fon, JSON endpoint `fonFiyatBilgiGetir` doğrulandı, `price_cache` şeması netleşti). 5 gün sonra başlıyor. Plan: `sprints/sprint-24.md`.
+**Sprint 25 = Değerleme Okunabilirliği** (2026-06-05 → 2026-06-18) — plan hazır: `sprints/sprint-25.md`.
 
-**Sprint 24 kapsamı:**
-1. **TEFAS Yatırım Fonu entegrasyonu** `[L][P1]` — 9 alt-task uçtan uca: NAV fetch routing, `tefas_funds` katalog tablosu, AddTab picker, Dashboard ₺ bloğu, SearchTab birleşik arama, AnalysisTab lime dilim + Türkiye bölge, Settings katalog yenile butonu, 6h cron allowlist.
-2. **Boş durum metinlerini kullanıcı diline çevir** `[S][P2]` — `"snap. yok"` → `"Veri henüz oluşmadı"`, `"Bilinmiyor"` → `"Henüz sınıflandırılmadı"`; TEFAS empty state'leri.
+**Goal**: Can bir hisseye bakarken "bu şirket sağlam mı, pahalı mı?" sorusuna 21 metriği tek tek okumadan plain-language özet cümleyle yanıt alır; portföyünün toplam F/K'sını S&P 500 ile kıyaslayan tek satırlık sinyal görür.
 
-**Sprint 25+ aday havuzu (2026-05-31 grooming'de yeniden sıralandı — her sprint başında gözden geçir):**
+**Sprint 25 kapsamı:**
+1. **Fundamental Checklist → özet + detay modeli** `[M][P2]` (headline) — TickerDetailTab'da 21-metrik checklist'in üstüne plain-language sinyal-renkli özet ("Kârlılık güçlü · Borç makul · Değerleme pahalı"); mevcut `FUND_GROUPS` grades'inden rollup, yeni eşik yok. Detay gruplar altında aynen kalır.
+2. **Ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma** `[S][P2]` — AnalysisTab Portföy Sağlık'ta MV-ağırlıklı F/K yanında "S&P 500 ortalamasının altında/üstünde" cümlesi; atlanan pozisyon notu; aynı `fund_cache` altyapısı (DRY).
+3. **Polish filler — Design audit Phase-2 kalanı** `[S×2][P2]` — #9 tooltip tutarlılığı (touch fallback), #7 kart padding `--card-pad` token konsolidasyonu. Headline'dan artan yarım gün için.
 
-1. **Değerleme okunabilirliği** `[M][P1/P2]` — Fundamental Checklist'i özet+detay modeline çevir, ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma cümlesi, sektör-aware F/K eşikleri. Yeni provider yok. **Neden 1**: Value-investing core fit + günlük driver delta + Sprint 23 verdict pattern'inin doğal devamı.
-2. **Layer-2 davranışsal nudge** `[M][P2]` — piyasa düşüş nudge'ı, büyük kazanç tez-kontrolü nudge'ı, SearchTab FOMO banner'ı. Mevcut `price_cache` verisi, yeni fetch yok. **Neden 2**: Platform vizyonu Katman 2'ye ilk somut adım; mevcut data leverage, ucuz effort.
-3. **TEFAS historical NAV + sparkline** `[M][P2]` — Sprint 24 sonrası iterasyonu: `price_cache.p_d1/w1/m1/y1` doldurma, sparkline desteği. TEFAS API historical endpoint test gerektirir. **Neden 3**: Sprint 24'ün doğal devamı ama önce Can'ın gerçek TEFAS kullanım feedback'i lazım — sıra ona göre değişebilir.
-4. **Design audit Phase-2 kalanı** `[S×2][P2]` — #7 kart/panel konsolidasyon, #9 tooltip tutarlılığı. **Neden 4**: Polish companion; başka headline'a yorulduğunda yarım gün'lük doldurma işi.
-5. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı. **Neden 5**: Going-live tarihi netleşmediği için şu an erkenci, ama hazırlık fazına başlamak akıllıca.
-6. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; public view `privacy_level==="full"` modda gerçek `shares`/`avg_cost`. **Neden 6 (sona)**: Social Faz 2 ship etmeden tek başına değer yaratmaz; coupling sebebiyle erken yapmanın anlamı yok.
+**Out of scope (Sprint 26'ya)**: Sektör-aware F/K eşikleri `[M][P1]` (özet modeli oturmadan eşik kişiselleştirmesi erken); Layer-2 nudge; TEFAS historical NAV+sparkline.
+
+**Sprint 26+ aday havuzu (her sprint başında gözden geçir):**
+
+1. **Sektör-aware F/K eşikleri** `[M][P1]` — `sic_description`/FMP `sector` ile profil seçimi (tech P/E ≤30, utility ≤15); TR enflasyonu CAGR eşik etkisi. Sprint 25 özet+detay modelinin segmentlerini zenginleştirir. **Neden 1**: Value-investing core'un doğal devamı; #25 headline'ı bunu hazırlar.
+2. **Layer-2 davranışsal nudge** `[M][P2]` — piyasa düşüş nudge'ı, büyük kazanç tez-kontrolü nudge'ı, SearchTab FOMO banner'ı. Mevcut `price_cache` verisi, yeni fetch yok. **Neden 2**: Platform vizyonu Katman 2'ye ilk somut adım; ucuz effort.
+3. **TEFAS historical NAV + sparkline** `[M][P2]` — `price_cache.p_d1/w1/m1/y1` doldurma + sparkline. TEFAS API historical endpoint test gerektirir. **Neden 3**: Sprint 24'ün devamı ama önce Can'ın gerçek TEFAS kullanım feedback'i lazım.
+4. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı. **Neden 4**: Going-live hazırlık fazı.
+5. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; public view `privacy_level==="full"` modda gerçek `shares`/`avg_cost`. **Neden 5 (sona)**: Social Faz 2 ship etmeden tek başına değer yaratmaz.

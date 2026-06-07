@@ -8,6 +8,7 @@ system, and brand assets. Read `brand-kit.md` first when working on UI.
 | File | What it is |
 |------|------------|
 | [brand-kit.md](brand-kit.md) | Master brand spec — identity, color tokens, typography (DM Serif / DM Sans / DM Mono), component tokens, dark + light palette, gold accent system |
+| [design-system.md](design-system.md) | Structured design-token spec (machine-readable: colors, typography scale, spacing, rounded, component recipes). Companion to brand-kit.md — brand-kit is the narrative, design-system is the token data |
 | [design-audit-2026-05-15.md](design-audit-2026-05-15.md) | Last UI/UX audit — text hierarchy, button hit areas, table density, responsive behavior. Snapshot in time; not authoritative for current state |
 
 ## Brand assets (kept in place — paths are hard-coded in code)
