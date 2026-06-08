@@ -22,6 +22,7 @@
       --border:rgba(255,255,255,0.06);--border2:rgba(201,168,76,0.28);
       --text:#f0ede8;--text2:#b8b8b8;--text3:#888888;
       --ok:#00d97e;--err:#ff3366;--info:#C9A84C;--warn:#ffb800;
+      --on-accent:#0D1117; /* text/icon on gold fills — dark theme gold is light, so near-black (≈8.4:1) */
       --r:10px;--rl:16px;
       --font-display:'DM Serif Display',serif;--font-body:'DM Sans',sans-serif;--font-numeric:'DM Mono',monospace;
     }
@@ -30,6 +31,7 @@
       --border:rgba(0,0,0,0.08);--border2:rgba(201,168,76,0.28);
       --text:#0D1117;--text2:#4a4a4a;--text3:#808080;
       --info:#8A6A1F;
+      --on-accent:#ffffff; /* light theme gold is dark (muted), so white text (≈5.0:1) */
       --ok:#00a65a;--err:#e0003c;--warn:#c47d00;
       --topbar-bg:rgba(245,243,238,0.90);
     }
@@ -117,7 +119,7 @@
     }
     /* Base — ghost stil (default). Özel class'lı butonlar (.tab, .btab, .eye-btn, #fab vb.) cascade ile bunu override eder. */
     button{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);cursor:pointer;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;padding:7px 14px;transition:opacity .12s,background .12s;}
-    button.pri{background:var(--info);border:none;color:#fff;font-weight:500;padding:8px 16px;}
+    button.pri{background:var(--info);border:none;color:var(--on-accent);font-weight:500;padding:8px 16px;}
     button.danger{background:transparent;border:1px solid rgba(255,51,102,0.25);color:var(--err);}
     button.danger:hover:not(:disabled){background:rgba(255,51,102,0.08);}
     button:hover:not(:disabled){opacity:.82;}
@@ -190,7 +192,7 @@
     /* Login */
     .login-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:var(--bg2);}
     .login-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:32px 28px;width:100%;max-width:360px;}
-    .login-logo{width:40px;height:40px;background:var(--info);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;letter-spacing:-0.02em;margin:0 auto 14px;}
+    .login-logo{width:40px;height:40px;background:var(--info);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--on-accent);letter-spacing:-0.02em;margin:0 auto 14px;}
     .login-title{text-align:center;font-size:18px;font-weight:600;margin-bottom:4px;}
     .login-sub{text-align:center;font-size:12px;color:var(--text2);margin-bottom:24px;}
     .login-field{margin-bottom:12px;}
@@ -203,7 +205,7 @@
     /* Mode tabs in Add */
     .mtab{flex:1;min-width:70px;font-size:12px;}
     .mtab.sm{flex:0 0 auto;min-width:auto;padding:3px 9px;font-size:11px;}
-    .mtab.on{background:var(--info);border-color:var(--info);color:#fff;}
+    .mtab.on{background:var(--info);border-color:var(--info);color:var(--on-accent);}
     /* Horizontally-scrollable filter chip row (Dashboard + AnalysisTab global filters) */
     .fbar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
     .fbar::-webkit-scrollbar{display:none;}
@@ -231,7 +233,7 @@
     .btn-xs{font-size:11px;padding:3px 9px;line-height:1.4;}
     .btn-sm{font-size:11px;padding:5px 10px;min-height:30px;line-height:1.2;}
     .btn-md{font-size:12px;padding:6px 12px;min-height:34px;line-height:1.2;}
-    .btn-pri{background:var(--info);border:none;color:#fff;font-weight:500;padding:8px 16px;min-height:38px;}
+    .btn-pri{background:var(--info);border:none;color:var(--on-accent);font-weight:500;padding:8px 16px;min-height:38px;}
     .btn-danger-out{color:var(--err);border-color:var(--err);background:transparent;}
     /* Link-button: text-only inline button styled as link (gold, no border/bg).
        Use for "show more / toggle login mode / view full" small text actions. */

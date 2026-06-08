@@ -8,8 +8,9 @@ CLAUDE.md'nin "Önemli Konvansiyonlar"ından ayrılan operasyonel kurallar. Yeni
 
 Sık başvurulan operasyonel kurallar (quick-ref):
 - **Tema**: dark (default) + light (`[data-theme="light"]`).
-- **Dark renk tokenleri**: `--bg #000` / `--bg2 #0c0c0c` / `--bg3 #141414` / `--bg4 #1c1c1c`; `--text #f0ede8`, `--text2 #b8b8b8`, `--text3 #888888`; `--info #C9A84C` (Portfoi Gold), `--ok #00d97e`, `--err #ff3366`, `--warn #ffb800`; `--border rgba(255,255,255,0.06)` 1px solid; `--border2 rgba(201,168,76,0.28)`.
-- **Light tema** (detay: `docs/brand/brand-kit.md` Section 7): `--bg #F5F3EE` (Arctic) / `--text #0D1117` (Midnight) / `--info #8A6A1F` (Gold Muted). İkon ve border gold her iki temada aynı kalır.
+- **Dark renk tokenleri**: `--bg #000` / `--bg2 #0c0c0c` / `--bg3 #141414` / `--bg4 #1c1c1c`; `--text #f0ede8`, `--text2 #b8b8b8`, `--text3 #888888`; `--info #C9A84C` (Portfoi Gold), `--ok #00d97e`, `--err #ff3366`, `--warn #ffb800`; `--on-accent #0D1117` (gold dolgu üzeri metin/ikon — gold açık olduğu için near-black, ≈8.4:1); `--border rgba(255,255,255,0.06)` 1px solid; `--border2 rgba(201,168,76,0.28)`.
+- **Light tema** (detay: `docs/brand/brand-kit.md` Section 7): `--bg #F5F3EE` (Arctic) / `--text #0D1117` (Midnight) / `--info #8A6A1F` (Gold Muted) / `--on-accent #ffffff` (light gold koyu olduğu için beyaz, ≈5.0:1). İkon ve border gold her iki temada aynı kalır.
+- **Gold dolgu üzeri metin**: gold zeminli öğeler (`button.pri`, `.btn-pri`, `.mtab.on`, `.login-logo`) **`color:var(--on-accent)`** kullanır — `#fff` hardcode etme (dark temada gold üzeri beyaz kontrast düşük).
 - **Font**: `DM Serif Display` (hero sayılar/başlıklar) + `DM Sans` (body 300-700) + `DM Mono` (sayılar/ticker). `--font-display`/`--font-body`/`--font-numeric` CSS değişkenleri. `.lbl`/`.stitle`/`.kk`: 10px uppercase `font-weight:500`.
 - **Aktif sekme**: pill `rgba(201,168,76,0.12)`, alt çizgi yok. **FAB**: 54px, `var(--info)` (gold), `bottom:76px`. **Dashboard hero**: Piyasa Değeri değeri 32px `var(--font-display)`.
 - **Kod içi font kullanımı**: inline style'larda hardcoded font string yok — `fontFamily:"var(--font-display)"` / `fontFamily:"var(--font-numeric)"` kullan.

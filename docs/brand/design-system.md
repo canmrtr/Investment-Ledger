@@ -8,6 +8,8 @@ colors:
   surface-3: "#1c1c1c"
   gold: "#C9A84C"
   gold-muted: "#8A6A1F"
+  on-accent-dark: "#0D1117"   # text/icon on gold fills, dark theme (~8.4:1)
+  on-accent-light: "#ffffff"  # text/icon on gold fills, light theme (~5.0:1)
   ink: "#f0ede8"
   ink-muted: "#b8b8b8"
   ink-faint: "#888888"

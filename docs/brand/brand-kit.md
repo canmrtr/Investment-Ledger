@@ -33,6 +33,7 @@ Replace all existing `#6366F1` (purple) accent values with `#C9A84C` (Portfoi Go
 /* Accent */
 --color-accent:         #C9A84C;   /* Portfoi Gold — FAB, active tab, CTA, border highlight */
 --color-accent-muted:   #8A6A1F;   /* Gold Muted — pressed state, secondary icon fill */
+--on-accent:            #0D1117;   /* Text/icon ON gold fills — near-black on dark theme (~8.4:1); #fff on light theme (~5.0:1). Implemented as --on-accent in index.html */
 
 /* Text */
 --color-text-primary:   #F5F3EE;   /* Near white — primary text on dark */
