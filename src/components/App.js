@@ -1148,7 +1148,7 @@ function App({session}){
             </div>
             <div style={{padding:"16px 16px 80px"}}>
               {/* Portföy başlık kartı */}
-              <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+              <div className="card" style={{marginBottom:16,padding:"var(--card-pad)"}}>
                 <div style={{display:"flex",alignItems:"center",gap:10}}>
                   <span style={{fontSize:28}}>{owner.avatar_emoji||"👤"}</span>
                   <div>
@@ -1168,7 +1168,7 @@ function App({session}){
                   <div className="sub">Henüz görüntülenecek varlık eklenmemiş.</div>
                 </div>
               ):(
-                <div className="card" style={{padding:"14px 16px"}}>
+                <div className="card" style={{padding:"var(--card-pad)"}}>
                   <div className="stitle" style={{marginBottom:12}}>
                     Varlık Dağılımı
                     {" "}<span style={{fontWeight:400,color:"var(--text3)"}}>{rows.length} varlık</span>

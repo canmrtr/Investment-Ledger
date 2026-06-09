@@ -42,3 +42,28 @@
 - Edge case: `fund_cache` boş bir ticker (yeni eklenen) → özet gizli, hata yok. BIST bankası (GARAN) → eligibility dışı, özet gizli (mevcut `isFundEligible` davranışı korunur).
 - AnalysisTab → Detaylı Analiz aç → Portföy Sağlık'ta F/K KPI yanında karşılaştırma cümlesi + atlanan pozisyon notu doğru sayıyor mu?
 - Başarı sinyali: Can bir hisseye bakıp 21 metriği tek tek okumadan "sağlam mı / pahalı mı" kararını 5 saniyede verebiliyor.
+
+---
+
+## Delivered (2026-06-09)
+
+Üç kapsam işi de kodlandı, `npm run check:babel` (14 OK) + saf-fonksiyon Node testi + dashboard görsel kontrolü ile doğrulandı. Sandbox dış ağa çıkamadığı için **canlı fund/F/K render'ı GitHub Pages deploy sonrası hard-reload ile doğrulanacak**.
+
+**#1 Fundamental Checklist özet satırı** — `TickerDetailTab.js`
+- `FUND_SUMMARY_MAP` (7 grup → 4 segment: profit/growth/debt/value) + `FUND_SUMMARY_SEGMENTS` (etiket + iyi/orta/zayıf kelimeleri) + `buildFundSummary(metrics)`.
+- Rollup: her segmentin metrik skorları (good=1, neutral=.5, bad=0) ortalanır → iyi≥.66 / orta≥.4 / zayıf. Skorlanabilir metriği olmayan segment atlanır (özet boşsa hiç render edilmez).
+- Render: legend ile `FUND_GROUPS.map` arası, `var(--bg3)` pill; sinyal noktası + `Label` (text2) + **word** (segment renginde). `data-tip` ile açıklama.
+- Node testi: strong→hepsi yeşil; expensive→Kârlılık güçlü/Büyüme·Borç·Değerleme kırmızı; empty→`[]`; only-value→tek segment. ✓
+
+**#2 Ağırlıklı portföy F/K + S&P 500** — `AnalysisTab.js`
+- Önceki binary `below?ok:warn` → 3-durumlu: `ratio = portfolioPE/SP500_PE`; <0.9 🟢 "altında" / ≤1.1 🟡 "civarında" / >1.1 🔴 "belirgin üstünde".
+- `SP500_PE=22` kaynak+tarih yorumlu sabit. Plain-language cümle + `included pozisyon dahil · kapsanan değer %X` notu.
+- `coverage = weightTotal / mvAll`; <%60 ise sarı "kısmi veri" uyarısı (ağırlıklı F/K yanıltıcı olabilir).
+
+**#3 Polish** — `index.html` + `TickerDetailTab/AnalysisTab/App.js`
+- `--card-pad:14px 16px` token (`:root`). Baskın `padding:"14px 16px"` (18 inline override) → `var(--card-pad)`; değer aynı → görsel no-op (dashboard screenshot doğrulandı).
+- #9: `src/components`'te native `title=` yok; touch tooltip `App.js` global `touchstart` handler'ı ile zaten çalışıyor → ek iş gerekmedi. Sağlık badge'leri zaten inline sayı gösteriyor.
+- Bilinçli ertelenen: `.card` base (`12px 14px`) + `16px 18px` Dashboard KPI paddingleri token'a çekilmedi (görsel değişiklik → ayrı onay).
+
+## Kalan
+- Canlı (GitHub Pages) render doğrulaması: AAPL/BIST TickerDetail özet satırı + AnalysisTab F/K cümlesi gerçek `fund_cache` verisiyle.

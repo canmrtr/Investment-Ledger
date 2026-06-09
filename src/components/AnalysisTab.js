@@ -896,7 +896,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
         );
       })()}
       {/* Varlık dağılımı — stacked bar — ÖZET */}
-      <div className="card" style={{order:10,marginBottom:16,padding:"14px 16px"}}>
+      <div className="card" style={{order:10,marginBottom:16,padding:"var(--card-pad)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div className="stitle" style={{marginBottom:0}}>Varlık Dağılımı</div>
           <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -956,7 +956,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       </div>
 
       {/* Bölge Dağılımı — stacked bar — ÖZET */}
-      <div className="card" style={{order:11,marginBottom:16,padding:"14px 16px"}}>
+      <div className="card" style={{order:11,marginBottom:16,padding:"var(--card-pad)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div className="stitle" style={{marginBottom:0}}>
             Bölge Dağılımı
@@ -1025,7 +1025,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           });
         });
         return(
-        <div className="card" data-card="health" style={{order:30,display:detailOpen?undefined:"none",marginBottom:16,padding:"14px 16px"}}>
+        <div className="card" data-card="health" style={{order:30,display:detailOpen?undefined:"none",marginBottom:16,padding:"var(--card-pad)"}}>
           {/* Üst bar: başlık + 3 rozet + Detay toggle */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
             <div className="stitle" style={{marginBottom:0}}>Portföy Sağlık Tablosu</div>
@@ -1039,27 +1039,46 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
             </div>
           </div>
 
-          {/* Portföy F/K KPI — her zaman görünür (healthOpen'dan bağımsız) */}
+          {/* Portföy F/K KPI + S&P 500 karşılaştırma (Sprint 25 #2) — her zaman görünür */}
           {(()=>{
-            let weightedSum=0, weightTotal=0, included=0, missing=0;
+            let weightedSum=0, weightTotal=0, mvAll=0, included=0, missing=0;
             healthFiltered.forEach(p => {
               const pe = fundCache[p.ticker]?.metrics?.pe;
               const mv = mvDisp(p);
+              if (mv > 0) mvAll += mv;
               if (pe != null && pe > 0 && mv > 0) { weightedSum += pe * mv; weightTotal += mv; included++; }
               else missing++;
             });
             const portfolioPE = weightTotal > 0 ? weightedSum / weightTotal : null;
             if (portfolioPE == null) return null;
-            const sp500ref = 22;
-            const below = portfolioPE < sp500ref;
+            // S&P 500 ortalama F/K referansı — statik sabit. Kaynak: multpl.com / S&P Global,
+            // 2026-06 itibarıyla TTM ~22-24 bandı. Sektör-aware eşikler (Sprint 26) gelene dek sabit.
+            const SP500_PE = 22;
+            const ratio = portfolioPE / SP500_PE;
+            const sig = ratio < 0.90 ? "good" : ratio <= 1.10 ? "neutral" : "bad";
+            const word = sig === "good" ? "altında" : sig === "neutral" ? "civarında" : "belirgin üstünde";
+            const color = sig === "good" ? "var(--ok)" : sig === "neutral" ? "var(--warn)" : "var(--err)";
+            const icon = sig === "good" ? "🟢" : sig === "neutral" ? "🟡" : "🔴";
+            const coverage = mvAll > 0 ? weightTotal / mvAll : 0;
             return (
-              <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10,flexWrap:"wrap"}}>
-                <span style={{fontSize:11,color:"var(--text2)"}}>Portföy F/K</span>
-                <span className="mono" style={{fontSize:18,fontWeight:600}}>{portfolioPE.toFixed(1)}x</span>
-                <span className={"hp "+(below?"hp-ok":"hp-warn")} style={{fontSize:11}}>
-                  {below ? `S&P 500 (${sp500ref}x) altında` : `S&P 500 (${sp500ref}x) üstünde`}
-                </span>
-                <span style={{fontSize:10,color:"var(--text3)"}}>{included} pozisyon dahil{missing>0?`, ${missing} veri yok`:""}</span>
+              <div style={{marginTop:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                  <span style={{fontSize:11,color:"var(--text2)"}}>Portföy F/K</span>
+                  <span className="mono" style={{fontSize:18,fontWeight:600}}>{portfolioPE.toFixed(1)}x</span>
+                </div>
+                <div style={{marginTop:6,fontSize:12,color:"var(--text2)",lineHeight:1.5,display:"flex",alignItems:"flex-start",gap:6}}>
+                  <span style={{fontSize:13,flex:"0 0 auto"}}>{icon}</span>
+                  <span>Portföyünün F/K'sı <strong style={{color:"var(--text)",fontWeight:600}}>{portfolioPE.toFixed(1)}</strong> — S&P 500 ortalamasının (~{SP500_PE}) <span style={{color}}>{word}</span>.</span>
+                </div>
+                <div style={{marginTop:4,fontSize:10,color:"var(--text3)"}}>
+                  {included} pozisyon dahil{missing>0?`, ${missing} veri yok`:""} · kapsanan değer %{Math.round(coverage*100)}
+                </div>
+                {coverage < 0.60 && (
+                  <div style={{marginTop:6,fontSize:11,color:"var(--warn)",display:"flex",alignItems:"flex-start",gap:6}}>
+                    <span style={{flex:"0 0 auto"}}>⚠</span>
+                    <span>Kısmi veri: pozisyon değerinin yalnız %{Math.round(coverage*100)}'i F/K içeriyor; ağırlıklı F/K yanıltıcı olabilir.</span>
+                  </div>
+                )}
               </div>
             );
           })()}
@@ -1217,7 +1236,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       );})()}
 
       {/* Toplam Komisyon — display cur'a convert edilmiş tek tutar — DETAY */}
-      <div className="card" style={{order:37,display:detailOpen?undefined:"none",marginBottom:16,padding:"14px 16px"}}>
+      <div className="card" style={{order:37,display:detailOpen?undefined:"none",marginBottom:16,padding:"var(--card-pad)"}}>
         {/* Üst bar: başlık + KPI sağda + Detay toggle (commData.total>0 ise) */}
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:10,flexWrap:"wrap"}}>
           <div className="stitle" style={{marginBottom:0}}>Toplam Komisyon</div>
@@ -1287,7 +1306,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       </div>
 
       {/* Kazanan/Kaybeden Trade — BUY ve SELL bağımsız, split-adjusted — DETAY */}
-      <div className="card" style={{order:34,display:detailOpen?undefined:"none",marginBottom:16,padding:"14px 16px"}}>
+      <div className="card" style={{order:34,display:detailOpen?undefined:"none",marginBottom:16,padding:"var(--card-pad)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:14}}>
           <div className="stitle" style={{marginBottom:0}}>Kazanan / Kaybeden İşlem</div>
           <span style={{fontSize:10,color:"var(--text3)"}}>güncel fiyatla kıyas · split-adjusted</span>
@@ -1343,7 +1362,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       </div>
 
       {/* Konsantrasyon Risk Göstergesi — top3 ağırlık + HHI — DETAY */}
-      <div className="card" style={{order:31,display:detailOpen?undefined:"none",marginBottom:16,padding:"14px 16px"}}>
+      <div className="card" style={{order:31,display:detailOpen?undefined:"none",marginBottom:16,padding:"var(--card-pad)"}}>
         <div className="stitle" style={{marginBottom:12}}>Konsantrasyon Riski</div>
         {(()=>{
           const posWithMv=filteredPos.filter(p=>p.type!=="CASH"&&p.type!=="DEPOSIT").map(p=>({...p,dispMv:mvDisp(p)})).filter(p=>p.dispMv>0);
@@ -1416,7 +1435,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       </div>
 
       {/* Break-Even Analizi — DETAY */}
-      <div className="card" style={{order:32,display:detailOpen?undefined:"none",marginBottom:16,padding:"14px 16px"}}>
+      <div className="card" style={{order:32,display:detailOpen?undefined:"none",marginBottom:16,padding:"var(--card-pad)"}}>
         <div className="stitle" style={{marginBottom:12}} data-tip="Komisyon dahil alış maliyetini karşılamak için gereken minimum satış fiyatı.">Başa Baş Analizi</div>
         {(()=>{
           const beRows = filteredPos
@@ -1499,7 +1518,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       </div>
 
       {/* Max Pain Simülasyonu — DETAY */}
-      <div className="card" style={{order:33,display:detailOpen?undefined:"none",marginBottom:16,padding:"14px 16px"}}>
+      <div className="card" style={{order:33,display:detailOpen?undefined:"none",marginBottom:16,padding:"var(--card-pad)"}}>
         <div className="stitle" style={{marginBottom:12}}>Potansiyel Kayıp Simülasyonu</div>
         {(()=>{
           const totalMV = filteredPos.reduce((a, p) => a + mvDisp(p), 0);
@@ -1634,7 +1653,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
         };
 
         return (
-          <div className="card" style={{order:12,marginBottom:16,padding:"14px 16px"}}>
+          <div className="card" style={{order:12,marginBottom:16,padding:"var(--card-pad)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
               <div className="stitle" style={{marginBottom:0}}>Sektör Dağılımı</div>
               <div style={{display:"flex",gap:8,alignItems:"center"}}>
@@ -1999,7 +2018,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
 
       {/* ── Kart: Piyasa Düşüşü Dayanıklılığı ──────────────────────── */}
       {resilienceEligible.length > 0 && (
-        <div className="card" style={{order:36,display:detailOpen?undefined:"none",marginBottom:16,padding:"14px 16px"}}>
+        <div className="card" style={{order:36,display:detailOpen?undefined:"none",marginBottom:16,padding:"var(--card-pad)"}}>
           {(()=>{
             let wSum=0, wTotal=0, resilientMV=0, totalMVRes=0;
             resilienceEligible.forEach(p => {

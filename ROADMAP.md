@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-06-05** (Sprint 21–24 ✅. **Sprint 24 = TEFAS ✅ SHIPPED 2026-06-05** — 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sprint 25 = Değerleme Okunabilirliği** (2026-06-05 → 2026-06-18) planlandı: Fundamental Checklist özet+detay modeli + ağırlıklı portföy F/K vs S&P 500 + Design audit Phase-2 polish. Plan: `sprints/sprint-25.md`. Detay "Sonraki Adım"da.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-06-05** (Sprint 21–24 ✅. **Sprint 24 = TEFAS ✅ SHIPPED 2026-06-05** — 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sprint 25 = Değerleme Okunabilirliği** (2026-06-05 → 2026-06-18) — 3 kapsam işi de **kodlandı + doğrulandı 2026-06-09** (Fundamental Checklist özet+detay · ağırlıklı portföy F/K vs S&P 500 · `--card-pad` token); canlı render doğrulaması bekliyor. Plan+delivery: `sprints/sprint-25.md`. Detay "Sonraki Adım"da.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -31,7 +31,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [x] **Mobile form grid classes** `[S]` `[P1]` `Sprint-21` `2026-05-16` — `.form-grid-2/3` reusable; ManuelPosForm + TickerDetailTab manuel quick-add + TickerDetailTab edit row + HistoryTab edit row migrate edildi; ≤640px tek kolona çöker.
 - [x] **Text size minimums** `[S]` `[P2]` `Sprint-21` `2026-05-16` — `.empty-card .sub` 12→13, `.ttl` 15→16, `.warn-card .wc-sub` 11→12, `.sg .hint` 11→12. `.lbl/.kk/.stitle` 10px ve tablo hücreleri 12px korundu (intentional dense labels).
 - [x] **Mobile touch targets ≥36px** `[S]` `[P1]` `Sprint-21` `2026-05-16` — `@media(max-width:640px)`: `.btn-xs/.btn-icon/.btn-sm` min 36×36; `.pos-row .btn-xs` ve `table .btn-xs` padding 8/10.
-- [ ] **Design audit Phase-2** `[M]` `[P2]` `Sprint-25+` — `design_audit.md` kalan maddeler. ✅ #8 tablet breakpoint + #10 inline flash class Sprint 22'de kapandı; ✅ #4 empty-state normalization + #6 button-like span→button Sprint 23 carry-over'da kapandı (2026-05-25, commits `710857a` + `8a54c56`). Kalan (Sprint 25+): #7 card/panel consolidation, #9 tooltip consistency.
+- [x] ~~**Design audit Phase-2**~~ `[M]` `[P2]` `Sprint-25` `2026-06-09` ✅ — `design_audit.md` kalan maddeler tamamlandı. ✅ #8 tablet breakpoint + #10 inline flash class Sprint 22'de kapandı; ✅ #4 empty-state normalization + #6 button-like span→button Sprint 23 carry-over'da kapandı (2026-05-25, commits `710857a` + `8a54c56`). ✅ #7 card padding `--card-pad` token (baskın değer; 2026-06-09) + #9 tooltip consistency (src/components'te native `title=` yok — zaten tek `data-tip` pattern'i; touch fallback `App.js` global handler'ı ile çalışıyor) Sprint 25'te kapandı.
 
 ---
 
@@ -174,9 +174,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 ### Karşılaştırma
 
 - [ ] **Peer Sektör Ortalamasıyla Karşılaştırma** `[L]` `[P3]` — FMP sektör ortalaması P/E, ROE; yeni endpoint (`/stable/sector-pe-snapshot`) gerekir.
-- [ ] **Ağırlıklı Ortalama Portföy P/E** `[S]` `[P2]` — MV-ağırlıklı P/E; "Portföyünüzün F/K'sı 18.4 — S&P 500 ortalamasının altında". Fundamentals cache zaten mevcut; yeni fetch yok.
-  - [ ] (a) AnalysisTab Portföy Sağlık'a KPI olarak ekle; atlanma sayısı not `[S]`
-  - [ ] (b) S&P 500 karşılaştırma cümlesi — hardcoded ~22 referans `[S]`
+- [x] ~~**Ağırlıklı Ortalama Portföy P/E**~~ `[S]` `[P2]` `Sprint-25` `2026-06-09` ✅ — AnalysisTab Portföy Sağlık'ta MV-ağırlıklı F/K KPI + 3-durumlu plain-language cümle: "Portföyünün F/K'sı 18.4 — S&P 500 ortalamasının (~22) altında/civarında/belirgin üstünde" (ratio <0.9 🟢 / ≤1.1 🟡 / >1.1 🔴). Kaynak yorumlu sabit (`SP500_PE=22`); "X pozisyon dahil · kapsanan değer %Y" notu; kapsam <%60 ise "kısmi veri" uyarısı. Yeni fetch yok. `→ src/components/AnalysisTab.js`
+  - [x] ~~(a) AnalysisTab Portföy Sağlık'a KPI olarak ekle; atlanma sayısı not~~ `[S]` `2026-06-09`
+  - [x] ~~(b) S&P 500 karşılaştırma cümlesi — hardcoded ~22 referans~~ `[S]` `2026-06-09`
 
 ### Vergi & Muhasebe
 
@@ -346,7 +346,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ### Tasarım Tutarsızlıkları
 
-- [ ] **Kart padding standart dışı** `[S]` `[P2]` — `.card` `12px 14px`; AnalysisTab kartları `14px 16px`; Dashboard kartları `16px 18px` inline override. Tek `--card-pad` token ile standardize et.
+- [x] ~~**Kart padding standart dışı**~~ `[S]` `[P2]` `Sprint-25` `2026-06-09` ✅ — `--card-pad:14px 16px` token tanımlandı (`:root`); baskın `14px 16px` section-card padding'i (18 inline override, TickerDetail/Analysis/App) token'a bağlandı — değer aynı, görsel regresyon yok. Dense `.card` base (`12px 14px`) bilinçli olarak token'dan ayrı kaldı. Kalan off-token paddingler (`16px 18px` Dashboard KPI vb.) görsel onay gerektirdiği için ileriye bırakıldı. `→ index.html; CONVENTIONS.md`
 - [ ] **Spinner boyut karmaşası** `[S]` `[P2]` — CSS `.spin` 18×18; inline'da 11/12/14px karışık. `--spin-sm:12px` + `--spin-md:16px` değişkenleri.
 - [ ] **Yükleniyor metin standardı** `[S]` `[P2]` — `"..."`, `"Kaydediliyor..."`, `"Parse ediliyor..."` karışık. Kural: kısa buton → spin icon; uzun metin buton → standart Türkçe metin.
 - [ ] **`.stitle` marginBottom inline override'ları** `[S]` `[P3]` — `data-tight`/`data-loose` modifier class ekle; aksi halde inline'ları kaldır.
@@ -395,7 +395,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [x] ~~**AnalysisTab Özet / Detay iki katmana bölünsün**~~ `[L]` `[P2]` `Sprint-23` `2026-05-22` — Root `<div>` flex-column; kartlar CSS `order` ile konumlanır. Özet katmanı (order 10–16, default görünür): Varlık/Bölge/Sektör Dağılımı, Aylık Özet, 6 Aylık Performans, Kur Riski, Temettü Özeti. "Detaylı Analiz" toggle (`detailOpen`, order:20) altında Detay katmanı (order 30–37, `display:none` ile gizli): Portföy Sağlık, Konsantrasyon/HHI, Başa Baş, Potansiyel Kayıp, Kazanan/Kaybeden, Dönem Bazlı Getiri, Dayanıklılık, Toplam Komisyon. `fund_cache` lazy-fetch yalnız Detay açıkken (`useEffect` deps `[pos,detailOpen]`). Eski 4 bölüm başlığı kaldırıldı. Playwright doğrulandı: Detay kapalıyken 0 `fund_cache` isteği, toggle'da 1. `→ src/components/AnalysisTab.js`
 - [ ] **Toplam Komisyon kartını AnalysisTab'dan taşı** `[S]` `[P2]` — Settings → İşlem Geçmişi altı veya "Maliyet Özeti" bölümü daha anlamlı.
 - [ ] **Konsantrasyon Riski — HHI sonucu → trafik ışığı + cümle** `[S]` `[P2]` — "Konsantrasyon: Yüksek" pill + cümle yeterli; HHI sayısı detay/tooltip'e.
-- [ ] **Fundamental Checklist'i şirket özeti + detay modeline çevir** `[M]` `[P2]` — TickerDetailTab önce plain-language özet: "Kârlılık güçlü · Borç makul · Değerleme pahalı". Ardından mevcut metrik grupları detay olarak kalır.
+- [x] ~~**Fundamental Checklist'i şirket özeti + detay modeline çevir**~~ `[M]` `[P2]` `Sprint-25` `2026-06-09` ✅ — TickerDetailTab checklist'in üstünde plain-language özet satırı ("🟢 Kârlılık güçlü · 🔴 Borç yüksek · 🔴 Değerleme pahalı"). 7 `FUND_GROUPS` başlığı → 4 segmente (`FUND_SUMMARY_MAP`: Kârlılık/Büyüme/Borç/Değerleme) deterministik map; `buildFundSummary` mevcut `fundScore` grade'lerinden rollup (avg good=1/neutral=.5/bad=0 → iyi≥.66/orta≥.4/zayıf). Yeni eşik yok. US_STOCK+BIST; `fund_cache` boşsa gizli. Detay gruplar aynen altta. `→ src/components/TickerDetailTab.js`
 - [ ] **Sağlık Tablosu 🟢🟡🔴 sayılarına inline açıklama** `[S]` `[P2]` — "7 sağlıklı · 3 orta · 2 dikkat" formatı; tooltip touch'ta çalışmıyor. `→ AnalysisTab.js:1001-1007`
 
 ---
@@ -480,14 +480,14 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 Sprint 4–23 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (2026-06-05 — 3509 fon canlıda, NAV doğrulandı); retro `sprints/sprint-24.md`.
 
-**Sprint 25 = Değerleme Okunabilirliği** (2026-06-05 → 2026-06-18) — plan hazır: `sprints/sprint-25.md`.
+**Sprint 25 = Değerleme Okunabilirliği** (2026-06-05 → 2026-06-18) — **3 kapsam işi de kodlandı + babel/logic doğrulandı (2026-06-09), canlı render doğrulaması bekliyor**. Plan + delivery: `sprints/sprint-25.md`.
 
 **Goal**: Can bir hisseye bakarken "bu şirket sağlam mı, pahalı mı?" sorusuna 21 metriği tek tek okumadan plain-language özet cümleyle yanıt alır; portföyünün toplam F/K'sını S&P 500 ile kıyaslayan tek satırlık sinyal görür.
 
 **Sprint 25 kapsamı:**
-1. **Fundamental Checklist → özet + detay modeli** `[M][P2]` (headline) — TickerDetailTab'da 21-metrik checklist'in üstüne plain-language sinyal-renkli özet ("Kârlılık güçlü · Borç makul · Değerleme pahalı"); mevcut `FUND_GROUPS` grades'inden rollup, yeni eşik yok. Detay gruplar altında aynen kalır.
-2. **Ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma** `[S][P2]` — AnalysisTab Portföy Sağlık'ta MV-ağırlıklı F/K yanında "S&P 500 ortalamasının altında/üstünde" cümlesi; atlanan pozisyon notu; aynı `fund_cache` altyapısı (DRY).
-3. **Polish filler — Design audit Phase-2 kalanı** `[S×2][P2]` — #9 tooltip tutarlılığı (touch fallback), #7 kart padding `--card-pad` token konsolidasyonu. Headline'dan artan yarım gün için.
+1. ✅ **Fundamental Checklist → özet + detay modeli** `[M][P2]` (headline) — TickerDetailTab'da checklist üstünde plain-language sinyal-renkli özet; `FUND_SUMMARY_MAP` + `buildFundSummary` rollup, yeni eşik yok. `→ TickerDetailTab.js`
+2. ✅ **Ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma** `[S][P2]` — AnalysisTab Portföy Sağlık'ta 3-durumlu cümle + kapsam notu + <%60 kısmi-veri uyarısı. `→ AnalysisTab.js`
+3. ✅ **Polish — Design audit Phase-2 kalanı** `[S×2][P2]` — #7 `--card-pad` token (18 override tokenize, görsel no-op); #9 tooltip zaten tek `data-tip` pattern'i + global touch fallback. `→ index.html`
 
 **Out of scope (Sprint 26'ya)**: Sektör-aware F/K eşikleri `[M][P1]` (özet modeli oturmadan eşik kişiselleştirmesi erken); Layer-2 nudge; TEFAS historical NAV+sparkline.
 

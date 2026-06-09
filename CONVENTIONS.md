@@ -44,6 +44,7 @@ Sık başvurulan operasyonel kurallar (quick-ref):
 - `.topbar-wordmark` — topbar sol wordmark butonu (Login.js olmayan tek logo placement). Mobilde gizli.
 - **`.pie-row`**: `flex:"0 0 70px"` ($) + `flex:"0 0 56px"` (%) sabit basis; label `flex:1,minWidth:0`. `minWidth` yetmez, truncate/ellipsis ekleme.
 - **`.fbar`**: `overflow-x:auto; scrollbar-width:none`; `.fbar .mtab`: `flex:0 0 auto; white-space:nowrap`. Wrapper'da `flexWrap:wrap` kullanma.
+- **`--card-pad` (Sprint 25 #7):** section/`.card` padding token = `14px 16px` (`:root`). Yeni section card'larında inline `padding:"14px 16px"` yerine `padding:"var(--card-pad)"` kullan. Dense `.card` base sınıfı bilinçli olarak token'dan ayrı (`12px 14px`); Dashboard KPI'ları henüz `16px 18px` (off-token, ileride çekilebilir).
 
 ## Edge çağrı yardımcıları
 - `edgeCall(fn, body)` — anon key ile çağırır; `fetch-prices` için **kullanma**.

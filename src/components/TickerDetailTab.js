@@ -252,6 +252,49 @@ const fmtFundVal = (val, type) => {
   return val.toFixed(2);
 };
 
+// Sprint 25 #1: 7 FUND_GROUPS başlığını 4 plain-language özet segmentine deterministik map.
+// Yeni eşik üretme yok — yalnız mevcut fundScore grade'lerini (good/neutral/bad) topla.
+const FUND_SUMMARY_MAP = {
+  "Büyüme (5Y CAGR)": "growth",
+  "Kâr Marjları":     "profit",
+  "Verimlilik":       "profit",
+  "Gider Disiplini":  "profit",
+  "Sermaye Yatırımı": "profit",
+  "Bilanço Sağlığı":  "debt",
+  "Değerleme":        "value",
+};
+// Segment etiketi + verdict kelimeleri (sırayla iyi / orta / zayıf).
+// Borç & Değerleme'de "iyi" = düşük/cazip (low-dir metrikler), grade zaten yön-farkındalı.
+const FUND_SUMMARY_SEGMENTS = [
+  { id:"profit", label:"Kârlılık",  words:["güçlü","makul","zayıf"]  },
+  { id:"growth", label:"Büyüme",    words:["güçlü","ılımlı","zayıf"] },
+  { id:"debt",   label:"Borç",      words:["düşük","makul","yüksek"] },
+  { id:"value",  label:"Değerleme", words:["cazip","makul","pahalı"] },
+];
+
+// metrics → [{label, word, color, n}] özet segmentleri. Hiç skorlanabilir metriği
+// olmayan segment atlanır (null → filter). avg: good=1, neutral=.5, bad=0.
+const buildFundSummary = (metrics) => {
+  const buckets = {};
+  FUND_GROUPS.forEach(([groupName, items]) => {
+    const seg = FUND_SUMMARY_MAP[groupName];
+    if (!seg) return;
+    items.forEach(([key]) => {
+      const s = fundScore(key, metrics[key]);
+      if (!s) return;
+      (buckets[seg] = buckets[seg] || []).push(s === "good" ? 1 : s === "neutral" ? 0.5 : 0);
+    });
+  });
+  return FUND_SUMMARY_SEGMENTS.map((seg) => {
+    const arr = buckets[seg.id];
+    if (!arr || !arr.length) return null;
+    const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+    const idx = avg >= 0.66 ? 0 : avg >= 0.4 ? 1 : 2;
+    const color = idx === 0 ? "var(--ok)" : idx === 1 ? "var(--warn)" : "var(--err)";
+    return { label: seg.label, word: seg.words[idx], color, n: arr.length };
+  }).filter(Boolean);
+};
+
 // "iyi ≥40% · orta ≥25%" gibi eşik metni — listede sublabel olarak gösterilir.
 const fundThreshText = (key, type) => {
   const t = FUND_THRESHOLDS[key];
@@ -552,7 +595,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       {p&&(
         <React.Fragment>
         {isDeposit&&(
-          <div className="card" style={{marginBottom:8,padding:"14px 16px"}}>
+          <div className="card" style={{marginBottom:8,padding:"var(--card-pad)"}}>
             <div className="stitle" style={{marginBottom:10}}>Mevduat Özeti</div>
             {(()=>{
               const rows=[
@@ -605,7 +648,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
           >💰 Değer Güncelle</button>
         )}
         {isBes&&(
-          <div className="card" style={{marginBottom:8,padding:"14px 16px"}}>
+          <div className="card" style={{marginBottom:8,padding:"var(--card-pad)"}}>
             <div className="stitle" style={{marginBottom:10}}>BES Özeti</div>
             {(()=>{
               const dkNull=p.dkCurrent==null;
@@ -811,7 +854,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
         );
         if (!hasDetailMeta && !metaLoading && !metaErr) return null;
         return (
-        <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
+        <div className="card" style={{marginBottom:14,padding:"var(--card-pad)"}}>
           <div className="stitle" style={{marginBottom:10}}>Şirket Bilgisi</div>
           {metaLoading&&<SkeletonRows n={3} gap={8}/>}
           {metaErr&&<div className="err" style={{fontSize:12}}>{metaErr}</div>}
@@ -877,7 +920,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
         const vColor=sig==="good"?"var(--ok)":sig==="neutral"?"var(--warn)":"var(--err)";
         const word=upside>=50?"belirgin iskontolu":upside>=25?"hafif iskontolu":upside>=0?"adil değere yakın":"pahalı";
         return(
-          <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
+          <div className="card" style={{marginBottom:14,padding:"var(--card-pad)"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:10,flexWrap:"wrap"}}>
               <div className="stitle" style={{marginBottom:0}}>Hızlı Değerleme (DCF)</div>
               <span style={{fontSize:12,color:vColor,fontWeight:500,whiteSpace:"nowrap"}}>
@@ -904,7 +947,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
 
       {/* Fundamental — değer yatırımı checklist (US_STOCK + BIST) */}
       {supportsFund&&!isDeposit&&(
-        <div className="card" style={{marginBottom:14,padding:"14px 16px"}}>
+        <div className="card" style={{marginBottom:14,padding:"var(--card-pad)"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,gap:8}}>
             <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
               <div className="stitle" style={{marginBottom:0}}>Fundamental · Değer Yatırımı Checklist</div>
@@ -939,6 +982,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
             const totalN=Object.keys(metrics).length;
             const fy=fund.raw?.latestFiscalYear;
             const yb=fund.raw?.yearsBackUsed;
+            const summary=buildFundSummary(metrics);
             return(
               <div>
                 <div style={{fontSize:11,color:"var(--text2)",marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:8}}>
@@ -949,6 +993,21 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
                     <span style={{display:"inline-flex",alignItems:"center",gap:4}}><span style={{width:7,height:7,borderRadius:"50%",background:"var(--err)"}}></span>zayıf</span>
                   </span>
                 </div>
+                {summary.length>0&&(
+                  <div data-tip="21 metriğin grade'lerinden türetilen özet: Kârlılık/Büyüme/Borç/Değerleme. Detay aşağıda."
+                    style={{background:"var(--bg3)",borderRadius:8,padding:"10px 12px",marginBottom:14,display:"flex",flexWrap:"wrap",alignItems:"center",gap:"6px 4px",cursor:"help"}}>
+                    {summary.map((s,i)=>(
+                      <React.Fragment key={s.label}>
+                        {i>0&&<span style={{color:"var(--text3)",margin:"0 6px"}}>·</span>}
+                        <span style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:13}}>
+                          <span style={{width:7,height:7,borderRadius:"50%",background:s.color,flex:"0 0 auto"}}></span>
+                          <span style={{color:"var(--text2)"}}>{s.label}</span>
+                          <strong style={{color:s.color,fontWeight:600}}>{s.word}</strong>
+                        </span>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )}
                 {FUND_GROUPS.map(([groupName,items])=>(
                   <div key={groupName} style={{marginBottom:14}}>
                     <div className="stitle" style={{marginBottom:6,fontSize:9}}>{groupName}</div>
@@ -996,7 +1055,7 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
 
       {/* Analist Tavsiyeleri — sadece US_STOCK + fund.grades */}
       {effectiveType==="US_STOCK"&&!isDeposit&&fund?.grades?.length>0&&(
-        <div className="card" style={{marginBottom:16,padding:"14px 16px"}}>
+        <div className="card" style={{marginBottom:16,padding:"var(--card-pad)"}}>
           <div className="stitle" style={{marginBottom:10}}>Analist Tavsiyeleri</div>
           {fund.grades.map((g,i)=>{
             const r=(g.rating||"").toLowerCase();

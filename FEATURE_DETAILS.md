@@ -103,6 +103,13 @@ Dashboard'daki 4 özet kart (hepsi **display currency**'de — toggle ile $ veya
 - **BIST/EDGAR**: FMP DCF BIST'i desteklemez (HTTP 402); EDGAR fallback'te de yok. Bu modlarda `dcf` undefined → kart gizli.
 - **Frontend**: `TickerDetailTab` "Hızlı Değerleme (DCF)" kartı, fundamental checklist'in hemen üstünde. Guard: `effectiveType==="US_STOCK" && displayCurrency==="USD" && fund?.dcf>0 && price!=null`. Yükseliş potansiyeli `(dcf−price)/price×100`; eşik `≥%50` 🟢 "belirgin iskontolu" / `≥%25` 🟡 "hafif iskontolu" / `0–25` 🔴 "adil değere yakın" / `<0` 🔴 "pahalı". Held'de `price=prc[ticker]`, discovery'de `livePrice`. Zorunlu "tahmini" disclaimer satırı.
 
+### Checklist Özet Satırı (Sprint 25 #1)
+
+- **Amaç**: 21 metriği tek tek okumadan "sağlam mı / pahalı mı" sinyali. Checklist'in legend ile metrik grupları arasında plain-language özet: `🟢 Kârlılık güçlü · 🔴 Borç yüksek · 🔴 Değerleme pahalı`.
+- **Map** (`TickerDetailTab.js`): `FUND_SUMMARY_MAP` 7 `FUND_GROUPS` başlığını 4 segmente çevirir — `profit` (Kâr Marjları+Verimlilik+Gider Disiplini+Sermaye Yatırımı), `growth` (Büyüme), `debt` (Bilanço Sağlığı), `value` (Değerleme). `FUND_SUMMARY_SEGMENTS` her segmentin etiketi + iyi/orta/zayıf kelimelerini tutar (Borç: düşük/makul/yüksek; Değerleme: cazip/makul/pahalı).
+- **Rollup** (`buildFundSummary(metrics)`): segmentin metrik `fundScore`'ları good=1/neutral=.5/bad=0 ile ortalanır → `avg≥.66` iyi 🟢 / `≥.4` orta 🟡 / else zayıf 🔴. **Yeni eşik yok** — mevcut `FUND_THRESHOLDS` grade'lerinin rollup'ı. Skorlanabilir metriği olmayan segment atlanır; özet tamamen boşsa (yeni ticker, `fund_cache` boş) hiç render edilmez.
+- **Kapsam**: US_STOCK + BIST (mevcut checklist davranışı; banka `isFundEligible` dışı). Detay metrik grupları özetin altında **aynen** kalır.
+
 ---
 
 ## Analiz Tab Kartları
@@ -117,7 +124,7 @@ Sticky pos.3 nav (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar).
 
 4. **Kazanan/Kaybeden Trade** — BUY+SELL bağımsız, split-adjusted. `adj = tx.price / factorAt(ticker, date)`. BUY win: `currentPrice > adj_buy`. SELL win: `currentPrice < adj_sell`. Stacked bar, noPrice tx atlanır.
 
-5. **Portföy Sağlık Tablosu** — Default kapalı görünüm: 🟢/🟡/🔴 toplam rozet + ağırlıklı F/K KPI (vs S&P 500 22x) + 6 portföy seviyesi sonuç cümlesi (MV-weighted; "🟢 Borçlanma seviyesi sağlıklı" / "🟡 Kârlılık orta" formatında, ham değer + eşik tooltip'te). Detay ▾ açar: 8 metrik renk pill tablo (P/E, ROE, Net/Op Marj, Gelir/Kâr 5Y, Borç/Özk, NetBorç/FCF) + Skor kolonu. "Eksikleri Çek" CTA. Asset-type filtre (US/BIST/Hepsi) cümleleri ve tabloyu birlikte filtreler. (Sprint 14 A-1)
+5. **Portföy Sağlık Tablosu** — Default kapalı görünüm: 🟢/🟡/🔴 toplam rozet + ağırlıklı F/K KPI + **S&P 500 karşılaştırma cümlesi** (Sprint 25 #2: `SP500_PE=22` kaynak+tarih yorumlu sabit; `ratio=portfolioPE/22` → `<0.9` 🟢 "altında" / `≤1.1` 🟡 "civarında" / `>1.1` 🔴 "belirgin üstünde"; `X pozisyon dahil · kapsanan değer %Y` notu; `coverage=weightTotal/mvAll < 0.60` ise sarı "kısmi veri" uyarısı) + 6 portföy seviyesi sonuç cümlesi (MV-weighted; "🟢 Borçlanma seviyesi sağlıklı" / "🟡 Kârlılık orta" formatında, ham değer + eşik tooltip'te). Detay ▾ açar: 8 metrik renk pill tablo (P/E, ROE, Net/Op Marj, Gelir/Kâr 5Y, Borç/Özk, NetBorç/FCF) + Skor kolonu. "Eksikleri Çek" CTA. Asset-type filtre (US/BIST/Hepsi) cümleleri ve tabloyu birlikte filtreler. (Sprint 14 A-1)
 
 6. **Konsantrasyon Riski** — Top 3 ağırlık + renk pill (>60% kırmızı / 40-60% sarı). HHI basit (Σwi²×10000). Frontend hesabı.
 
