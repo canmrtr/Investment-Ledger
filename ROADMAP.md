@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-06-05** (Sprint 21–24 ✅. **Sprint 24 = TEFAS ✅ SHIPPED 2026-06-05** — 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sprint 25 = Değerleme Okunabilirliği** (2026-06-05 → 2026-06-18) — 3 kapsam işi de **kodlandı + doğrulandı 2026-06-09** (Fundamental Checklist özet+detay · ağırlıklı portföy F/K vs S&P 500 · `--card-pad` token); canlı render doğrulaması bekliyor. Plan+delivery: `sprints/sprint-25.md`. Detay "Sonraki Adım"da.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-06-13** (Sprint 21–24 ✅. **Sprint 24 = TEFAS ✅ SHIPPED 2026-06-05** — 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sprint 25 = Değerleme Okunabilirliği** (2026-06-05 → 2026-06-18) — 3 kapsam işi de **kodlandı + doğrulandı 2026-06-09** (Fundamental Checklist özet+detay · ağırlıklı portföy F/K vs S&P 500 · `--card-pad` token); canlı render doğrulaması bekliyor. Plan+delivery: `sprints/sprint-25.md`. Detay "Sonraki Adım"da.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -66,7 +66,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [x] **CSP/SRI: `html2canvas` integrity hash eksik** `[S]` `[P2]` `Sprint-16` ✅ — `index.html` sha512 integrity attribute eklendi.
 - [x] **`watchlist_own` policy `FOR ALL` — UPDATE riski** `[S]` `[P2]` `Sprint-16` ✅ — Migration 015: FOR INSERT/SELECT/DELETE ayrı policy; UPDATE DB seviyesinde engelli.
 - [x] **`fetch-prices` historical upsert hatası sessizce yutuluyor** `[S]` `[P2]` `Sprint-16` ✅ — PostgREST + network hataları console.error ile loglanıyor.
-- [ ] **LS key'leri user-scope değil** `[S]` `[P2]` `Sprint-16` — `il_prc`, `il_hist`, `il_hide` vb. user-specific prefix taşımıyor. Kısa vade: signOut'ta tüm `il_` key'leri temizle. Uzun vade: key'lere `user.id` prefix ekle.
+- [x] ~~**LS key'leri user-scope değil**~~ `[S]` `[P2]` `Sprint-22` `2026-06-13` ✅ — Sprint 22 #5'te kapandı (grooming-confirmed 2026-06-13): user-scoped key'ler `il_<base>_<userId>`; device-pref global'ler (`il_theme`/`il_fx`/`il_disp_cur`) prefix'siz. App mount'ta `migrateUserLSKeys`, signOut'ta `clearUserLocalKeys`. Manifest → `CACHE.md`. `→ App.js:45,592,1408`
 - [x] **`price_snapshots` policy `TO anon, authenticated` eksik** `[S]` `[P3]` `2026-05-19` — Migration 020: DROP + CREATE policy explicit `TO anon, authenticated USING (true)`. `fund_cache`/`adr_bist_map` pattern'ine hizalandı.
 
 ---
@@ -85,7 +85,6 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
   - [x] (9) `refresh-price-cache` cron'a TEFAS ekleme `[S]` `2026-06-04`
 - [x] ~~**BES Devlet Katkısı (DK) entegrasyonu**~~ `[M]` `[P0]` `Sprint-18` ✅ (2026-05-13) — 4 form alanı (kişisel yatırılan, kişisel portföy güncel, DK anaparası, DK portföy güncel); `positions` tablosuna `dk_principal` + `dk_current` kolonları eklendi; `rebuild_positions_atomic` RPC güncellendi; cost basis = yalnızca kişisel yatırılan, DK+getiri tamamı kazanç; hint kaldırıldı. Migration 018. `→ utils.js, App.js, ManuelPosForm.js`
 - [x] ~~**AI parse temettü desteği (DIV way)**~~ `[S]` `[P1]` (2026-05-13) — `parse-transaction` sözleşmesi `BUY|SELL|DIV` oldu; Türkçe temettü ifadesi örnekleri eklendi; `saveTx` way allowlist doğrulaması eklendi. `→ parse-transaction-edge-function.js; AddTab.js`
-- [ ] **Sektör-aware fundamental eşikler** `[M]` `[P1]` — tech P/E ≤30, utility ≤15 vs.; `sic_description` veya FMP `sector` ile profil seç. TR enflasyonu CAGR eşiklerini de etkiliyor.
 - [ ] **TR altın işçilik premium göstergesi** `[M]` `[P2]` — Reşat/Ata birimi ekleme; Dashboard "5 çeyrek · ₺12,000/ad · Spot saf ₺55,000 · Premium %9" render; ödenen fiyat − spot saf fark hesabı.
 - [ ] **BIST P/S metriği** `[S]` `[P2]` — borsa-mcp `meta.market_cap` / `latestRevenue` ile derive; frontend veya edge function 2. call.
 - [ ] **BIST bankalar fundamentals** `[L]` `[P2]` — UFRS grubu Roman numeral itemCode mapping; `ISY_KNOWN_BANKS` early-exit kaldır.
@@ -148,17 +147,17 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ### Portföy Analizi
 
-- [ ] **"Dip mi Tepeden mi Girdim?" Giriş Kalitesi** `[S]` `[P2]` — avg_cost'u 52W aralığına yerleştiren yatay progress bar; "İyi giriş / Tepeden giriş" etiketi. 52W verisi fundamentals cache'te mevcut.
+- [ ] **"Dip mi Tepeden mi Girdim?" Giriş Kalitesi (sözel verdict)** `[S]` `[P2]` — **Kısmen shipped**: TickerDetailTab'da held US_STOCK/BIST(TRY) için 52W gradient bar (avg_cost marker + güncel fiyat disk) live (`TickerDetailTab.js:780`). Kalan delta: açık "İyi giriş %28 / Tepeden %89" sözel verdict etiketi + (opsiyonel) AnalysisTab portföy seviyesi rollup. (Eski "Alım Fiyatı Bölgesi Analizi / 52W Konumu" item'ı buraya katlandı.)
 - [ ] **Portföy Çeşitlendirme Skoru** `[M]` `[P2]` — Bölge × Sektör × Asset Type matrisinden 1-10 skor; tek bölge/sektör yoğunlaşmasına göre uyarı cümlesi. Tamamen frontend hesabı.
 - [ ] **Yeniden Dengeleme Önerisi (Rebalancing)** `[M]` `[P2]` — Kullanıcı hedef dağılım girer (US %50, BIST %30 vb.); mevcut farkı göster. `profiles` tablosuna JSON kolonu gerekir.
 
 ### Risk
 
 - [ ] **Likidite Analizi** `[M]` `[P2]` — `marketCap` bazlı "kolayca satılabilir / az likit" sınıflandırması. Fundamentals cache'ten; ek fetch yok.
-- [ ] **Piyasa Düşüşü Dayanıklılık Skoru** `[M]` `[P2]` — Borç/Özk < 0.5, FCF marjı >10%, op marjı >15% pozisyonların ağırlıklı payı → 1-10 puan. Fundamentals cache; ek fetch yok.
-  - [ ] (a) `resilienceScore(fund)` fonksiyonu: 3 metrik → 0-6 puan → 1-10 scale `[S]`
-  - [ ] (b) MV-weighted portföy skoru hesabı `[S]`
-  - [ ] (c) AnalysisTab "Piyasa Dayanıklılığı" kartı — skor + bar + "Eksikleri Çek" CTA `[S]`
+- [x] ~~**Piyasa Düşüşü Dayanıklılık Skoru**~~ `[M]` `[P2]` `2026-06-13` ✅ — AnalysisTab Detay katmanında live (grooming-confirmed): `resilienceScore` MV-weighted 1-10 + tek-satır verdict (güçlü ≥7 / orta ≥5 / kırılgan <5) + composition satırı + per-ticker bar grid. BIST bankaları + non-equity `isFundEligible` ile kapsam dışı. Fundamentals cache; ek fetch yok. `→ AnalysisTab.js:477-508`
+  - [x] (a) `resilienceScore(m)` fonksiyonu ✅
+  - [x] (b) MV-weighted portföy skoru hesabı ✅
+  - [x] (c) AnalysisTab "Piyasa Dayanıklılığı" kartı ✅
 - [ ] **Portföy Beta Tahmini** `[M]` `[P2]` — `price_cache.p_w1/m1` hareketleri benchmark ile karşılaştırma; ağırlıklı portföy betası. `[Benchmark karşılaştırması]` tamamlandıktan sonra kolaylaşır.
 
 ### Performans
@@ -188,7 +187,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 ### Davranışsal Analiz
 
 - [ ] **Art Arda Kazanma/Kaybetme Serisi (Streak)** `[S]` `[P3]` — Kapatılmış işlemler kârlı/zararlı zinciri; tamamen `transactions` BUY+SELL frontend hesabı.
-- [ ] **Alım Fiyatı Bölgesi Analizi (52W Konumu)** `[S]` `[P2]` — avg_cost 52W low/high aralığı; "İyi giriş (%28)" veya "Tepeden giriş (%89)". Fundamentals cache'te `high_52w/low_52w` mevcut; yeni fetch yok.
+- [x] ~~**Alım Fiyatı Bölgesi Analizi (52W Konumu)**~~ `[S]` `[P2]` `2026-06-13` — Duplicate; "Dip mi Tepeden mi Girdim?" (Portföy Analizi) item'ıyla aynı iş, oraya katlandı. Görsel bar TickerDetailTab'da shipped; kalan sözel-etiket deltası tek item'da izlenir.
 - [ ] **Kayıp Realizasyonu Analizi (Tax Loss Harvesting)** `[S]` `[P3]` — Zarardaki pozisyonlar + elde tutma süresi; "XYZ 2 yıldır zararda — vergi avantajı fırsatı". Frontend hesabı.
 
 ### Analiz Tab Açık Alt Görevler
@@ -347,7 +346,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 ### Tasarım Tutarsızlıkları
 
 - [x] ~~**Kart padding standart dışı**~~ `[S]` `[P2]` `Sprint-25` `2026-06-09` ✅ — `--card-pad:14px 16px` token tanımlandı (`:root`); baskın `14px 16px` section-card padding'i (18 inline override, TickerDetail/Analysis/App) token'a bağlandı — değer aynı, görsel regresyon yok. Dense `.card` base (`12px 14px`) bilinçli olarak token'dan ayrı kaldı. Kalan off-token paddingler (`16px 18px` Dashboard KPI vb.) görsel onay gerektirdiği için ileriye bırakıldı. `→ index.html; CONVENTIONS.md`
-- [ ] **Spinner boyut karmaşası** `[S]` `[P2]` — CSS `.spin` 18×18; inline'da 11/12/14px karışık. `--spin-sm:12px` + `--spin-md:16px` değişkenleri.
+- [ ] **Spinner boyut karmaşası** `[S]` `[P2]` — CSS `.spin` 18×18; inline'da 11/12/14px karışık. `--spin-sm:12px` + `--spin-md:16px` değişkenleri. (Bug&UX'teki "Spinner boyut standardı" duplicate'i buraya katlandı.)
 - [ ] **Yükleniyor metin standardı** `[S]` `[P2]` — `"..."`, `"Kaydediliyor..."`, `"Parse ediliyor..."` karışık. Kural: kısa buton → spin icon; uzun metin buton → standart Türkçe metin.
 - [ ] **`.stitle` marginBottom inline override'ları** `[S]` `[P3]` — `data-tight`/`data-loose` modifier class ekle; aksi halde inline'ları kaldır.
 - [ ] **`CUR_COLORS` `TYPE_COLORS` ile çakışıyor** `[S]` `[P2]` — AnalysisTab Kur Riski: `USD:"#0a84ff"` (FUND rengi) anlamsız. `TYPE_COLORS.US_STOCK` daha semantik. `→ AnalysisTab.js:~3989`
@@ -414,7 +413,6 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 - [ ] **fundLoading spin icon** `[S]` `[P2]` — "..." yerine spin icon.
 - [ ] **Login error/success → .flash class** `[S]` `[P2]` — inline style yerine class.
 - [ ] **TickerDetailTab metaErr warn-card** `[S]` `[P2]` — küçük `.err` span yerine `.warn-card`.
-- [ ] **Spinner boyut standardı** `[S]` `[P2]` — 12/14/11px karışık; tek standart.
 - [ ] **Tip picker desc font/contrast** `[S]` `[P2]` — 10px var(--text3) AA sınırda.
 - [ ] **AddTab tip değiştir butonu dokunma hedefi** `[S]` `[P2]` — 24-26px → 44px.
 - [ ] **Türkçe/İngilizce term sözlüğü** `[S]` `[P2]` — CLAUDE.md'ye glossary ekle; `period` → `dönem` vb.
@@ -489,12 +487,11 @@ Sprint 4–23 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 2. ✅ **Ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma** `[S][P2]` — AnalysisTab Portföy Sağlık'ta 3-durumlu cümle + kapsam notu + <%60 kısmi-veri uyarısı. `→ AnalysisTab.js`
 3. ✅ **Polish — Design audit Phase-2 kalanı** `[S×2][P2]` — #7 `--card-pad` token (18 override tokenize, görsel no-op); #9 tooltip zaten tek `data-tip` pattern'i + global touch fallback. `→ index.html`
 
-**Out of scope (Sprint 26'ya)**: Sektör-aware F/K eşikleri `[M][P1]` (özet modeli oturmadan eşik kişiselleştirmesi erken); Layer-2 nudge; TEFAS historical NAV+sparkline.
+**Out of scope (Sprint 26'ya)**: Layer-2 nudge; TEFAS historical NAV+sparkline.
 
 **Sprint 26+ aday havuzu (her sprint başında gözden geçir):**
 
-1. **Sektör-aware F/K eşikleri** `[M][P1]` — `sic_description`/FMP `sector` ile profil seçimi (tech P/E ≤30, utility ≤15); TR enflasyonu CAGR eşik etkisi. Sprint 25 özet+detay modelinin segmentlerini zenginleştirir. **Neden 1**: Value-investing core'un doğal devamı; #25 headline'ı bunu hazırlar.
-2. **Layer-2 davranışsal nudge** `[M][P2]` — piyasa düşüş nudge'ı, büyük kazanç tez-kontrolü nudge'ı, SearchTab FOMO banner'ı. Mevcut `price_cache` verisi, yeni fetch yok. **Neden 2**: Platform vizyonu Katman 2'ye ilk somut adım; ucuz effort.
-3. **TEFAS historical NAV + sparkline** `[M][P2]` — `price_cache.p_d1/w1/m1/y1` doldurma + sparkline. TEFAS API historical endpoint test gerektirir. **Neden 3**: Sprint 24'ün devamı ama önce Can'ın gerçek TEFAS kullanım feedback'i lazım.
-4. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı. **Neden 4**: Going-live hazırlık fazı.
-5. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; public view `privacy_level==="full"` modda gerçek `shares`/`avg_cost`. **Neden 5 (sona)**: Social Faz 2 ship etmeden tek başına değer yaratmaz.
+1. **Layer-2 davranışsal nudge** `[M][P2]` — piyasa düşüş nudge'ı, büyük kazanç tez-kontrolü nudge'ı, SearchTab FOMO banner'ı. Mevcut `price_cache` verisi, yeni fetch yok. **Neden 1**: Platform vizyonu Katman 2'ye ilk somut adım; ucuz effort.
+2. **TEFAS historical NAV + sparkline** `[M][P2]` — `price_cache.p_d1/w1/m1/y1` doldurma + sparkline. TEFAS API historical endpoint test gerektirir. **Neden 2**: Sprint 24'ün devamı ama önce Can'ın gerçek TEFAS kullanım feedback'i lazım.
+3. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı. **Neden 3**: Going-live hazırlık fazı.
+4. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; public view `privacy_level==="full"` modda gerçek `shares`/`avg_cost`. **Neden 4 (sona)**: Social Faz 2 ship etmeden tek başına değer yaratmaz.
