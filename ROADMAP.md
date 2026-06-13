@@ -487,11 +487,20 @@ Sprint 4–23 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 2. ✅ **Ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma** `[S][P2]` — AnalysisTab Portföy Sağlık'ta 3-durumlu cümle + kapsam notu + <%60 kısmi-veri uyarısı. `→ AnalysisTab.js`
 3. ✅ **Polish — Design audit Phase-2 kalanı** `[S×2][P2]` — #7 `--card-pad` token (18 override tokenize, görsel no-op); #9 tooltip zaten tek `data-tip` pattern'i + global touch fallback. `→ index.html`
 
-**Out of scope (Sprint 26'ya)**: Layer-2 nudge; TEFAS historical NAV+sparkline.
+---
 
-**Sprint 26+ aday havuzu (her sprint başında gözden geçir):**
+**Sprint 26 = Karma: TEFAS sparkline + ilk davranışsal nudge** (2026-06-19 → 2026-07-02) — **PLANLANDI** (Can'ın tema seçimi 2026-06-13). Plan: `sprints/sprint-26.md`.
 
-1. **Layer-2 davranışsal nudge** `[M][P2]` — piyasa düşüş nudge'ı, büyük kazanç tez-kontrolü nudge'ı, SearchTab FOMO banner'ı. Mevcut `price_cache` verisi, yeni fetch yok. **Neden 1**: Platform vizyonu Katman 2'ye ilk somut adım; ucuz effort.
-2. **TEFAS historical NAV + sparkline** `[M][P2]` — `price_cache.p_d1/w1/m1/y1` doldurma + sparkline. TEFAS API historical endpoint test gerektirir. **✅ Unblocked (2026-06-13)**: Can TEFAS'ı uçtan uca kullandı (fon eklendi → Dashboard'da göründü); bağımlı olduğu "gerçek kullanım feedback'i" alındı. **PO notu**: artık Sprint 26 headline'lık güçlü aday — shipped TEFAS işinin doğal devamı, gerçek kullanım mevcut.
-3. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı. **Neden 3**: Going-live hazırlık fazı.
-4. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; public view `privacy_level==="full"` modda gerçek `shares`/`avg_cost`. **Neden 4 (sona)**: Social Faz 2 ship etmeden tek başına değer yaratmaz.
+**Goal**: TEFAS fonları artık "kör nokta" değil — Can her TEFAS fonunun son ~6 ayın NAV trendini sparkline'da görür, Dashboard'da günlük/haftalık değişimini diğer varlıklar gibi okur; ayrıca portföyü bir günde sert düştüğünde tezini sorgulatan ilk davranışsal nudge devreye girer.
+
+**Sprint 26 kapsamı:**
+1. **TEFAS historical NAV + sparkline** `[M][P2]` (headline) — `fetch-prices` historical dalı + `price_cache.p_d1/w1/m1/m3/m6/y1` doldurma + TickerDetail sparkline + Dashboard günlük % badge. **Risk-first spike**: TEFAS NAV zaman-serisi endpoint'i (tarih-aralıklı `fonFiyatBilgiGetir`) sprint başında test edilir; yoksa cron snapshot ileriye-doldurma fallback'i. `→ fetch-prices-edge-function.js, refresh-price-cache, TickerDetailTab.js, App.js`
+2. **Piyasa düşüş nudge'ı** `[S][P2]` (filler) — MV-ağırlıklı günlük değişim `price_cache.p_d1`'den ≤ -%5 ise Dashboard nudge ("Portföyün bugün -%X düştü. Tezin hâlâ geçerli mi?"); dismiss + gün-bazlı sustur (LS `il_nudge_drop_<userId>`). Yeni fetch yok. Platform Katman 2'ye ilk adım. `→ App.js`
+
+**Out of scope (Sprint 26)**: diğer Layer-2 nudge'ları (büyük kazanç tez-kontrol, SearchTab FOMO) → sonraki Layer-2 sprint'i; TEFAS fundamentals (veri yok).
+
+**Sprint 27+ aday havuzu (her sprint başında gözden geçir):**
+
+1. **Layer-2 davranışsal nudge — kalan parçalar** `[M][P2]` — büyük kazanç tez-kontrolü nudge'ı + SearchTab FOMO banner'ı (piyasa düşüş nudge'ı Sprint 26'da). Mevcut `price_cache`, yeni fetch yok. **Neden 1**: Sprint 26'nın açtığı nudge altyapısının doğal devamı.
+2. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı. **Neden 2**: Going-live hazırlık fazı.
+3. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; public view `privacy_level==="full"` modda gerçek `shares`/`avg_cost`. **Neden 3 (sona)**: Social Faz 2 ship etmeden tek başına değer yaratmaz.
