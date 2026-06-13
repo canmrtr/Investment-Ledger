@@ -492,6 +492,6 @@ Sprint 4–23 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 **Sprint 26+ aday havuzu (her sprint başında gözden geçir):**
 
 1. **Layer-2 davranışsal nudge** `[M][P2]` — piyasa düşüş nudge'ı, büyük kazanç tez-kontrolü nudge'ı, SearchTab FOMO banner'ı. Mevcut `price_cache` verisi, yeni fetch yok. **Neden 1**: Platform vizyonu Katman 2'ye ilk somut adım; ucuz effort.
-2. **TEFAS historical NAV + sparkline** `[M][P2]` — `price_cache.p_d1/w1/m1/y1` doldurma + sparkline. TEFAS API historical endpoint test gerektirir. **Neden 2**: Sprint 24'ün devamı ama önce Can'ın gerçek TEFAS kullanım feedback'i lazım.
+2. **TEFAS historical NAV + sparkline** `[M][P2]` — `price_cache.p_d1/w1/m1/y1` doldurma + sparkline. TEFAS API historical endpoint test gerektirir. **✅ Unblocked (2026-06-13)**: Can TEFAS'ı uçtan uca kullandı (fon eklendi → Dashboard'da göründü); bağımlı olduğu "gerçek kullanım feedback'i" alındı. **PO notu**: artık Sprint 26 headline'lık güçlü aday — shipped TEFAS işinin doğal devamı, gerçek kullanım mevcut.
 3. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı. **Neden 3**: Going-live hazırlık fazı.
 4. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; public view `privacy_level==="full"` modda gerçek `shares`/`avg_cost`. **Neden 4 (sona)**: Social Faz 2 ship etmeden tek başına değer yaratmaz.
