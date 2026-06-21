@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-06-20** (Sprint 21–25 ✅. **Sprint 24 = TEFAS ✅ SHIPPED 2026-06-05** — 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sprint 25 = Değerleme Okunabilirliği ✅ KAPANDI** (2026-06-05 → 2026-06-18) — 3 kapsam işi de kodlandı + canlıya deploy edildi (commit `fe3e16a`: Fundamental Checklist özet+detay · ağırlıklı portföy F/K vs S&P 500 · `--card-pad` token). Tek carry-over: canlı `fund_cache` verisiyle render göz doğrulaması → Sprint 26 başında birlikte yapılır. Plan+delivery: `sprints/sprint-25.md`. **Sprint 26 = TEFAS sparkline + ilk davranışsal nudge — KOD+EDGE TAMAM** (2026-06-19 → 2026-07-02): #1 `refresh-price-cache` v19 deploy + smoke-verified (YAC delta alanları doğru), TickerDetail sparkline kodlandı (veri yolu 124-nokta JWT'yle doğrulandı); #2 piyasa düşüş nudge'ı `computeNudges`'a eklendi (gün-damgalı id, yeni LS key yok). Kalan: canlı görsel eyeball (edge CORS → yalnız production). **Sprint 27 planlandı** (Layer-2 nudge derinleşme). Detay "Sonraki Adım"da.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-06-20** (Sprint 21–25 ✅. **Sprint 24 = TEFAS ✅ SHIPPED 2026-06-05** — 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sprint 25 = Değerleme Okunabilirliği ✅ KAPANDI** (2026-06-05 → 2026-06-18) — 3 kapsam işi de kodlandı + canlıya deploy edildi (commit `fe3e16a`: Fundamental Checklist özet+detay · ağırlıklı portföy F/K vs S&P 500 · `--card-pad` token). Tek carry-over: canlı `fund_cache` verisiyle render göz doğrulaması → Sprint 26 başında birlikte yapılır. Plan+delivery: `sprints/sprint-25.md`. **Sprint 26 ✅ KAPANDI** (TEFAS sparkline + market-drop nudge; commit `82c8b93`, canlıda doğrulandı — YAC NAV sparkline +16.6%). **Sprint 27 ✅ KAPANDI** (2026-06-21'de erken; commit `a238d2c`): kazanç tez-kontrol nudge'ı (TickerDetail) + SearchTab FOMO badge — ikisi de canlıda doğrulandı (GARAN m1-bump testi). Katman 2 davranışsal nudge sistemi 3 yüzeyde tamam (kayıp/kazanç/FOMO). **Sprint 28 henüz planlanmadı** — top aday: Hesap Yönetimi canlı-sistem önkoşulları. Detay "Sonraki Adım"da.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -500,19 +500,22 @@ Sprint 4–24 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 
 ---
 
-**Sprint 27 = Layer-2 nudge derinleşme: kazanç tez-kontrolü + FOMO badge** (2026-07-03 → 2026-07-16) — **🚧 KOD TAMAM, canlı eyeball bekliyor**. Plan: `sprints/sprint-27.md`.
+**Sprint 27 = Layer-2 nudge derinleşme: kazanç tez-kontrolü + FOMO badge** (2026-06-21'de erken kapandı; planlı pencere 07-03 → 07-16) — **✅ KAPANDI, canlıda doğrulandı**. Commit `a238d2c`. Plan + retro: `sprints/sprint-27.md`.
 
-**Goal**: Davranışsal koç (Katman 2) tek nudge'dan sisteme dönüşür — kayıp (Sprint 26) + kazanç + arama-FOMO üç bağlamda karar sürtünmesi. Hepsi mevcut `price_cache`, yeni fetch yok.
-1. ✅ **Büyük kazanç tez-kontrol nudge'ı** `[S][P2]` — held pozisyon `m1 > %25` ise TickerDetailTab header altında gold-tinted nudge; per-ticker 30-gün sustur (`il_nudge_gain_<userId>`). Parse yeşil. SOXX (m1 28.7) ile canlı doğrulanabilir. `→ TickerDetailTab.js`
-2. ✅ **SearchTab FOMO badge'i** `[M][P2]` — `hist[ticker].m1 > 30` ise `🔥 +%X` pasif badge + tooltip; yalnız cache'te olan ticker'larda (O(1) lookup, dismiss yok). App `hist` prop geçirir. `→ SearchTab.js, App.js`
+**Goal**: Davranışsal koç (Katman 2) tek nudge'dan sisteme dönüştü — kayıp (Sprint 26) + kazanç + arama-FOMO üç bağlamda karar sürtünmesi. Hepsi mevcut `price_cache`, yeni fetch yok.
+1. ✅ **Büyük kazanç tez-kontrol nudge'ı** `[S][P2]` — held + `m1 > %25` ise TickerDetailTab header altında gold-tinted nudge; per-ticker 30-gün sustur (`il_nudge_gain_<userId>`). **Canlıda doğrulandı** (GARAN m1=35 bump → nudge + dismiss çalıştı → restore). `→ TickerDetailTab.js`
+2. ✅ **SearchTab FOMO badge'i** `[M][P2]` — `hist[ticker].m1 > 30` ise `🔥 +%X` pasif badge + tooltip; yalnız cache'te olan ticker'larda (O(1), dismiss yok). App `hist` prop geçirir. **Canlıda doğrulandı** (GARAN satırında 🔥 +35.0%, diğer sonuçlar temiz). `→ SearchTab.js, App.js`
 
-**Not (tasarım kararı)**: #2 "banner" yerine inline `🔥` badge olarak gerçeklendi — liste-satırında pasif-bilgilendirici, panik yaratmayan, ~50-80 satıra ölçeklenir (plan "dismiss edilebilir VEYA pasif-bilgilendirici" diyordu). #1 eşik %25, #2 eşik %30 (plan).
+**Tasarım kararı**: #2 "banner" yerine inline `🔥` badge — liste-satırında pasif-bilgilendirici, panik yaratmaz, ölçeklenir (plan "dismiss edilebilir VEYA pasif-bilgilendirici" diyordu). Eşikler: #1 %25, #2 %30. Üç nudge üç yüzeyde ayrı (tek-util'e zorlanmadı — bkz. `sprints/sprint-27.md` DRY notu).
 
-**Kalan**: canlı eyeball — #1 SOXX detayında nudge; #2 cache'te m1>30 olan ticker (şu an yok; geçici m1-bump ile test).
+---
 
-**Sprint 28+ aday havuzu (her sprint başında gözden geçir):**
+**Sprint 28 = ?** (planlı pencere ~07-17 →) — **HENÜZ PLANLANMADI**. Katman 2 nudge batch'i bitti; sıradaki tema seçimi Can ile. Top-3 aday (gerekçeli):
 
-1. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı. **Neden 1**: Going-live hazırlık fazı; Layer-2 batch bitince bağımsız tema.
-2. **Yeni pozisyon ekleme checklist nudge'ı** `[S][P2]` — AddTab'da asset seçiminden önce "Yatırım tezini belirledin mi?" — dördüncü Layer-2 nudge. **Neden 2**: Nudge sistemini tamamlar; Sprint 27'den taştıysa öncelikli.
-3. **TR altın işçilik premium göstergesi** `[M][P2]` — Reşat/Ata birimi + "ödenen − spot saf = premium %9". **Neden 3**: İzole frontend işi; Can'ın gerçek altın datasında kör nokta ama stratejik değil.
-4. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı. **Neden 4 (sona)**: Social Faz 2 ship etmeden tek başına değer yaratmaz.
+1. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` ← *en güçlü* — Ayarlar sekmesi revizyonu (geliştirici-odaklı → kullanıcı-odaklı) + Support & Feature Request iletişim kanalı. **Neden**: Going-live'a giden zorunlu kapı; ürün "kişisel araç"tan "paylaşılabilir ürüne" geçiyorsa kilidi açar. Layer-2 momentum bitti, doğal sonraki faz.
+2. **Yeni pozisyon ekleme checklist nudge'ı** `[S][P2]` — AddTab'da asset seçiminden önce "Yatırım tezini belirledin mi? (Investment Guide 20-kriter)". **Neden**: Dördüncü ve son Layer-2 nudge; sistemi tamamlar. Ucuz (mevcut altyapı, yeni fetch yok) ama Layer-2 teması artık doygun — tek başına bir sprint'i taşımaz, #1'e filler olabilir.
+3. **TR altın işçilik premium göstergesi** `[M][P2]` — Reşat/Ata birimi + "ödenen − spot saf = premium %9". **Neden**: Can'ın gerçek altın datasında kör nokta (Altın %41 portföyün en büyük dilimi!); izole frontend, düşük risk. Daily-driver delta yüksek ama stratejik değil.
+
+**Önerilen Sprint 28**: #1 (Hesap Yönetimi, headline) + #2 (checklist nudge, filler) — going-live hazırlığı + Layer-2'yi kapatış. Ya da daily-driver isteniyorsa #3 (altın premium) headline.
+
+**Diğer beklemedeki adaylar**: "Tam Detay" gerçek render (Social Faz 2 bağımlısı — tek başına değersiz); Broker Dağılımı pie; Sparkline interactivity.

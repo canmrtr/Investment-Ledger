@@ -66,6 +66,8 @@ Sprint 26 aynı gün kapandığı için 27'ye erkenden başlandı. Her iki kapsa
 ### DRY notu (plan hedefinden sapma — kabul edilebilir)
 Plan "üç nudge tek util'den türesin" diyordu. Pratikte üç nudge **üç farklı yüzeyde** (Dashboard/TickerDetail/SearchTab), farklı veri şekliyle (portföy-agregat / per-ticker held / per-ticker arama-sonucu) ve farklı dismiss modeliyle (gün-damgalı / per-ticker 30g / dismiss yok) çalışıyor. Tek util'e zorlamak yapay coupling olurdu; bunun yerine **ortak felsefe** (mevcut `hist`, eşik sabiti tek yerde, nötr ton) paylaşılıyor. FEATURE_DETAILS "Davranışsal Nudge'lar" tek bölümde üç yüzeyi belgeliyor.
 
-### Kalan (push sonrası, canlıda)
-- #1: SOXX (m1 28.7 > 25) detayında nudge eyeball.
-- #2: cache'te m1>30 ticker şu an yok → geçici `price_cache.m1` bump ile badge render doğrula, sonra restore (sparkline force-stale testi gibi).
+### Canlı doğrulama (2026-06-21, production) — ✅ TAMAM
+Test hesabında doğal m1 eşiği aşan ticker yoktu (en yüksek GARAN 19.7 < 25). Geçici `price_cache.m1` bump ile (GARAN → 35) ikisi de canlıda doğrulandı, sonra GARAN m1 gerçek değerine (19.749997456868496) **restore edildi**:
+- **#1 kazanç nudge'ı** ✅ — GARAN detayında "GARAN son ~1 ayda +35.0% büyüdü. Orijinal yatırım tezin hâlâ geçerli mi…" gold-tinted kart; × dismiss → kart kayboldu (LS `il_nudge_gain` yazıldı). 0 ilgili console hatası (GARAN banka fundamental uyarısı pre-existing).
+- **#2 FOMO badge'i** ✅ — "GARAN" aramasında Portföyünden satırında `🔥 +35.0%` badge; diğer sonuçlar (GARFA/GRNYO/TEFAS fonları) temiz → yalnız cache'te m1>30 olanda görünüyor.
+- **Öğrenilen tekrar**: localhost edge CORS nedeniyle bu doğrulama yalnız production'da yapılabildi (Lessons.md 2026-06-21).
