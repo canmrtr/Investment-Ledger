@@ -14,7 +14,7 @@ Tek dosyalı React + Supabase kişisel yatırım takip uygulaması. Türkçe UI.
 - **Edge Functions** (hepsi `--no-verify-jwt`):
   - `parse-transaction` — Claude Haiku 4.5, metin/görüntü → `{transactions:[...]}` array
   - `fetch-prices` — Massive (US/FX/Crypto/GOLD), Yahoo (BIST price/hist), Twelve Data + borsa-mcp (BIST meta), **TEFAS** (`asset_type:"TEFAS"` → `tefas.gov.tr/api/funds/fonFiyatBilgiGetir` NAV; price/historical/meta; provider-key kontrolünden önce route; price_cache'e yalnız `{ticker,price,updated_at}` yazar)
-  - `refresh-price-cache` — pg_cron 6h, stale-first batch; `REFRESHABLE_TYPES` US_STOCK/FUND/CRYPTO/GOLD/BIST/**TEFAS** (TEFAS `fetchTefasPrice` ile fetch loop'ta branch'lenir)
+  - `refresh-price-cache` — pg_cron 6h, stale-first batch; `REFRESHABLE_TYPES` US_STOCK/FUND/CRYPTO/GOLD/BIST/**TEFAS** (TEFAS `fetchTefasHistorical` ile fetch loop'ta branch'lenir; tek `periyod=12` çağrısından price + d1/w1/m1/y1 + p_d1…p_y1 + h_52w/l_52w türetir — US/BIST ile aynı şema, Sprint 26)
   - `fetch-fundamentals` — FMP + EDGAR (US); İş Yatırım (BIST); 21 metrik + annual + grades + `dcf` (FMP `/stable/discounted-cash-flow` adil değer, cevapta top-level — metrics jsonb'sine konmaz; US-only); `mode:"ticker-list"` → ~11k ticker DB; `mode:"refresh-fund-cache"` → pg_cron haftalık stale refresh; `mode:"etf-country"` → FMP country-weightings (planlı); `mode:"tefas-catalog"` → ~3510 fonu `/api/funds/fonGetir`'den `tefas_funds`'a upsert (500'lük chunk; **JWT-protected, skipJwt'de DEĞİL** — anon suistimali engellenir)
 - **PWA**: `manifest.json` + `service-worker.js` (root); `index.html`'de SW kayıt; icon-192/512.png mevcut.
 - **Secrets** (`Deno.env.get`): `MASSIVE_KEY`, `FMP_KEY`, `TWELVEDATA_KEY`, `ANTHROPIC_KEY`

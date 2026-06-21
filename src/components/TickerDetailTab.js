@@ -364,6 +364,46 @@ const fmtCompact = (n) => {
   return ""+n;
 };
 
+// ── TefasNavSparkline — TEFAS fonu için ~6 aylık NAV trend grafiği (SVG). ──
+// series: [{t:"YYYY-MM-DD", c:<NAV>}] eski→yeni (fetch-prices mode:"historical" çıktısı).
+// null = henüz yüklenmedi (hiçbir şey render etme); [] / <2 nokta = "geçmiş oluşuyor"
+// zarif boş durumu. NAV küçük ondalık (0.50, 14.25) → min/max 4 hane gösterilir.
+function TefasNavSparkline({series,sym}){
+  if(series==null)return null;  // loading — caller TEFAS için her zaman render eder, burada eler
+  if(series.length<2)return(
+    <div style={{padding:"12px 14px",background:"var(--bg2)",borderRadius:8,border:"0.5px solid var(--border)",marginBottom:14,fontSize:11,color:"var(--text3)",textAlign:"center"}}>
+      Geçmiş NAV verisi henüz oluşuyor
+    </div>
+  );
+  const W=400,H=72,pad=6;
+  const vals=series.map(d=>d.c);
+  const min=Math.min(...vals),max=Math.max(...vals),rng=(max-min)||1;
+  const sx=i=>pad+(W-2*pad)*(i/(series.length-1));
+  const sy=v=>pad+(H-2*pad)*(1-(v-min)/rng);
+  const pts=series.map((d,i)=>`${sx(i).toFixed(1)},${sy(d.c).toFixed(1)}`).join(" ");
+  const first=series[0].c,last=series[series.length-1].c;
+  const chgPct=first>0?((last/first)-1)*100:0;
+  const up=last>=first;
+  const col=up?"var(--ok)":"var(--err)";
+  const areaPts=`${pad},${H-pad} ${pts} ${W-pad},${H-pad}`;
+  return(
+    <div style={{padding:"10px 14px",background:"var(--bg2)",borderRadius:8,border:"0.5px solid var(--border)",marginBottom:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:8,fontSize:12,flexWrap:"wrap"}}>
+        <strong style={{color:"var(--text)",fontWeight:500}}>NAV Trendi <span style={{color:"var(--text3)",fontWeight:400,fontSize:11}}>(~6 ay)</span></strong>
+        <span className={"mono"+(up?" ok":" err")} style={{fontWeight:600,fontSize:12}}>{fmtP(chgPct)}</span>
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:H,display:"block"}} preserveAspectRatio="none">
+        <polygon points={areaPts} fill={col} opacity="0.08"/>
+        <polyline points={pts} fill="none" stroke={col} strokeWidth="1.5" vectorEffect="non-scaling-stroke"/>
+      </svg>
+      <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:10,color:"var(--text3)"}}>
+        <span>{fmtDateTR(series[0].t)} · {sym}{fmt(min,4)}</span>
+        <span>{sym}{fmt(max,4)} · {fmtDateTR(series[series.length-1].t)}</span>
+      </div>
+    </div>
+  );
+}
+
 function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,flash_,loadData,closeDetail,hideAmts,mask,portfolioId,inWatchlist,onToggleWatchlist}){
   const [meta,setMeta]=useState(()=>metaCacheGet(ticker));
   const [metaLoading,setMetaLoading]=useState(false);
@@ -460,6 +500,21 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
       .catch(()=>{});
   },[ticker,p,effectiveType]);
   const price = p ? prc[ticker] : livePrice;
+
+  // TEFAS NAV serisi — ~6 aylık sparkline için lazy fetch (yalnız TEFAS fonları).
+  // null = yükleniyor; [] = veri yok (zarif boş). edgePriceCall fetch-prices kısayolu.
+  const [navSeries,setNavSeries]=useState(null);
+  useEffect(()=>{
+    if(effectiveType!=="TEFAS"){setNavSeries(null);return;}
+    let alive=true;setNavSeries(null);
+    const from=new Date(Date.now()-185*86400000).toISOString().split("T")[0];
+    edgePriceCall({ticker,mode:"historical",asset_type:"TEFAS",from})
+      .then(r=>r.json())
+      .then(d=>{if(alive)setNavSeries(Array.isArray(d?.result?.results)?d.result.results:[]);})
+      .catch(()=>{if(alive)setNavSeries([]);});
+    return()=>{alive=false;};
+  },[ticker,effectiveType]);
+
   const currentCost=p?p.shares*p.avgCost:0;
   const mv=p&&price!=null?p.shares*price:null;
   const dayChange=hist[ticker]?.d1; // % değişim son 1G (held için)
@@ -816,6 +871,9 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
           </div>
         );
       })()}
+
+      {/* TEFAS NAV trend sparkline — ~6 aylık (Sprint 26). Held + discovery; veri yoksa zarif boş. */}
+      {effectiveType==="TEFAS"&&<TefasNavSparkline series={navSeries} sym={sym}/>}
 
       {/* Detay satırı — Ort. Maliyet · Realized · Unrealized · Komisyon (sadece held için) */}
       {p&&!isDeposit&&!isBes&&(

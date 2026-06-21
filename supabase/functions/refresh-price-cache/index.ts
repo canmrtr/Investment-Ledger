@@ -117,10 +117,13 @@ const normalizeTicker = (ticker, type) => {
   return ticker;
 };
 
-// TEFAS: en güncel NAV — tefas.gov.tr /api/funds/fonFiyatBilgiGetir.
-// price_cache şemasında olmayan kolon döndürmez (source/currency yok); sadece {price}.
-// periyod=1 son ~14-22 işlem gününü döner; son elemanı al (tatil loop'u gereksiz).
-const fetchTefasPrice = async (fonKodu) => {
+// TEFAS: NAV zaman serisi — tefas.gov.tr /api/funds/fonFiyatBilgiGetir.
+// periyod=12 tek çağrıda son ~252 işlem günü NAV'ını döner → price + d1/w1/m1/y1 +
+// p_d1…p_y1 + h_52w/l_52w'in HEPSİ tek fetch'ten türetilir (US/BIST ile aynı şema;
+// Sprint 26 spike'ında doğrulandı). resultList eski→yeni; BUGÜNÜN satırı NAV yayınlanana
+// kadar fiyat:0 döner (TEFAS akşam yayınlar) → 0/NaN satırları elenir, paylaşımlı cache zehirlenmez.
+// Yeni/kısa-geçmişli fon: get() aralık dışı index'lerde null → chg(null)=null (zarif boş seri).
+const fetchTefasHistorical = async (fonKodu) => {
   const r = await fetch("https://www.tefas.gov.tr/api/funds/fonFiyatBilgiGetir", {
     method: "POST",
     headers: {
@@ -130,7 +133,7 @@ const fetchTefasPrice = async (fonKodu) => {
       "Referer": "https://www.tefas.gov.tr/",  // WAF dayanıklılığı (sprint #1 riski rebound)
       "Origin": "https://www.tefas.gov.tr",
     },
-    body: JSON.stringify({ fonKodu, periyod: 1 }),
+    body: JSON.stringify({ fonKodu, periyod: 12 }),
     signal: AbortSignal.timeout(10000),
   });
   if (!r.ok) throw new Error(`TEFAS HTTP ${r.status}`);
@@ -138,15 +141,22 @@ const fetchTefasPrice = async (fonKodu) => {
   if (data?.errorCode) throw new Error(`TEFAS: ${data.errorMessage || data.errorCode}`);
   const list = data?.resultList || [];
   if (!list.length) throw new Error("TEFAS: fiyat bulunamadı");
-  // resultList eski→yeni; BUGÜNÜN entry'si NAV yayınlanana kadar fiyat:0 döner (TEFAS akşam yayınlar).
-  // Sondan başlayıp fiyat>0 olan son yayınlanmış NAV'ı al. String+replace TR-locale'e karşı defansif.
-  let price = null;
-  for (let i = list.length - 1; i >= 0; i--) {
-    const px = parseFloat(String(list[i].fiyat).replace(",", "."));
-    if (!isNaN(px) && px > 0) { price = px; break; }
-  }
-  if (price == null) throw new Error("TEFAS: geçerli fiyat yok");  // 0/NaN cache'i zehirlemesin
-  return { price };
+  // Eski→yeni sıralı; fiyat>0 olan satırları al (String+replace TR-locale'e karşı defansif).
+  const bars = list
+    .map((row) => ({ t: row.tarih, c: parseFloat(String(row.fiyat).replace(",", ".")) }))
+    .filter((b) => !isNaN(b.c) && b.c > 0)
+    .sort((a, b) => a.t.localeCompare(b.t));
+  if (!bars.length) throw new Error("TEFAS: geçerli fiyat yok");  // 0/NaN cache'i zehirlemesin
+  const n = bars.length, last = bars[n - 1].c;
+  // Index offset'leri yfHistoricalUS/massiveHistorical ile aynı (TEFAS de işlem-günü serisi).
+  const get = (i) => (i >= 0 && i < n ? bars[i].c : null);
+  const chg = (old) => (old != null ? (last / old - 1) * 100 : null);
+  const p_d1 = get(n - 2), p_w1 = get(n - 6), p_m1 = get(n - 22);
+  const p_m3 = get(n - 66), p_m6 = get(n - 132), p_y1 = get(0);
+  const closes = bars.map((b) => b.c).filter((c) => c != null);  // bars zaten temiz; peer fonksiyonlarla tutarlılık için
+  const h_52w = closes.length ? Math.max(...closes) : null;
+  const l_52w = closes.length ? Math.min(...closes) : null;
+  return { price: last, d1: chg(p_d1), w1: chg(p_w1), m1: chg(p_m1), y1: chg(p_y1), p_d1, p_w1, p_m1, p_m3, p_m6, p_y1, h_52w, l_52w };
 };
 
 Deno.serve(async (req) => {
@@ -238,7 +248,7 @@ Deno.serve(async (req) => {
         const type = tickerTypes[t];
         let data;
         if (type === "TEFAS") {
-          data = await fetchTefasPrice(t);
+          data = await fetchTefasHistorical(t);
         } else {
           const apiTicker = normalizeTicker(t, type);
           data = await fetchHistorical(apiTicker, massiveKey);

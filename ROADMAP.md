@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-06-13** (Sprint 21–24 ✅. **Sprint 24 = TEFAS ✅ SHIPPED 2026-06-05** — 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sprint 25 = Değerleme Okunabilirliği** (2026-06-05 → 2026-06-18) — 3 kapsam işi de **kodlandı + doğrulandı 2026-06-09** (Fundamental Checklist özet+detay · ağırlıklı portföy F/K vs S&P 500 · `--card-pad` token); canlı render doğrulaması bekliyor. Plan+delivery: `sprints/sprint-25.md`. Detay "Sonraki Adım"da.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-06-20** (Sprint 21–25 ✅. **Sprint 24 = TEFAS ✅ SHIPPED 2026-06-05** — 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sprint 25 = Değerleme Okunabilirliği ✅ KAPANDI** (2026-06-05 → 2026-06-18) — 3 kapsam işi de kodlandı + canlıya deploy edildi (commit `fe3e16a`: Fundamental Checklist özet+detay · ağırlıklı portföy F/K vs S&P 500 · `--card-pad` token). Tek carry-over: canlı `fund_cache` verisiyle render göz doğrulaması → Sprint 26 başında birlikte yapılır. Plan+delivery: `sprints/sprint-25.md`. **Sprint 26 = TEFAS sparkline + ilk davranışsal nudge — KOD+EDGE TAMAM** (2026-06-19 → 2026-07-02): #1 `refresh-price-cache` v19 deploy + smoke-verified (YAC delta alanları doğru), TickerDetail sparkline kodlandı (veri yolu 124-nokta JWT'yle doğrulandı); #2 piyasa düşüş nudge'ı `computeNudges`'a eklendi (gün-damgalı id, yeni LS key yok). Kalan: canlı görsel eyeball (edge CORS → yalnız production). **Sprint 27 planlandı** (Layer-2 nudge derinleşme). Detay "Sonraki Adım"da.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -106,7 +106,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Temettü Takvimi
 
-- [ ] **Temettü Takvimi** `[M]` `[P2]` — FMP `/stable/stock/dividends`; tutulan ticker'lar için sonraki temettü tarihi; HistoryTab "Yaklaşan Temettüler" collapsible veya TickerDetailTab "Sonraki Temettü" satırı. `fetch-fundamentals`'a yeni `mode:"dividend-calendar"` dalı.
+- [x] ~~**Temettü Takvimi**~~ `[M]` `[P2]` `Sprint-19` `2026-06-20` ✅ — Üç alt-task da shipped (grooming-confirmed): `mode:"dividend-calendar"` dalı + TickerDetailTab "Sonraki Temettü" satırı + Dashboard "Bu Ay Beklenen Temettüler" `<details>` kartı (ex_date ∈ [today, today+30]). Opsiyonel HistoryTab "Yaklaşan Temettüler" tablo varyantı bilinçli olarak ertelendi (Dashboard kartı pratikte kapsamı karşılıyor).
   - [x] ~~(a) `mode:"dividend-calendar"` dalı; `dividends` array → ex-date, amount~~ `[S]` (2026-05-13)
   - [x] ~~(b) TickerDetailTab "Sonraki Temettü" satırı (held ise)~~ `[S]` (2026-05-13)
   - [x] ~~(c) Dashboard "Bu Ay Beklenen Temettüler" `<details>` kartı~~ `[S]` `Sprint-19` `2026-05-15` — Faz 1 LS cache'i (`il_divcal_${ticker}`, 24h TTL) `src/utils.js`'e taşındı. App.js'e `divCalByTicker` state + pos değişiminde LS-load + eksik US_STOCK ticker'ları için `dividend-calendar` batch fetch (20/batch). KPI ile Period selector arasında `<details>` kart; ex_date ∈ [today, today+30] filtresi; empty state'te kart tamamen gizli. HistoryTab tablosu (3c) Sprint 20+ feedback'e bırakıldı.
@@ -218,7 +218,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Akıllı Öneriler & Nudge Sistemi
 
-- [ ] **Katman 2 — Piyasa düşüş nudge'ı** `[S]` `[P2]` — `price_cache.p_d1` portföy ağırlıklı günlük ≤ -%5 ise "Portföyün bugün -%X düştü. Tezin hâlâ geçerli mi?" nudge. Yeni fetch yok.
+- [x] ~~**Katman 2 — Piyasa düşüş nudge'ı**~~ `[S]` `[P2]` `Sprint-26` `2026-06-21` ✅ — `computeNudges`'a eklendi: MV-ağırlıklı günlük değişim (`allDisp` `mv`×`d1`, yalnız fiyat-takipli pozisyonlar) ≤ -%5 ise P0 Dashboard nudge'ı. Yeni LS key yok — gün-damgalı id (`market_drop_YYYY-MM-DD`) mevcut `il_nudge_dismissed` makinesiyle aynı gün susar, ertesi gün yeniden görünür. Yeni fetch yok. `→ src/utils.js`
 - [ ] **Katman 2 — Yeni pozisyon ekleme checklist sorusu** `[S]` `[P2]` — AddTab'da asset tipi seçiminden önce "Yatırım tezini belirledin mi? (Investment Guide 20-kriter)" nudge/modal. Yeni API yok.
 - [ ] **Katman 2 — Popüler hisse FOMO uyarısı** `[M]` `[P2]` — SearchTab'da `price_cache.p_m1 > 30%` ise "Bu hisse son 30 günde çok konuşuluyor. FOMO mu, tez mi?" banner. Basit versiyon: tamamen frontend, yeni fetch yok.
 - [ ] **Katman 2 — Büyük kazanç tez kontrolü nudge** `[S]` `[P2]` — Pozisyon son 1 ayda >%25 artmışsa "TICKER %X büyüdü. Orijinal tezin hâlâ geçerli mi?" nudge; aynı ticker 30 gün susturulur.
@@ -476,31 +476,41 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Sonraki Adım
 
-Sprint 4–23 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (2026-06-05 — 3509 fon canlıda, NAV doğrulandı); retro `sprints/sprint-24.md`.
+Sprint 4–24 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (2026-06-05 — 3509 fon canlıda, NAV doğrulandı); retro `sprints/sprint-24.md`.
 
-**Sprint 25 = Değerleme Okunabilirliği** (2026-06-05 → 2026-06-18) — **3 kapsam işi de kodlandı + babel/logic doğrulandı (2026-06-09), canlı render doğrulaması bekliyor**. Plan + delivery: `sprints/sprint-25.md`.
-
-**Goal**: Can bir hisseye bakarken "bu şirket sağlam mı, pahalı mı?" sorusuna 21 metriği tek tek okumadan plain-language özet cümleyle yanıt alır; portföyünün toplam F/K'sını S&P 500 ile kıyaslayan tek satırlık sinyal görür.
-
-**Sprint 25 kapsamı:**
-1. ✅ **Fundamental Checklist → özet + detay modeli** `[M][P2]` (headline) — TickerDetailTab'da checklist üstünde plain-language sinyal-renkli özet; `FUND_SUMMARY_MAP` + `buildFundSummary` rollup, yeni eşik yok. `→ TickerDetailTab.js`
-2. ✅ **Ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma** `[S][P2]` — AnalysisTab Portföy Sağlık'ta 3-durumlu cümle + kapsam notu + <%60 kısmi-veri uyarısı. `→ AnalysisTab.js`
-3. ✅ **Polish — Design audit Phase-2 kalanı** `[S×2][P2]` — #7 `--card-pad` token (18 override tokenize, görsel no-op); #9 tooltip zaten tek `data-tip` pattern'i + global touch fallback. `→ index.html`
+**Sprint 25 = Değerleme Okunabilirliği ✅ KAPANDI** (2026-06-05 → 2026-06-18) — 3 kapsam işi de kodlandı + canlıya deploy edildi (commit `fe3e16a`). Tek carry-over: canlı `fund_cache` verisiyle render göz doğrulaması → Sprint 26 başında. Plan + delivery: `sprints/sprint-25.md`.
+1. ✅ **Fundamental Checklist → özet + detay modeli** `[M][P2]` — TickerDetailTab plain-language sinyal-renkli özet; `FUND_SUMMARY_MAP` + `buildFundSummary` rollup. `→ TickerDetailTab.js`
+2. ✅ **Ağırlıklı portföy F/K KPI + S&P 500 karşılaştırma** `[S][P2]` — AnalysisTab Portföy Sağlık 3-durumlu cümle + kapsam notu + <%60 kısmi-veri uyarısı. `→ AnalysisTab.js`
+3. ✅ **Polish — Design audit Phase-2 kalanı** `[S×2][P2]` — #7 `--card-pad` token; #9 tooltip tek `data-tip` pattern + global touch fallback. `→ index.html`
 
 ---
 
-**Sprint 26 = Karma: TEFAS sparkline + ilk davranışsal nudge** (2026-06-19 → 2026-07-02) — **PLANLANDI** (Can'ın tema seçimi 2026-06-13). Plan: `sprints/sprint-26.md`.
+**Sprint 26 = Karma: TEFAS sparkline + ilk davranışsal nudge** (2026-06-19 → 2026-07-02) — **🚧 DEVAM EDİYOR**. Plan + spike sonucu: `sprints/sprint-26.md`.
 
 **Goal**: TEFAS fonları artık "kör nokta" değil — Can her TEFAS fonunun son ~6 ayın NAV trendini sparkline'da görür, Dashboard'da günlük/haftalık değişimini diğer varlıklar gibi okur; ayrıca portföyü bir günde sert düştüğünde tezini sorgulatan ilk davranışsal nudge devreye girer.
 
-**Sprint 26 kapsamı:**
-1. **TEFAS historical NAV + sparkline** `[M][P2]` (headline) — `fetch-prices` historical dalı + `price_cache.p_d1/w1/m1/m3/m6/y1` doldurma + TickerDetail sparkline + Dashboard günlük % badge. **Risk-first spike**: TEFAS NAV zaman-serisi endpoint'i (tarih-aralıklı `fonFiyatBilgiGetir`) sprint başında test edilir; yoksa cron snapshot ileriye-doldurma fallback'i. `→ fetch-prices-edge-function.js, refresh-price-cache, TickerDetailTab.js, App.js`
-2. **Piyasa düşüş nudge'ı** `[S][P2]` (filler) — MV-ağırlıklı günlük değişim `price_cache.p_d1`'den ≤ -%5 ise Dashboard nudge ("Portföyün bugün -%X düştü. Tezin hâlâ geçerli mi?"); dismiss + gün-bazlı sustur (LS `il_nudge_drop_<userId>`). Yeni fetch yok. Platform Katman 2'ye ilk adım. `→ App.js`
+**Sprint 26 durumu (2026-06-21) — ✅ KOD + EDGE TAMAM, canlı eyeball push sonrası:**
+- ✅ **Spike yeşil** — TEFAS NAV zaman serisi `periyod=12` ile çalışıyor (252 nokta, tek fetch tüm `p_*` delta'ları besliyor). Detay: `sprints/sprint-26.md` "Spike Sonucu".
+- ✅ **#1 TEFAS historical NAV + sparkline** `[M][P2]` (headline) — `refresh-price-cache` `fetchTefasHistorical` (`periyod=12` → price + d1/w1/m1/y1 + p_* + 52w) **deploy edildi (v19)**; `edge-reviewer` GO; smoke test 200/0-fail; YAC delta alanları doğru doldu. TickerDetailTab `TefasNavSparkline` kodlandı (parse yeşil); veri yolu gerçek JWT'yle doğrulandı (124 NAV noktası). Kalan: canlı görsel eyeball (CORS → yalnız production). `→ fetch-prices, refresh-price-cache, TickerDetailTab.js, App.js`
+- ✅ **#2 Piyasa düşüş nudge'ı** `[S][P2]` (filler) — `computeNudges`'a eklendi (MV-ağırlıklı günlük ≤ -%5 → P0 nudge). Yeni LS key gerekmedi: gün-damgalı id (`market_drop_YYYY-MM-DD`) mevcut `il_nudge_dismissed` makinesiyle aynı gün susar, ertesi gün yeniden görünür. Logic unit-test edildi. `→ utils.js (computeNudges)`
 
-**Out of scope (Sprint 26)**: diğer Layer-2 nudge'ları (büyük kazanç tez-kontrol, SearchTab FOMO) → sonraki Layer-2 sprint'i; TEFAS fundamentals (veri yok).
+**Out of scope (Sprint 26)**: diğer Layer-2 nudge'ları (büyük kazanç tez-kontrol, SearchTab FOMO) → Sprint 27; TEFAS fundamentals (veri yok).
 
-**Sprint 27+ aday havuzu (her sprint başında gözden geçir):**
+**Kalan (push sonrası, canlıda eyeball)**: YAC sparkline + Dashboard TEFAS günlük % badge; Sprint 25 carry-over (F/K cümlesi + fundamental özet satırı). Hepsi edge-bağımlı → localhost CORS nedeniyle yalnız `canmrtr.github.io`'da doğrulanır.
 
-1. **Layer-2 davranışsal nudge — kalan parçalar** `[M][P2]` — büyük kazanç tez-kontrolü nudge'ı + SearchTab FOMO banner'ı (piyasa düşüş nudge'ı Sprint 26'da). Mevcut `price_cache`, yeni fetch yok. **Neden 1**: Sprint 26'nın açtığı nudge altyapısının doğal devamı.
-2. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı. **Neden 2**: Going-live hazırlık fazı.
-3. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; public view `privacy_level==="full"` modda gerçek `shares`/`avg_cost`. **Neden 3 (sona)**: Social Faz 2 ship etmeden tek başına değer yaratmaz.
+---
+
+**Sprint 27 = Layer-2 nudge derinleşme: kazanç tez-kontrolü + FOMO banner** (2026-07-03 → 2026-07-16) — **📋 PLANLANDI**. Plan: `sprints/sprint-27.md`.
+
+**Goal**: Davranışsal koç (Katman 2) tek nudge'dan sisteme dönüşür — kayıp (Sprint 26) + kazanç + arama-FOMO üç bağlamda karar sürtünmesi. Hepsi mevcut `price_cache`, yeni fetch yok.
+1. ⬜ **Büyük kazanç tez-kontrol nudge'ı** `[S][P2]` — held pozisyon `p_m1 > %25` ise "TICKER %X büyüdü, tezin geçerli mi?"; ticker-scoped 30-gün sustur. `→ TickerDetailTab.js / App.js`
+2. ⬜ **SearchTab FOMO banner'ı** `[M][P2]` — `p_m1 > %30` ticker'da "FOMO mu, tez mi?" banner; per-row perf guard. `→ SearchTab.js`
+
+**Bağımlılık**: Sprint 26 #2 (piyasa düşüş nudge'ı) altyapısı — dismiss/sustur kalıbı + MV-ağırlıklı hesap. Sprint 26 #2 ship etmediyse Sprint 27 başında carry-over olarak kapatılır.
+
+**Sprint 28+ aday havuzu (her sprint başında gözden geçir):**
+
+1. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` — Ayarlar sekmesi revizyonu + Support & Feature Request iletişim kanalı. **Neden 1**: Going-live hazırlık fazı; Layer-2 batch bitince bağımsız tema.
+2. **Yeni pozisyon ekleme checklist nudge'ı** `[S][P2]` — AddTab'da asset seçiminden önce "Yatırım tezini belirledin mi?" — dördüncü Layer-2 nudge. **Neden 2**: Nudge sistemini tamamlar; Sprint 27'den taştıysa öncelikli.
+3. **TR altın işçilik premium göstergesi** `[M][P2]` — Reşat/Ata birimi + "ödenen − spot saf = premium %9". **Neden 3**: İzole frontend işi; Can'ın gerçek altın datasında kör nokta ama stratejik değil.
+4. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı. **Neden 4 (sona)**: Social Faz 2 ship etmeden tek başına değer yaratmaz.

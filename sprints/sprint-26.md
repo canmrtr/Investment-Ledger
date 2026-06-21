@@ -26,6 +26,25 @@
      - Empty/normal gün (düşüş < %5 veya veri yok) → nudge tamamen gizli, hata yok.
    - Risk: -%5 eşiği nadiren tetiklenir → manuel test zor. Mitigation: geçici mock `p_d1` değeriyle render'ı doğrula; eşik sabiti tek yerde (kolay tune). Nudge metni nötr/destekleyici tonda — panik yaratma.
 
+## Spike Sonucu (2026-06-20) — ✅ YEŞİL IŞIK
+
+TEFAS NAV zaman serisi endpoint'i **çalışıyor**, fallback'e gerek yok. `fonFiyatBilgiGetir` tarih-aralıklı (`bastarih`/`bittarih`) DEĞİL — mevcut prod kodunun zaten kullandığı `periyod` (1/3/6/12 ay-geriye) parametresiyle çalışır. Test fonu YAC ile doğrulandı:
+
+| periyod | satır | geçerli (NAV>0) | aralık |
+|---|---|---|---|
+| 1 | 20 | 20 | 2026-05-20 → 06-19 |
+| 3 | 60 | 60 | 2026-03-19 → 06-19 |
+| 6 | **123** | 123 | 2025-12-19 → 06-19 |
+| 12 | 252 | 252 | 2025-06-19 → 06-19 |
+
+- Endpoint gerçek **günlük** seri döner (~21 işlem günü/ay), her satır geçerli `fiyat` = **JSON number** (örn. `14.252678`), eski→yeni sıralı, `tarih` `YYYY-MM-DD` (ISO string-karşılaştırılabilir → `tefasHistorical`'daki `tarih >= fromISO` filtresi doğru).
+- `periyod=6` sparkline'ı tam karşılar (123 nokta, 19KB, ~0.11s). HTTP 200, errorCode=null.
+- **Bonus**: Tek `periyod=12` çağrısı (252 nokta, 40KB) TÜM cache delta alanlarını besler — `p_d1/p_w1/p_m1/p_m3/p_m6/p_y1` hepsi tek fetch'ten türetilebilir; cron'da fon başına çoklu period çağrısı gerekmez.
+- Mevcut `tefasHistorical` + `mode:"historical"` dalı pratikte hazır; `tefasLastPublished` 0-guard'ı yayın-öncesi pencereyi hâlâ korur.
+- **Risk (a) düştü**: cron snapshot ileriye-doldurma fallback'ine gerek yok. Risk (b) (küçük ondalık ölçek) sparkline'da relatif ölçekle yönetilir.
+
+**Sonraki adım**: `mode:"historical"` çağrısının `price_cache.p_*` alanlarını doldurması (tercihen tek `periyod=12` fetch ile) + TickerDetail sparkline render + Dashboard günlük % badge.
+
 ## Out of Scope (bilinçli ertelenenler)
 
 - **Diğer Layer-2 nudge'ları** — büyük kazanç tez-kontrol nudge'ı + SearchTab FOMO banner'ı sonraki Layer-2 sprint'ine. Bu sprint'te odak dağılmasın diye **tek nudge**.
@@ -42,3 +61,23 @@
 ## Notlar / Bağımlılıklar
 - **Sprint 25 carry-over**: AnalysisTab F/K cümlesi + TickerDetail fundamental özet satırının canlı `fund_cache` verisiyle render doğrulaması hâlâ açık (Sprint 25'in tek "Kalan" maddesi). Sprint 26 başında deploy sonrası birlikte doğrula.
 - Edge fn değişikliği (`fetch-prices`, muhtemelen `refresh-price-cache`) → deploy öncesi `edge-reviewer` agent + drift check (`npm run check:edge-drift`).
+
+## Kapanış / Retro (2026-06-21)
+
+**Durum: kod + edge tarafı TAMAM, canlı görsel doğrulama push sonrası.**
+
+### #1 TEFAS historical NAV + sparkline — ✅ shipped (edge canlı)
+- `refresh-price-cache` `fetchTefasHistorical` (`periyod=12`, 252 nokta → tüm `p_*` + `h/l_52w` türevi) **deploy edildi (v19)**. `edge-reviewer` GO (blocker yok). `node --check` + drift check yeşil.
+- **Smoke test (Lessons.md 2026-05-19 kuralı)**: deploy sonrası 1 invoke → HTTP 200, 0 fail (boot OK, `const` redeclaration riski temiz). YAC force-stale + invoke → tüm delta alanları doğru doldu: price 14.25, p_d1…p_y1 dolu, h_52w 14.25 / l_52w 9.92, y1 +43.4% (math doğrulandı), `updated_at` taze.
+- TickerDetailTab `TefasNavSparkline` (+58 satır) kodlandı; babel parse yeşil. `fetch-prices mode:"historical"` veri yolu **gerçek test-hesabı JWT'siyle doğrulandı**: 124 NAV noktası `[{t,c}]` döndü (12.23 → 14.25, küçük ondalık format doğru). Render mantığı + `effectiveType==="TEFAS"` gating + response-shape seam kod-doğrulandı.
+
+### #2 Piyasa düşüş nudge'ı — ✅ shipped
+- `computeNudges`'a eklendi (yeni LS key gerekmedi — **DRY**): MV-ağırlıklı günlük değişim (`allDisp` `mv`×`d1`, yalnız fiyat-takipli pozisyonlar; CASH/DEPOSIT/BES hariç) ≤ -%5 ise P0 nudge. **id gün-damgalı** (`market_drop_YYYY-MM-DD`) → mevcut `il_nudge_dismissed` makinesiyle aynı gün susar, ertesi gün yeni id ile yeniden görünür.
+- Logic unit-test edildi: -%6→tetiklenir, -%3→null, tam -%5→tetiklenir (≤), synthetic-only→null (div-by-zero yok), yukarı gün→null. Render yolu zaten shipped nudge kartı (kanıtlanmış).
+
+### Öğrenilen (Lessons.md adayı — Can onayı bekliyor)
+- **localhost edge-bağımlı render'ı doğrulayamaz**: tüm edge fn'ler `Access-Control-Allow-Origin: https://canmrtr.github.io` hardcoded → `localhost:3000`'de tarayıcı CORS preflight'ı `fetch-prices`/`fetch-fundamentals` çağrılarını bloklar (curl bloklamaz, o yüzden veri yolu curl'le doğrulandı). Tablo okumaları (price_cache/fund_cache PostgREST) localhost'ta çalışır → Dashboard KPI'ları yüklenir ama sparkline/fundamental-özet edge'e gider, localhost'ta boş kalır. **Sonuç**: edge-bağımlı görsel doğrulama yalnız canlı (`canmrtr.github.io`) push sonrası yapılabilir.
+
+### Kalan (push sonrası, canlıda)
+- **Canlı eyeball**: YAC TickerDetail'de NAV sparkline render + Dashboard TEFAS satırı günlük % badge (push sonrası GitHub Pages).
+- **Sprint 25 carry-over**: AnalysisTab F/K cümlesi + TickerDetail fundamental özet satırı `fund_cache`/fetch-fundamentals ile canlıda eyeball (aynı CORS nedeniyle localhost'ta doğrulanamaz).

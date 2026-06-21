@@ -452,6 +452,29 @@ const computeNudges = (positions, transactions, healthRedCount, annualRate, disp
   if (!positions || positions.length === 0) return [];
   const nudges = [];
 
+  // P0: Piyasa düşüşü — MV-ağırlıklı günlük değişim ≤ -%5 (Sprint 26, Katman 2 davranışsal nudge).
+  // Yalnızca d1 olan (fiyat-takipli) pozisyonlar üzerinden ağırlıklandırılır; CASH/DEPOSIT/BES
+  // (synthetic, d1 yok) ağırlığa girmez. id gün-damgalı → dismiss 7g sürse de id ertesi gün
+  // değişir, böylece her yeni sert düşüş günü nudge yeniden görünür (yeni LS key gerekmez).
+  {
+    let wMv = 0, wChg = 0;
+    for (const p of positions) {
+      if (p.mv != null && p.d1 != null) { wMv += p.mv; wChg += p.mv * p.d1; }
+    }
+    if (wMv > 0) {
+      const portChg = wChg / wMv;  // MV-ağırlıklı günlük % değişim
+      if (portChg <= -5) {
+        const today = new Date().toISOString().split('T')[0];
+        nudges.push({
+          id: `market_drop_${today}`,
+          priority: 0,
+          message: `Portföyün bugün %${Math.abs(portChg).toFixed(1)} değer kaybetti. Tezin hâlâ geçerli mi, yoksa duygularla mı karar veriyorsun?`,
+          actionTab: 'analysis'
+        });
+      }
+    }
+  }
+
   // P0: Konsantrasyon — tek pozisyon >%35
   const hasMV = positions.every(p => p.mv != null);
   const totalMV = positions.reduce((a, p) => a + (p.mv ?? p.cost ?? 0), 0);

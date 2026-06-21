@@ -61,6 +61,11 @@ Dashboard'daki 4 özet kart (hepsi **display currency**'de — toggle ile $ veya
 | `FX` / `GOLD` | Massive | `C:USDTRY`, `C:XAUUSD` |
 | `BIST` (price/hist) | Yahoo Finance unofficial | `query1.finance.yahoo.com/v8/finance/chart/THYAO.IS` — UA header gerek |
 | `BIST` (meta) | Twelve Data + borsa-mcp paralel | `/stocks?exchange=XIST` + `borsamcp.fastmcp.app/mcp` `get_profile` |
+| `TEFAS` (price/hist/meta) | tefas.gov.tr | `/api/funds/fonFiyatBilgiGetir` `periyod` (1/3/6/12 ay) → günlük NAV serisi; provider-key kontrolünden ÖNCE route |
+
+### TEFAS Historical NAV (Sprint 26)
+
+`fetch-prices mode:"historical"` `asset_type:"TEFAS"` → `tefasHistorical`: `from`'u kapsayan en küçük `periyod`'u seçer, `{results:[{t:"YYYY-MM-DD", c:<NAV>}]}` döner (eski→yeni, 0/NaN NAV elenir). TickerDetailTab `TefasNavSparkline` bunu ~6 aylık NAV trend SVG'sine çevirir (relatif ölçek — küçük ondalık NAV'lar için; <2 nokta → "geçmiş oluşuyor" zarif boş). `refresh-price-cache` cron'u ayrıca tek `periyod=12` çağrısından (252 nokta) `price + d1/w1/m1/y1 + p_d1…p_y1 + h_52w/l_52w`'i türetir — US/BIST `yfHistoricalUS`/`massiveHistorical` ile **birebir aynı şema** → Dashboard günlük % badge + 52W bar TEFAS'ta da çalışır.
 
 ### Massive.com Ticker Formatları
 
@@ -167,6 +172,16 @@ Sticky pos.3 nav (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar).
 - **Helper**: `isPriceStale(updatedAtISO, thresholdHours=24)` `src/utils.js`'te. `null/undefined/invalid` → `false`. Threshold parametrik (default 24).
 - **Render**: Dashboard pos-row desktop (`.tcell`) + mobile (`.pcr-ticker`) + WatchlistTab ticker hücresi — `<span className="badge stale" data-tip="Fiyat X sa önce güncellendi">Fiyat eski</span>`. `data-tip` içinde `fmtAge(new Date(updatedAt).getTime())` ile insan-okur format ("3 sa önce", "2 gün önce").
 - **CSS**: `.badge.stale` `index.html`'de — `.badge.cry/.badge.split` ile birebir aynı turuncu (`var(--warn) #ffb800`).
+
+---
+
+## Davranışsal Nudge'lar (`computeNudges`)
+
+`src/utils.js` `computeNudges(positions, transactions, healthRedCount, annualRate, displayCur)` → `[{id, priority, message, actionTab, actionCard?}]`. Dashboard'da KPI üstünde render (max 2, priority ASC). Dismiss: `il_nudge_dismissed` user-scoped map (`{id: expiryEpoch}`); render `nudgeDismissed[id] < now` ise gösterir. Default dismiss süresi 7 gün.
+
+Mevcut nudge'lar: `market_drop_<date>` (P0, Sprint 26), `concentration_<ticker>` (P0, >%35), `inactivity` (P1, >90g BUY yok), `diversification` (P1, tek asset_type), `health_score` (P1, ≥3 kırmızı metrik), `xirr_low` (P1, enflasyon altı).
+
+- **Piyasa düşüş nudge'ı (Sprint 26)**: MV-ağırlıklı günlük değişim = `Σ(mv·d1)/Σ(mv)`, **yalnız `d1` olan** (fiyat-takipli) pozisyonlar üzerinden — CASH/DEPOSIT/BES (synthetic, `d1` yok) ağırlığa girmez (yoksa div-by-zero / yanlış ağırlık). ≤ -%5 ise P0 nudge. **id gün-damgalı** (`market_drop_YYYY-MM-DD`): dismiss 7g sürse de id ertesi gün değişir → her yeni sert düşüş günü yeniden görünür, ayrı LS key gerekmez.
 
 ---
 
