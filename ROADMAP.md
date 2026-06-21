@@ -219,7 +219,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 ## Akıllı Öneriler & Nudge Sistemi
 
 - [x] ~~**Katman 2 — Piyasa düşüş nudge'ı**~~ `[S]` `[P2]` `Sprint-26` `2026-06-21` ✅ — `computeNudges`'a eklendi: MV-ağırlıklı günlük değişim (`allDisp` `mv`×`d1`, yalnız fiyat-takipli pozisyonlar) ≤ -%5 ise P0 Dashboard nudge'ı. Yeni LS key yok — gün-damgalı id (`market_drop_YYYY-MM-DD`) mevcut `il_nudge_dismissed` makinesiyle aynı gün susar, ertesi gün yeniden görünür. Yeni fetch yok. `→ src/utils.js`
-- [ ] **Katman 2 — Yeni pozisyon ekleme checklist sorusu** `[S]` `[P2]` — AddTab'da asset tipi seçiminden önce "Yatırım tezini belirledin mi? (Investment Guide 20-kriter)" nudge/modal. Yeni API yok.
+- [ ] **Katman 2 — Yeni pozisyon ekleme checklist sorusu** `[S]` `[P2]` `Sprint-28 (filler)` — AddTab'da asset tipi seçiminden önce "Yatırım tezini belirledin mi? (Investment Guide 20-kriter)" nudge/modal. Yeni API yok. 4. ve son Layer-2 nudge.
 - [x] ~~**Katman 2 — Popüler hisse FOMO uyarısı**~~ `[M]` `[P2]` `Sprint-27` `2026-06-21` ✅ — SearchTab sonuç satırında `hist[ticker].m1 > 30` ise pasif-bilgilendirici `🔥 +%X` badge + tooltip ("Son ~1 ayda çok hareketlendi — FOMO mu, tez mi?"). Yalnız cache'te olan ticker'larda; tamamen frontend, yeni fetch yok. App `hist`'i prop geçirir. `→ SearchTab.js, App.js`
 - [x] ~~**Katman 2 — Büyük kazanç tez kontrolü nudge**~~ `[S]` `[P2]` `Sprint-27` `2026-06-21` ✅ — Held pozisyon son ~1 ayda `m1 > %25` ise TickerDetailTab header altında gold-tinted nudge: "TICKER son ~1 ayda +%X büyüdü. Orijinal tezin hâlâ geçerli mi…". Per-ticker 30-gün sustur (`il_nudge_gain_<userId>`). `→ TickerDetailTab.js`
 
@@ -300,9 +300,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Hesap Yönetimi
 
-- [ ] **Canlı sistem için Ayarlar sekmesi revizyonu** `[M]` `[P2]` `[PO+UX]` `[Canlı Sistem Önkoşulu]` — Mevcut Ayarlar (hamburger menü) geliştirici/bakım odaklı; canlıya geçince kullanıcıya ne gösterilmeli netleştirilmeli. Hangi bölümler kalır, hangisi kaldırılır, yeni ne eklenmeli — PO içerik kararı, UX düzen revizyonu yapacak.
+- [ ] **Canlı sistem için Ayarlar sekmesi revizyonu** `[M]` `[P2]` `[PO+UX]` `[Canlı Sistem Önkoşulu]` `Sprint-28 (headline-A)` — Mevcut Ayarlar (hamburger menü) geliştirici/bakım odaklı; canlıya geçince kullanıcıya ne gösterilmeli netleştirilmeli. Hangi bölümler kalır, hangisi kaldırılır, yeni ne eklenmeli — PO içerik kararı, UX düzen revizyonu yapacak. Plan: `sprints/sprint-28.md`.
 
-- [ ] **Support & Feature Request iletişim altyapısı** `[M]` `[P2]` `[Canlı Sistem Önkoşulu]` — Canlı sisteme geçilmeden önce kullanıcıların sorun bildirebileceği ve özellik talep edebileceği bir iletişim kanalı kurulmalı. Seçenekler: (a) uygulama içi form → e-posta/Supabase tablosu, (b) Crisp/Intercom gibi hazır widget, (c) GitHub Issues linki. Kanal seçimi ve önceliklendirme PO ile yapılacak.
+- [ ] **Support & Feature Request iletişim altyapısı** `[M]` `[P2]` `[Canlı Sistem Önkoşulu]` `Sprint-28 (headline-B)` — Canlı sisteme geçilmeden önce kullanıcıların sorun bildirebileceği ve özellik talep edebileceği bir iletişim kanalı kurulmalı. Seçenekler: (a) uygulama içi form → Supabase `feedback` tablosu **[önerilen]**, (b) Crisp/Intercom gibi hazır widget, (c) GitHub Issues linki. Mekanizma kararı sprint başında Can ile. Plan: `sprints/sprint-28.md`.
 
 - [ ] **Hesap ekranı genişletme** `[M]` `[P2]` — şifre değiştirme, email değiştirme (verifikasyonlu), hesap silme (cascade delete), avatar. Mevcut username/display_name ekranı zaten var.
 
@@ -510,12 +510,18 @@ Sprint 4–24 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 
 ---
 
-**Sprint 28 = ?** (planlı pencere ~07-17 →) — **HENÜZ PLANLANMADI**. Katman 2 nudge batch'i bitti; sıradaki tema seçimi Can ile. Top-3 aday (gerekçeli):
+**Sprint 28 = Going-live hazırlığı: Ayarlar revizyonu + Support kanalı** (2026-06-21 → 2026-07-04) — **📋 PLANLANDI**. Plan: `sprints/sprint-28.md`.
 
-1. **Hesap Yönetimi canlı-sistem önkoşulları** `[M][P2]` ← *en güçlü* — Ayarlar sekmesi revizyonu (geliştirici-odaklı → kullanıcı-odaklı) + Support & Feature Request iletişim kanalı. **Neden**: Going-live'a giden zorunlu kapı; ürün "kişisel araç"tan "paylaşılabilir ürüne" geçiyorsa kilidi açar. Layer-2 momentum bitti, doğal sonraki faz.
-2. **Yeni pozisyon ekleme checklist nudge'ı** `[S][P2]` — AddTab'da asset seçiminden önce "Yatırım tezini belirledin mi? (Investment Guide 20-kriter)". **Neden**: Dördüncü ve son Layer-2 nudge; sistemi tamamlar. Ucuz (mevcut altyapı, yeni fetch yok) ama Layer-2 teması artık doygun — tek başına bir sprint'i taşımaz, #1'e filler olabilir.
-3. **TR altın işçilik premium göstergesi** `[M][P2]` — Reşat/Ata birimi + "ödenen − spot saf = premium %9". **Neden**: Can'ın gerçek altın datasında kör nokta (Altın %41 portföyün en büyük dilimi!); izole frontend, düşük risk. Daily-driver delta yüksek ama stratejik değil.
+**Goal**: Uygulama "kişisel araç"tan "başkasına verilebilir ürüne" yaklaşır — kullanıcı yardım isteyebilir/özellik talep edebilir, ve Ayarlar geliştirici-bakım paneli değil kullanıcı-odaklı kontrol gösterir.
+1. ⬜ **Ayarlar sekmesi revizyonu** `[M][P2][PO+UX]` (headline-A) — envanter → kal/gizle/katla kararı (Can onayı); dev/bakım/durum bir "Gelişmiş" `<details>`'ine katlanır (silinmez), kullanıcı kontrolleri öne + tek-cümle açıklama. `→ index.html / Settings`
+2. ⬜ **Support & Feature Request kanalı** `[M][P2]` (headline-B) — yeni `feedback` tablosu (RLS own-insert/select, `rls-auditor` sign-off) + Settings "Geri Bildirim" formu (Hata/Öneri + metin → insert). `→ migration, Settings`
+3. ⬜ **AddTab tez checklist nudge'ı** `[S][P2]` (filler/stretch) — 4. ve son Layer-2 nudge; asset seçiminden sonra "Yatırım tezini belirledin mi?" pasif hatırlatma. Taşarsa Sprint 29. `→ AddTab.js`
 
-**Önerilen Sprint 28**: #1 (Hesap Yönetimi, headline) + #2 (checklist nudge, filler) — going-live hazırlığı + Layer-2'yi kapatış. Ya da daily-driver isteniyorsa #3 (altın premium) headline.
+**⚠ Açık karar (sprint başında)**: Support kanalı mekanizması — (A) in-app form → Supabase `feedback` **[önerilen]** / (B) GitHub Issues linki / (C) Crisp/Intercom widget. Plan (A)'ya göre; detay `sprints/sprint-28.md`.
 
-**Diğer beklemedeki adaylar**: "Tam Detay" gerçek render (Social Faz 2 bağımlısı — tek başına değersiz); Broker Dağılımı pie; Sparkline interactivity.
+**Sprint 29+ aday havuzu (her sprint başında gözden geçir):**
+
+1. **TR altın işçilik premium göstergesi** `[M][P2]` — Altın %41 portföyün en büyük dilimi, kör nokta; izole frontend, düşük risk.
+2. **Hesap ekranı genişletme** `[M][P2]` — şifre/email değiştirme (verifikasyonlu), hesap silme (cascade; App Store önkoşulu). Going-live + mobil faz bağı.
+3. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; tek başına değersiz.
+4. **Görselleştirme polish** `[S-M][P2]` — Broker Dağılımı pie · Sparkline interactivity · sticky `.fbar`.
