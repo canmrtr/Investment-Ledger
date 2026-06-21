@@ -117,6 +117,7 @@ function App({session}){
   const [connTest,setConnTest]=useState(null);  // {ok:bool, status:int, body:str} — Settings → Bağlantı Test çıktısı
   const [tefasCatBusy,setTefasCatBusy]=useState(false);  // TEFAS katalog yenileme in-flight (~20s)
   const [statusOpen,setStatusOpen]=useState(false);
+  const [advancedOpen,setAdvancedOpen]=useState(false); // Settings "Gelişmiş / Geliştirici" katlama (Sprint 28 #1)
   const [nudgeDismissed,setNudgeDismissed]=useState(()=>LS.get(_uk('il_nudge_dismissed'),{}));
   const [healthRedCount,setHealthRedCount]=useState(null);
   const [besModalPos,setBesModalPos]=useState(null);
@@ -1289,82 +1290,20 @@ function App({session}){
             <div className="hint">Tema tercihi tarayıcıda kaydedilir.</div>
           </div>
 
-          {/* 4. Fiyat & Veri */}
+          {/* 4. Veri — kullanıcı için anlık fiyat güncelleme (dev veri araçları Gelişmiş'te, Sprint 28 #1) */}
           <div className="sg">
-            <label>Fiyat & Veri</label>
+            <label>Veri</label>
             <div className="hint" style={{marginBottom:10}}>Portföyündeki tüm tickerların güncel fiyatları çekilir. Sekme ön plana geldiğinde ve her 30 dakikada bir otomatik yenilenir.</div>
-            {(busy.p||busy.h)
+            {busy.p
               ?<div className="dim" style={{fontSize:13,display:"flex",alignItems:"center",gap:8}}><div className="spin" style={{width:14,height:14}}></div><span className="mono">{pprog}</span></div>
               :<div className="brow">
                 <button onClick={fetchPrices}>↻ Şimdi Güncelle{lastFetchAt&&<span className="dim" style={{fontSize:10,marginLeft:6}}>{fmtAge(lastFetchAt)}</span>}</button>
-                <button onClick={fetchHist}>Tarihi Veri (1G/1H/1A/1Y)</button>
-                <button disabled={tefasCatBusy} onClick={async()=>{
-                  setTefasCatBusy(true);
-                  flash_("TEFAS katalogu yükleniyor… (~20 sn)","ok");
-                  try{
-                    const r=await edgeCallAuth("fetch-fundamentals",{mode:"tefas-catalog"});
-                    const d=await r.json();
-                    if(d.error)flash_("Katalog hatası: "+d.error,"err");
-                    else flash_(`TEFAS katalogu güncellendi: ${d.fetched} fon`,"ok");
-                  }catch(e){flash_("Katalog hatası: "+e.message,"err");}
-                  finally{setTefasCatBusy(false);}
-                }}>{tefasCatBusy?"TEFAS yükleniyor…":"TEFAS Katalogu Yenile"}</button>
-                <button onClick={async()=>{
-                  setConnTest({loading:true});
-                  try{
-                    const r=await edgePriceCall({ticker:"NVDA",mode:"price"});
-                    const txt=await r.text();
-                    setConnTest({ok:r.ok, status:r.status, body:txt.slice(0,600)});
-                  }catch(e){setConnTest({ok:false, status:"—", body:"HATA: "+e.message});}
-                }} style={{fontSize:11,padding:"5px 10px",color:"var(--warn)",borderColor:"var(--warn)"}}>🔍 Bağlantı Test</button>
               </div>}
-            <div className="hint">Ticker başına ~8 sn · "Bağlantı Test" ile önce tek ticker dene</div>
-            {connTest&&(
-              <div className="cbox" style={{marginTop:8,marginBottom:0,padding:"10px 12px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                  <span className="lbl">Test Sonucu</span>
-                  <button className="btn-xs" onClick={()=>setConnTest(null)}>Kapat</button>
-                </div>
-                {connTest.loading
-                  ?<div className="dim" style={{fontSize:12}}><span className="spin" style={{width:11,height:11,marginRight:6,verticalAlign:"middle"}}></span>İstek gönderiliyor…</div>
-                  :<>
-                    <div style={{fontSize:12,marginBottom:6}}>
-                      <span className={"dot "+(connTest.ok?"ok":"off")}></span>
-                      <span className="mono">HTTP {connTest.status}</span>
-                    </div>
-                    <pre style={{margin:0,fontSize:10,fontFamily:"var(--font-numeric)",color:"var(--text2)",whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:200,overflow:"auto"}}>{connTest.body}</pre>
-                  </>}
-              </div>
-            )}
           </div>
 
-          {/* 5. Araçlar — Pozisyon Bakımı + Export + İşlem Geçmişi */}
+          {/* 5. Araçlar — Export + İşlem Geçmişi (bakım araçları Gelişmiş'te) */}
           <div className="sg">
             <label>Araçlar</label>
-            <div className="brow">
-              <button onClick={async()=>{
-                if(!(await confirm_("Tüm pozisyonlar sıfırlanıp işlemlerden yeniden hesaplanacak. Devam edilsin mi?",{okLbl:"Yeniden Hesapla",danger:true})))return;
-                const n=await rebuildPositions(user.id,activePortfolioId);
-                await loadData();
-                if(n===null){flash_("Pozisyonlar güncellenemedi","err");}
-                else{flash_(`Pozisyonlar yeniden hesaplandı · ${n} pozisyon`);}
-              }}>♻️ Pozisyonları Yeniden Hesapla</button>
-              <button onClick={async()=>{
-                const tickers=pos.filter(p=>p.type!=="BIST").map(p=>p.ticker);
-                if(!tickers.length){flash_("Senkronize edilecek US/ETF/Kripto pozisyonu yok","err");return;}
-                flash_("Splitler kontrol ediliyor...","ok");
-                const{inserted}=await syncSplits(tickers,activePortfolioId);
-                if(inserted>0){
-                  const n=await rebuildPositions(user.id,activePortfolioId);
-                  await loadData();
-                  if(n===null){flash_("Pozisyonlar güncellenemedi","err");}
-                  else{flash_(`${inserted} yeni split bulundu · ${n} pozisyon güncellendi`);}
-                }else{
-                  flash_("Split verisi güncel, değişiklik yok");
-                }
-              }}>🔄 Splitleri Senkronize Et</button>
-            </div>
-            <div className="hint" style={{marginBottom:10}}>Split eklendi/değiştirildiyse basın — tüm işlemler split-aware yeniden hesaplanır. Senkronize Et butonu US/ETF/Kripto için FMP'den otomatik çeker (BIST hariç).</div>
             <div className="brow" style={{marginBottom:10}}>
               <button onClick={expTx}>İşlemler CSV</button>
               <button onClick={expPos}>Pozisyonlar CSV</button>
@@ -1374,32 +1313,110 @@ function App({session}){
             </div>
           </div>
 
-          {/* 5.5 Geri Bildirim / Destek (Sprint 28) */}
+          {/* Geri Bildirim / Destek (Sprint 28 #2) */}
           <FeedbackSection user={user} flash_={flash_}/>
 
-          {/* 6. Sistem Durumu — collapsible */}
+          {/* Gelişmiş / Geliştirici — bakım + veri + tanılama araçları katlı (Sprint 28 #1) */}
           <div className="sg">
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",userSelect:"none"}} onClick={()=>setStatusOpen(o=>!o)}>
-              <label style={{cursor:"pointer",marginBottom:0}}>Sistem Durumu</label>
-              <span style={{fontSize:12,color:"var(--text3)"}}>{statusOpen?"▴":"▾"}</span>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",userSelect:"none"}} onClick={()=>setAdvancedOpen(o=>!o)}>
+              <label style={{cursor:"pointer",marginBottom:0}}>Gelişmiş / Geliştirici</label>
+              <span style={{fontSize:12,color:"var(--text3)"}}>{advancedOpen?"▴":"▾"}</span>
             </div>
-            {statusOpen&&(
-              <div style={{marginTop:8}}>
-                {[
-                  [true,"Supabase","Bağlı · RLS aktif"],
-                  [true,"Edge Functions","parse-transaction · fetch-prices"],
-                  [hasH,"Tarihi Veri",hasH?Object.keys(hist).length+" ticker":"Yüklenmedi"],
-                  [pdate!=="—","Son Fiyat",pdate],
-                  [!!fxRates?.USDTRY,"FX Kuru",fxRates?.USDTRY?`1$ ≈ ₺${fmt(fxRates.USDTRY,2)}${fxAt?` · ${Math.round((Date.now()-fxAt)/3600000)}sa önce`:""}`:"Yüklenmedi"],
-                  [true,"Pozisyonlar",pos.length+" açık"],
-                  [true,"İşlemler",txs.length+" kayıtlı"],
-                  [splits.length>0,"Split Kayıtları",splits.length>0?splits.length+" tanımlı":"Yok / okunamıyor"],
-                ].map(([ok,l,v])=>(
-                  <div key={l} className="row">
-                    <span style={{fontSize:13}}><span className={"dot "+(ok?"ok":"off")}></span>{l}</span>
-                    <span className="dim" style={{fontSize:12}}>{v}</span>
+            {advancedOpen&&(
+              <div style={{marginTop:10}}>
+                <div className="hint" style={{marginBottom:10}}>Bakım, veri yenileme ve tanılama araçları. Normal kullanımda gerekmez.</div>
+                {/* Veri araçları — tarihi veri + TEFAS katalog + bağlantı test */}
+                {busy.h
+                  ?<div className="dim" style={{fontSize:13,display:"flex",alignItems:"center",gap:8,marginBottom:10}}><div className="spin" style={{width:14,height:14}}></div><span className="mono">{pprog}</span></div>
+                  :<div className="brow" style={{marginBottom:6}}>
+                    <button onClick={fetchHist}>Tarihi Veri (1G/1H/1A/1Y)</button>
+                    <button disabled={tefasCatBusy} onClick={async()=>{
+                      setTefasCatBusy(true);
+                      flash_("TEFAS katalogu yükleniyor… (~20 sn)","ok");
+                      try{
+                        const r=await edgeCallAuth("fetch-fundamentals",{mode:"tefas-catalog"});
+                        const d=await r.json();
+                        if(d.error)flash_("Katalog hatası: "+d.error,"err");
+                        else flash_(`TEFAS katalogu güncellendi: ${d.fetched} fon`,"ok");
+                      }catch(e){flash_("Katalog hatası: "+e.message,"err");}
+                      finally{setTefasCatBusy(false);}
+                    }}>{tefasCatBusy?"TEFAS yükleniyor…":"TEFAS Katalogu Yenile"}</button>
+                    <button onClick={async()=>{
+                      setConnTest({loading:true});
+                      try{
+                        const r=await edgePriceCall({ticker:"NVDA",mode:"price"});
+                        const txt=await r.text();
+                        setConnTest({ok:r.ok, status:r.status, body:txt.slice(0,600)});
+                      }catch(e){setConnTest({ok:false, status:"—", body:"HATA: "+e.message});}
+                    }} style={{fontSize:11,padding:"5px 10px",color:"var(--warn)",borderColor:"var(--warn)"}}>🔍 Bağlantı Test</button>
+                  </div>}
+                <div className="hint" style={{marginBottom:10}}>Tarihi veri ticker başına ~8 sn · "Bağlantı Test" ile önce tek ticker dene</div>
+                {connTest&&(
+                  <div className="cbox" style={{marginTop:8,marginBottom:10,padding:"10px 12px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                      <span className="lbl">Test Sonucu</span>
+                      <button className="btn-xs" onClick={()=>setConnTest(null)}>Kapat</button>
+                    </div>
+                    {connTest.loading
+                      ?<div className="dim" style={{fontSize:12}}><span className="spin" style={{width:11,height:11,marginRight:6,verticalAlign:"middle"}}></span>İstek gönderiliyor…</div>
+                      :<>
+                        <div style={{fontSize:12,marginBottom:6}}>
+                          <span className={"dot "+(connTest.ok?"ok":"off")}></span>
+                          <span className="mono">HTTP {connTest.status}</span>
+                        </div>
+                        <pre style={{margin:0,fontSize:10,fontFamily:"var(--font-numeric)",color:"var(--text2)",whiteSpace:"pre-wrap",wordBreak:"break-word",maxHeight:200,overflow:"auto"}}>{connTest.body}</pre>
+                      </>}
                   </div>
-                ))}
+                )}
+                {/* Bakım — pozisyon yeniden hesaplama + split senkron */}
+                <div className="brow">
+                  <button onClick={async()=>{
+                    if(!(await confirm_("Tüm pozisyonlar sıfırlanıp işlemlerden yeniden hesaplanacak. Devam edilsin mi?",{okLbl:"Yeniden Hesapla",danger:true})))return;
+                    const n=await rebuildPositions(user.id,activePortfolioId);
+                    await loadData();
+                    if(n===null){flash_("Pozisyonlar güncellenemedi","err");}
+                    else{flash_(`Pozisyonlar yeniden hesaplandı · ${n} pozisyon`);}
+                  }}>♻️ Pozisyonları Yeniden Hesapla</button>
+                  <button onClick={async()=>{
+                    const tickers=pos.filter(p=>p.type!=="BIST").map(p=>p.ticker);
+                    if(!tickers.length){flash_("Senkronize edilecek US/ETF/Kripto pozisyonu yok","err");return;}
+                    flash_("Splitler kontrol ediliyor...","ok");
+                    const{inserted}=await syncSplits(tickers,activePortfolioId);
+                    if(inserted>0){
+                      const n=await rebuildPositions(user.id,activePortfolioId);
+                      await loadData();
+                      if(n===null){flash_("Pozisyonlar güncellenemedi","err");}
+                      else{flash_(`${inserted} yeni split bulundu · ${n} pozisyon güncellendi`);}
+                    }else{
+                      flash_("Split verisi güncel, değişiklik yok");
+                    }
+                  }}>🔄 Splitleri Senkronize Et</button>
+                </div>
+                <div className="hint" style={{marginBottom:10}}>Split eklendi/değiştirildiyse basın — tüm işlemler split-aware yeniden hesaplanır. Senkronize Et butonu US/ETF/Kripto için FMP'den otomatik çeker (BIST hariç).</div>
+                {/* Sistem Durumu — iç içe collapsible */}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",userSelect:"none",marginTop:4}} onClick={()=>setStatusOpen(o=>!o)}>
+                  <span className="lbl">Sistem Durumu</span>
+                  <span style={{fontSize:12,color:"var(--text3)"}}>{statusOpen?"▴":"▾"}</span>
+                </div>
+                {statusOpen&&(
+                  <div style={{marginTop:8}}>
+                    {[
+                      [true,"Supabase","Bağlı · RLS aktif"],
+                      [true,"Edge Functions","parse-transaction · fetch-prices"],
+                      [hasH,"Tarihi Veri",hasH?Object.keys(hist).length+" ticker":"Yüklenmedi"],
+                      [pdate!=="—","Son Fiyat",pdate],
+                      [!!fxRates?.USDTRY,"FX Kuru",fxRates?.USDTRY?`1$ ≈ ₺${fmt(fxRates.USDTRY,2)}${fxAt?` · ${Math.round((Date.now()-fxAt)/3600000)}sa önce`:""}`:"Yüklenmedi"],
+                      [true,"Pozisyonlar",pos.length+" açık"],
+                      [true,"İşlemler",txs.length+" kayıtlı"],
+                      [splits.length>0,"Split Kayıtları",splits.length>0?splits.length+" tanımlı":"Yok / okunamıyor"],
+                    ].map(([ok,l,v])=>(
+                      <div key={l} className="row">
+                        <span style={{fontSize:13}}><span className={"dot "+(ok?"ok":"off")}></span>{l}</span>
+                        <span className="dim" style={{fontSize:12}}>{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
