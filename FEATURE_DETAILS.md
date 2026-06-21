@@ -175,13 +175,25 @@ Sticky pos.3 nav (Dashboard | İşlemler | **Analiz** | Ara | Ayarlar).
 
 ---
 
-## Davranışsal Nudge'lar (`computeNudges`)
+## Davranışsal Nudge'lar (Katman 2)
+
+Üç yüzey, üç tetikleyici — hepsi mevcut `price_cache` (`hist`) verisinden, yeni fetch yok.
+
+### Dashboard portföy-seviyesi (`computeNudges`)
 
 `src/utils.js` `computeNudges(positions, transactions, healthRedCount, annualRate, displayCur)` → `[{id, priority, message, actionTab, actionCard?}]`. Dashboard'da KPI üstünde render (max 2, priority ASC). Dismiss: `il_nudge_dismissed` user-scoped map (`{id: expiryEpoch}`); render `nudgeDismissed[id] < now` ise gösterir. Default dismiss süresi 7 gün.
 
-Mevcut nudge'lar: `market_drop_<date>` (P0, Sprint 26), `concentration_<ticker>` (P0, >%35), `inactivity` (P1, >90g BUY yok), `diversification` (P1, tek asset_type), `health_score` (P1, ≥3 kırmızı metrik), `xirr_low` (P1, enflasyon altı).
+Nudge'lar: `market_drop_<date>` (P0, Sprint 26), `concentration_<ticker>` (P0, >%35), `inactivity` (P1, >90g BUY yok), `diversification` (P1, tek asset_type), `health_score` (P1, ≥3 kırmızı metrik), `xirr_low` (P1, enflasyon altı).
 
 - **Piyasa düşüş nudge'ı (Sprint 26)**: MV-ağırlıklı günlük değişim = `Σ(mv·d1)/Σ(mv)`, **yalnız `d1` olan** (fiyat-takipli) pozisyonlar üzerinden — CASH/DEPOSIT/BES (synthetic, `d1` yok) ağırlığa girmez (yoksa div-by-zero / yanlış ağırlık). ≤ -%5 ise P0 nudge. **id gün-damgalı** (`market_drop_YYYY-MM-DD`): dismiss 7g sürse de id ertesi gün değişir → her yeni sert düşüş günü yeniden görünür, ayrı LS key gerekmez.
+
+### TickerDetailTab kazanç tez-kontrolü (Sprint 27)
+
+Held pozisyon + `hist[ticker].m1 > 25` (son ~1 ay %) → header altında gold-tinted nudge: "TICKER son ~1 ayda +%X büyüdü. Orijinal tezin hâlâ geçerli mi…". **Per-ticker 30-gün dismiss**: LS map `il_nudge_gain_<userId>` = `{ticker: expiryEpoch}`; signOut'ta catch-all `clearUserLocalKeys` siler (yeni key, migration gerekmez). `→ TickerDetailTab.js`
+
+### SearchTab FOMO badge (Sprint 27)
+
+Arama sonuç satırında `hist[ticker].m1 > 30` ise pasif-bilgilendirici `🔥 +%X` badge + `data-tip` tooltip ("Son ~1 ayda çok hareketlendi — FOMO mu, tez mi?"). Yalnız `hist`'te (cache'te) olan ticker'larda görünür — çoğu arama sonucunda veri yok, sessiz. O(1) lookup; dismiss yok (badge, banner değil). App `hist`'i SearchTab'a prop geçirir. `→ SearchTab.js, App.js`
 
 ---
 

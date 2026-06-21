@@ -1,7 +1,7 @@
 // ── SearchTab ────────────────────────────────────────────────────
 // Global ticker arama: portföydeki + tüm SEC kayıtlı US hisseler.
 // Sonuca tıklayınca TickerDetailTab açılır (held veya not held).
-function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,userId}){
+function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,userId,hist}){
   const recentKey=userId?`il_recent_${userId}`:"il_recent_search";
   const [q,setQ]=useState("");
   const [tickerDb,setTickerDb]=useState(()=>tickerDbCacheGet());
@@ -95,6 +95,12 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
   const Row=({ticker,name,held,exchange,type})=>{
     const ex = exchange || (type==="BIST"?"XIST":"US");
     const at = type || exchToType(ex);
+    // FOMO uyarısı (Sprint 27, Katman 2): cache'te m1 (son ~1 ay %) varsa ve >%30 ise
+    // pasif-bilgilendirici 🔥 badge + tooltip. Yalnız price_cache'te olan (held + daha önce
+    // fetch'lenen) ticker'larda görünür — çoğu arama sonucunda veri yok, sessiz. O(1) lookup,
+    // render edilen ~50-80 satır için perf guard'a gerek yok.
+    const m1 = hist?.[ticker]?.m1;
+    const isHot = m1!=null && m1>30;
     return (
       <div onClick={()=>handleOpen(ticker,at)} className="pos-row" style={{
         display:"flex",alignItems:"center",gap:10,
@@ -102,6 +108,7 @@ function SearchTab({pos,txs,openDetail,flash_,watchlistItems,onToggleWatchlist,u
       }}>
         <span style={{fontFamily:"'DM Mono',monospace",fontWeight:600,fontSize:13,minWidth:72}}>{ticker}</span>
         <span style={{flex:1,fontSize:12,color:"var(--text2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name||"—"}</span>
+        {isHot&&<span className="badge" data-tip="Son ~1 ayda çok hareketlendi — FOMO mu, tez mi?" style={{fontSize:9,background:"rgba(255,51,102,0.14)",color:"var(--err)",cursor:"help"}}>🔥 {fmtP(m1)}</span>}
         {ex==="XIST"&&<span className="badge cry" style={{fontSize:9}}>BIST</span>}
         {at==="TEFAS"&&<span className="badge" style={{fontSize:9,background:"rgba(132,204,22,0.15)",color:"#84CC16"}}>TEFAS</span>}
         {held&&<span className="badge etf" style={{fontSize:9}}>açık</span>}

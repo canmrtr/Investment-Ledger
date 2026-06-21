@@ -519,6 +519,15 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
   const mv=p&&price!=null?p.shares*price:null;
   const dayChange=hist[ticker]?.d1; // % değişim son 1G (held için)
 
+  // Büyük kazanç tez-kontrol nudge (Sprint 27, Katman 2): held pozisyon son ~1 ayda
+  // >%25 arttıysa tezini sorgulat. Ticker-scoped 30-gün sustur — LS map {ticker: dismissEpoch}.
+  // Market-drop nudge (computeNudges) ile aynı dismiss felsefesi; burada per-ticker olduğu için ayrı key.
+  const monthChg=hist[ticker]?.m1; // son ~1 ay % değişim
+  const gainKey=userLSKey('il_nudge_gain',user.id);
+  const [gainDismissed,setGainDismissed]=useState(()=>LS.get(gainKey,{}));
+  const showGainNudge=p&&monthChg!=null&&monthChg>25&&(!gainDismissed[ticker]||gainDismissed[ticker]<Date.now());
+  const dismissGain=()=>{const next={...gainDismissed,[ticker]:Date.now()+30*86400000};setGainDismissed(next);LS.set(gainKey,next);};
+
   // Realize / Unrealize / Toplam — bu ticker için tüm zaman
   const totalInvested=tickerTxs.filter(t=>t.way==="BUY").reduce((a,t)=>a+(+t.total+(+t.commission||0)),0);
   const divTxs=tickerTxs.filter(t=>t.way==="DIV").sort((a,b)=>a.date.localeCompare(b.date));
@@ -645,6 +654,20 @@ function TickerDetailTab({ticker,assetTypeHint,pos,txs,prc,hist,user,confirm_,fl
           {inWatchlist?"− İzlemeden Çıkar":"+ İzlemeye Ekle"}
         </button>
       </div>}
+
+      {/* Büyük kazanç tez-kontrol nudge (Sprint 27) — held + son ~1 ayda >%25; nötr/gold tonu (panik değil). */}
+      {showGainNudge&&(
+        <div className="warn-card" style={{alignItems:'center',borderColor:'var(--border2)',background:'rgba(201,168,76,0.06)',marginBottom:10}}>
+          <div className="wc-sub" style={{flex:1}}>
+            <strong>{ticker}</strong> son ~1 ayda <strong style={{color:'var(--ok)'}}>{fmtP(monthChg)}</strong> büyüdü. Orijinal yatırım tezin hâlâ geçerli mi, yoksa fiyatı mı kovalıyorsun?
+          </div>
+          <button
+            style={{background:'none',border:'none',color:'var(--text3)',cursor:'pointer',fontSize:20,lineHeight:1,padding:'0 0 0 12px',flexShrink:0}}
+            onClick={dismissGain}
+            aria-label="Kapat"
+          >×</button>
+        </div>
+      )}
 
       {/* Pozisyon özeti — 4 ana kart (sadece held ticker için) */}
       {p&&(

@@ -1115,7 +1115,7 @@ function App({session}){
 
       {/* SEARCH */}
       {tab==="search"&&(
-        <SearchTab pos={pos} txs={txs} openDetail={openDetail} flash_={flash_} watchlistItems={watchlistItems} onToggleWatchlist={toggleWatchlist} userId={user?.id}/>
+        <SearchTab pos={pos} txs={txs} openDetail={openDetail} flash_={flash_} watchlistItems={watchlistItems} onToggleWatchlist={toggleWatchlist} userId={user?.id} hist={hist}/>
       )}
 
       {/* ADD */}

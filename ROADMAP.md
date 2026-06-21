@@ -220,8 +220,8 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 - [x] ~~**Katman 2 — Piyasa düşüş nudge'ı**~~ `[S]` `[P2]` `Sprint-26` `2026-06-21` ✅ — `computeNudges`'a eklendi: MV-ağırlıklı günlük değişim (`allDisp` `mv`×`d1`, yalnız fiyat-takipli pozisyonlar) ≤ -%5 ise P0 Dashboard nudge'ı. Yeni LS key yok — gün-damgalı id (`market_drop_YYYY-MM-DD`) mevcut `il_nudge_dismissed` makinesiyle aynı gün susar, ertesi gün yeniden görünür. Yeni fetch yok. `→ src/utils.js`
 - [ ] **Katman 2 — Yeni pozisyon ekleme checklist sorusu** `[S]` `[P2]` — AddTab'da asset tipi seçiminden önce "Yatırım tezini belirledin mi? (Investment Guide 20-kriter)" nudge/modal. Yeni API yok.
-- [ ] **Katman 2 — Popüler hisse FOMO uyarısı** `[M]` `[P2]` — SearchTab'da `price_cache.p_m1 > 30%` ise "Bu hisse son 30 günde çok konuşuluyor. FOMO mu, tez mi?" banner. Basit versiyon: tamamen frontend, yeni fetch yok.
-- [ ] **Katman 2 — Büyük kazanç tez kontrolü nudge** `[S]` `[P2]` — Pozisyon son 1 ayda >%25 artmışsa "TICKER %X büyüdü. Orijinal tezin hâlâ geçerli mi?" nudge; aynı ticker 30 gün susturulur.
+- [x] ~~**Katman 2 — Popüler hisse FOMO uyarısı**~~ `[M]` `[P2]` `Sprint-27` `2026-06-21` ✅ — SearchTab sonuç satırında `hist[ticker].m1 > 30` ise pasif-bilgilendirici `🔥 +%X` badge + tooltip ("Son ~1 ayda çok hareketlendi — FOMO mu, tez mi?"). Yalnız cache'te olan ticker'larda; tamamen frontend, yeni fetch yok. App `hist`'i prop geçirir. `→ SearchTab.js, App.js`
+- [x] ~~**Katman 2 — Büyük kazanç tez kontrolü nudge**~~ `[S]` `[P2]` `Sprint-27` `2026-06-21` ✅ — Held pozisyon son ~1 ayda `m1 > %25` ise TickerDetailTab header altında gold-tinted nudge: "TICKER son ~1 ayda +%X büyüdü. Orijinal tezin hâlâ geçerli mi…". Per-ticker 30-gün sustur (`il_nudge_gain_<userId>`). `→ TickerDetailTab.js`
 
 ---
 
@@ -500,13 +500,15 @@ Sprint 4–24 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 
 ---
 
-**Sprint 27 = Layer-2 nudge derinleşme: kazanç tez-kontrolü + FOMO banner** (2026-07-03 → 2026-07-16) — **📋 PLANLANDI**. Plan: `sprints/sprint-27.md`.
+**Sprint 27 = Layer-2 nudge derinleşme: kazanç tez-kontrolü + FOMO badge** (2026-07-03 → 2026-07-16) — **🚧 KOD TAMAM, canlı eyeball bekliyor**. Plan: `sprints/sprint-27.md`.
 
 **Goal**: Davranışsal koç (Katman 2) tek nudge'dan sisteme dönüşür — kayıp (Sprint 26) + kazanç + arama-FOMO üç bağlamda karar sürtünmesi. Hepsi mevcut `price_cache`, yeni fetch yok.
-1. ⬜ **Büyük kazanç tez-kontrol nudge'ı** `[S][P2]` — held pozisyon `p_m1 > %25` ise "TICKER %X büyüdü, tezin geçerli mi?"; ticker-scoped 30-gün sustur. `→ TickerDetailTab.js / App.js`
-2. ⬜ **SearchTab FOMO banner'ı** `[M][P2]` — `p_m1 > %30` ticker'da "FOMO mu, tez mi?" banner; per-row perf guard. `→ SearchTab.js`
+1. ✅ **Büyük kazanç tez-kontrol nudge'ı** `[S][P2]` — held pozisyon `m1 > %25` ise TickerDetailTab header altında gold-tinted nudge; per-ticker 30-gün sustur (`il_nudge_gain_<userId>`). Parse yeşil. SOXX (m1 28.7) ile canlı doğrulanabilir. `→ TickerDetailTab.js`
+2. ✅ **SearchTab FOMO badge'i** `[M][P2]` — `hist[ticker].m1 > 30` ise `🔥 +%X` pasif badge + tooltip; yalnız cache'te olan ticker'larda (O(1) lookup, dismiss yok). App `hist` prop geçirir. `→ SearchTab.js, App.js`
 
-**Bağımlılık**: Sprint 26 #2 (piyasa düşüş nudge'ı) altyapısı — dismiss/sustur kalıbı + MV-ağırlıklı hesap. Sprint 26 #2 ship etmediyse Sprint 27 başında carry-over olarak kapatılır.
+**Not (tasarım kararı)**: #2 "banner" yerine inline `🔥` badge olarak gerçeklendi — liste-satırında pasif-bilgilendirici, panik yaratmayan, ~50-80 satıra ölçeklenir (plan "dismiss edilebilir VEYA pasif-bilgilendirici" diyordu). #1 eşik %25, #2 eşik %30 (plan).
+
+**Kalan**: canlı eyeball — #1 SOXX detayında nudge; #2 cache'te m1>30 olan ticker (şu an yok; geçici m1-bump ile test).
 
 **Sprint 28+ aday havuzu (her sprint başında gözden geçir):**
 

@@ -50,3 +50,22 @@ Bu sprint **Sprint 26 #2 (piyasa düşüş nudge'ı)** ile gelen altyapıya daya
 - **Yeni fetch yok** — üç nudge da mevcut `price_cache.p_d1/p_m1`'den; edge fn değişikliği beklenmiyor. Edge dokunulursa `edge-reviewer` + drift check.
 - **UI işi** → `ui-builder` skill (nudge kartı + banner = yeni görsel bileşen). Nudge metinleri Türkçe, nötr/destekleyici ton (panik/FOMO körükleme yok).
 - **DRY**: Sprint 26 nudge kalıbını (`computeNudges()` benzeri tek yer + LS susturma helper'ı) genelleştir; üç nudge tek util'den türesin — kopyala-yapıştır değil.
+
+## Kapanış / Retro (2026-06-21 — erken başlandı)
+
+Sprint 26 aynı gün kapandığı için 27'ye erkenden başlandı. Her iki kapsam işi de kodlandı (parse yeşil, docs synced); canlı eyeball push sonrası.
+
+### #1 Kazanç tez-kontrol nudge'ı — ✅ kod tamam
+- TickerDetailTab header altında, held + `hist[ticker].m1 > 25` ise gold-tinted nudge (`--border2`, panik tonu değil). Per-ticker 30-gün dismiss → `il_nudge_gain_<userId>` map `{ticker: expiryEpoch}`. signOut catch-all siler, migration gerekmez (yeni key). CACHE.md güncellendi.
+- **Tasarım kararı**: market-drop (computeNudges, portföy-seviyesi) ile aynı dismiss felsefesi ama bu **per-ticker** olduğu için TickerDetailTab'da ayrı state + ayrı LS key. Eşik %25.
+
+### #2 SearchTab FOMO — ✅ kod tamam (banner → inline badge)
+- **Tasarım kararı**: Plan "banner" diyordu ama liste-satırı bağlamında full-cümle banner her hot satırda listeyi şişirir. Plan'ın izin verdiği "pasif-bilgilendirici" yolu seçildi: inline `🔥 +%X` badge + `data-tip` tooltip. Ölçeklenir (~50-80 satır), panik yaratmaz, dismiss gerekmez.
+- `hist[ticker].m1 > 30` (eşik %30). Yalnız cache'te (`hist`) olan ticker'larda görünür → çoğu arama sonucunda sessiz. App `hist`'i SearchTab'a prop geçirir (önceden yoktu). O(1) lookup, perf guard'a gerek yok.
+
+### DRY notu (plan hedefinden sapma — kabul edilebilir)
+Plan "üç nudge tek util'den türesin" diyordu. Pratikte üç nudge **üç farklı yüzeyde** (Dashboard/TickerDetail/SearchTab), farklı veri şekliyle (portföy-agregat / per-ticker held / per-ticker arama-sonucu) ve farklı dismiss modeliyle (gün-damgalı / per-ticker 30g / dismiss yok) çalışıyor. Tek util'e zorlamak yapay coupling olurdu; bunun yerine **ortak felsefe** (mevcut `hist`, eşik sabiti tek yerde, nötr ton) paylaşılıyor. FEATURE_DETAILS "Davranışsal Nudge'lar" tek bölümde üç yüzeyi belgeliyor.
+
+### Kalan (push sonrası, canlıda)
+- #1: SOXX (m1 28.7 > 25) detayında nudge eyeball.
+- #2: cache'te m1>30 ticker şu an yok → geçici `price_cache.m1` bump ile badge render doğrula, sonra restore (sparkline force-stale testi gibi).
