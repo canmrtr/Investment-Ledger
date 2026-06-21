@@ -18,6 +18,7 @@ DB'nin **ne olduğu**: tablolar, RLS niyeti, RPC imzaları, pg_cron. (DB'nin sen
 | `fund_cache` | paylaşımlı (service_role write only) | ticker PK, asset_type, metrics/annual/grades jsonb, source, updated_at |
 | `adr_bist_map` | paylaşımlı (public read, service_role write) | adr_ticker PK, bist_ticker, name; OTC ADR→BIST eşlemesi; `fetch-fundamentals` 1h TTL ile cache'ler; yeni satır Supabase Dashboard'dan eklenir, deploy gerekmez |
 | `tefas_funds` | paylaşımlı (public read, service_role write) | code PK, name, category, updated_at; TEFAS yatırım fonu kataloğu (~3500 fon); `fetch-fundamentals mode:"tefas-catalog"` ile doldurulur; SearchTab `tefas_funds` araması bundan beslenir |
+| `feedback` | user (RLS, own insert+select) | id PK, user_id FK (default `auth.uid()`), `type` CHECK (`bug`\|`feature`), `message` CHECK (1-2000 char), created_at; Sprint 28 in-app Support & Feature Request. **UPDATE/DELETE yok** (immutable; RLS default-deny + grant yalnız SELECT/INSERT). anon erişemez. Admin görünümü ileride service_role. Migration `20260621000000_feedback.sql` |
 
 `price_cache`: frontend read-only; tüm write `fetch-prices` service_role üstünden.
 `fund_cache`: frontend read-only (anon+authenticated); tüm write `fetch-fundamentals` service_role üstünden.

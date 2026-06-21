@@ -12,6 +12,7 @@ const files = [
   'src/components/BesUpdateModal.js',
   'src/components/TickerDetailTab.js',
   'src/components/AccountSection.js',
+  'src/components/FeedbackSection.js',
   'src/components/ConfirmBox.js',
   'src/components/HistoryTab.js',
   'src/components/ManuelPosForm.js',

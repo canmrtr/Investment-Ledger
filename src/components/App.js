@@ -1374,6 +1374,9 @@ function App({session}){
             </div>
           </div>
 
+          {/* 5.5 Geri Bildirim / Destek (Sprint 28) */}
+          <FeedbackSection user={user} flash_={flash_}/>
+
           {/* 6. Sistem Durumu — collapsible */}
           <div className="sg">
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",userSelect:"none"}} onClick={()=>setStatusOpen(o=>!o)}>
