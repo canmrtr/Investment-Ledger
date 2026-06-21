@@ -195,6 +195,10 @@ Held pozisyon + `hist[ticker].m1 > 25` (son ~1 ay %) → header altında gold-ti
 
 Arama sonuç satırında `hist[ticker].m1 > 30` ise pasif-bilgilendirici `🔥 +%X` badge + `data-tip` tooltip ("Son ~1 ayda çok hareketlendi — FOMO mu, tez mi?"). Yalnız `hist`'te (cache'te) olan ticker'larda görünür — çoğu arama sonucunda veri yok, sessiz. O(1) lookup; dismiss yok (badge, banner değil). App `hist`'i SearchTab'a prop geçirir. `→ SearchTab.js, App.js`
 
+### AddTab tez checklist nudge (Sprint 28 — 4. ve son Layer-2 nudge)
+
+Tip seçildikten sonra (CASH/DEPOSIT hariç — yatırım tezi gerektirmez), tip context header'ın altında pasif gold-tinted hatırlatma: "Almadan önce: bu varlık için yatırım tezini netleştirdin mi? …". **Kalıcı dismiss**: LS bool `il_nudge_thesis_<userId>` — bir kez kapatınca tekrar gösterilmez (kayıp/kazanç/FOMO nudge'larının aksine her seferinde değil; eğitimsel hatırlatma, nag değil). `→ AddTab.js`
+
 ---
 
 ## Search Tab

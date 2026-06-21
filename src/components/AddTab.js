@@ -34,6 +34,12 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
   const [progDone,setProgDone]=useState(false);
   const fileRef=useRef(null);
 
+  // Tez checklist nudge (Sprint 28 #3, Katman 2 — 4. ve son nudge): tip seçildikten sonra
+  // (CASH/DEPOSIT hariç — bunlar yatırım tezi gerektirmez) pasif, kalıcı-dismissable hatırlatma.
+  const thesisKey=userLSKey('il_nudge_thesis',user?.id);
+  const [thesisDismissed,setThesisDismissed]=useState(()=>LS.get(thesisKey,false));
+  const dismissThesis=()=>{setThesisDismissed(true);LS.set(thesisKey,true);};
+
   const switchMode=m=>{setMode(m);setParsed(null);setParseErr("");};
 
   // Tipi değiştir → buffer temizle, mode'u text'e resetle, picker'a dön
@@ -235,6 +241,21 @@ function AddTab({session,user,pos,loadData,flash_,confirm_,portfolioId}){
         <div style={{flex:1}}></div>
         <button className="btn-xs" onClick={resetType} data-test="change-type">Tipi değiştir</button>
       </div>
+
+      {/* Tez checklist nudge — pasif hatırlatma; CASH/DEPOSIT hariç, kalıcı dismiss (Sprint 28 #3) */}
+      {!thesisDismissed && !["CASH","DEPOSIT"].includes(pickedType) && (
+        <div className="warn-card" style={{alignItems:"center",borderColor:"var(--border2)",background:"rgba(201,168,76,0.06)",marginBottom:14}}>
+          <div className="wc-sub" style={{flex:1}}>
+            💡 Almadan önce: bu varlık için <strong>yatırım tezini</strong> netleştirdin mi? <span className="dim">Neden alıyorsun, hangi koşulda satarsın? (değer yatırımı 20-kriter)</span>
+          </div>
+          <button
+            type="button"
+            style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:20,lineHeight:1,padding:"0 0 0 12px",flexShrink:0}}
+            onClick={dismissThesis}
+            aria-label="Kapat"
+          >×</button>
+        </div>
+      )}
 
       <div style={{display:"flex",gap:6,marginBottom:16,flexWrap:"wrap"}}>
         {(pickedType && MANUEL_ONLY_TYPES.has(pickedType)

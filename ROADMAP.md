@@ -219,7 +219,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 ## Akıllı Öneriler & Nudge Sistemi
 
 - [x] ~~**Katman 2 — Piyasa düşüş nudge'ı**~~ `[S]` `[P2]` `Sprint-26` `2026-06-21` ✅ — `computeNudges`'a eklendi: MV-ağırlıklı günlük değişim (`allDisp` `mv`×`d1`, yalnız fiyat-takipli pozisyonlar) ≤ -%5 ise P0 Dashboard nudge'ı. Yeni LS key yok — gün-damgalı id (`market_drop_YYYY-MM-DD`) mevcut `il_nudge_dismissed` makinesiyle aynı gün susar, ertesi gün yeniden görünür. Yeni fetch yok. `→ src/utils.js`
-- [ ] **Katman 2 — Yeni pozisyon ekleme checklist sorusu** `[S]` `[P2]` `Sprint-28 (filler)` — AddTab'da asset tipi seçiminden önce "Yatırım tezini belirledin mi? (Investment Guide 20-kriter)" nudge/modal. Yeni API yok. 4. ve son Layer-2 nudge.
+- [x] ~~**Katman 2 — Yeni pozisyon ekleme checklist sorusu**~~ `[S]` `[P2]` `Sprint-28` `2026-06-21` ✅ — AddTab'da tip seçildikten sonra (CASH/DEPOSIT hariç) pasif gold-tinted tez hatırlatması; kalıcı dismiss (`il_nudge_thesis_<userId>`). Yeni API yok. **4. ve son Layer-2 nudge — davranışsal nudge sistemi tamam** (kayıp/kazanç/FOMO/yeni-pozisyon). `→ AddTab.js`
 - [x] ~~**Katman 2 — Popüler hisse FOMO uyarısı**~~ `[M]` `[P2]` `Sprint-27` `2026-06-21` ✅ — SearchTab sonuç satırında `hist[ticker].m1 > 30` ise pasif-bilgilendirici `🔥 +%X` badge + tooltip ("Son ~1 ayda çok hareketlendi — FOMO mu, tez mi?"). Yalnız cache'te olan ticker'larda; tamamen frontend, yeni fetch yok. App `hist`'i prop geçirir. `→ SearchTab.js, App.js`
 - [x] ~~**Katman 2 — Büyük kazanç tez kontrolü nudge**~~ `[S]` `[P2]` `Sprint-27` `2026-06-21` ✅ — Held pozisyon son ~1 ayda `m1 > %25` ise TickerDetailTab header altında gold-tinted nudge: "TICKER son ~1 ayda +%X büyüdü. Orijinal tezin hâlâ geçerli mi…". Per-ticker 30-gün sustur (`il_nudge_gain_<userId>`). `→ TickerDetailTab.js`
 
@@ -510,12 +510,12 @@ Sprint 4–24 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 
 ---
 
-**Sprint 28 = Going-live hazırlığı: Ayarlar revizyonu + Support kanalı** (2026-06-21 → 2026-07-04) — **🚧 İKİ HEADLINE ✅ CANLIDA, #3 stretch açık**. Plan: `sprints/sprint-28.md`.
+**Sprint 28 = Going-live hazırlığı: Ayarlar revizyonu + Support kanalı** (2026-06-21'de kapandı) — **✅ KAPANDI (3/3 + stretch dahil)**. Plan + retro: `sprints/sprint-28.md`.
 
 **Goal**: Uygulama "kişisel araç"tan "başkasına verilebilir ürüne" yaklaşır — kullanıcı yardım isteyebilir/özellik talep edebilir, ve Ayarlar geliştirici-bakım paneli değil kullanıcı-odaklı kontrol gösterir.
 1. ✅ **Ayarlar sekmesi revizyonu** `[M][P2][PO+UX]` — kullanıcı-odaklı IA: Görünür (Hesap/Portföy/Görünüm/Veri/Araçlar/Geri Bildirim/Çıkış) + "Gelişmiş / Geliştirici" collapsible (Tarihi Veri, TEFAS Katalog, Bağlantı Test, Pozisyon Yeniden Hesapla, Split Senkronize, Sistem Durumu). Hiçbir şey silinmedi. **Canlıda doğrulandı** (commit `e12e171`). `→ App.js`
 2. ✅ **Support & Feature Request kanalı** `[M][P2]` — `feedback` tablosu (RLS own-insert/select, `rls-auditor` PASS + `rls-empirical-tester` 14/14, grant-hardening) + Settings `FeedbackSection` (Hata/Öneri + metin → insert). **Canlıda uçtan uca doğrulandı** (test feedback insert→DB→cleanup; commit `aba0cc5`). `→ migration 20260621000000_feedback.sql, FeedbackSection.js`
-3. ⬜ **AddTab tez checklist nudge'ı** `[S][P2]` (stretch) — 4. ve son Layer-2 nudge; asset seçiminden sonra "Yatırım tezini belirledin mi?" pasif hatırlatma. Açık — Sprint 28 stretch veya Sprint 29. `→ AddTab.js`
+3. ✅ **AddTab tez checklist nudge'ı** `[S][P2]` — tip seçildikten sonra (CASH/DEPOSIT hariç) pasif gold-tinted tez hatırlatması; kalıcı dismiss (`il_nudge_thesis`). **4. ve son Layer-2 nudge → davranışsal nudge sistemi tamam** (kayıp/kazanç/FOMO/yeni-pozisyon). `→ AddTab.js`
 
 **Karar verildi**: Support kanalı = (A) in-app form → Supabase `feedback` (Can onayı 2026-06-21).
 **Bonus fix**: SW shell cache v3→v4 bump (commit `2d911a7`) — index.html değişince cache-first stale shell bug'ı (FeedbackSection script tag yüklenmiyordu); GOTCHAS kuralı uygulandı.

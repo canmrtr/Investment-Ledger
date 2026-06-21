@@ -75,5 +75,8 @@ Plan (A)'ya göre yazıldı. Can (B)/(C) derse #2 DoD güncellenir.
 ### Bonus — SW shell cache bug yakalandı + fix'lendi (commit `2d911a7`)
 FeedbackSection script tag'i index.html'i değiştirdi ama SW shell'i cache-first servis ediyor (JS network-first) → dönen kullanıcı yeni App.js (FeedbackSection referansı) + stale index.html (script tag yok) → `ReferenceError`, Settings boş. `CACHE` v3→v4 bump'lendi (GOTCHAS kuralı). **Öğrenme**: index.html her değişince SW cache bump şart — bu sefer hatırlatıcı yoktu, sonraki için GOTCHAS yeterli.
 
-### Kalan
-- **#3 AddTab tez checklist nudge'ı** `[S]` (stretch) — başlanmadı. Sprint 28'de bitirilebilir veya Sprint 29'a devreder (Layer-2'nin 4. ve son nudge'ı).
+### #3 AddTab tez checklist nudge'ı — ✅ tamamlandı
+Tip seçildikten sonra (CASH/DEPOSIT hariç) tip context header'ın altında pasif gold-tinted hatırlatma: "Almadan önce: bu varlık için yatırım tezini netleştirdin mi?…". Kalıcı dismiss (`il_nudge_thesis_<userId>` bool) — eğitimsel hatırlatma olduğu için bir kez kapatınca gitmeli (nag değil), kayıp/kazanç/FOMO'nun aksine her seferinde değil. CACHE.md + FEATURE_DETAILS güncellendi.
+
+### Sprint 28 sonuç
+3/3 kapsam işi + bonus SW fix tamam. **Katman 2 davranışsal nudge sistemi 4 yüzeyde tamamlandı**: kayıp (Dashboard market-drop), kazanç (TickerDetail), FOMO (SearchTab), yeni-pozisyon tez (AddTab). Going-live önkoşulları (Settings IA + Support kanalı) karşılandı.

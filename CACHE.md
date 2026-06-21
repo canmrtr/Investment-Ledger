@@ -18,6 +18,7 @@ Kullanıcıya özel veri. Pattern: `il_<base>_<userId>` (SearchTab `il_recent_${
 | `il_last_fetch` | — | App | son fiyat fetch zaman damgası |
 | `il_nudge_dismissed` | kalıcı | Dashboard nudge kartları (`computeNudges`) | portföy-seviyesi nudge dismiss state `{id: expiryEpoch}` |
 | `il_nudge_gain` | kalıcı | TickerDetailTab kazanç nudge'ı (Sprint 27) | per-ticker dismiss `{ticker: expiryEpoch}`; 30-gün sustur |
+| `il_nudge_thesis` | kalıcı | AddTab tez checklist nudge'ı (Sprint 28 #3) | bool dismiss flag; bir kez kapatınca tekrar gösterilmez (kalıcı) |
 | `il_active_portfolio` | kalıcı | portföy seçici | aktif portföy id |
 | `il_recent_${userId}` | kalıcı | SearchTab | son aranan ticker'lar (zaten suffix'li) |
 
