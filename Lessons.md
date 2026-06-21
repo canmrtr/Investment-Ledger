@@ -32,6 +32,7 @@ Konuya göre hızlı bulma (entry'nin kendisi aşağıda, tarihiyle):
 
 | Tag | Entry (tarih) |
 |-----|---------------|
+| `CORS` / localhost / edge-render | 2026-06-21 (origin lock → localhost edge-bağımlı render doğrulayamaz) |
 | `priceCur` / para-değer | 2026-06-04 (`mvDisp` ~38x) |
 | `edge` / `deno` / local-gate | 2026-06-04 (`deno check`), 2026-05-19 (`node --check` const redecl.) |
 | `pg_cron` / secrets / vault | 2026-05-19 (hardcoded Bearer) |
@@ -43,6 +44,12 @@ Konuya göre hızlı bulma (entry'nin kendisi aşağıda, tarihiyle):
 ## Lessons
 
 <!-- Yeni entry'ler buraya, en üste. -->
+
+### 2026-06-21 — localhost edge-bağımlı render'ı doğrulayamaz (CORS origin lock)
+**Bağlam:** Sprint 26 TEFAS NAV sparkline'ını kapatırken `localhost:3000`'de (test-runner agent + Playwright) render'ı görsel doğrulamaya çalıştım.
+**Hatam:** test-runner "sparkline FAIL — render olmuyor, boş da değil" dedi; ben bunu gerçek bir kod/akış hatası sandım ve `effectiveType` debugging'ine giriştim.
+**Doğrusu:** Kod doğruydu. **Tüm edge fn'ler `Access-Control-Allow-Origin: "https://canmrtr.github.io"` hardcoded** → `localhost`'ta tarayıcı CORS preflight'ı `fetch-prices`/`fetch-fundamentals` çağrılarını bloklar. `curl` CORS uygulamaz, o yüzden veri yolunu curl'le doğruladığımda 124 NAV noktası döndü — ama tarayıcı fetch'i reddediyordu. Tablo okumaları (price_cache/fund_cache PostgREST) permissive olduğundan Dashboard KPI'ları localhost'ta yüklenir → "app localhost'ta tam test edilebilir" yanılgısı. Production'a (`canmrtr.github.io`) push edip eyeball'ladığımda sparkline mükemmel render etti (+16.6%, doğru ölçek).
+**Kural:** Edge fn'e giden herhangi bir render'ı **localhost'ta görsel doğrulama — yalnız production'da (`canmrtr.github.io`) eyeball et.** localhost yalnız tablo-okuyan (PostgREST) feature'lar + babel parse + saf logic testleri için güvenilir. test-runner/Playwright bir edge-bağımlı render'ı "yok" derse, kod hatası varsaymadan önce CORS'u ele: veri yolunu `curl`'le ayrı doğrula (CORS bypass), sorun yalnız tarayıcı-origin'deyse kod sağlamdır.
 
 ### 2026-06-04 — `mvDisp` BIST-dışını "USD" sayınca TL mevduat ~38x şişti
 **Bağlam:** Can "Varlık Dağılımı" kartında Vadeli Mevduat'ın %88 göründüğünü, bunun olamayacağını söyledi. İlk turda bar ile listenin tutarlı olduğunu (ikisi de `slices.frac`) ölçüp "hata yok" dedim.
