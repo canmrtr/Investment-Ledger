@@ -1,4 +1,7 @@
-const CACHE = 'il-shell-v3';
+// NOTE: index.html (shell) cache-first servis edilir → her index.html değişikliğinde
+// (yeni <script src> tag'i, meta, vb.) bu sürümü BUMP et, yoksa dönen kullanıcılar stale
+// shell alır ve yeni script'ler yüklenmez (ReferenceError). v4: Sprint 28 FeedbackSection tag'i.
+const CACHE = 'il-shell-v4';
 const SHELL = [
   '/Investment-Ledger/',
   '/Investment-Ledger/index.html',
