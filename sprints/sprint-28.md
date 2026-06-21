@@ -59,3 +59,21 @@ Plan (A)'ya göre yazıldı. Can (B)/(C) derse #2 DoD güncellenir.
 - **UI işi** (Settings reorganizasyon + Support formu + nudge) → `ui-builder` skill. Türkçe UI, mevcut `.btn-*`/`.finp`/`.warn-card` sistemine uy.
 - **Edge yok** (beklenen) — feedback insert client'tan doğrudan Supabase'e (RLS-korumalı), edge fn gerekmez. Edge dokunulursa `edge-reviewer` + drift check.
 - **Platform yörüngesi**: yeni state Supabase'e (LS değil) — `feedback` tablosu multi-user SaaS geçişiyle uyumlu.
+
+## İlerleme / Retro (2026-06-21)
+
+İki headline aynı gün kodlandı + canlıda doğrulandı. Karar (A) in-app Supabase seçildi.
+
+### #2 Support kanalı — ✅ canlıda (commit `aba0cc5`)
+- `feedback` tablosu: `rls-auditor` PASS (5/5 gereksinim) + `rls-empirical-tester` **14/14** (cross-user izolasyon solid). Bonus hardening: Supabase default privileges anon+authenticated'a TÜM yetkileri otomatik vermiş → `REVOKE ALL` + yalnız SELECT/INSERT (least-privilege).
+- `FeedbackSection` Settings'te; canlıda uçtan uca: Öneri gönder → `feedback` tablosuna `type=feature` + doğru owner düştü → test satırı temizlendi.
+
+### #1 Ayarlar revizyonu — ✅ canlıda (commit `e12e171`)
+- Can kararı: bakım/recovery dahil **hepsini** "Gelişmiş / Geliştirici" collapsible'a katla.
+- Görünür: Hesap, Portföy, Görünüm, Veri (yalnız "↻ Şimdi Güncelle"), Araçlar (Export + İşlem Geçmişi), Geri Bildirim, Çıkış. Katlı: Tarihi Veri, TEFAS Katalog, Bağlantı Test, Pozisyon Yeniden Hesapla, Split Senkronize, Sistem Durumu. Tüm handler'lar birebir korundu; hiçbir araç silinmedi.
+
+### Bonus — SW shell cache bug yakalandı + fix'lendi (commit `2d911a7`)
+FeedbackSection script tag'i index.html'i değiştirdi ama SW shell'i cache-first servis ediyor (JS network-first) → dönen kullanıcı yeni App.js (FeedbackSection referansı) + stale index.html (script tag yok) → `ReferenceError`, Settings boş. `CACHE` v3→v4 bump'lendi (GOTCHAS kuralı). **Öğrenme**: index.html her değişince SW cache bump şart — bu sefer hatırlatıcı yoktu, sonraki için GOTCHAS yeterli.
+
+### Kalan
+- **#3 AddTab tez checklist nudge'ı** `[S]` (stretch) — başlanmadı. Sprint 28'de bitirilebilir veya Sprint 29'a devreder (Layer-2'nin 4. ve son nudge'ı).

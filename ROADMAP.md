@@ -300,9 +300,9 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Hesap Yönetimi
 
-- [ ] **Canlı sistem için Ayarlar sekmesi revizyonu** `[M]` `[P2]` `[PO+UX]` `[Canlı Sistem Önkoşulu]` `Sprint-28 (headline-A)` — Mevcut Ayarlar (hamburger menü) geliştirici/bakım odaklı; canlıya geçince kullanıcıya ne gösterilmeli netleştirilmeli. Hangi bölümler kalır, hangisi kaldırılır, yeni ne eklenmeli — PO içerik kararı, UX düzen revizyonu yapacak. Plan: `sprints/sprint-28.md`.
+- [x] ~~**Canlı sistem için Ayarlar sekmesi revizyonu**~~ `[M]` `[P2]` `[PO+UX]` `Sprint-28` `2026-06-21` ✅ — Kullanıcı-odaklı IA: görünür bölümler (Hesap/Portföy/Görünüm/Veri/Araçlar/Geri Bildirim/Çıkış) + "Gelişmiş / Geliştirici" collapsible (bakım+veri+tanılama araçları katlı, silinmedi). Canlıda doğrulandı. `→ App.js` (commit `e12e171`)
 
-- [ ] **Support & Feature Request iletişim altyapısı** `[M]` `[P2]` `[Canlı Sistem Önkoşulu]` `Sprint-28 (headline-B)` — Canlı sisteme geçilmeden önce kullanıcıların sorun bildirebileceği ve özellik talep edebileceği bir iletişim kanalı kurulmalı. Seçenekler: (a) uygulama içi form → Supabase `feedback` tablosu **[önerilen]**, (b) Crisp/Intercom gibi hazır widget, (c) GitHub Issues linki. Mekanizma kararı sprint başında Can ile. Plan: `sprints/sprint-28.md`.
+- [x] ~~**Support & Feature Request iletişim altyapısı**~~ `[M]` `[P2]` `Sprint-28` `2026-06-21` ✅ — (a) seçildi: in-app form → Supabase `feedback` tablosu. `FeedbackSection` (Hata/Öneri + metin, RLS own-insert, `rls-empirical-tester` 14/14). Canlıda uçtan uca doğrulandı. `→ migration 20260621000000_feedback.sql, FeedbackSection.js` (commit `aba0cc5`)
 
 - [ ] **Hesap ekranı genişletme** `[M]` `[P2]` — şifre değiştirme, email değiştirme (verifikasyonlu), hesap silme (cascade delete), avatar. Mevcut username/display_name ekranı zaten var.
 
@@ -510,14 +510,15 @@ Sprint 4–24 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 
 ---
 
-**Sprint 28 = Going-live hazırlığı: Ayarlar revizyonu + Support kanalı** (2026-06-21 → 2026-07-04) — **📋 PLANLANDI**. Plan: `sprints/sprint-28.md`.
+**Sprint 28 = Going-live hazırlığı: Ayarlar revizyonu + Support kanalı** (2026-06-21 → 2026-07-04) — **🚧 İKİ HEADLINE ✅ CANLIDA, #3 stretch açık**. Plan: `sprints/sprint-28.md`.
 
 **Goal**: Uygulama "kişisel araç"tan "başkasına verilebilir ürüne" yaklaşır — kullanıcı yardım isteyebilir/özellik talep edebilir, ve Ayarlar geliştirici-bakım paneli değil kullanıcı-odaklı kontrol gösterir.
-1. ⬜ **Ayarlar sekmesi revizyonu** `[M][P2][PO+UX]` (headline-A) — envanter → kal/gizle/katla kararı (Can onayı); dev/bakım/durum bir "Gelişmiş" `<details>`'ine katlanır (silinmez), kullanıcı kontrolleri öne + tek-cümle açıklama. `→ index.html / Settings`
-2. ⬜ **Support & Feature Request kanalı** `[M][P2]` (headline-B) — yeni `feedback` tablosu (RLS own-insert/select, `rls-auditor` sign-off) + Settings "Geri Bildirim" formu (Hata/Öneri + metin → insert). `→ migration, Settings`
-3. ⬜ **AddTab tez checklist nudge'ı** `[S][P2]` (filler/stretch) — 4. ve son Layer-2 nudge; asset seçiminden sonra "Yatırım tezini belirledin mi?" pasif hatırlatma. Taşarsa Sprint 29. `→ AddTab.js`
+1. ✅ **Ayarlar sekmesi revizyonu** `[M][P2][PO+UX]` — kullanıcı-odaklı IA: Görünür (Hesap/Portföy/Görünüm/Veri/Araçlar/Geri Bildirim/Çıkış) + "Gelişmiş / Geliştirici" collapsible (Tarihi Veri, TEFAS Katalog, Bağlantı Test, Pozisyon Yeniden Hesapla, Split Senkronize, Sistem Durumu). Hiçbir şey silinmedi. **Canlıda doğrulandı** (commit `e12e171`). `→ App.js`
+2. ✅ **Support & Feature Request kanalı** `[M][P2]` — `feedback` tablosu (RLS own-insert/select, `rls-auditor` PASS + `rls-empirical-tester` 14/14, grant-hardening) + Settings `FeedbackSection` (Hata/Öneri + metin → insert). **Canlıda uçtan uca doğrulandı** (test feedback insert→DB→cleanup; commit `aba0cc5`). `→ migration 20260621000000_feedback.sql, FeedbackSection.js`
+3. ⬜ **AddTab tez checklist nudge'ı** `[S][P2]` (stretch) — 4. ve son Layer-2 nudge; asset seçiminden sonra "Yatırım tezini belirledin mi?" pasif hatırlatma. Açık — Sprint 28 stretch veya Sprint 29. `→ AddTab.js`
 
-**⚠ Açık karar (sprint başında)**: Support kanalı mekanizması — (A) in-app form → Supabase `feedback` **[önerilen]** / (B) GitHub Issues linki / (C) Crisp/Intercom widget. Plan (A)'ya göre; detay `sprints/sprint-28.md`.
+**Karar verildi**: Support kanalı = (A) in-app form → Supabase `feedback` (Can onayı 2026-06-21).
+**Bonus fix**: SW shell cache v3→v4 bump (commit `2d911a7`) — index.html değişince cache-first stale shell bug'ı (FeedbackSection script tag yüklenmiyordu); GOTCHAS kuralı uygulandı.
 
 **Sprint 29+ aday havuzu (her sprint başında gözden geçir):**
 
