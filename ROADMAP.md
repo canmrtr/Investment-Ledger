@@ -2,7 +2,7 @@
 
 Fikir havuzu — öncelik ve boyut etiketli, her sprint gözden geçirilir.
 
-İlk toplama: **2026-04-24** | Son grooming: **2026-06-20** (Sprint 21–25 ✅. **Sprint 24 = TEFAS ✅ SHIPPED 2026-06-05** — 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sprint 25 = Değerleme Okunabilirliği ✅ KAPANDI** (2026-06-05 → 2026-06-18) — 3 kapsam işi de kodlandı + canlıya deploy edildi (commit `fe3e16a`: Fundamental Checklist özet+detay · ağırlıklı portföy F/K vs S&P 500 · `--card-pad` token). Tek carry-over: canlı `fund_cache` verisiyle render göz doğrulaması → Sprint 26 başında birlikte yapılır. Plan+delivery: `sprints/sprint-25.md`. **Sprint 26 ✅ KAPANDI** (TEFAS sparkline + market-drop nudge; commit `82c8b93`, canlıda doğrulandı — YAC NAV sparkline +16.6%). **Sprint 27 ✅ KAPANDI** (2026-06-21'de erken; commit `a238d2c`): kazanç tez-kontrol nudge'ı (TickerDetail) + SearchTab FOMO badge — ikisi de canlıda doğrulandı (GARAN m1-bump testi). Katman 2 davranışsal nudge sistemi 3 yüzeyde tamam (kayıp/kazanç/FOMO). **Sprint 28 henüz planlanmadı** — top aday: Hesap Yönetimi canlı-sistem önkoşulları. Detay "Sonraki Adım"da.)
+İlk toplama: **2026-04-24** | Son grooming: **2026-06-20** (Sprint 21–25 ✅. **Sprint 24 = TEFAS ✅ SHIPPED 2026-06-05** — 3509 fon katalog canlıda, NAV doğrulandı. Retro: `sprints/sprint-24.md`. **Sprint 25 = Değerleme Okunabilirliği ✅ KAPANDI** (2026-06-05 → 2026-06-18) — 3 kapsam işi de kodlandı + canlıya deploy edildi (commit `fe3e16a`: Fundamental Checklist özet+detay · ağırlıklı portföy F/K vs S&P 500 · `--card-pad` token). Tek carry-over: canlı `fund_cache` verisiyle render göz doğrulaması → Sprint 26 başında birlikte yapılır. Plan+delivery: `sprints/sprint-25.md`. **Sprint 26 ✅ KAPANDI** (TEFAS sparkline + market-drop nudge; commit `82c8b93`, canlıda doğrulandı — YAC NAV sparkline +16.6%). **Sprint 27 ✅ KAPANDI** (2026-06-21'de erken; commit `a238d2c`): kazanç tez-kontrol nudge'ı (TickerDetail) + SearchTab FOMO badge — ikisi de canlıda doğrulandı (GARAN m1-bump testi). Katman 2 davranışsal nudge sistemi 3 yüzeyde tamam (kayıp/kazanç/FOMO). **Sprint 28 ✅ KAPANDI** (Going-live: Settings IA revamp + Support kanalı + tez nudge; 3/3 + SW fix). **Sprint 29 PLANLANDI** (Altın işçilik premium — %41'lik en büyük dilim, kör nokta). Detay "Sonraki Adım"da.)
 
 ### Uzun Vadeli Platform Vizyonu
 
@@ -85,7 +85,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
   - [x] (9) `refresh-price-cache` cron'a TEFAS ekleme `[S]` `2026-06-04`
 - [x] ~~**BES Devlet Katkısı (DK) entegrasyonu**~~ `[M]` `[P0]` `Sprint-18` ✅ (2026-05-13) — 4 form alanı (kişisel yatırılan, kişisel portföy güncel, DK anaparası, DK portföy güncel); `positions` tablosuna `dk_principal` + `dk_current` kolonları eklendi; `rebuild_positions_atomic` RPC güncellendi; cost basis = yalnızca kişisel yatırılan, DK+getiri tamamı kazanç; hint kaldırıldı. Migration 018. `→ utils.js, App.js, ManuelPosForm.js`
 - [x] ~~**AI parse temettü desteği (DIV way)**~~ `[S]` `[P1]` (2026-05-13) — `parse-transaction` sözleşmesi `BUY|SELL|DIV` oldu; Türkçe temettü ifadesi örnekleri eklendi; `saveTx` way allowlist doğrulaması eklendi. `→ parse-transaction-edge-function.js; AddTab.js`
-- [ ] **TR altın işçilik premium göstergesi** `[M]` `[P2]` — Reşat/Ata birimi ekleme; Dashboard "5 çeyrek · ₺12,000/ad · Spot saf ₺55,000 · Premium %9" render; ödenen fiyat − spot saf fark hesabı.
+- [ ] **TR altın işçilik premium göstergesi** `[M]` `[P2]` `Sprint-29 (headline)` — Reşat/Ata birimi ekleme; Dashboard/TickerDetail "Saf altın değeri ₺X · Ödenen ₺Y · Prim %Z" render; ödenen − saf fark. Mevcut `GOLD_UNITS`/`goldOzPerUnit`/XAU spot altyapısı kullanılır. Premium tanımı spike'ta seçilir (güncel-spot / eğitimsel / historical). Plan: `sprints/sprint-29.md`.
 - [ ] **BIST P/S metriği** `[S]` `[P2]` — borsa-mcp `meta.market_cap` / `latestRevenue` ile derive; frontend veya edge function 2. call.
 - [ ] **BIST bankalar fundamentals** `[L]` `[P2]` — UFRS grubu Roman numeral itemCode mapping; `ISY_KNOWN_BANKS` early-exit kaldır.
 - [ ] **FX/GOLD ham ticker normalize** `[S]` `[P2]` — `asset_type:"FX"` prefix'siz `USDTRY` gelince 404; `C:` autoprefix + format guard.
@@ -520,9 +520,19 @@ Sprint 4–24 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 **Karar verildi**: Support kanalı = (A) in-app form → Supabase `feedback` (Can onayı 2026-06-21).
 **Bonus fix**: SW shell cache v3→v4 bump (commit `2d911a7`) — index.html değişince cache-first stale shell bug'ı (FeedbackSection script tag yüklenmiyordu); GOTCHAS kuralı uygulandı.
 
-**Sprint 29+ aday havuzu (her sprint başında gözden geçir):**
+---
 
-1. **TR altın işçilik premium göstergesi** `[M][P2]` — Altın %41 portföyün en büyük dilimi, kör nokta; izole frontend, düşük risk.
-2. **Hesap ekranı genişletme** `[M][P2]` — şifre/email değiştirme (verifikasyonlu), hesap silme (cascade; App Store önkoşulu). Going-live + mobil faz bağı.
+**Sprint 29 = Altın işçilik premium + Reşat/Ata birimleri** (2026-06-22 → 2026-07-05) — **📋 PLANLANDI**. Plan: `sprints/sprint-29.md`.
+
+**Goal**: Altın (portföyün %41'i, en büyük + en kör dilim) — Can her altın pozisyonunun saf değerini + ödediği primi görür. Mevcut `GOLD_UNITS`/`goldOzPerUnit`/XAU spot altyapısı %80 hazır.
+1. ⬜ **TR altın işçilik premium göstergesi** `[M][P2]` (headline) — held GOLD (oz/gram hariç) için "Saf altın değeri ₺X · Ödenen ₺Y · Prim %Z". **Risk-first spike**: premium tanımı (tarihsel spot yok → (A) güncel-spot deltası / (B) eğitimsel yapısal / (C) historical=out-of-scope). `→ utils.js, TickerDetailTab/Dashboard`
+2. ⬜ **GOLD_UNITS'e Reşat + Ata Lirası** `[S][P2]` (filler) — birim picker'da eksik; aynı dosya, headline'ı tamamlar. `→ utils.js (GOLD_UNITS)`
+
+**⚠ Açık karar (spike)**: premium tanımı (A/B/C) — detay `sprints/sprint-29.md`.
+
+**Sprint 30+ aday havuzu (her sprint başında gözden geçir):**
+
+1. **Hesap ekranı genişletme** `[M][P2]` — şifre/email değiştirme (verifikasyonlu), hesap silme (cascade; App Store önkoşulu). Sprint 28 Hesap Yönetimi'nin doğal devamı; going-live + mobil faz bağı.
+2. **Altın gerçek tarihsel işçilik (C)** `[L][P3]` — alım-tarihi XAU spot fetch ile gerçek ödenen işçilik; Sprint 29 (B/A) MVP'sinden sonra doğruluk artışı.
 3. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; tek başına değersiz.
 4. **Görselleştirme polish** `[S-M][P2]` — Broker Dağılımı pie · Sparkline interactivity · sticky `.fbar`.
