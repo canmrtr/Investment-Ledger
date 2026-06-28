@@ -304,7 +304,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 - [x] ~~**Support & Feature Request iletişim altyapısı**~~ `[M]` `[P2]` `Sprint-28` `2026-06-21` ✅ — (a) seçildi: in-app form → Supabase `feedback` tablosu. `FeedbackSection` (Hata/Öneri + metin, RLS own-insert, `rls-empirical-tester` 14/14). Canlıda uçtan uca doğrulandı. `→ migration 20260621000000_feedback.sql, FeedbackSection.js` (commit `aba0cc5`)
 
-- [ ] **Hesap ekranı genişletme** `[M]` `[P2]` — şifre değiştirme, email değiştirme (verifikasyonlu), hesap silme (cascade delete), avatar. Mevcut username/display_name ekranı zaten var.
+- [ ] **Hesap ekranı genişletme** `[M→S-M]` `[P2]` `Sprint-30 (headline)` — **Scope düzeltmesi (2026-06-28)**: şifre değiştirme / email değiştirme (verifikasyonlu) / avatar / bio / username `AccountSection.js`'te **zaten canlıda**. Kalan tek iş = **hesap silme (cascade delete)** → App Store önkoşulu (Apple Guideline 5.1.1). Gerektirir: `delete-account` edge function (service_role admin delete, client'tan yapılamaz) + cascade kapsam denetimi (profiles/splits FK teyidi) + Settings "Tehlikeli Bölge" type-to-confirm UI. Plan: `sprints/sprint-30.md`.
 
 ---
 
@@ -530,9 +530,25 @@ Sprint 4–24 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 
 **⚠ Açık karar (spike)**: premium tanımı (A/B/C) — detay `sprints/sprint-29.md`.
 
-**Sprint 30+ aday havuzu (her sprint başında gözden geçir):**
+**Sprint 29 = Altın işçilik premium — ⏸ PARK EDİLDİ** (2026-06-28, Can kararı). Plan hazır (`sprints/sprint-29.md`); Can yeniden önceliklendirene kadar bekler.
 
-1. **Hesap ekranı genişletme** `[M][P2]` — şifre/email değiştirme (verifikasyonlu), hesap silme (cascade; App Store önkoşulu). Sprint 28 Hesap Yönetimi'nin doğal devamı; going-live + mobil faz bağı.
-2. **Altın gerçek tarihsel işçilik (C)** `[L][P3]` — alım-tarihi XAU spot fetch ile gerçek ödenen işçilik; Sprint 29 (B/A) MVP'sinden sonra doğruluk artışı.
+---
+
+**Sprint 30 = Hesap Silme (Cascade) — App Store önkoşulu** (2026-06-28 → 2026-07-11) — **📋 PLANLANDI**. Plan: `sprints/sprint-30.md`.
+
+**Goal**: Kullanıcı hesabını tamamen silebilir — tüm verisi geri dönüşsüz temizlenir + `auth.users` kaldırılır; Apple Guideline 5.1.1 zorunluluğu kapanır.
+
+> **Scope düzeltmesi**: "Hesap ekranı genişletme"nin şifre/email/avatar/username parçaları `AccountSection.js`'te **zaten canlıda**. Kalan tek iş = hesap silme. Item `[M]` → fiilen `[S-M]`.
+
+1. ⬜ **`delete-account` edge function** `[S][P2]` (headline) — service_role admin delete; token'daki `uid` (IDOR yok); `edge-reviewer` GO. `→ supabase/functions/delete-account`
+2. ⬜ **Cascade kapsam denetimi + boşluk migration** `[S][P2]` — profiles/splits FK teyidi; `rls-empirical-tester` ile gerçek sil-doğrula (13 tabloda 0 satır). `→ SCHEMA.md, migration`
+3. ⬜ **Settings "Tehlikeli Bölge" UI** `[S][P2]` — type-to-confirm "SİL" guard + signOut; `client-security-auditor`. `→ AccountSection.js`
+
+**Out of scope**: soft-delete/geri-al, silme onay e-postası (Resend), avatar resim upload, altın premium (Sprint 29 park).
+
+**Sprint 31+ aday havuzu (her sprint başında gözden geçir):**
+
+1. **Altın işçilik premium (Sprint 29 park)** `[M][P2]` — Can yeniden önceliklendirirse; plan hazır.
+2. **Altın gerçek tarihsel işçilik (C)** `[L][P3]` — alım-tarihi XAU spot fetch; Sprint 29 (B/A) MVP'sinden sonra.
 3. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; tek başına değersiz.
 4. **Görselleştirme polish** `[S-M][P2]` — Broker Dağılımı pie · Sparkline interactivity · sticky `.fbar`.

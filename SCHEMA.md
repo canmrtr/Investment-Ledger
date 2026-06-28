@@ -27,6 +27,28 @@ DB'nin **ne olduğu**: tablolar, RLS niyeti, RPC imzaları, pg_cron. (DB'nin sen
 
 > Önbellek TTL'leri + LS key'leri → `CACHE.md` (price_cache/fund_cache/adr_bist_map/tefas_funds satırları orada).
 
+## Hesap Silme — Cascade Kapsam Matrisi (Sprint 30)
+
+`delete-account` edge function `auth.users` satırını siler (service_role admin API); kalan temizlik **DB FK `ON DELETE CASCADE`** ile otomatik olur. 13 tablonun kapsamı (katalogdan teyitli, `pg_constraint.confdeltype='c'`):
+
+| Tablo | Davranış | Not |
+|-------|----------|-----|
+| `positions` | ✅ CASCADE (user_id) | `portfolio_id` RESTRICT FK cascade'i **bloklamıyor** — referans veren satırlar aynı işlemde siliniyor (empirik doğrulandı, Sprint 30) |
+| `transactions` | ✅ CASCADE (user_id) | aynı RESTRICT senaryosu — bloklamıyor |
+| `splits` | ✅ CASCADE (user_id) | |
+| `profiles` | ✅ CASCADE (user_id) | |
+| `portfolios` | ✅ CASCADE (user_id) | |
+| `watchlist` | ✅ CASCADE (user_id) | |
+| `follows` | ✅ CASCADE (follower_id + following_id) | iki FK de CASCADE |
+| `portfolio_activities` | ✅ CASCADE (user_id) | |
+| `feedback` | ✅ CASCADE (user_id) | |
+| `price_cache` | ⊘ paylaşımlı — silinmez | user-scope değil; ticker-keyed |
+| `fund_cache` | ⊘ paylaşımlı — silinmez | user-scope değil |
+| `adr_bist_map` | ⊘ paylaşımlı — silinmez | user-scope değil |
+| `tefas_funds` | ⊘ paylaşımlı — silinmez | user-scope değil |
+
+**9 user-scope tablonun hepsi CASCADE → migration gerekmedi.** Empirik doğrulama (Sprint 30, 2026-06-28): throwaway user'da portfolio+position+transaction+watchlist+profile eklendi → `delete-account` çağrıldı → tüm tablolarda 0 satır + `auth.users` 0. Negatif testler: no-token→401, GET→405, valid JWT→200.
+
 ## pg_cron
 
 - `refresh-price-cache-6h` — `0 */6 * * *`

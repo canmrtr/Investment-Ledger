@@ -20,7 +20,9 @@ for f in \
   fetch-prices-edge-function.js \
   refresh-price-cache-edge-function.js \
   parse-transaction-edge-function.js \
-  fetch-fundamentals-edge-function.js
+  fetch-fundamentals-edge-function.js \
+  sync-splits-edge-function.js \
+  delete-account-edge-function.js
 do
   if node --check "$f" 2>&1; then
     echo "✅ node --check  $f"
