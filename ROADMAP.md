@@ -304,7 +304,7 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 - [x] ~~**Support & Feature Request iletişim altyapısı**~~ `[M]` `[P2]` `Sprint-28` `2026-06-21` ✅ — (a) seçildi: in-app form → Supabase `feedback` tablosu. `FeedbackSection` (Hata/Öneri + metin, RLS own-insert, `rls-empirical-tester` 14/14). Canlıda uçtan uca doğrulandı. `→ migration 20260621000000_feedback.sql, FeedbackSection.js` (commit `aba0cc5`)
 
-- [ ] **Hesap ekranı genişletme** `[M→S-M]` `[P2]` `Sprint-30 (headline)` — **Scope düzeltmesi (2026-06-28)**: şifre değiştirme / email değiştirme (verifikasyonlu) / avatar / bio / username `AccountSection.js`'te **zaten canlıda**. Kalan tek iş = **hesap silme (cascade delete)** → App Store önkoşulu (Apple Guideline 5.1.1). Gerektirir: `delete-account` edge function (service_role admin delete, client'tan yapılamaz) + cascade kapsam denetimi (profiles/splits FK teyidi) + Settings "Tehlikeli Bölge" type-to-confirm UI. Plan: `sprints/sprint-30.md`.
+- [x] ~~**Hesap ekranı genişletme**~~ `[M→S-M]` `[P2]` `Sprint-30` `2026-06-28` ✅ — **Scope düzeltmesi**: şifre/email (verifikasyonlu)/avatar/bio/username `AccountSection.js`'te zaten canlıydı; kalan tek iş = **hesap silme (cascade)** → App Store önkoşulu (Apple Guideline 5.1.1) kapandı. (1) `delete-account` edge fn (service_role `admin.deleteUser`, token-uid IDOR-safe, `--no-verify-jwt` + içeride JWT; `edge-reviewer` GO; deploy + e2e doğrulandı); (2) cascade kapsam denetimi — 9 user-scope tablonun hepsi `ON DELETE CASCADE`, `splits`+RESTRICT-FK senaryosu empirik teyitli, migration gerekmedi (`SCHEMA.md` matrisi); (3) Settings "Tehlikeli Bölge" kırmızı kartı — type-to-confirm "SİL" + `confirm_` danger + `clearUserLocalKeys`+`signOut`; `client-security-auditor` GO. `→ delete-account-edge-function.js, SCHEMA.md, AccountSection.js`
 
 ---
 
@@ -534,17 +534,18 @@ Sprint 4–24 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 
 ---
 
-**Sprint 30 = Hesap Silme (Cascade) — App Store önkoşulu** (2026-06-28 → 2026-07-11) — **📋 PLANLANDI**. Plan: `sprints/sprint-30.md`.
+**Sprint 30 = Hesap Silme (Cascade) — App Store önkoşulu** (2026-06-28 → 2026-07-11) — **✅ KOD TAMAM (3/3), canlı UI eyeball push sonrası**. Plan: `sprints/sprint-30.md`.
 
 **Goal**: Kullanıcı hesabını tamamen silebilir — tüm verisi geri dönüşsüz temizlenir + `auth.users` kaldırılır; Apple Guideline 5.1.1 zorunluluğu kapanır.
 
 > **Scope düzeltmesi**: "Hesap ekranı genişletme"nin şifre/email/avatar/username parçaları `AccountSection.js`'te **zaten canlıda**. Kalan tek iş = hesap silme. Item `[M]` → fiilen `[S-M]`.
 
-1. ⬜ **`delete-account` edge function** `[S][P2]` (headline) — service_role admin delete; token'daki `uid` (IDOR yok); `edge-reviewer` GO. `→ supabase/functions/delete-account`
-2. ⬜ **Cascade kapsam denetimi + boşluk migration** `[S][P2]` — profiles/splits FK teyidi; `rls-empirical-tester` ile gerçek sil-doğrula (13 tabloda 0 satır). `→ SCHEMA.md, migration`
-3. ⬜ **Settings "Tehlikeli Bölge" UI** `[S][P2]` — type-to-confirm "SİL" guard + signOut; `client-security-auditor`. `→ AccountSection.js`
+1. ✅ **`delete-account` edge function** `[S][P2]` (headline) — service_role `admin.deleteUser`; token-uid (IDOR yok); `--no-verify-jwt`+içeride JWT; `edge-reviewer` GO; **deploy + e2e doğrulandı** (no-token→401, GET→405, valid→200, full cascade). `→ supabase/functions/delete-account` (commit `9c9fe4f`)
+2. ✅ **Cascade kapsam denetimi** `[S][P2]` — 9 user-scope tablo hepsi CASCADE; `splits`+RESTRICT-FK empirik teyitli; **migration gerekmedi**; `SCHEMA.md` kapsam matrisi. `→ SCHEMA.md` (commit `9c9fe4f`)
+3. ✅ **Settings "Tehlikeli Bölge" UI** `[S][P2]` — en altta kırmızı kart; type-to-confirm "SİL" + `confirm_` danger + `clearUserLocalKeys`+`signOut`; `client-security-auditor` GO + 2 hardening. `→ AccountSection.js`
 
 **Out of scope**: soft-delete/geri-al, silme onay e-postası (Resend), avatar resim upload, altın premium (Sprint 29 park).
+**Kalan**: canlı UI eyeball (push sonrası `canmrtr.github.io` — kırmızı kart + type-to-confirm guard).
 
 **Sprint 31+ aday havuzu (her sprint başında gözden geçir):**
 

@@ -14,6 +14,11 @@ function AccountSection({user,profile,flash_,confirm_,onSaved}){
   const [profilePublic,setProfilePublic]=useState(false);
   const [profileBusy,setProfileBusy]=useState(false);
 
+  // Hesap silme (Tehlikeli Bölge) state
+  const [delOpen,setDelOpen]=useState(false);
+  const [delConfirm,setDelConfirm]=useState("");
+  const [delBusy,setDelBusy]=useState(false);
+
   const saveProfile=async()=>{
     if(bioVal.length>160){flash_("Bio 160 karakteri geçemez","err");return;}
     setProfileBusy(true);
@@ -31,6 +36,34 @@ function AccountSection({user,profile,flash_,confirm_,onSaved}){
   };
 
   const cancel=()=>{setEditing(null);setPw1("");setPw2("");setEmail("");setUname("");};
+
+  // Hesabı kalıcı sil: delete-account edge fn → auth.users + FK CASCADE ile
+  // tüm kullanıcı-scope veri silinir; ardından local key temizliği + signOut.
+  // İki kapı: type-to-confirm "SİL" + confirm_ danger dialog.
+  const deleteAccount=async()=>{
+    // "SİL" Türkçe noktalı büyük İ (U+0130) içerir — ASCII "SIL"e indirgeme;
+    // karakter farkı kazara silmeye karşı ek bariyer (label ile birebir eşleşir).
+    if(delConfirm!=="SİL")return;
+    if(!(await confirm_("Hesabın ve tüm verin (pozisyon, işlem, portföy, watchlist) kalıcı olarak silinecek. Bu işlem geri alınamaz.",{okLbl:"Hesabı Sil",cancelLbl:"Vazgeç",danger:true})))return;
+    setDelBusy(true);
+    try{
+      const r=await edgeCallAuth("delete-account",{});
+      if(!r.ok){
+        const d=await r.json().catch(()=>({}));
+        flash_(d.error||"Hesap silinemedi","err");
+        setDelConfirm(""); // başarısızlıkta tekrar denemek için "SİL" yeniden yazılmalı
+        setDelBusy(false);
+        return;
+      }
+      // Başarı: local key temizliği + signOut → auth listener login ekranına döner.
+      // Component unmount olacağı için setDelBusy(false) çağrılmaz.
+      clearUserLocalKeys();
+      await sb.auth.signOut();
+    }catch(e){
+      flash_("Hesap silinemedi","err");
+      setDelBusy(false);
+    }
+  };
 
   const savePw=async()=>{
     if(pw1.length<6){flash_("Şifre en az 6 karakter olmalı","err");return;}
@@ -204,6 +237,31 @@ function AccountSection({user,profile,flash_,confirm_,onSaved}){
           </div>
         </div>
       )}
+
+      {/* Tehlikeli Bölge — hesap silme */}
+      <div style={{marginTop:18,border:"1px solid var(--err)",borderRadius:8,background:"rgba(255,51,102,0.06)",padding:"14px 16px"}}>
+        <div style={{fontSize:11,color:"var(--err)",textTransform:"uppercase",letterSpacing:".05em",fontWeight:600,marginBottom:6}}>Tehlikeli Bölge</div>
+        {!delOpen?(
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+            <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.5,flex:"1 1 200px"}}>
+              Hesabını kalıcı olarak sil. Tüm pozisyon, işlem, portföy ve watchlist verin geri dönüşsüz silinir.
+            </div>
+            <button className="btn-danger-out btn-md" onClick={()=>setDelOpen(true)} style={{flexShrink:0}}>Hesabı Sil</button>
+          </div>
+        ):(
+          <div>
+            <div style={{fontSize:13,color:"var(--text)",marginBottom:10,lineHeight:1.5}}>
+              Bu işlem <strong>geri alınamaz</strong>. Tüm verin kalıcı silinecek ve oturumun kapanacak.
+            </div>
+            <div className="kk" style={{marginBottom:4}}>Onaylamak için <strong style={{color:"var(--err)"}}>SİL</strong> yaz</div>
+            <input className="finp sm" value={delConfirm} onChange={e=>setDelConfirm(e.target.value)} placeholder="SİL" disabled={delBusy} style={{marginBottom:10}}/>
+            <div className="brow">
+              <button className="btn-danger-out btn-md" onClick={deleteAccount} disabled={delConfirm!=="SİL"||delBusy}>{delBusy?"Siliniyor...":"Hesabı Kalıcı Sil"}</button>
+              <button className="btn-md" onClick={()=>{setDelOpen(false);setDelConfirm("");}} disabled={delBusy}>İptal</button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -47,3 +47,18 @@
 - Silme sonrası Supabase'de doğrula: `auth.users` + 13 tablonun hepsinde o `uid`'ye ait **0 satır** (`rls-empirical-tester` veya manuel `execute_sql` SELECT count).
 - Negatif test: anon/eksik JWT ile `delete-account` çağrısı → 401; başkasının user_id'sini gövdede göndermek → yine sadece token sahibinin silinmesi (IDOR yok).
 - Production'da (`canmrtr.github.io`) UI eyeball: kırmızı bölge görünür, type-to-confirm guard çalışıyor, yanlış metinle buton pasif.
+
+---
+
+## Retro (2026-06-28) — ✅ KOD TAMAM 3/3, tek günde kapandı
+
+**Ne çıktı:**
+- **#1 edge fn** — `delete-account` yazıldı, `edge-reviewer` GO (1 LOW env-guard fix), deploy edildi, **canlı e2e doğrulandı**: throwaway user'larla no-token→401, GET→405, valid JWT→200 `{ok:true}`; full cascade (portfolio+position+transaction+watchlist+profile → hepsi 0). Commit `9c9fe4f`.
+- **#2 cascade denetimi** — Katalog (`pg_constraint`) ile 9 user-scope tablonun hepsi `ON DELETE CASCADE` teyitli; **`splits` + RESTRICT-FK senaryosu** (positions/transactions → portfolios) empirik olarak bloklanmadığı kanıtlandı → **migration gerekmedi**. `SCHEMA.md` kapsam matrisi yazıldı. Commit `9c9fe4f`.
+- **#3 UI** — `AccountSection.js` en altında "Tehlikeli Bölge" kırmızı kartı; type-to-confirm "SİL" (U+0130) + `confirm_` danger = iki kapı; `clearUserLocalKeys`+`signOut`. `client-security-auditor` GO + 2 LOW hardening uygulandı (başarısızlıkta `delConfirm` reset; "SİL" Unicode notu). App.js'e dokunulmadı (deps global/prop).
+
+**Sürpriz:** Roadmap item "hesap ekranı genişletme" sanılandan %80 daha küçüktü — şifre/email/avatar/username zaten canlıydı. Gerçek iş yalnız hesap silmeydi (`[M]`→`[S-M]`). Erken kod okuması bunu yakaladı, sprint scope'u küçüldü.
+
+**Kalan:** canlı UI eyeball (Can push sonrası hard-reload ile). Backend zaten canlıda + doğrulanmış; risk düşük.
+
+**Kararlar (Can):** type-to-confirm = "SİL"; yerleşim = en altta ayrı kırmızı kart.
