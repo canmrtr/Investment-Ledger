@@ -530,7 +530,7 @@ Sprint 4–24 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 
 **⚠ Açık karar (spike)**: premium tanımı (A/B/C) — detay `sprints/sprint-29.md`.
 
-**Sprint 29 = Altın işçilik premium — ⏸ PARK EDİLDİ** (2026-06-28, Can kararı). Plan hazır (`sprints/sprint-29.md`); Can yeniden önceliklendirene kadar bekler.
+**Sprint 29 = Altın işçilik premium — ⏸ PARK EDİLDİ (2×)**. İlk park 2026-06-28 (Sprint 30 önceliği); **2. park 2026-07-08 spike sonrası**: risk-first spike Can'ın canlı GOLD pozisyonlarının **hepsinin ons külçe olduğunu** buldu (sikke yok) → işçilik primi feature'ı oz/gram'ı hariç tuttuğu için Can'ın portföyünde hiçbir şey göstermez. Premise geçersiz. Sikke eklenmesi / (B) külçe reframe'i tetikleyebilir. Detay: `sprints/sprint-29.md` "Spike Sonucu".
 
 ---
 

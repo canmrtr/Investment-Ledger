@@ -44,6 +44,15 @@
 - Reşat/Ata birimi eklenip pozisyon oluşturulabiliyor + prim doğru hesaplanıyor.
 - **Canlı doğrulama**: edge/FX'e bağlı olduğundan push sonrası `canmrtr.github.io`'da (localhost CORS edge'i bloklar — Lessons.md 2026-06-21).
 
+## Spike Sonucu (2026-07-08) — ⏸ TEKRAR PARK EDİLDİ
+
+Risk-first spike altyapıyı doğruladı **ama premise'i çürüttü**:
+- ✅ `GOLD_UNITS` değerleri standart/doğru; saf değer formülü (`XAU_spot × goldOzPerUnit`) hazır; GOLD=USD → priceCur trap yok.
+- 🔴 **Can'ın canlı GOLD pozisyonları sikke değil — hepsi ons külçe**: XAU oz 14.58 @ $1335.71 · XAU null-unit 2 @ $4702.61 · XAG gümüş 100. Hiç çeyrek/Cumhuriyet/Reşat yok.
+- İşçilik primi feature'ı oz/gram'ı **kasıtlı hariç tutar** (külçede işçilik yok) → feature tam çalışsa bile Can'ın portföyünde **hiçbir şey göstermez**. "Altın %41 ama işçilik görünmüyor" premise'i geçersiz: o %41 külçe, işçilik primi zaten yok.
+
+**Karar (Can, 2026-07-08)**: Sprint 29 tekrar park. Anlık değer katmıyor. Sikke altın eklenmesi veya (B) külçe "spot vs ödenen" reframe'i gelecekte tetikleyebilir. Feature kodu değersiz değil (multi-user'da sikke tutan kullanıcı için değerli) ama Can'ın kendi daily-driver'ı için öncelik değil.
+
 ## Notlar / Bağımlılıklar
 - **Frontend-ağırlıklı** — mevcut `GOLD_UNITS`/`goldOzPerUnit`/XAU spot/`fxRates.USDTRY` yeniden kullanılır; yeni edge/tablo beklenmez. (C) seçilirse historical fetch gerekir (o zaman edge dokunulur → `edge-reviewer`).
 - **UI işi** → `ui-builder` skill (prim satırı + birim picker). Türkçe, mevcut tasarım sistemi.
