@@ -547,9 +547,19 @@ Sprint 4–24 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 **Out of scope**: soft-delete/geri-al, silme onay e-postası (Resend), avatar resim upload, altın premium (Sprint 29 park).
 **Kalan**: canlı UI eyeball (push sonrası `canmrtr.github.io` — kırmızı kart + type-to-confirm guard).
 
-**Sprint 31+ aday havuzu (her sprint başında gözden geçir):**
+**Sprint 31 = Görselleştirme polish** (2026-07-08 → 2026-07-21) — **📋 PLANLANDI**. Plan: `sprints/sprint-31.md`. (Can seçti 2026-07-08; premise-check: broker verisi zengin/gerçek.)
 
-1. **Altın işçilik premium (Sprint 29 park)** `[M][P2]` — Can yeniden önceliklendirirse; plan hazır.
-2. **Altın gerçek tarihsel işçilik (C)** `[L][P3]` — alım-tarihi XAU spot fetch; Sprint 29 (B/A) MVP'sinden sonra.
-3. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; tek başına değersiz.
-4. **Görselleştirme polish** `[S-M][P2]` — Broker Dağılımı pie · Sparkline interactivity · sticky `.fbar`.
+**Goal**: Günlük dashboard/analiz daha okunur — aracı kurum dağılımı tek bakışta, sparkline'da tarih/değer, filtre bar scroll'da sabit. Frontend-only, yeni veri/edge yok.
+1. ⬜ **Broker Dağılımı Pie** `[S][P2]` (headline) — AnalysisTab collapsible; `positions.broker` MV-ağırlıklı; **case-insensitive** (QNB/Qnb tek dilim) + boş→"Atanmamış"; `buildSlicesPath`+`.pie-row` reuse. `→ AnalysisTab.js`
+2. ⬜ **Sparkline hover tooltip** `[S][P2]` — Dashboard sparkline hover'da tarih+değer + dikey kılavuz; `TefasNavSparkline` pattern referans. `→ App.js`
+3. ⬜ **Sticky `.fbar`** `[S][P2]` — Dashboard filtre bar `position:sticky; top:--topbar-h`. `→ index.html, App.js`
+
+**Out of scope**: pie→stacked bar migrasyonu, segment selection, broker DB merge (yalnız görüntüde normalize), gerçek tarihsel MV sparkline.
+
+**Sprint 32+ aday havuzu (her sprint başında gözden geçir):**
+
+1. **Bağlamsal Mikro Öğrenme Katmanı** `[M][P1]` — en yüksek öncelik etiketli başlanmamış item; inline kavram açıklamaları (F/K, XIRR); Katman 3 köprüsü. (2026-07-08 aday olarak sunuldu.)
+2. **Satılan Pozisyon Realized P&L Özeti** `[M][P2]` — yıl bazlı kapatılmış-pozisyon kâr/zarar; aktif trader için somut. (2026-07-08 aday.)
+3. **Altın işçilik premium (Sprint 29 park 2×)** `[M][P2]` — sikke altın eklenirse VEYA külçe "spot vs ödenen" reframe'i ile tetiklenir; plan hazır (spike premise'i çürüttü).
+4. **"Tam Detay" gerçek tam-detay render** `[M][P2]` — Social Faz 2 bağımlısı; tek başına değersiz.
+5. **Altın gerçek tarihsel işçilik (C)** `[L][P3]` — alım-tarihi XAU spot fetch; ancak sikke altın varsa anlamlı.
