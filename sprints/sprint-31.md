@@ -53,3 +53,18 @@
 - **UI işi** → `ui-builder` skill. Türkçe, mevcut tasarım sistemi (TYPE_COLORS broker'a uymaz → nötr palet).
 - **priceCur kuralı**: broker MV toplamı display cur'a `allDisp` normalize pattern'i ile çevrilir (natural-cur karıştırma → ~38x trap; Lessons 2026-06-04).
 - **`--topbar-h`**: yoksa oluştur; hem topbar hem sticky `.fbar` referans alsın (magic px değil).
+
+---
+
+## Retro (2026-07-10) — ✅ KOD TAMAM 3/3
+
+**Premise-check her item'da işe yaradı (gold dersinin devamı):**
+- **#1 Broker** ✅ — canlı broker verisi zengin (Akbank/QNB/Midas/YKB + 8 boş) → gerçek dağılım. Mevcut dağılım kartları aslında **stacked-bar** (SVG pie değil); broker kartı sektör kartını klonladı (DRY). Case-merge (QNB/Qnb), boş→"Atanmamış", `mvDisp` reuse. `order:12` + DOM-after-sektör tie-break ile üç dağılım kartına bitişik render. `→ AnalysisTab.js`
+- **#2 Sparkline** ⚠→✅ — premise-check hedefi çürüttü: **dashboard sparkline'ı 2026-04-29'da kaldırılmış** (`Login.js:51`), gerçek versiyonu `portfolio_snapshots` [M] ertelenmiş. Can kararı: hover'ı var olan **TefasNavSparkline**'a ekle (2 TEFAS fonu tutuyor). Dikey kılavuz (SVG line) + nokta/tooltip (HTML overlay → viewBox `preserveAspectRatio="none"` distortion'ından kaçın); mouse+touch; hook early-return öncesine taşındı. `→ TickerDetailTab.js`
+- **#3 Sticky fbar** ✅ — premise-check: Dashboard `.fbar` fiilen **period selector** (roadmap "asset-type" etiketi imprecise). `.fbar-sticky` modifier ile Dashboard'a scope'landı; AnalysisTab `.fbar` static (out-of-scope korundu). `--topbar-h` token; #shell overflow yok → sticky feasible. `→ index.html, App.js`
+
+**Kalıp:** Üç item'ın ikisinde premise-check (broker verisi var mı? sparkline var mı?) gerçeği plan varsayımından ayırdı — biri onaylandı, biri redirect gerektirdi. Gold + bu sprint: **"kod yazmadan önce hedefin canlı veride var olduğunu doğrula"** artık standart ilk adım.
+
+**Kalan:** canlı eyeball (push sonrası). Pür frontend, SW `.js` network-first → index.html değişti ama... **bkz. aşağıda SW notu.**
+
+**⚠ SW bump kontrolü:** index.html **değişti** (`--topbar-h` + `.fbar-sticky` CSS). `.js` network-first ama index.html (shell) **cache-first** → dönen kullanıcı stale shell alabilir. Ancak bu değişiklik yalnız CSS (yeni `<script src>` yok) → stale shell yeni CSS'i kaçırır ama ReferenceError üretmez (script tag seti aynı). Yine de GOTCHAS kuralına göre **SW shell cache bump'ı (v4→v5) güvenli taraf** — push öncesi yapılmalı.

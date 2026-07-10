@@ -116,11 +116,11 @@ Platform yörüngesi: (1) Solo web app → (2) Multi-user SaaS → (3) Native mo
 
 ## Görselleştirme
 
-- [ ] **Broker Dağılımı Pie Chart** `[S]` `[P2]` — AnalysisTab Varlık/Bölge/Sektör yanına "Aracı Kurum Dağılımı" collapsible; `positions.broker` alanından, mevcut pie altyapısı.
-- [ ] **Sparkline interactivity** `[S]` `[P2]` — hover'da değer/tarih tooltip; SVG `<circle>` cursor + dikey kılavuz çizgi.
+- [x] ~~**Broker Dağılımı Pie Chart**~~ `[S]` `[P2]` `Sprint-31` `2026-07-10` ✅ — AnalysisTab'da "Aracı Kurum Dağılımı" collapsible stacked-bar+legend (order:12, sektörden hemen sonra); `positions.broker` MV-ağırlıklı; case-insensitive gruplama (QNB/Qnb tek dilim, etiket=en yüksek tek-katkılı yazım) + boş→"Atanmamış"; CASH/DEPOSIT hariç; `mvDisp`+`.pie-row`/`.pie-sw` reuse, nötr broker paleti. `→ AnalysisTab.js`
+- [x] ~~**Sparkline interactivity**~~ `[S]` `[P2]` `Sprint-31` `2026-07-10` ✅ — TefasNavSparkline'a hover: dikey kılavuz çizgi (SVG `<line>` dashed) + nokta (HTML overlay, viewBox distortion'dan kaçınır) + tarih/NAV tooltip; mouse + touch. (Not: dashboard portföy sparkline'ı 2026-04-29'da kaldırılmıştı; gerçek tarihsel versiyon `portfolio_snapshots` [M] ertelenmiş — hover var olan tek line-chart'a eklendi.) `→ TickerDetailTab.js`
 - [ ] **Pie chart segment selection** `[M]` `[P2]` — slice hover/select; legend tıklanabilir; seçili slice 2px outline + ortada toplam label.
 - [ ] **AnalysisTab: Dağılım kartları pie → stacked bar** `[M]` `[P2]` — Varlık/Bölge/Sektör kartlarındaki pie SVG → tek yatay stacked horizontal bar; legend/liste/yüzdeler collapsible kalır. `buildStackedBar` render helper; önce `buildSlicesPath` kullanım yerlerini denetle.
-- [ ] **Dashboard: Varlık türü filtre bar'ı sticky** `[S]` `[P2]` — `.fbar` chip bar `position:sticky; top:<topbar-height>px`; topbar yüksekliği `--topbar-h` CSS custom property ile yönetilmeli.
+- [x] ~~**Dashboard: filtre bar'ı sticky**~~ `[S]` `[P2]` `Sprint-31` `2026-07-10` ✅ — Dashboard period-selector `.fbar`'a `.fbar-sticky` (`position:sticky; top:var(--topbar-h); z-index:50`); `--topbar-h:52px` token eklendi (topbar + sticky tek kaynak). AnalysisTab `.fbar` bilinçli static (scope). (Not: Dashboard `.fbar` fiilen period selector; asset-type filtre değil.) `→ index.html, App.js`
 - [ ] **Fundamental Ratio Trendi (5Y Grafik)** `[M]` `[P2]` — TickerDetailTab'da P/E, P/S, ROE için yıllık trend SVG; FMP `/stable/ratios` annual array zaten mevcut. `TrendMiniChart` pattern yeniden kullanılır.
 - [ ] **Portföy Değer Geçmişi (Tarihsel MV)** `[M]` `[P2]` — `portfolio_snapshots` tablosu; günlük kapanışta cron snapshot; Dashboard Sparkline gerçek geçmişten beslenir. **Uzun vade — Vite geçişinden önce değil.**
 
@@ -547,14 +547,15 @@ Sprint 4–24 ✅ | Sprint 24 = TEFAS Yatırım Fonu Entegrasyonu ✅ kapandı (
 **Out of scope**: soft-delete/geri-al, silme onay e-postası (Resend), avatar resim upload, altın premium (Sprint 29 park).
 **Kalan**: canlı UI eyeball (push sonrası `canmrtr.github.io` — kırmızı kart + type-to-confirm guard).
 
-**Sprint 31 = Görselleştirme polish** (2026-07-08 → 2026-07-21) — **📋 PLANLANDI**. Plan: `sprints/sprint-31.md`. (Can seçti 2026-07-08; premise-check: broker verisi zengin/gerçek.)
+**Sprint 31 = Görselleştirme polish** (2026-07-08 → 2026-07-21) — **✅ KOD TAMAM (3/3), canlı eyeball push sonrası**. Plan: `sprints/sprint-31.md`. (Can seçti 2026-07-08; her item premise-check edildi.)
 
 **Goal**: Günlük dashboard/analiz daha okunur — aracı kurum dağılımı tek bakışta, sparkline'da tarih/değer, filtre bar scroll'da sabit. Frontend-only, yeni veri/edge yok.
-1. ⬜ **Broker Dağılımı Pie** `[S][P2]` (headline) — AnalysisTab collapsible; `positions.broker` MV-ağırlıklı; **case-insensitive** (QNB/Qnb tek dilim) + boş→"Atanmamış"; `buildSlicesPath`+`.pie-row` reuse. `→ AnalysisTab.js`
-2. ⬜ **Sparkline hover tooltip** `[S][P2]` — Dashboard sparkline hover'da tarih+değer + dikey kılavuz; `TefasNavSparkline` pattern referans. `→ App.js`
-3. ⬜ **Sticky `.fbar`** `[S][P2]` — Dashboard filtre bar `position:sticky; top:--topbar-h`. `→ index.html, App.js`
+1. ✅ **Broker Dağılımı** `[S][P2]` (headline) — AnalysisTab collapsible stacked-bar+legend (order:12, sektörden sonra); `positions.broker` MV-ağırlıklı; **case-insensitive** (QNB/Qnb tek dilim, etiket=en yüksek katkı) + boş→"Atanmamış"; `mvDisp`+`.pie-row` reuse. `→ AnalysisTab.js`
+2. ✅ **Sparkline hover tooltip** `[S][P2]` — **redirect**: dashboard sparkline 2026-04-29'da kaldırılmıştı → var olan **TefasNavSparkline**'a (Can 2 TEFAS fonu tutuyor) hover: dikey kılavuz + nokta + tarih/NAV tooltip (mouse+touch). `→ TickerDetailTab.js`
+3. ✅ **Sticky `.fbar`** `[S][P2]` — Dashboard period selector `.fbar-sticky` (`position:sticky; top:var(--topbar-h)`); `--topbar-h` token eklendi (topbar + sticky tek kaynak). AnalysisTab `.fbar` static kalır (scope). `→ index.html, App.js`
 
-**Out of scope**: pie→stacked bar migrasyonu, segment selection, broker DB merge (yalnız görüntüde normalize), gerçek tarihsel MV sparkline.
+**Out of scope**: pie→stacked bar migrasyonu, segment selection, broker DB merge (yalnız görüntüde normalize), gerçek tarihsel MV sparkline (portfolio_snapshots [M] ertelenmiş).
+**Kalan**: canlı eyeball (push sonrası `canmrtr.github.io` — broker dilimleri + TEFAS hover + sticky bar).
 
 **Sprint 32+ aday havuzu (her sprint başında gözden geçir):**
 

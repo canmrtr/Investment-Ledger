@@ -369,6 +369,8 @@ const fmtCompact = (n) => {
 // null = henüz yüklenmedi (hiçbir şey render etme); [] / <2 nokta = "geçmiş oluşuyor"
 // zarif boş durumu. NAV küçük ondalık (0.50, 14.25) → min/max 4 hane gösterilir.
 function TefasNavSparkline({series,sym}){
+  // Hover state — hook rules gereği early-return'lerden ÖNCE tanımlanmalı.
+  const [hoverI,setHoverI]=useState(null);
   if(series==null)return null;  // loading — caller TEFAS için her zaman render eder, burada eler
   if(series.length<2)return(
     <div style={{padding:"12px 14px",background:"var(--bg2)",borderRadius:8,border:"0.5px solid var(--border)",marginBottom:14,fontSize:11,color:"var(--text3)",textAlign:"center"}}>
@@ -386,16 +388,45 @@ function TefasNavSparkline({series,sym}){
   const up=last>=first;
   const col=up?"var(--ok)":"var(--err)";
   const areaPts=`${pad},${H-pad} ${pts} ${W-pad},${H-pad}`;
+  // Hover: clientX → en yakın veri noktası indexi (viewBox preserveAspectRatio="none"
+  // yatayda lineer scale eder, o yüzden yalnız oran yeterli).
+  const pickIdx=clientX=>e=>{
+    const rect=e.currentTarget.getBoundingClientRect();
+    if(!rect.width)return;
+    const rx=Math.max(0,Math.min(1,(clientX(e)-rect.left)/rect.width));
+    const i=Math.round((rx*W-pad)/((W-2*pad))*(series.length-1));
+    setHoverI(Math.max(0,Math.min(series.length-1,i)));
+  };
+  const onMove=pickIdx(e=>e.clientX);
+  const onTouch=pickIdx(e=>e.touches[0].clientX);
+  const hx=hoverI!=null?sx(hoverI):0, hy=hoverI!=null?sy(series[hoverI].c):0;
+  const leftPct=(hx/W)*100;
+  const tipShift=leftPct<20?"0%":leftPct>80?"-100%":"-50%";
   return(
     <div style={{padding:"10px 14px",background:"var(--bg2)",borderRadius:8,border:"0.5px solid var(--border)",marginBottom:14}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,marginBottom:8,fontSize:12,flexWrap:"wrap"}}>
         <strong style={{color:"var(--text)",fontWeight:500}}>NAV Trendi <span style={{color:"var(--text3)",fontWeight:400,fontSize:11}}>(~6 ay)</span></strong>
         <span className={"mono"+(up?" ok":" err")} style={{fontWeight:600,fontSize:12}}>{fmtP(chgPct)}</span>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:H,display:"block"}} preserveAspectRatio="none">
-        <polygon points={areaPts} fill={col} opacity="0.08"/>
-        <polyline points={pts} fill="none" stroke={col} strokeWidth="1.5" vectorEffect="non-scaling-stroke"/>
-      </svg>
+      <div style={{position:"relative"}}
+           onMouseMove={onMove} onMouseLeave={()=>setHoverI(null)}
+           onTouchStart={onTouch} onTouchMove={onTouch} onTouchEnd={()=>setHoverI(null)}>
+        <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:H,display:"block"}} preserveAspectRatio="none">
+          <polygon points={areaPts} fill={col} opacity="0.08"/>
+          <polyline points={pts} fill="none" stroke={col} strokeWidth="1.5" vectorEffect="non-scaling-stroke"/>
+          {hoverI!=null&&(
+            <line x1={hx} y1={pad} x2={hx} y2={H-pad} stroke="var(--text3)" strokeWidth="1" strokeDasharray="2 2" vectorEffect="non-scaling-stroke"/>
+          )}
+        </svg>
+        {hoverI!=null&&(
+          <>
+            <div style={{position:"absolute",left:`${leftPct}%`,top:hy,width:7,height:7,borderRadius:"50%",background:col,border:"1.5px solid var(--bg2)",transform:"translate(-50%,-50%)",pointerEvents:"none"}}/>
+            <div style={{position:"absolute",left:`${leftPct}%`,top:-4,transform:`translateX(${tipShift})`,background:"var(--bg4)",border:"0.5px solid var(--border)",borderRadius:5,padding:"2px 6px",fontSize:10,whiteSpace:"nowrap",pointerEvents:"none",color:"var(--text)",fontFamily:"var(--font-numeric)",zIndex:2}}>
+              {fmtDateTR(series[hoverI].t)} · {sym}{fmt(series[hoverI].c,4)}
+            </div>
+          </>
+        )}
+      </div>
       <div style={{display:"flex",justifyContent:"space-between",marginTop:6,fontSize:10,color:"var(--text3)"}}>
         <span>{fmtDateTR(series[0].t)} · {sym}{fmt(min,4)}</span>
         <span>{sym}{fmt(max,4)} · {fmtDateTR(series[series.length-1].t)}</span>

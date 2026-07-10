@@ -24,6 +24,7 @@
       --ok:#00d97e;--err:#ff3366;--info:#C9A84C;--warn:#ffb800;
       --on-accent:#0D1117; /* text/icon on gold fills — dark theme gold is light, so near-black (≈8.4:1) */
       --r:10px;--rl:16px;
+      --topbar-h:52px; /* single source for topbar height — #topbar + sticky .fbar-sticky reference (Sprint 31) */
       --card-pad:14px 16px; /* section card padding token (Sprint 25 #7) — dense .card base stays 12px 14px */
       --font-display:'DM Serif Display',serif;--font-body:'DM Sans',sans-serif;--font-numeric:'DM Mono',monospace;
     }
@@ -40,7 +41,7 @@
     body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-weight:400;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;min-height:100vh;}
     #app{display:contents;}
     #shell{display:flex;flex-direction:column;min-height:100vh;}
-    #topbar{height:52px;background:var(--topbar-bg,rgba(0,0,0,0.85));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:100;}
+    #topbar{height:var(--topbar-h);background:var(--topbar-bg,rgba(0,0,0,0.85));backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;position:sticky;top:0;z-index:100;}
     .topbar-left{display:flex;align-items:center;gap:9px;margin-right:28px;}
     .hamburger-btn{display:flex;flex-direction:column;justify-content:space-between;width:18px;height:13px;background:transparent;border:none;cursor:pointer;padding:6px;box-sizing:content-box;border-radius:6px;flex-shrink:0;}
     .hamburger-btn span{display:block;height:2px;background:var(--info);border-radius:1px;transition:transform .15s,opacity .15s;}
@@ -210,6 +211,9 @@
     /* Horizontally-scrollable filter chip row (Dashboard + AnalysisTab global filters) */
     .fbar{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;padding-bottom:2px;}
     .fbar::-webkit-scrollbar{display:none;}
+    /* Sticky variant (Sprint 31) — sticks just below topbar on scroll. Scoped to
+       Dashboard usage via extra class; AnalysisTab .fbar stays static (out of scope). */
+    .fbar-sticky{position:sticky;top:var(--topbar-h);z-index:50;background:var(--bg);padding-top:8px;border-bottom:1px solid var(--border);}
     .fbar .mtab{flex:0 0 auto;min-width:auto;display:flex;align-items:center;gap:4px;white-space:nowrap;}
     /* Modal */
     .mdl-bd{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;z-index:200;padding:16px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);animation:fadeIn .15s ease;}

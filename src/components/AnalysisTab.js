@@ -290,6 +290,7 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
   });
   const [etfCwBusy, setEtfCwBusy] = useState(false);
   const [sectorPieOpen,setSectorPieOpen]=useState(true);
+  const [brokerPieOpen,setBrokerPieOpen]=useState(true);
   const [sectorMetaBusy,setSectorMetaBusy]=useState(false);
   const [sectorMetaTick,setSectorMetaTick]=useState(0); // inc to force re-render after meta fetch
   // Auto-fetch sector meta on mount for US_STOCK/BIST/FUND positions missing meta
@@ -627,6 +628,33 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
       key, label: REGION_META[key]?.label || key, value, color: REGION_META[key]?.color || "#666"
     })).sort((a, b) => b.value - a.value);
     arr.forEach(s => s.frac = total > 0 ? s.value / total : 0);
+    return { arr, total };
+  })();
+
+  // Broker (aracı kurum) slices — MV-ağırlıklı, display cur. Case-insensitive
+  // gruplama ("QNB"/"Qnb" tek dilim); boş broker → "Atanmamış"; CASH/DEPOSIT hariç.
+  const BROKER_PALETTE = ["#8B5CF6","#F97316","#06B6D4","#10B981","#EC4899","#6366F1","#C9A84C","#F59E0B","#14B8A6"];
+  const brokerSlices = (() => {
+    const byKey = {}; // lowercase key → {label, value, best}
+    filteredPos.forEach(p => {
+      if (p.type === "CASH" || p.type === "DEPOSIT") return;
+      const mv = mvDisp(p);
+      if (mv <= 0) return;
+      const raw = (p.broker || "").trim() || "Atanmamış";
+      const k = raw.toLocaleLowerCase("tr");
+      if (!byKey[k]) byKey[k] = { label: raw, value: 0, best: 0 };
+      byKey[k].value += mv;
+      // Etiket = en yüksek tek-katkılı yazım varyantı (QNB 9pos > Qnb 1pos → "QNB")
+      if (mv > byKey[k].best) { byKey[k].best = mv; byKey[k].label = raw; }
+    });
+    const total = Object.values(byKey).reduce((a, s) => a + s.value, 0);
+    const arr = Object.values(byKey).sort((a, b) => b.value - a.value);
+    let ci = 0;
+    arr.forEach(s => {
+      s.key = s.label;
+      s.color = s.label === "Atanmamış" ? "#4b5563" : BROKER_PALETTE[ci++ % BROKER_PALETTE.length];
+      s.frac = total > 0 ? s.value / total : 0;
+    });
     return { arr, total };
   })();
 
@@ -1708,6 +1736,44 @@ function AnalysisTab({pos,txs,splits,prc,hist,hide,mask,setTab,displayCur,fxRate
           </div>
         );
       })()}
+
+      {/* ── Kart: Aracı Kurum Dağılımı (Sprint 31) — order:12, sektörden sonra render ── */}
+      <div className="card" style={{order:12,marginBottom:16,padding:"var(--card-pad)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div className="stitle" style={{marginBottom:0}}>Aracı Kurum Dağılımı</div>
+          <button className="btn-xs" onClick={()=>setBrokerPieOpen(o=>!o)} aria-label={brokerPieOpen?"Kapat":"Aç"} aria-expanded={brokerPieOpen}>{brokerPieOpen?"▴":"▾"}</button>
+        </div>
+        {brokerSlices.arr.length > 0 && (
+          <div style={{height:12,borderRadius:6,overflow:"hidden",display:"flex",gap:1,marginTop:12}}>
+            {brokerSlices.arr.map(s=>(
+              <div key={s.key} style={{width:(s.frac*100)+"%",height:"100%",background:s.color}}
+                data-tip={`${s.label}: ${(s.frac*100).toFixed(1)}%`}/>
+            ))}
+          </div>
+        )}
+        {brokerPieOpen && (
+          <div style={{marginTop:14}}>
+            {brokerSlices.arr.length === 0 ? (
+              <div className="empty" style={{padding:"20px 0"}}>Aracı kurum bilgisi olan pozisyon yok</div>
+            ) : (
+              <>
+                {brokerSlices.arr.map(s=>(
+                  <div key={s.key} className="pie-row">
+                    <span className="pie-sw" style={{background:s.color}}></span>
+                    <span style={{flex:1,minWidth:0}}>{s.label}</span>
+                    <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>{(s.frac*100).toFixed(1)}%</span>
+                  </div>
+                ))}
+                <div className="pie-row" style={{borderTop:"0.5px solid var(--border)",marginTop:6,paddingTop:8,fontWeight:600}}>
+                  <span className="pie-sw" style={{visibility:"hidden"}}></span>
+                  <span style={{flex:1,minWidth:0}}>Toplam</span>
+                  <span className="dim" style={{textAlign:"right",fontSize:11,flex:"0 0 56px"}}>100.0%</span>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* ── Kart: Dönem Bazlı Getiri ─────────────────────────────── */}
       {(()=>{

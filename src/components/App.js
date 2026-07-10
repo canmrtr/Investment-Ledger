@@ -867,8 +867,8 @@ function App({session}){
               );
             })()}
 
-            {/* Period selector */}
-            <div className="fbar" style={{marginBottom:16}}>
+            {/* Period selector — sticky under topbar on scroll (Sprint 31 #3) */}
+            <div className="fbar fbar-sticky" style={{marginBottom:16}}>
               {PERIODS.map(p=>{
                 const refTk=(usd[0]||try_[0])?.ticker;
                 const available=p.key==="max"||(hasH&&refTk&&hist[refTk]?.[p.priceKey]!=null);
